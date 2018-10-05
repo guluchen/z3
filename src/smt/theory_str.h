@@ -65,6 +65,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream& os, const word_term& word_t);
     friend class word_equ;
+    friend class state;
 
 
 };
@@ -100,6 +101,10 @@ public:
     state(ast_manager& m):m(m){}
     void add_word_equation(word_equ input);
     std::list<state> transport();
+    std::set<sym,compare_symbol> get_variables() const;
+    bool operator>(const state &other) const ;
+    state replace(const sym&  src, word_term& des);
+
 
     bool is_inconsistent();
     bool is_in_solved_form();
@@ -107,6 +112,7 @@ public:
     friend std::ostream &operator<<(std::ostream& os, const state& word_t);
 
 };
+struct compare_state { bool operator ()( const state &p1, const state &p2 ) const { return p1>p2; }};
 
 // Asserted or derived equality
 class equation_pair {

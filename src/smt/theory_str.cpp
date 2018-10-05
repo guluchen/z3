@@ -172,30 +172,67 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-//        context & ctx = get_context();
         ast_manager & m = get_manager();
         std::cout<< "level: " << get_context().get_scope_level() << "\n"<<std::endl;
 
+        std::set<state,compare_state> processed;
+        std::stack<state> todo;
+
+        //create root state
         state root(m);
-
-
         for (auto const& e : m_eqs) {
             word_term lhs=get_word_term(e.ls());
             word_term rhs=get_word_term(e.rs());
-
-
-            root.add_word_equation(word_equ(lhs,rhs));
-            root.add_word_equation(word_equ(lhs,rhs));
             root.add_word_equation(word_equ(rhs,lhs));
         }
-        std::cout<<root<<std::endl;
 
-        std::list<state> next=root.transport();
+        todo.push(root);
 
-        for(auto& st:next){
-            std::cout<<st<<std::endl;
+        //consider all empty string assignments
+
+        while(!todo.empty()){
+            state cur=todo.top();
+            todo.pop();
+
+            if(cur.is_in_solved_form()){
+                return FC_DONE;
+            }
+
+
+            if(!cur.is_inconsistent() && processed.find(cur)==processed.end()) {
+                processed.insert(cur);
+                for(sym s:cur.get_variables()){
+                    word_term empty(m);
+                    todo.push(cur.replace(s,empty));
+                }
+
+            }
+
         }
-        std::cout<<root<<std::endl;
+
+        for (auto it = processed.begin(); it != processed.end(); ) {
+            todo.push(*it++);
+        }
+
+        //start the word equation satisfibiity procedure
+        while(!todo.empty()){
+            state cur=todo.top();
+            todo.pop();
+            std::cout<<cur<<std::endl;
+
+
+            for(state& next:cur.transport()){
+                if(!next.is_inconsistent() && processed.find(next)==processed.end()){
+                    if(next.is_in_solved_form()){
+                        return FC_DONE;
+                    }
+
+                    processed.insert(next);
+                    todo.push(next);
+                }
+            }
+        }
+
 
         //The word equations are UNSAT, remove them from the solution space
         expr* toAssert=NULL;
@@ -378,6 +415,7 @@ namespace smt {
         else if (other.content != content) return false;
         else return true;
     }
+
     bool sym::operator>(const sym &other) const {
         if (type < other.type) return false;
         else if (type > other.type) return true;
@@ -496,15 +534,15 @@ namespace smt {
     }
 
     bool word_equ::operator>(const word_equ &other) const {
-        word_term my_larger_word_equ=m_lhs>m_rhs?m_lhs:m_rhs;
-        word_term my_smaller_word_equ=m_lhs>m_rhs?m_rhs:m_lhs;
+        word_term my_larger_word_term=m_lhs>m_rhs?m_lhs:m_rhs;
+        word_term my_smaller_word_term=m_lhs>m_rhs?m_rhs:m_lhs;
 
-        word_term other_larger_word_equ=other.m_lhs>other.m_rhs?other.m_lhs:other.m_rhs;
-        word_term other_smaller_word_equ=other.m_lhs>other.m_rhs?other.m_rhs:other.m_lhs;
+        word_term other_larger_word_term=other.m_lhs>other.m_rhs?other.m_lhs:other.m_rhs;
+        word_term other_smaller_word_term=other.m_lhs>other.m_rhs?other.m_rhs:other.m_lhs;
 
-        if(my_smaller_word_equ>other_smaller_word_equ) return true;
-        else if (other_smaller_word_equ>my_smaller_word_equ) return false;
-        else if(my_larger_word_equ>other_larger_word_equ) return true;
+        if(my_smaller_word_term>other_smaller_word_term) return true;
+        else if (other_smaller_word_term>my_smaller_word_term) return false;
+        else if(my_larger_word_term>other_larger_word_term) return true;
         else return false;
     }
 
@@ -528,18 +566,47 @@ namespace smt {
     bool state::is_inconsistent(){
 
         for(auto& weq: weqs){
-            if( (weq.ls().length()==0 && weq.rs().has_constant()) ||
-                (weq.rs().length()==0 && weq.ls().has_constant()) ){
+            if( (weq.ls().length()==0 && weq.rs().length()!=0) ||
+                (weq.rs().length()==0 && weq.ls().length()!=0) ){
                 return true;
+            }
+
+            if(weq.ls().peek_front().type==STR_CONST &&
+               weq.rs().peek_front().type==STR_CONST &&
+               (weq.ls().peek_front().content != weq.rs().peek_front().content))
+                return true;
+        }
+        return false;
+    }
+    bool state::is_in_solved_form(){
+        for(auto& weq: weqs){
+            if( !(weq.ls().length()==0 && weq.rs().length()==0)){
+                return false;
             }
         }
 
-    }
-    bool state::is_in_solved_form(){
-
+        return true;
 
     }
 
+
+    std::set<sym,compare_symbol> state::get_variables() const {
+        std::set<sym, compare_symbol> result;
+        for (auto &weq:weqs) {
+            for(auto& s:weq.ls().content){
+                if(s.type==STR_VAR){
+                    result.insert(s);
+                }
+            }
+            for(auto& s:weq.rs().content){
+                if(s.type==STR_VAR){
+                    result.insert(s);
+                }
+            }
+        }
+
+        return result;
+    }
 
     std::list<state> state::transport(){
 
@@ -574,12 +641,12 @@ namespace smt {
 
         if(lhs.peek_front().type==STR_VAR && rhs.peek_front().type==STR_VAR){
             //Encountered the case X...=Y...
-            //X => epsilon
-            source.push_back(lhs.peek_front());
-            destination.push_back(word_term(m));
-            //Y => epsilon
-            source.push_back(rhs.peek_front());
-            destination.push_back(word_term(m));
+//            //X => epsilon
+//            source.push_back(lhs.peek_front());
+//            destination.push_back(word_term(m));
+//            //Y => epsilon
+//            source.push_back(rhs.peek_front());
+//            destination.push_back(word_term(m));
             //X => YX
             source.push_back(lhs.peek_front());
             word_term dest1(m);
@@ -613,9 +680,9 @@ namespace smt {
                 csym=&con;
             }
 
-            //X => epsilon
-            source.push_back(*vsym);
-            destination.push_back(word_term(m));
+//            //X => epsilon
+//            source.push_back(*vsym);
+//            destination.push_back(word_term(m));
 
             //X => aX
             source.push_back(*vsym);
@@ -635,21 +702,42 @@ namespace smt {
         std::list<word_term>::iterator destination_iter=destination.begin();
 
         while(source_iter!=source.end()){
-            state to_result(m);
-
-            for(auto s:weqs){
-                s.replace(*source_iter,*destination_iter);
-                s.removeEquivalentPrefix();
-
-                to_result.add_word_equation(s);
-            }
+            result.push_back(replace(*source_iter,*destination_iter));
             source_iter++;
             destination_iter++;
-            result.push_back(to_result);
         }
 
-
         return result;
+    }
+
+    state state::replace(const sym&  src, word_term& des){
+
+        state to_result(m);
+
+        for(auto s:weqs){
+            s.replace(src,des);
+            s.removeEquivalentPrefix();
+            to_result.add_word_equation(s);
+        }
+        return to_result;
+
+    }
+
+
+    bool state::operator>(const state &other) const {
+        if(weqs.size()>other.weqs.size()) return true;
+        else if (weqs.size()<other.weqs.size()) return false;
+
+        std::set<word_equ>::iterator weqs_iter=weqs.begin();
+        std::set<word_equ>::iterator other_weqs_iter=other.weqs.begin();
+        while(weqs_iter!=weqs.end()){
+            if((*weqs_iter) > (*other_weqs_iter)) return true;
+            if((*other_weqs_iter) > (*weqs_iter)) return false;
+            weqs_iter++;
+            other_weqs_iter++;
+        }
+        return false;
+
     }
 
 }; /* namespace smt */
