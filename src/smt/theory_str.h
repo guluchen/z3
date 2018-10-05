@@ -1,19 +1,3 @@
-/*++
-  Module Name:
-
-  theory_str.h
-
-  Abstract:
-
-  String Theory Plugin
-
-  Author:
-
-  Murphy Berzish and Yunhui Zheng
-
-  Revision History:
-
-  --*/
 #ifndef _THEORY_STR_H_
 #define _THEORY_STR_H_
 
@@ -35,18 +19,102 @@
 #include<stack>
 #include<vector>
 #include<map>
+#include<list>
 
 namespace smt {
+enum sym_type{STR_VAR, STR_CONST};
+
+class sym {
+
+public:
+    std::string content;
+    sym_type type;
+
+    sym(sym_type type, std::string content) : content(content),type(type) {}
+    bool operator==(const sym &other) const;
+    bool operator>(const sym &other) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const sym &s);
+};
+struct compare_symbol { bool operator ()( const sym &s1, const sym &s2 ) const { return s1>s2; }};
+
+
+class word_term {
+    std::list<sym> content;
+    ast_manager & m;
+public:
+    word_term(ast_manager& m):m(m){}
+
+    word_term(const word_term& other):m(other.m){
+        content.insert(content.begin(),other.content.begin(),other.content.end());
+    }
+
+    void push_back(sym s);
+    void push_back_string_const(expr *e);
+    void push_back(word_term &other);
+    void push_back_string_var(expr *e);
+    void remove_front();
+    size_t length() const{return content.size();};
+    std::set<sym,compare_symbol> get_variables() const;
+    bool has_constant() const;
+
+    sym peek_front() const;
+    void replace(const sym&  src, word_term& des);
+    bool operator>(const word_term &other) const;
+    word_term& operator = (const word_term & other);
+
+    friend std::ostream &operator<<(std::ostream& os, const word_term& word_t);
+    friend class word_equ;
+
+
+};
+
+
+class word_equ {
+    word_term  m_lhs;
+    word_term  m_rhs;
+    ast_manager & m;
+
+public:
+
+    word_equ(word_term& l, word_term& r):m_lhs(l), m_rhs(r), m(l.m){}
+    word_equ(word_equ const& other): m_lhs(other.m_lhs), m_rhs(other.m_rhs), m(other.m) {}
+
+    word_term const& ls() const { return m_lhs; }
+    word_term const& rs() const { return m_rhs; }
+    void replace(const sym&  src, word_term& des);
+    void removeEquivalentPrefix();
+    std::set<sym,compare_symbol> get_variables();
+    bool operator>(const word_equ &other) const ;
+
+    friend std::ostream &operator<<(std::ostream& os, const word_equ& word_t);
+
+};
+struct compare_word_equ { bool operator ()( const word_equ &p1, const word_equ &p2 ) const { return p1>p2; }};
+
+class state {
+    std::set<word_equ,compare_word_equ> weqs;
+    ast_manager & m;
+
+public:
+    state(ast_manager& m):m(m){}
+    void add_word_equation(word_equ input);
+    std::list<state> transport();
+
+    bool is_inconsistent();
+    bool is_in_solved_form();
+
+    friend std::ostream &operator<<(std::ostream& os, const state& word_t);
+
+};
 
 // Asserted or derived equality
-class weq {
+class equation_pair {
     expr_ref  m_lhs;
     expr_ref  m_rhs;
 public:
-
-    weq(expr_ref& l, expr_ref& r):
-            m_lhs(l), m_rhs(r){}
-    weq(weq const& other): m_lhs(other.m_lhs), m_rhs(other.m_rhs) {}
+    equation_pair(expr_ref& l, expr_ref& r): m_lhs(l), m_rhs(r){}
+    equation_pair(equation_pair const& other): m_lhs(other.m_lhs), m_rhs(other.m_rhs) {}
     expr_ref const& ls() const { return m_lhs; }
     expr_ref const& rs() const { return m_rhs; }
 };
@@ -58,20 +126,12 @@ public:
     ~theory_str() override;
     void display(std::ostream & out) const override;
 
-    //used in union_find<theory_str>
-//    trail_stack<theory_str> m_trail_stack;
-//    trail_stack<theory_str>& get_trail_stack() { return m_trail_stack; }
-
-
 protected:
-//    union_find<theory_str> m_find;
     int sLevel;
     theory_str_params const & m_params;
-    scoped_vector<weq>          m_eqs;        // set of current equations.
-    scoped_vector<weq>          m_nqs;        // set of current disequalities.
+    scoped_vector<equation_pair>          m_eqs;        // set of current equations.
+    scoped_vector<equation_pair>          m_nqs;        // set of current disequalities.
     void assert_axiom(expr * e);
-
-
 
     bool internalize_atom(app * atom, bool gate_ctx) override;
     bool internalize_term(app * term) override;
@@ -100,7 +160,8 @@ protected:
     void dump_assignments();
 private:
     bool is_string_theory_term(expr *);
-    expr* mk_not_and_remove_double_negation(expr *);
+    decl_kind get_decl_kind(expr *);
+    word_term get_word_term(expr *e);
 
 };
 
