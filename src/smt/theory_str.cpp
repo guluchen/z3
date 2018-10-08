@@ -171,9 +171,11 @@ namespace smt {
 
     }
 
+
+
     final_check_status theory_str::final_check_eh() {
         ast_manager & m = get_manager();
-        std::cout<< "level: " << get_context().get_scope_level() << "\n"<<std::endl;
+        std::cout<< "final_check at level: " << get_context().get_scope_level() << "\n"<<std::endl;
 
         std::set<state,compare_state> processed;
         std::stack<state> todo;
@@ -181,12 +183,17 @@ namespace smt {
         //create root state
         state root(m);
         for (auto const& e : m_eqs) {
+            std::cout<< "formula:"<< mk_ismt2_pp(e.ls(), get_manager())<<"="<<mk_ismt2_pp(e.rs(), get_manager())<<std::endl;
+
             word_term lhs=get_word_term(e.ls());
             word_term rhs=get_word_term(e.rs());
             root.add_word_equation(word_equ(rhs,lhs));
         }
 
         todo.push(root);
+
+
+        std::cout<< "identified root states (color: "<<GREEN<<"GREEN"<<RESET<<" for variables and "<<BLUE<<"BLUE"<<RESET<<" for constants"<<std::endl;
 
         //consider all empty string assignments
 
@@ -200,6 +207,7 @@ namespace smt {
 
 
             if(!cur.is_inconsistent() && processed.find(cur)==processed.end()) {
+                std::cout<< cur<<std::endl;
                 processed.insert(cur);
                 for(sym s:cur.get_variables()){
                     word_term empty(m);
@@ -214,19 +222,22 @@ namespace smt {
             todo.push(*it++);
         }
 
+        std::cout<< "start the satisfibility procedure"<<std::endl;
+
         //start the word equation satisfibiity procedure
         while(!todo.empty()){
             state cur=todo.top();
             todo.pop();
-            std::cout<<cur<<std::endl;
+            std::cout<< "from "<<cur<<std::endl;
 
 
             for(state& next:cur.transport()){
                 if(!next.is_inconsistent() && processed.find(next)==processed.end()){
                     if(next.is_in_solved_form()){
+                        std::cout<< "to "<<next<<RED<<"(solved form)"<<RESET<<std::endl;
                         return FC_DONE;
                     }
-
+                    std::cout<< "to "<<next<<std::endl;
                     processed.insert(next);
                     todo.push(next);
                 }
@@ -377,9 +388,9 @@ namespace smt {
 
     std::ostream& operator<<(std::ostream& os, const sym& s) {
         if(s.type==STR_VAR){
-            os<<"V("<<s.content<<")";
+            os<<GREEN<<s.content<<RESET;
         }else{
-            os<<" "<<s.content<<" ";
+            os<<BLUE<<s.content<<RESET;
         }
         return os;
     }
@@ -434,7 +445,7 @@ namespace smt {
         ss << mk_ismt2_pp(e, m);
         std::string name = ss.str();
         for(int i=name.length()-2;i>0;i--){
-            content.insert(content.end(),sym(STR_CONST, name.substr(i,1)));
+            content.push_front(sym(STR_CONST, name.substr(i,1)));
         }
     }
     void word_term::push_back(word_term &other){
