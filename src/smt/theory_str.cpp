@@ -11,6 +11,12 @@
 #include "ast/rewriter/seq_rewriter.h"
 #include "smt_kernel.h"
 
+/*TODO:
+ 1. better algorithm for checking solved form
+ 2. on-the-fly over-approximation
+ 3. better algorithm for computing state transport
+
+ */
 namespace smt {
     theory_str::theory_str(ast_manager & m, theory_str_params const & params):
     theory(m.mk_family_id("seq")),
@@ -110,7 +116,6 @@ namespace smt {
 
     void theory_str::new_eq_eh(theory_var x, theory_var y) {
 
-
         ast_manager & m = get_manager();
         enode* n1 = get_enode(x);
         enode* n2 = get_enode(y);
@@ -191,9 +196,7 @@ namespace smt {
         }
 
         todo.push(root);
-
-
-        std::cout<< "identified root states (color: "<<GREEN<<"GREEN"<<RESET<<" for variables and "<<BLUE<<"BLUE"<<RESET<<" for constants"<<std::endl;
+        std::cout<< "identified root states (color: "<<BOLDGREEN<<"GREEN"<<RESET<<" for variables and "<<BLUE<<"BLUE"<<RESET<<" for constants"<<std::endl;
 
         //consider all empty string assignments
 
@@ -205,7 +208,6 @@ namespace smt {
                 return FC_DONE;
             }
 
-
             if(!cur.is_inconsistent() && processed.find(cur)==processed.end()) {
                 std::cout<< cur<<std::endl;
                 processed.insert(cur);
@@ -213,9 +215,7 @@ namespace smt {
                     word_term empty(m);
                     todo.push(cur.replace(s,empty));
                 }
-
             }
-
         }
 
         for (auto it = processed.begin(); it != processed.end(); ) {
@@ -230,7 +230,6 @@ namespace smt {
             todo.pop();
             std::cout<< "from "<<cur<<std::endl;
 
-
             for(state& next:cur.transport()){
                 if(!next.is_inconsistent() && processed.find(next)==processed.end()){
                     if(next.is_in_solved_form()){
@@ -243,7 +242,6 @@ namespace smt {
                 }
             }
         }
-
 
         //The word equations are UNSAT, remove them from the solution space
         expr* toAssert=NULL;
@@ -280,7 +278,6 @@ namespace smt {
     }
     void theory_str::init_model(model_generator & mg) {
         TRACE("str", tout << "initializing model" << std::endl;);
-
     }
 
     model_value_proc * theory_str::mk_value(enode * n, model_generator & mg) {
@@ -292,7 +289,6 @@ namespace smt {
 
         // If the owner is not internalized, it doesn't have an enode associated.
         SASSERT(get_context().e_internalized(owner));
-
         return alloc(expr_wrapper_proc, owner);
 
     }
@@ -316,15 +312,15 @@ namespace smt {
 
     void theory_str::dump_assignments() {
         TRACE_CODE(
-                ast_manager & m = get_manager();
-                context & ctx = get_context();
-                tout << "dumping all assignments:" << std::endl;
-                expr_ref_vector assignments(m);
-                ctx.get_assignments(assignments);
-                for (expr_ref_vector::iterator i = assignments.begin(); i != assignments.end(); ++i) {
-                    expr * ex = *i;
-                    tout << mk_ismt2_pp(ex, m) << (ctx.is_relevant(ex) ? "" : " (NOT REL)") << std::endl;
-                }
+            ast_manager & m = get_manager();
+            context & ctx = get_context();
+            tout << "dumping all assignments:" << std::endl;
+            expr_ref_vector assignments(m);
+            ctx.get_assignments(assignments);
+            for (expr_ref_vector::iterator i = assignments.begin(); i != assignments.end(); ++i) {
+                expr * ex = *i;
+                tout << mk_ismt2_pp(ex, m) << (ctx.is_relevant(ex) ? "" : " (NOT REL)") << std::endl;
+            }
         );
     }
 
@@ -384,13 +380,11 @@ namespace smt {
      *
      *=====================================*/
 
-
-
     std::ostream& operator<<(std::ostream& os, const sym& s) {
         if(s.type==STR_VAR){
-            os<<GREEN<<s.content<<RESET;
+            os<<BOLDGREEN<<s.content<<" "<<RESET;
         }else{
-            os<<BLUE<<s.content<<RESET;
+            os<<BLUE<<s.content<<" "<<RESET;
         }
         return os;
     }
@@ -594,6 +588,8 @@ namespace smt {
             if( !(weq.ls().length()==0 && weq.rs().length()==0)){
                 return false;
             }
+
+
         }
 
         return true;
