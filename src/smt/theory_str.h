@@ -106,6 +106,17 @@ namespace smt {
         bool operator()(const state& s1, const state& s2) const { return s1 > s2; }
     };
 
+    class neilson_based_solver {
+        std::set<state, compare_state> m_processed;
+        std::stack<state> m_pending;
+        bool m_solution_found;
+    public:
+        explicit neilson_based_solver(const state& root);
+        const bool solution_found() const { return m_solution_found; }
+        void consider_var_empty_cases();
+        void check_sat();
+    };
+
     using expr_pair = std::pair<expr_ref, expr_ref>;
 
     class theory_str : public theory {
@@ -141,9 +152,11 @@ namespace smt {
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
-        const bool is_theory_str_term(expr *e);
-        decl_kind get_decl_kind(expr *e);
-        word_term get_word_term(expr *e);
+        const bool is_theory_str_term(expr *e) const;
+        decl_kind get_decl_kind(expr *e) const;
+        word_term get_word_term(expr *e) const;
+        state build_state_from_memo() const;
+        const bool block_dpllt_assignment_from_memo();
     };
 
 };

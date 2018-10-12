@@ -305,6 +305,53 @@ namespace smt {
         return os;
     }
 
+    neilson_based_solver::neilson_based_solver(const state& root) : m_solution_found{false} {
+        m_pending.push(root);
+    }
+
+    void neilson_based_solver::consider_var_empty_cases() {
+        while (!m_pending.empty()) {
+            state curr_s = m_pending.top();
+            m_pending.pop();
+            if (curr_s.is_in_solved_form()) {
+                m_solution_found = true;
+                return;
+            }
+            if (!curr_s.is_inconsistent() && m_processed.find(curr_s) == m_processed.end()) {
+                std::cout << curr_s << std::endl;
+                m_processed.insert(curr_s);
+                for (const auto& var : curr_s.variables()) {
+                    word_term empty;
+                    m_pending.push(curr_s.replace(var, empty));
+                }
+            }
+        }
+        for (const auto& s : m_processed) {
+            m_pending.push(s);
+        }
+    }
+
+    void neilson_based_solver::check_sat() {
+        std::cout << "start the check SAT procedure" << std::endl;
+        while (!m_pending.empty()) {
+            state curr_s = m_pending.top();
+            m_pending.pop();
+            std::cout << "from " << curr_s << std::endl;
+            for (const auto& next : curr_s.transform()) {
+                if (!next.is_inconsistent() && m_processed.find(next) == m_processed.end()) {
+                    if (next.is_in_solved_form()) {
+                        std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
+                        m_solution_found = true;
+                        return;
+                    }
+                    std::cout << "to " << next << std::endl;
+                    m_processed.insert(next);
+                    m_pending.push(next);
+                }
+            }
+        }
+    }
+
     theory_str::theory_str(ast_manager& m, theory_str_params const& params) :
             theory{m.mk_family_id("seq")}, m_scope_level{0}, m_params{params} {
     }
@@ -467,77 +514,20 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-        ast_manager& m = get_manager();
         context& ctx = get_context();
         std::cout << "final_check at level: " << ctx.get_scope_level() << "\n" << std::endl;
-        std::set<state, compare_state> processed;
-        std::stack<state> pending;
-
-        // create root state
-        state root;
-        for (const auto& we_memo : m_we_expr_memo) {
-            std::cout << "formula:" << mk_ismt2_pp(we_memo.first, m) << "="
-                      << mk_ismt2_pp(we_memo.second, m) << std::endl;
-            const word_term& lhs = get_word_term(we_memo.first);
-            const word_term& rhs = get_word_term(we_memo.second);
-            root.add_word_equation(word_equation(rhs, lhs));
-        }
-        pending.push(root);
         std::cout << "identified root states (color: " << BOLDGREEN << "GREEN" << RESET
                   << " for variables and " << BLUE << "BLUE" << RESET << " for constants"
                   << std::endl;
 
-        // consider all empty string assignments
-        while (!pending.empty()) {
-            state curr_state = pending.top();
-            pending.pop();
-            if (curr_state.is_in_solved_form()) return FC_DONE;
-            if (!curr_state.is_inconsistent() && processed.find(curr_state) == processed.end()) {
-                std::cout << curr_state << std::endl;
-                processed.insert(curr_state);
-                for (const auto& var : curr_state.variables()) {
-                    word_term empty;
-                    pending.push(curr_state.replace(var, empty));
-                }
-            }
-        }
-        for (const auto& s : processed) {
-            pending.push(s);
-        }
+        const state& search_root = build_state_from_memo();
+        neilson_based_solver solver{search_root};
+        solver.consider_var_empty_cases();
+        if (solver.solution_found()) return FC_DONE;
+        solver.check_sat();
+        if (solver.solution_found()) return FC_DONE;
 
-        // start the check SAT procedure
-        std::cout << "start the check SAT procedure" << std::endl;
-        while (!pending.empty()) {
-            state curr_state = pending.top();
-            pending.pop();
-            std::cout << "from " << curr_state << std::endl;
-            for (const auto& next : curr_state.transform()) {
-                if (!next.is_inconsistent() && processed.find(next) == processed.end()) {
-                    if (next.is_in_solved_form()) {
-                        std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
-                        return FC_DONE;
-                    }
-                    std::cout << "to " << next << std::endl;
-                    processed.insert(next);
-                    pending.push(next);
-                }
-            }
-        }
-
-        expr *refinement_expr = nullptr;
-        for (const auto& memo : m_we_expr_memo) {
-            expr *const e = m.mk_not(mk_eq_atom(memo.first, memo.second));
-            if (refinement_expr == nullptr) {
-                refinement_expr = e;
-            } else {
-                refinement_expr = m.mk_or(refinement_expr, e);
-            }
-            std::cout << memo.first << " = " << memo.second << " \n";
-        }
-
-        if (refinement_expr != nullptr) {
-            std::cout << "asserting " << mk_pp(refinement_expr, m) << std::endl;
-            assert_axiom(refinement_expr);
+        if (block_dpllt_assignment_from_memo()) {
             TRACE("str", tout << "final check" << std::endl;);
             return FC_CONTINUE;
         } else {
@@ -592,16 +582,16 @@ namespace smt {
         );
     }
 
-    const bool theory_str::is_theory_str_term(expr *const e) {
+    const bool theory_str::is_theory_str_term(expr *const e) const {
         ast_manager& m = get_manager();
         return (m.get_sort(e) == m.mk_sort(m.mk_family_id("seq"), _STRING_SORT, 0, nullptr));
     }
 
-    decl_kind theory_str::get_decl_kind(expr *const e) {
+    decl_kind theory_str::get_decl_kind(expr *const e) const {
         return to_app(e)->get_decl_kind();
     }
 
-    word_term theory_str::get_word_term(expr *const e) {
+    word_term theory_str::get_word_term(expr *const e) const {
         if (get_decl_kind(e) == OP_STRING_CONST) {
             std::stringstream ss;
             ss << mk_ismt2_pp(e, get_manager());
@@ -619,6 +609,39 @@ namespace smt {
         std::stringstream ss;
         ss << mk_ismt2_pp(e, get_manager());
         return word_term::of_variable(ss.str());
+    }
+
+    state theory_str::build_state_from_memo() const {
+        ast_manager& m = get_manager();
+        state result;
+        for (const auto& memo : m_we_expr_memo) {
+            std::cout << "formula:" << mk_ismt2_pp(memo.first, m) << "="
+                      << mk_ismt2_pp(memo.second, m) << std::endl;
+            const word_term& lhs = get_word_term(memo.first);
+            const word_term& rhs = get_word_term(memo.second);
+            result.add_word_equation(word_equation(rhs, lhs));
+        }
+        return result;
+    }
+
+    const bool theory_str::block_dpllt_assignment_from_memo() {
+        ast_manager& m = get_manager();
+        expr *refinement_expr = nullptr;
+        for (const auto& memo : m_we_expr_memo) {
+            expr *const e = m.mk_not(mk_eq_atom(memo.first, memo.second));
+            if (refinement_expr == nullptr) {
+                refinement_expr = e;
+            } else {
+                refinement_expr = m.mk_or(refinement_expr, e);
+            }
+            std::cout << memo.first << " = " << memo.second << " \n";
+        }
+        if (refinement_expr != nullptr) {
+            std::cout << "asserting " << mk_pp(refinement_expr, m) << std::endl;
+            assert_axiom(refinement_expr);
+            return true;
+        }
+        return false;
     }
 
 };
