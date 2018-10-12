@@ -42,10 +42,10 @@ namespace smt {
         return other.m_value == m_value;
     }
 
-    const bool element::operator>(const element& other) const {
-        if (m_type > other.m_type) return true;
-        if (m_type < other.m_type) return false;
-        return m_value > other.m_value;
+    const bool element::operator<(const element& other) const {
+        if (m_type < other.m_type) return true;
+        if (m_type > other.m_type) return false;
+        return m_value < other.m_value;
     }
 
     std::ostream& operator<<(std::ostream& os, const element& s) {
@@ -75,8 +75,8 @@ namespace smt {
         m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
     }
 
-    const std::set<element, compare_elem> word_term::variables() const {
-        std::set<element, compare_elem> result;
+    const std::set<element> word_term::variables() const {
+        std::set<element> result;
         for (const auto& e : m_elements) {
             if (e.type() == element_t::VAR) {
                 result.insert(e);
@@ -121,21 +121,16 @@ namespace smt {
         }
     }
 
-    const bool word_term::operator>(const word_term& other) const {
-        if (m_elements.size() > other.m_elements.size()) return true;
-        if (m_elements.size() < other.m_elements.size()) return false;
+    const bool word_term::operator<(const word_term& other) const {
+        if (m_elements.size() < other.m_elements.size()) return true;
+        if (m_elements.size() > other.m_elements.size()) return false;
         auto e_it_other = other.m_elements.begin();
         for (const auto& e : m_elements) {
-            if (e > *e_it_other) return true;
-            if (*e_it_other > e) return false;
+            if (e < *e_it_other) return true;
+            if (*e_it_other < e) return false;
             e_it_other++;
         }
         return false;
-    }
-
-    word_term& word_term::operator=(const word_term& other) {
-        m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
-        return *this;
     }
 
     std::ostream& operator<<(std::ostream& os, const word_term& w) {
@@ -145,17 +140,13 @@ namespace smt {
         return os;
     }
 
-    const std::set<element, compare_elem> word_equation::variables() const {
-        std::set<element, compare_elem> result;
-        for (const auto& le : m_lhs.elements()) {
-            if (le.type() == element_t::VAR) {
-                result.insert(le);
-            }
+    const std::set<element> word_equation::variables() const {
+        std::set<element> result;
+        for (const auto& v : m_lhs.variables()) {
+            result.insert(v);
         }
-        for (const auto& re : m_rhs.elements()) {
-            if (re.type() == element_t::VAR) {
-                result.insert(re);
-            }
+        for (const auto& v : m_rhs.variables()) {
+            result.insert(v);
         }
         return result;
     }
@@ -185,8 +176,7 @@ namespace smt {
     }
 
     void word_equation::trim_prefix() {
-        while (m_lhs.peek_front().type() == m_rhs.peek_front().type() &&
-               m_lhs.peek_front().value() == m_rhs.peek_front().value()) {
+        while (m_lhs.peek_front() == m_rhs.peek_front()) {
             m_lhs.remove_front();
             m_rhs.remove_front();
         }
@@ -197,14 +187,14 @@ namespace smt {
         m_rhs.replace(tgt, subst);
     }
 
-    const bool word_equation::operator>(const word_equation& other) const {
-        const word_term& larger_word_term = m_lhs > m_rhs ? m_lhs : m_rhs;
-        const word_term& smaller_word_term = m_lhs > m_rhs ? m_rhs : m_lhs;
-        const word_term& other_larger = other.m_lhs > other.m_rhs ? other.m_lhs : other.m_rhs;
-        const word_term& other_smaller = other.m_lhs > other.m_rhs ? other.m_rhs : other.m_lhs;
-        if (smaller_word_term > other_smaller) return true;
-        if (other_smaller > smaller_word_term) return false;
-        return larger_word_term > other_larger;
+    const bool word_equation::operator<(const word_equation& other) const {
+        const word_term& larger_word_term = m_lhs < m_rhs ? m_rhs : m_lhs;
+        const word_term& smaller_word_term = m_lhs < m_rhs ? m_lhs : m_rhs;
+        const word_term& other_larger = other.m_lhs < other.m_rhs ? other.m_rhs : other.m_lhs;
+        const word_term& other_smaller = other.m_lhs < other.m_rhs ? other.m_lhs : other.m_rhs;
+        if (smaller_word_term < other_smaller) return true;
+        if (other_smaller < smaller_word_term) return false;
+        return larger_word_term < other_larger;
     }
 
     std::ostream& operator<<(std::ostream& os, const word_equation& we) {
@@ -212,18 +202,11 @@ namespace smt {
         return os;
     }
 
-    const std::set<element, compare_elem> state::variables() const {
-        std::set<element, compare_elem> result;
+    const std::set<element> state::variables() const {
+        std::set<element> result;
         for (const auto& we : m_word_equations) {
-            for (const auto& s : we.lhs().elements()) {
-                if (s.type() == element_t::VAR) {
-                    result.insert(s);
-                }
-            }
-            for (const auto& s : we.rhs().elements()) {
-                if (s.type() == element_t::VAR) {
-                    result.insert(s);
-                }
+            for (const auto& v : we.variables()) {
+                result.insert(v);
             }
         }
         return result;
@@ -286,13 +269,13 @@ namespace smt {
         return result;
     }
 
-    const bool state::operator>(const state& other) const {
-        if (m_word_equations.size() > other.m_word_equations.size()) return true;
-        if (m_word_equations.size() < other.m_word_equations.size()) return false;
+    const bool state::operator<(const state& other) const {
+        if (m_word_equations.size() < other.m_word_equations.size()) return true;
+        if (m_word_equations.size() > other.m_word_equations.size()) return false;
         auto we_it_other = other.m_word_equations.begin();
         for (const auto& we : m_word_equations) {
-            if (we > *we_it_other) return true;
-            if (*we_it_other > we) return false;
+            if (we < *we_it_other) return true;
+            if (*we_it_other < we) return false;
             we_it_other++;
         }
         return false;
@@ -338,7 +321,7 @@ namespace smt {
             m_pending.pop();
             std::cout << "from " << curr_s << std::endl;
             for (const auto& next : curr_s.transform()) {
-                if (!next.is_inconsistent() && m_processed.find(next) == m_processed.end()) {
+                if (m_processed.find(next) == m_processed.end() && !next.is_inconsistent()) {
                     if (next.is_in_solved_form()) {
                         std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
                         m_solution_found = true;

@@ -24,7 +24,7 @@
 namespace smt {
 
     enum class element_t {
-        VAR, CONST
+        CONST, VAR
     };
 
     class element {
@@ -35,12 +35,8 @@ namespace smt {
         const element_t& type() const { return m_type; }
         const std::string& value() const { return m_value; }
         const bool operator==(const element& other) const;
-        const bool operator>(const element& other) const;
+        const bool operator<(const element& other) const;
         friend std::ostream& operator<<(std::ostream& os, const element& e);
-    };
-
-    struct compare_elem {
-        const bool operator()(const element& e1, const element& e2) const { return e1 > e2; }
     };
 
     class word_term {
@@ -55,15 +51,14 @@ namespace smt {
         explicit word_term(std::list<element> v) : m_elements{std::move(v)} {}
         const std::size_t length() const { return m_elements.size(); };
         const std::list<element>& elements() const { return m_elements; };
-        const std::set<element, compare_elem> variables() const;
+        const std::set<element> variables() const;
         const bool has_constant() const;
         const bool check_front(const element_t& t) const;
         const element& peek_front() const;
         void remove_front();
         void concat(const word_term& other);
         void replace(const element& tgt, const word_term& subst);
-        const bool operator>(const word_term& other) const;
-        word_term& operator=(const word_term& other);
+        const bool operator<(const word_term& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_term& w);
     };
 
@@ -75,39 +70,31 @@ namespace smt {
         word_equation(const word_equation& other) = default;
         const word_term& lhs() const { return m_lhs; }
         const word_term& rhs() const { return m_rhs; }
-        const std::set<element, compare_elem> variables() const;
+        const std::set<element> variables() const;
         const bool is_simply_unsat(bool allow_empty_assign = false) const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
         void trim_prefix();
         void replace(const element& tgt, const word_term& subst);
-        const bool operator>(const word_equation& other) const;
+        const bool operator<(const word_equation& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
     };
 
-    struct compare_we {
-        bool operator()(const word_equation& w1, const word_equation& w2) const { return w1 > w2; }
-    };
-
     class state {
-        std::set<word_equation, compare_we> m_word_equations;
+        std::set<word_equation> m_word_equations;
     public:
         state() = default;
-        const std::set<element, compare_elem> variables() const;
+        const std::set<element> variables() const;
         const bool is_inconsistent() const;
         const bool is_in_solved_form() const;
         void add_word_equation(word_equation we);
         state replace(const element& tgt, const word_term& subst) const;
         const std::list<state> transform() const;
-        const bool operator>(const state& other) const;
+        const bool operator<(const state& other) const;
         friend std::ostream& operator<<(std::ostream& os, const state& s);
     };
 
-    struct compare_state {
-        bool operator()(const state& s1, const state& s2) const { return s1 > s2; }
-    };
-
     class neilson_based_solver {
-        std::set<state, compare_state> m_processed;
+        std::set<state> m_processed;
         std::stack<state> m_pending;
         bool m_solution_found;
     public:
