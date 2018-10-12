@@ -1,60 +1,344 @@
+#include <algorithm>
 #include "ast/ast_smt2_pp.h"
 #include "smt/smt_context.h"
 #include "smt/theory_str.h"
 #include "smt/smt_model_generator.h"
 #include "ast/ast_pp.h"
 #include "ast/ast_ll_pp.h"
-#include<algorithm>
 #include "smt/theory_seq_empty.h"
 #include "smt/theory_arith.h"
 #include "ast/ast_util.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "smt_kernel.h"
 
-/*TODO:
- 1. better algorithm for checking solved form
- 2. on-the-fly over-approximation
- 3. better algorithm for computing state transport
-
+/* TODO:
+ *  1. better algorithm for checking solved form
+ *  2. on-the-fly over-approximation
+ *  3. better algorithm for computing state transform
  */
+
+#define RESET   "\033[0m"
+#define BLACK   "\033[30m"      /* Black */
+#define RED     "\033[31m"      /* Red */
+#define GREEN   "\033[32m"      /* Green */
+#define YELLOW  "\033[33m"      /* Yellow */
+#define BLUE    "\033[34m"      /* Blue */
+#define MAGENTA "\033[35m"      /* Magenta */
+#define CYAN    "\033[36m"      /* Cyan */
+#define WHITE   "\033[37m"      /* White */
+#define BOLDBLACK   "\033[1m\033[30m"      /* Bold Black */
+#define BOLDRED     "\033[1m\033[31m"      /* Bold Red */
+#define BOLDGREEN   "\033[1m\033[32m"      /* Bold Green */
+#define BOLDYELLOW  "\033[1m\033[33m"      /* Bold Yellow */
+#define BOLDBLUE    "\033[1m\033[34m"      /* Bold Blue */
+#define BOLDMAGENTA "\033[1m\033[35m"      /* Bold Magenta */
+#define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
+#define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
+
 namespace smt {
-    theory_str::theory_str(ast_manager & m, theory_str_params const & params):
-    theory(m.mk_family_id("seq")),
-    sLevel(0),
-    m_params(params)
-    {
+
+    const bool element::operator==(const element& other) const {
+        if (other.m_type != m_type) return false;
+        return other.m_value == m_value;
     }
 
-    theory_str::~theory_str() {
-
+    const bool element::operator>(const element& other) const {
+        if (m_type > other.m_type) return true;
+        if (m_type < other.m_type) return false;
+        return m_value > other.m_value;
     }
 
-    void theory_str::init(context * ctx) {
+    std::ostream& operator<<(std::ostream& os, const element& s) {
+        if (s.m_type == element_t::VAR) {
+            os << BOLDGREEN << s.value() << " " << RESET;
+        } else {
+            os << BLUE << s.value() << " " << RESET;
+        }
+        return os;
+    }
+
+    word_term word_term::of_string(const std::string& literal) {
+        word_term result;
+        for (auto i = literal.length() - 2; i > 0; i--) {
+            result.m_elements.push_front(element{element_t::CONST, literal.substr(i, 1)});
+        }
+        return result;
+    }
+
+    word_term word_term::of_variable(const std::string& name) {
+        word_term result;
+        result.m_elements.push_front(element{element_t::VAR, name});
+        return result;
+    }
+
+    word_term::word_term(const smt::word_term& other) {
+        m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
+    }
+
+    const std::set<element, compare_elem> word_term::variables() const {
+        std::set<element, compare_elem> result;
+        for (const auto& e : m_elements) {
+            if (e.type() == element_t::VAR) {
+                result.insert(e);
+            }
+        }
+        return result;
+    }
+
+    const bool word_term::has_constant() const {
+        for (const auto& e : m_elements) {
+            if (e.type() == element_t::CONST) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const bool word_term::check_front(const element_t& t) const {
+        return peek_front().type() == t;
+    }
+
+    const element& word_term::peek_front() const {
+        // TODO: review the empty case
+        return *m_elements.begin();
+    }
+
+    void word_term::remove_front() {
+        // TODO: review the empty case
+        m_elements.pop_front();
+    }
+
+    void word_term::concat(const word_term& other) {
+        m_elements.insert(m_elements.end(), other.m_elements.begin(), other.m_elements.end());
+    }
+
+    void word_term::replace(const element& tgt, const word_term& subst) {
+        auto find_it = std::find(m_elements.begin(), m_elements.end(), tgt);
+        while (find_it != m_elements.end()) {
+            m_elements.insert(find_it, subst.m_elements.begin(), subst.m_elements.end());
+            m_elements.erase(find_it++);
+            find_it = std::find(find_it, m_elements.end(), tgt);
+        }
+    }
+
+    const bool word_term::operator>(const word_term& other) const {
+        if (m_elements.size() > other.m_elements.size()) return true;
+        if (m_elements.size() < other.m_elements.size()) return false;
+        auto e_it_other = other.m_elements.begin();
+        for (const auto& e : m_elements) {
+            if (e > *e_it_other) return true;
+            if (*e_it_other > e) return false;
+            e_it_other++;
+        }
+        return false;
+    }
+
+    word_term& word_term::operator=(const word_term& other) {
+        m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
+        return *this;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const word_term& w) {
+        for (const auto& e : w.m_elements) {
+            os << e;
+        }
+        return os;
+    }
+
+    const std::set<element, compare_elem> word_equation::variables() const {
+        std::set<element, compare_elem> result;
+        for (const auto& le : m_lhs.elements()) {
+            if (le.type() == element_t::VAR) {
+                result.insert(le);
+            }
+        }
+        for (const auto& re : m_rhs.elements()) {
+            if (re.type() == element_t::VAR) {
+                result.insert(re);
+            }
+        }
+        return result;
+    }
+
+    const bool word_equation::is_simply_unsat(const bool allow_empty_assign) const {
+        if (allow_empty_assign) {
+            if ((m_lhs.length() == 0 && m_rhs.has_constant()) ||
+                (m_rhs.length() == 0 && m_lhs.has_constant())) {
+                return true;
+            }
+        } else {
+            if ((m_lhs.length() == 0 && m_rhs.length() != 0) ||
+                (m_lhs.length() != 0 && m_rhs.length() == 0)) {
+                return true;
+            }
+            // check inconsistent heads when having same length
+            const auto& lh = m_lhs.peek_front();
+            const auto& rh = m_rhs.peek_front();
+            if (check_heads(element_t::CONST, element_t::CONST) && lh.value() != rh.value())
+                return true;
+        }
+        return false;
+    }
+
+    const bool word_equation::check_heads(const element_t& lht, const element_t& rht) const {
+        return m_lhs.check_front(lht) && m_rhs.check_front(rht);
+    }
+
+    void word_equation::trim_prefix() {
+        while (m_lhs.peek_front().type() == m_rhs.peek_front().type() &&
+               m_lhs.peek_front().value() == m_rhs.peek_front().value()) {
+            m_lhs.remove_front();
+            m_rhs.remove_front();
+        }
+    }
+
+    void word_equation::replace(const element& tgt, const word_term& subst) {
+        m_lhs.replace(tgt, subst);
+        m_rhs.replace(tgt, subst);
+    }
+
+    const bool word_equation::operator>(const word_equation& other) const {
+        const word_term& larger_word_term = m_lhs > m_rhs ? m_lhs : m_rhs;
+        const word_term& smaller_word_term = m_lhs > m_rhs ? m_rhs : m_lhs;
+        const word_term& other_larger = other.m_lhs > other.m_rhs ? other.m_lhs : other.m_rhs;
+        const word_term& other_smaller = other.m_lhs > other.m_rhs ? other.m_rhs : other.m_lhs;
+        if (smaller_word_term > other_smaller) return true;
+        if (other_smaller > smaller_word_term) return false;
+        return larger_word_term > other_larger;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const word_equation& we) {
+        os << we.m_lhs << " = " << we.m_rhs;
+        return os;
+    }
+
+    const std::set<element, compare_elem> state::variables() const {
+        std::set<element, compare_elem> result;
+        for (const auto& we : m_word_equations) {
+            for (const auto& s : we.lhs().elements()) {
+                if (s.type() == element_t::VAR) {
+                    result.insert(s);
+                }
+            }
+            for (const auto& s : we.rhs().elements()) {
+                if (s.type() == element_t::VAR) {
+                    result.insert(s);
+                }
+            }
+        }
+        return result;
+    }
+
+    const bool state::is_inconsistent() const {
+        for (const auto& we: m_word_equations) {
+            if (we.is_simply_unsat()) return true;
+        }
+        return false;
+    }
+
+    const bool state::is_in_solved_form() const {
+        // TODO: improve this
+        for (const auto& we: m_word_equations) {
+            if (!(we.lhs().length() == 0 && we.rhs().length() == 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void state::add_word_equation(word_equation we) {
+        we.trim_prefix();
+        m_word_equations.insert(we);
+    }
+
+    state state::replace(const element& tgt, const word_term& subst) const {
+        state result;
+        for (auto we : m_word_equations) {
+            we.replace(tgt, subst);
+            result.add_word_equation(we);
+        }
+        return result;
+    }
+
+    const std::list<state> state::transform() const {
+        std::list<state> result;
+        if (is_inconsistent()) return result;
+
+        const word_equation& curr_we = *m_word_equations.begin();
+        const element& x = curr_we.lhs().peek_front();
+        const element& y = curr_we.rhs().peek_front();
+        if (curr_we.check_heads(element_t::VAR, element_t::VAR)) {
+            const word_term yx{std::list<element>{y, x}};
+            result.push_back(replace(x, yx));
+            const word_term xy{std::list<element>{x, y}};
+            result.push_back(replace(y, xy));
+            const word_term single_y{std::list<element>{y}};
+            result.push_back(replace(x, single_y));
+        } else {
+            const bool var_cons_headed = curr_we.lhs().check_front(element_t::VAR);
+            const element& v = var_cons_headed ? x : y;
+            const element& c = var_cons_headed ? y : x;
+            const word_term cv{std::list<element>{c, v}};
+            result.push_back(replace(v, cv));
+            const word_term single_c{std::list<element>{c}};
+            result.push_back(replace(v, single_c));
+        }
+        return result;
+    }
+
+    const bool state::operator>(const state& other) const {
+        if (m_word_equations.size() > other.m_word_equations.size()) return true;
+        if (m_word_equations.size() < other.m_word_equations.size()) return false;
+        auto we_it_other = other.m_word_equations.begin();
+        for (const auto& we : m_word_equations) {
+            if (we > *we_it_other) return true;
+            if (*we_it_other > we) return false;
+            we_it_other++;
+        }
+        return false;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const state& s) {
+        for (const auto& we : s.m_word_equations) {
+            os << we << std::endl;
+        }
+        return os;
+    }
+
+    theory_str::theory_str(ast_manager& m, theory_str_params const& params) :
+            theory{m.mk_family_id("seq")}, m_scope_level{0}, m_params{params} {
+    }
+
+    void theory_str::display(std::ostream& os) const {
+        os << "TODO: theory_str display" << std::endl;
+    }
+
+    void theory_str::init(context *ctx) {
         theory::init(ctx);
     }
 
-    bool theory_str::internalize_atom(app * atom, bool gate_ctx) {
+    bool theory_str::internalize_atom(app *atom, bool gate_ctx) {
         return internalize_term(atom);
     }
 
-    bool theory_str::internalize_term(app * term) {
-        context & ctx = get_context();
-        ast_manager & m = get_manager();
+    bool theory_str::internalize_term(app *term) {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
         SASSERT(term->get_family_id() == get_family_id());
-
-        TRACE("str", tout << "internalizing term: " << mk_ismt2_pp(term, get_manager()) << std::endl;);
+        TRACE("str", tout << "internalizing term: " << mk_ismt2_pp(term, m) << std::endl;);
 
         unsigned num_args = term->get_num_args();
         for (unsigned i = 0; i < num_args; ++i) {
             ctx.internalize(term->get_arg(i), false);
         }
         if (ctx.e_internalized(term)) {
-            enode * e = ctx.get_enode(term);
+            enode *e = ctx.get_enode(term);
             mk_var(e);
             return true;
         }
-//        std::cout << "the term: " << mk_ismt2_pp(term, get_manager()) << " is bool? "<< m.is_bool(term) << std::endl;
-        enode * e = ctx.mk_enode(term, false, m.is_bool(term), true);
+        // std::cout << "the term: " << mk_ismt2_pp(term, m) << " is bool? " << m.is_bool(term)
+        // << std::endl;
+        enode *e = ctx.mk_enode(term, false, m.is_bool(term), true);
         if (m.is_bool(term)) {
             bool_var bv = ctx.mk_bool_var(term);
             ctx.set_var_theory(bv, get_id());
@@ -62,9 +346,10 @@ namespace smt {
         }
         // make sure every argument is attached to a theory variable
         for (unsigned i = 0; i < num_args; ++i) {
-            enode * arg = e->get_arg(i);
+            enode *arg = e->get_arg(i);
             theory_var v_arg = mk_var(arg);
-            TRACE("str", tout << "arg has theory var #" << v_arg << std::endl;); (void)v_arg;
+            TRACE("str", tout << "arg has theory var #" << v_arg << std::endl;);
+            (void) v_arg;
         }
 
         theory_var v = mk_var(e);
@@ -72,21 +357,192 @@ namespace smt {
         return true;
     }
 
-    theory_var theory_str::mk_var(enode* n) {
+    theory_var theory_str::mk_var(enode *n) {
         TRACE("str", tout << "mk_var for " << mk_pp(n->get_owner(), get_manager()) << std::endl;);
-//        ast_manager & m = get_manager();
-        if (!(is_string_theory_term(n->get_owner()))) {
+        if (!(is_theory_str_term(n->get_owner()))) {
             return null_theory_var;
         }
         if (is_attached_to_var(n)) {
-            TRACE("str", tout << "already attached to theory var v#" << n->get_th_var(get_id()) << std::endl;);
+            TRACE("str", tout << "already attached to theory var v#" << n->get_th_var(get_id())
+                              << std::endl;);
             return n->get_th_var(get_id());
         } else {
             theory_var v = theory::mk_var(n);
-            TRACE("str", tout << "new theory var v#" << v << " find " << get_enode(v) << std::endl;);
+            TRACE("str", tout << "new theory var v#" << v << " find " << get_enode(v)
+                              << std::endl;);
             get_context().attach_th_var(n, this, v);
             get_context().mark_as_relevant(n);
             return v;
+        }
+    }
+
+    model_value_proc *theory_str::mk_value(enode *n, model_generator& mg) {
+        ast_manager& m = get_manager();
+        TRACE("str", tout << "mk_value for: " << mk_ismt2_pp(n->get_owner(), m) << " (sort "
+                          << mk_ismt2_pp(m.get_sort(n->get_owner()), m) << ")" << std::endl;);
+        app_ref owner{m};
+        owner = n->get_owner();
+
+        // if the owner is not internalized, it doesn't have an enode associated.
+        SASSERT(get_context().e_internalized(owner));
+        return alloc(expr_wrapper_proc, owner);
+    }
+
+    void theory_str::add_theory_assumptions(expr_ref_vector& assumptions) {
+        TRACE("str", tout << "add theory assumption for theory_str" << std::endl;);
+    }
+
+    lbool theory_str::validate_unsat_core(expr_ref_vector& unsat_core) {
+        return l_undef;
+    }
+
+    void theory_str::new_eq_eh(theory_var x, theory_var y) {
+        ast_manager& m = get_manager();
+        enode *n1 = get_enode(x);
+        enode *n2 = get_enode(y);
+        expr_ref e1{n1->get_owner(), m};
+        expr_ref e2{n2->get_owner(), m};
+        expr_pair we{e1, e2};
+        // std::cout << "new equality " << get_context().get_scope_level() << ": "
+        // << mk_ismt2_pp(n1->get_owner(), m) << " = " << mk_ismt2_pp(n2->get_owner(), m)
+        // << std::endl;
+
+        m_we_expr_memo.push_back(we);
+        TRACE("str", tout << "new eq: " << mk_ismt2_pp(n1->get_owner(), m) << " = "
+                          << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
+    }
+
+    void theory_str::new_diseq_eh(theory_var x, theory_var y) {
+        ast_manager& m = get_manager();
+        enode *n1 = get_enode(x);
+        enode *n2 = get_enode(y);
+        expr_ref e1{n1->get_owner(), m};
+        expr_ref e2{n2->get_owner(), m};
+        expr_pair wine{e1, e2};
+        // std::cout << "new disequality " << get_context().get_scope_level() << ": "
+        // << mk_ismt2_pp(n1->get_owner(), m) << " = " << mk_ismt2_pp(n2->get_owner(), m)
+        // << std::endl;
+
+        m_wine_expr_memo.push_back(wine);
+        TRACE("str", tout << "new diseq: " << mk_ismt2_pp(n1->get_owner(), m) << " = "
+                          << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
+    }
+
+    void theory_str::init_search_eh() {
+    }
+
+    void theory_str::relevant_eh(app *n) {
+        TRACE("str", tout << "relevant: " << mk_ismt2_pp(n, get_manager()) << std::endl;);
+    }
+
+    void theory_str::assign_eh(bool_var v, bool is_true) {
+        // YFC: membership constraint goes here
+        std::cout << "assign: v" << v << " #" << get_context().bool_var2expr(v)->get_id()
+                  << " is_true: " << is_true << std::endl;
+
+        TRACE("str", tout << "assign: v" << v << "--> "
+                          << mk_ismt2_pp(get_context().bool_var2expr(v), get_manager())
+                          << " is_true: " << is_true << std::endl;);
+    }
+
+    void theory_str::push_scope_eh() {
+        m_scope_level += 1;
+        m_we_expr_memo.push_scope();
+        m_wine_expr_memo.push_scope();
+        // std::cout << "push to " << m_scope_level << std::endl;
+        TRACE("str", tout << "push to " << m_scope_level << std::endl;);
+    }
+
+    void theory_str::pop_scope_eh(unsigned num_scopes) {
+        m_scope_level -= num_scopes;
+        m_we_expr_memo.pop_scope(num_scopes);
+        m_wine_expr_memo.pop_scope(num_scopes);
+
+        // std::cout << "pop " << num_scopes << " to " << m_scope_level << std::endl;
+        TRACE("str", tout << "pop " << num_scopes << " to " << m_scope_level << std::endl;);
+    }
+
+    void theory_str::reset_eh() {
+        TRACE("str", tout << "resetting" << std::endl;);
+    }
+
+    final_check_status theory_str::final_check_eh() {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        std::cout << "final_check at level: " << ctx.get_scope_level() << "\n" << std::endl;
+        std::set<state, compare_state> processed;
+        std::stack<state> pending;
+
+        // create root state
+        state root;
+        for (const auto& we_memo : m_we_expr_memo) {
+            std::cout << "formula:" << mk_ismt2_pp(we_memo.first, m) << "="
+                      << mk_ismt2_pp(we_memo.second, m) << std::endl;
+            const word_term& lhs = get_word_term(we_memo.first);
+            const word_term& rhs = get_word_term(we_memo.second);
+            root.add_word_equation(word_equation(rhs, lhs));
+        }
+        pending.push(root);
+        std::cout << "identified root states (color: " << BOLDGREEN << "GREEN" << RESET
+                  << " for variables and " << BLUE << "BLUE" << RESET << " for constants"
+                  << std::endl;
+
+        // consider all empty string assignments
+        while (!pending.empty()) {
+            state curr_state = pending.top();
+            pending.pop();
+            if (curr_state.is_in_solved_form()) return FC_DONE;
+            if (!curr_state.is_inconsistent() && processed.find(curr_state) == processed.end()) {
+                std::cout << curr_state << std::endl;
+                processed.insert(curr_state);
+                for (const auto& var : curr_state.variables()) {
+                    word_term empty;
+                    pending.push(curr_state.replace(var, empty));
+                }
+            }
+        }
+        for (const auto& s : processed) {
+            pending.push(s);
+        }
+
+        // start the check SAT procedure
+        std::cout << "start the check SAT procedure" << std::endl;
+        while (!pending.empty()) {
+            state curr_state = pending.top();
+            pending.pop();
+            std::cout << "from " << curr_state << std::endl;
+            for (const auto& next : curr_state.transform()) {
+                if (!next.is_inconsistent() && processed.find(next) == processed.end()) {
+                    if (next.is_in_solved_form()) {
+                        std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
+                        return FC_DONE;
+                    }
+                    std::cout << "to " << next << std::endl;
+                    processed.insert(next);
+                    pending.push(next);
+                }
+            }
+        }
+
+        expr *refinement_expr = nullptr;
+        for (const auto& memo : m_we_expr_memo) {
+            expr *const e = m.mk_not(mk_eq_atom(memo.first, memo.second));
+            if (refinement_expr == nullptr) {
+                refinement_expr = e;
+            } else {
+                refinement_expr = m.mk_or(refinement_expr, e);
+            }
+            std::cout << memo.first << " = " << memo.second << " \n";
+        }
+
+        if (refinement_expr != nullptr) {
+            std::cout << "asserting " << mk_pp(refinement_expr, m) << std::endl;
+            assert_axiom(refinement_expr);
+            TRACE("str", tout << "final check" << std::endl;);
+            return FC_CONTINUE;
+        } else {
+            TRACE_CODE(dump_assignments(););
+            return FC_DONE;
         }
     }
 
@@ -98,653 +554,71 @@ namespace smt {
         TRACE("str", tout << "propagating..." << std::endl;);
     }
 
-    void theory_str::reset_eh() {
-        TRACE("str", tout << "resetting" << std::endl;);
-    }
-
-    void theory_str::add_theory_assumptions(expr_ref_vector & assumptions) {
-        TRACE("str", tout << "add theory assumption for theory_str" << std::endl;);
-    }
-
-    lbool theory_str::validate_unsat_core(expr_ref_vector & unsat_core) {
-        return l_undef;
-    }
-
-    void theory_str::init_search_eh() {
-
-    }
-
-    void theory_str::new_eq_eh(theory_var x, theory_var y) {
-
-        ast_manager & m = get_manager();
-        enode* n1 = get_enode(x);
-        enode* n2 = get_enode(y);
-        expr_ref e1(n1->get_owner(), m);
-        expr_ref e2(n2->get_owner(), m);
-        equation_pair weq1(e1, e2);
-//        std::cout << "new equality " << get_context().get_scope_level() << ": "<<
-//        mk_ismt2_pp(get_enode(x)->get_owner(), get_manager()) << " = " <<
-//        mk_ismt2_pp(get_enode(y)->get_owner(), get_manager()) << std::endl;
-
-        m_eqs.push_back(weq1);
-        TRACE("str", tout << "new eq: " << mk_ismt2_pp(get_enode(x)->get_owner(), get_manager()) << " = " <<
-              mk_ismt2_pp(get_enode(y)->get_owner(), get_manager()) << std::endl;);
-    }
-
-    void theory_str::new_diseq_eh(theory_var x, theory_var y) {
-        ast_manager & m = get_manager();
-        enode* n1 = get_enode(x);
-        enode* n2 = get_enode(y);
-        expr_ref e1(n1->get_owner(), m);
-        expr_ref e2(n2->get_owner(), m);
-        equation_pair weq1(e1, e2);
-//        std::cout << "new disequality " << get_context().get_scope_level() << ": "<<
-//                  mk_ismt2_pp(get_enode(x)->get_owner(), get_manager()) << " = " <<
-//                  mk_ismt2_pp(get_enode(y)->get_owner(), get_manager()) << std::endl;
-
-        m_nqs.push_back(weq1);
-        TRACE("str", tout << "new diseq: " << mk_ismt2_pp(get_enode(x)->get_owner(), get_manager()) << " = " <<
-                          mk_ismt2_pp(get_enode(y)->get_owner(), get_manager()) << std::endl;);
-    }
-
-    void theory_str::relevant_eh(app * n) {
-        TRACE("str", tout << "relevant: " << mk_ismt2_pp(n, get_manager()) << std::endl;);
-    }
-
-    void theory_str::assign_eh(bool_var v, bool is_true) {
-        //YFC:membership constraint goes here
-        std::cout << "assign: v" << v << " #" << get_context().bool_var2expr(v)->get_id() << " is_true: " << is_true << std::endl;
-
-        TRACE("str", tout << "assign: v" << v << "--> " << mk_ismt2_pp(get_context().bool_var2expr(v), get_manager()) << " is_true: " << is_true << std::endl;);
-    }
-
-    void theory_str::push_scope_eh() {
-        sLevel += 1;
-        m_eqs.push_scope();
-        m_nqs.push_scope();
-     //   std::cout<< "push to " << sLevel << std::endl;
-        TRACE("str", tout << "push to " << sLevel << std::endl;);
-    }
-
-    void theory_str::pop_scope_eh(unsigned num_scopes) {
-        sLevel -= num_scopes;
-        m_eqs.pop_scope(num_scopes);
-        m_nqs.pop_scope(num_scopes);
-
-     //   std::cout<< "pop " << num_scopes << " to " << sLevel << std::endl;
-        TRACE("str", tout << "pop " << num_scopes << " to " << sLevel << std::endl;);
-
-    }
-
-
-
-    final_check_status theory_str::final_check_eh() {
-        ast_manager & m = get_manager();
-        std::cout<< "final_check at level: " << get_context().get_scope_level() << "\n"<<std::endl;
-
-        std::set<state,compare_state> processed;
-        std::stack<state> todo;
-
-        //create root state
-        state root(m);
-        for (auto const& e : m_eqs) {
-            std::cout<< "formula:"<< mk_ismt2_pp(e.ls(), get_manager())<<"="<<mk_ismt2_pp(e.rs(), get_manager())<<std::endl;
-
-            word_term lhs=get_word_term(e.ls());
-            word_term rhs=get_word_term(e.rs());
-            root.add_word_equation(word_equ(rhs,lhs));
-        }
-
-        todo.push(root);
-        std::cout<< "identified root states (color: "<<BOLDGREEN<<"GREEN"<<RESET<<" for variables and "<<BLUE<<"BLUE"<<RESET<<" for constants"<<std::endl;
-
-        //consider all empty string assignments
-
-        while(!todo.empty()){
-            state cur=todo.top();
-            todo.pop();
-
-            if(cur.is_in_solved_form()){
-                return FC_DONE;
-            }
-
-            if(!cur.is_inconsistent() && processed.find(cur)==processed.end()) {
-                std::cout<< cur<<std::endl;
-                processed.insert(cur);
-                for(sym s:cur.get_variables()){
-                    word_term empty(m);
-                    todo.push(cur.replace(s,empty));
-                }
-            }
-        }
-
-        for (auto it = processed.begin(); it != processed.end(); ) {
-            todo.push(*it++);
-        }
-
-        std::cout<< "start the satisfibility procedure"<<std::endl;
-
-        //start the word equation satisfibiity procedure
-        while(!todo.empty()){
-            state cur=todo.top();
-            todo.pop();
-            std::cout<< "from "<<cur<<std::endl;
-
-            for(state& next:cur.transport()){
-                if(!next.is_inconsistent() && processed.find(next)==processed.end()){
-                    if(next.is_in_solved_form()){
-                        std::cout<< "to "<<next<<RED<<"(solved form)"<<RESET<<std::endl;
-                        return FC_DONE;
-                    }
-                    std::cout<< "to "<<next<<std::endl;
-                    processed.insert(next);
-                    todo.push(next);
-                }
-            }
-        }
-
-        //The word equations are UNSAT, remove them from the solution space
-        expr* toAssert=NULL;
-        for (auto const& e : m_eqs) {
-            expr* exp=m.mk_not(mk_eq_atom( e.ls(),e.rs()));
-            if(toAssert==NULL){
-                toAssert=exp;
-            }else{
-                toAssert = m.mk_or(toAssert, exp);
-            }
-            std::cout << e.ls() << " = " << e.rs() << " \n";
-        }
-
-        for (auto const& e : m_nqs) {
-            expr* exp=mk_eq_atom( e.ls(),e.rs());
-            if(toAssert==NULL){
-                toAssert=exp;
-            }else{
-                toAssert = m.mk_or(toAssert, exp);
-            }
-            std::cout << e.ls() << " != " << e.rs() << " \n";
-        }
-
-        if(toAssert!=NULL) {
-            std::cout << "asserting " << mk_pp(toAssert, m) << std::endl;
-            assert_axiom(toAssert);
-            TRACE("str", tout << "final check" << std::endl;);
-            return FC_CONTINUE;
-
-        }else {
-            TRACE_CODE(dump_assignments(););
-            return FC_DONE;
-        }
-    }
-    void theory_str::init_model(model_generator & mg) {
+    void theory_str::init_model(model_generator& mg) {
         TRACE("str", tout << "initializing model" << std::endl;);
     }
 
-    model_value_proc * theory_str::mk_value(enode * n, model_generator & mg) {
-        TRACE("str", tout << "mk_value for: " << mk_ismt2_pp(n->get_owner(), get_manager()) <<
-                          " (sort " << mk_ismt2_pp(get_manager().get_sort(n->get_owner()), get_manager()) << ")" << std::endl;);
-        ast_manager & m = get_manager();
-        app_ref owner(m);
-        owner = n->get_owner();
-
-        // If the owner is not internalized, it doesn't have an enode associated.
-        SASSERT(get_context().e_internalized(owner));
-        return alloc(expr_wrapper_proc, owner);
-
+    void theory_str::finalize_model(model_generator& mg) {
     }
 
-    void theory_str::finalize_model(model_generator & mg) {}
-    void theory_str::display(std::ostream & out) const {
-        out << "TODO: theory_str display" << std::endl;
+    void theory_str::assert_axiom(expr *const e) {
+        if (e == nullptr) return;
+        if (get_manager().is_true(e)) return;
+
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        TRACE("str", tout << "asserting " << mk_ismt2_pp(e, m) << std::endl;);
+
+        expr_ref ex{e, m};
+        if (!ctx.b_internalized(ex)) {
+            ctx.internalize(ex, false);
+        }
+        literal lit(ctx.get_literal(ex));
+        ctx.mark_as_relevant(lit);
+        ctx.mk_th_axiom(get_id(), 1, &lit);
     }
-
-
-
-
-
-
-    /*=====================================
-     *
-     * Helper functions of string theory
-     *
-     *=====================================*/
-
 
     void theory_str::dump_assignments() {
         TRACE_CODE(
-            ast_manager & m = get_manager();
-            context & ctx = get_context();
-            tout << "dumping all assignments:" << std::endl;
-            expr_ref_vector assignments(m);
-            ctx.get_assignments(assignments);
-            for (expr_ref_vector::iterator i = assignments.begin(); i != assignments.end(); ++i) {
-                expr * ex = *i;
-                tout << mk_ismt2_pp(ex, m) << (ctx.is_relevant(ex) ? "" : " (NOT REL)") << std::endl;
-            }
+                ast_manager& m = get_manager();
+                context& ctx = get_context();
+                tout << "dumping all assignments:" << std::endl;
+                expr_ref_vector assignments{m};
+                ctx.get_assignments(assignments);
+                for (expr *const e : assignments) {
+                    tout << mk_ismt2_pp(e, m) << (ctx.is_relevant(e) ? "" : " (NOT REL)")
+                         << std::endl;
+                }
         );
     }
 
-    void theory_str::assert_axiom(expr * _e) {
-        if (_e == nullptr)
-            return;
-
-        if (get_manager().is_true(_e)) return;
-        context & ctx = get_context();
+    const bool theory_str::is_theory_str_term(expr *const e) {
         ast_manager& m = get_manager();
-        TRACE("str", tout << "asserting " << mk_ismt2_pp(_e, m) << std::endl;);
-
-
-        expr_ref e(_e, m);
-        if (!ctx.b_internalized(e)) {
-            ctx.internalize(e, false);
-        }
-        literal lit(ctx.get_literal(e));
-        ctx.mark_as_relevant(lit);
-        ctx.mk_th_axiom(get_id(), 1, &lit);
-
-    }
-
-    bool theory_str::is_string_theory_term(expr *e){
-        ast_manager & m = get_manager();
         return (m.get_sort(e) == m.mk_sort(m.mk_family_id("seq"), _STRING_SORT, 0, nullptr));
     }
 
-    decl_kind theory_str::get_decl_kind(expr *e) {
+    decl_kind theory_str::get_decl_kind(expr *const e) {
         return to_app(e)->get_decl_kind();
     }
 
-    word_term theory_str::get_word_term(expr *e){
-        word_term result(get_manager());
-
-        if(get_decl_kind(e)==OP_STRING_CONST){
-            result.push_back_string_const(e);
-
-        }else if(get_decl_kind(e)==OP_SEQ_CONCAT){
+    word_term theory_str::get_word_term(expr *const e) {
+        if (get_decl_kind(e) == OP_STRING_CONST) {
+            std::stringstream ss;
+            ss << mk_ismt2_pp(e, get_manager());
+            return word_term::of_string(ss.str());
+        }
+        if (get_decl_kind(e) == OP_SEQ_CONCAT) {
+            word_term result;
             unsigned num_args = to_app(e)->get_num_args();
-            for (unsigned i = 0; i < num_args; ++i) {
-                word_term sub_term=get_word_term(to_app(e)->get_arg(i));
-                result.push_back(sub_term);
+            for (unsigned i = 0; i < num_args; i++) {
+                const word_term& sub_term = get_word_term(to_app(e)->get_arg(i));
+                result.concat(sub_term);
             }
-
-        }else {//is variable
-            result.push_back_string_var(e);
+            return result;
         }
-
-        return result;
-    }
-
-
-    /*=====================================
-     *
-     * For output
-     *
-     *=====================================*/
-
-    std::ostream& operator<<(std::ostream& os, const sym& s) {
-        if(s.type==STR_VAR){
-            os<<BOLDGREEN<<s.content<<" "<<RESET;
-        }else{
-            os<<BLUE<<s.content<<" "<<RESET;
-        }
-        return os;
-    }
-
-    std::ostream &operator<<(std::ostream& os, const word_term& word_t) {
-        for(auto const& s:word_t.content){
-            os<<s;
-        }
-        return os;
-    }
-
-    std::ostream &operator<<(std::ostream& os, const word_equ& word_e){
-        os<<word_e.m_lhs<<" = "<<word_e.m_rhs;
-        return os;
-    }
-
-    std::ostream &operator<<(std::ostream& os, const state& st){
-        for(auto const& we:st.weqs){
-            os<<we;
-            os<<std::endl;
-        }
-        return os;
-    }
-
-    /*=====================================
-     *
-     * For sym class
-     *
-     *=====================================*/
-
-    bool sym::operator==(const sym &other) const {
-        if (other.type != type) return false;
-        else if (other.content != content) return false;
-        else return true;
-    }
-
-    bool sym::operator>(const sym &other) const {
-        if (type < other.type) return false;
-        else if (type > other.type) return true;
-        else return content > other.content;
-    }
-
-    /*=====================================
-     *
-     * For word_term class
-     *
-     *=====================================*/
-
-
-    void word_term::push_back_string_const(expr *e){
         std::stringstream ss;
-        ss << mk_ismt2_pp(e, m);
-        std::string name = ss.str();
-        for(int i=name.length()-2;i>0;i--){
-            content.push_front(sym(STR_CONST, name.substr(i,1)));
-        }
-    }
-    void word_term::push_back(word_term &other){
-        content.insert(content.end(),other.content.begin(),other.content.end());
-    }
-    void word_term::push_back(sym s){
-        content.push_back(s);
+        ss << mk_ismt2_pp(e, get_manager());
+        return word_term::of_variable(ss.str());
     }
 
-    std::set<sym,compare_symbol> word_term::get_variables() const{
-        std::set<sym,compare_symbol> result;
-        for(auto& s:content){
-            if(s.type==STR_VAR){
-                result.insert(s);
-            }
-        }
-
-        return result;
-    }
-
-    bool word_term::has_constant() const{
-        for(auto& s:content){
-            if(s.type==STR_CONST){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void word_term::push_back_string_var(expr *e){
-        std::stringstream ss;
-        ss << mk_ismt2_pp(e, m);
-        std::string name = ss.str();
-        content.insert(content.end(),sym(STR_VAR, name));
-    }
-    void word_term::remove_front(){
-        content.pop_front();
-    }
-    sym word_term::peek_front() const{
-        return *content.begin();
-    }
-
-
-    void word_term::replace(const sym&  src, word_term& des){
-        std::list<sym>::iterator findIter = std::find(content.begin(),content.end(),src);
-        while(findIter!=content.end()){
-            content.insert(findIter, des.content.begin(),des.content.end());
-            content.erase(findIter++);
-            findIter = std::find(findIter,content.end(),src);
-        }
-    }
-
-    bool word_term::operator>(const word_term &other) const {
-        if (content.size() > other.content.size()) return true;
-        else if (content.size() < other.content.size()) return false;
-        else {
-            std::list<sym>::const_iterator otherIter=other.content.begin();
-            for(std::list<sym>::const_iterator myIter=content.begin();myIter!=content.end();myIter++){
-                if(*myIter>*otherIter) return true;
-                else if (*otherIter>*myIter) return false;
-                otherIter++;
-            }
-        }
-        return false;
-    }
-
-    word_term& word_term::operator = (const word_term & other) {
-        content.insert(content.begin(),other.content.begin(),other.content.end());
-        return *this;
-    }
-
-    /*=====================================
-    *
-    * For word_equ class
-    *
-    *=====================================*/
-
-    std::set<sym,compare_symbol> word_equ::get_variables() {
-        std::set<sym,compare_symbol> result;
-        for(auto& s:m_lhs.content){
-            if(s.type==STR_VAR){
-                result.insert(s);
-            }
-        }
-        for(auto& s:m_rhs.content){
-            if(s.type==STR_VAR){
-                result.insert(s);
-            }
-        }
-
-        return result;
-    }
-
-    void word_equ::replace(const sym&  src, word_term& des){
-        m_lhs.replace(src,des);
-        m_rhs.replace(src,des);
-    }
-
-    bool word_equ::operator>(const word_equ &other) const {
-        word_term my_larger_word_term=m_lhs>m_rhs?m_lhs:m_rhs;
-        word_term my_smaller_word_term=m_lhs>m_rhs?m_rhs:m_lhs;
-
-        word_term other_larger_word_term=other.m_lhs>other.m_rhs?other.m_lhs:other.m_rhs;
-        word_term other_smaller_word_term=other.m_lhs>other.m_rhs?other.m_rhs:other.m_lhs;
-
-        if(my_smaller_word_term>other_smaller_word_term) return true;
-        else if (other_smaller_word_term>my_smaller_word_term) return false;
-        else if(my_larger_word_term>other_larger_word_term) return true;
-        else return false;
-    }
-
-    void word_equ::removeEquivalentPrefix(){
-        while(m_lhs.peek_front().content==m_rhs.peek_front().content && m_lhs.peek_front().type==m_rhs.peek_front().type) {
-            m_lhs.remove_front();
-            m_rhs.remove_front();
-        }
-    }
-
-    /*=====================================
-     *
-     * For state class
-     *
-     *=====================================*/
-
-    void state::add_word_equation(word_equ input){
-        weqs.insert(input);
-    }
-
-    bool state::is_inconsistent(){
-
-        for(auto& weq: weqs){
-            if( (weq.ls().length()==0 && weq.rs().length()!=0) ||
-                (weq.rs().length()==0 && weq.ls().length()!=0) ){
-                return true;
-            }
-
-            if(weq.ls().peek_front().type==STR_CONST &&
-               weq.rs().peek_front().type==STR_CONST &&
-               (weq.ls().peek_front().content != weq.rs().peek_front().content))
-                return true;
-        }
-        return false;
-    }
-    bool state::is_in_solved_form(){
-        for(auto& weq: weqs){
-            if( !(weq.ls().length()==0 && weq.rs().length()==0)){
-                return false;
-            }
-
-
-        }
-
-        return true;
-
-    }
-
-
-    std::set<sym,compare_symbol> state::get_variables() const {
-        std::set<sym, compare_symbol> result;
-        for (auto &weq:weqs) {
-            for(auto& s:weq.ls().content){
-                if(s.type==STR_VAR){
-                    result.insert(s);
-                }
-            }
-            for(auto& s:weq.rs().content){
-                if(s.type==STR_VAR){
-                    result.insert(s);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    std::list<state> state::transport(){
-
-        std::list<state> result;
-
-        //the state is inconsistent, matching an empty word term with a non-empty one
-        for(auto& weq: weqs){
-            if( (weq.ls().length()==0 && weq.rs().has_constant()) ||
-                (weq.rs().length()==0 && weq.ls().has_constant()) ){
-                return result;
-            }
-        }
-
-
-
-        std::list<sym> source;
-        std::list<word_term> destination;
-
-        word_equ main_equation=*weqs.begin();
-
-        word_term lhs=main_equation.ls();
-        word_term rhs=main_equation.rs();
-
-        //remove symbols that are identical in both word terms
-        while(lhs.peek_front().content==rhs.peek_front().content && lhs.peek_front().type==rhs.peek_front().type){
-            lhs.remove_front();
-            rhs.remove_front();
-        }
-
-        //if both are string constant and their content are different, this state is inconsistent and we can stop.
-        if (lhs.peek_front().type==STR_CONST && rhs.peek_front().type==STR_CONST)return result;
-
-        if(lhs.peek_front().type==STR_VAR && rhs.peek_front().type==STR_VAR){
-            //Encountered the case X...=Y...
-//            //X => epsilon
-//            source.push_back(lhs.peek_front());
-//            destination.push_back(word_term(m));
-//            //Y => epsilon
-//            source.push_back(rhs.peek_front());
-//            destination.push_back(word_term(m));
-            //X => YX
-            source.push_back(lhs.peek_front());
-            word_term dest1(m);
-            dest1.push_back(rhs.peek_front());
-            dest1.push_back(lhs.peek_front());
-            destination.push_back(dest1);
-            //Y => XY
-            source.push_back(rhs.peek_front());
-            word_term dest2(m);
-            dest2.push_back(lhs.peek_front());
-            dest2.push_back(rhs.peek_front());
-            destination.push_back(dest2);
-            //X => Y
-            source.push_back(lhs.peek_front());
-            word_term dest3(m);
-            dest3.push_back(rhs.peek_front());
-            destination.push_back(dest3);
-        }else{
-            sym *vsym,*csym;
-
-            //the types of the fronts of lhs and rhs are different
-            if(lhs.peek_front().type==STR_VAR){
-                sym var=lhs.peek_front();
-                vsym=&var;
-                sym con=rhs.peek_front();
-                csym=&con;
-            }else{
-                sym var=rhs.peek_front();
-                vsym=&var;
-                sym con=lhs.peek_front();
-                csym=&con;
-            }
-
-//            //X => epsilon
-//            source.push_back(*vsym);
-//            destination.push_back(word_term(m));
-
-            //X => aX
-            source.push_back(*vsym);
-            word_term dest1(m);
-            dest1.push_back(*csym);
-            dest1.push_back(*vsym);
-            destination.push_back(dest1);
-
-            //X => a
-            source.push_back(*vsym);
-            word_term dest2(m);
-            dest2.push_back(*csym);
-            destination.push_back(dest2);
-        }
-
-        std::list<sym>::iterator source_iter=source.begin();
-        std::list<word_term>::iterator destination_iter=destination.begin();
-
-        while(source_iter!=source.end()){
-            result.push_back(replace(*source_iter,*destination_iter));
-            source_iter++;
-            destination_iter++;
-        }
-
-        return result;
-    }
-
-    state state::replace(const sym&  src, word_term& des){
-
-        state to_result(m);
-
-        for(auto s:weqs){
-            s.replace(src,des);
-            s.removeEquivalentPrefix();
-            to_result.add_word_equation(s);
-        }
-        return to_result;
-
-    }
-
-
-    bool state::operator>(const state &other) const {
-        if(weqs.size()>other.weqs.size()) return true;
-        else if (weqs.size()<other.weqs.size()) return false;
-
-        std::set<word_equ>::iterator weqs_iter=weqs.begin();
-        std::set<word_equ>::iterator other_weqs_iter=other.weqs.begin();
-        while(weqs_iter!=weqs.end()){
-            if((*weqs_iter) > (*other_weqs_iter)) return true;
-            if((*other_weqs_iter) > (*weqs_iter)) return false;
-            weqs_iter++;
-            other_weqs_iter++;
-        }
-        return false;
-
-    }
-
-}; /* namespace smt */
+};
