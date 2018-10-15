@@ -3,9 +3,8 @@
 
 #include <set>
 #include <stack>
-#include <vector>
-#include <map>
 #include <list>
+#include <map>
 #include "util/trail.h"
 #include "util/union_find.h"
 #include "util/scoped_vector.h"
@@ -24,13 +23,14 @@
 namespace smt {
 
     enum class element_t {
-        CONST, VAR
+        CONST, VAR, NONE
     };
 
     class element {
-        const element_t m_type;
-        const std::string m_value;
+        element_t m_type;
+        std::string m_value;
     public:
+        static const element& null();
         element(const element_t& t, std::string v) : m_type{t}, m_value{std::move(v)} {}
         const element_t& type() const { return m_type; }
         const std::string& value() const { return m_value; }
@@ -40,12 +40,11 @@ namespace smt {
     };
 
     class word_term {
-    public:
-        static word_term of_string(const std::string& literal);
-        static word_term of_variable(const std::string& name);
-    private:
         std::list<element> m_elements;
     public:
+        static const word_term& null();
+        static word_term of_string(const std::string& literal);
+        static word_term of_variable(const std::string& name);
         word_term() = default;
         word_term(const word_term& other);
         explicit word_term(std::list<element> v) : m_elements{std::move(v)} {}
@@ -66,12 +65,15 @@ namespace smt {
         word_term m_lhs;
         word_term m_rhs;
     public:
-        word_equation(const word_term& lhs, const word_term& rhs) : m_lhs{lhs}, m_rhs{rhs} {}
+        word_equation(const word_term& lhs, const word_term& rhs);
         word_equation(const word_equation& other) = default;
         const word_term& lhs() const { return m_lhs; }
         const word_term& rhs() const { return m_rhs; }
         const std::set<element> variables() const;
+        const element& def_var() const;
+        const word_term& def_body() const;
         const bool is_simply_unsat(bool allow_empty_assign = false) const;
+        const bool is_in_definition_form() const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
         void trim_prefix();
         void replace(const element& tgt, const word_term& subst);
@@ -79,18 +81,27 @@ namespace smt {
         friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
     };
 
+    using def_node = element;
+    using def_nodes = std::set<def_node>;
+    using def_graph = std::map<element, def_nodes>;
+
     class state {
         std::set<word_equation> m_word_equations;
     public:
         state() = default;
         const std::set<element> variables() const;
         const bool is_inconsistent() const;
+        const bool is_in_definition_form() const;
         const bool is_in_solved_form() const;
         void add_word_equation(word_equation we);
         state replace(const element& tgt, const word_term& subst) const;
         const std::list<state> transform() const;
         const bool operator<(const state& other) const;
         friend std::ostream& operator<<(std::ostream& os, const state& s);
+    private:
+        static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
+                                             def_nodes& marked, def_nodes& checked);
+        const bool definition_form_acyclic() const;
     };
 
     class neilson_based_solver {

@@ -1,15 +1,17 @@
 #include <algorithm>
-#include "ast/ast_smt2_pp.h"
-#include "smt/smt_context.h"
-#include "smt/theory_str.h"
-#include "smt/smt_model_generator.h"
-#include "ast/ast_pp.h"
+#include <queue>
+#include <map>
 #include "ast/ast_ll_pp.h"
-#include "smt/theory_seq_empty.h"
-#include "smt/theory_arith.h"
+#include "ast/ast_pp.h"
+#include "ast/ast_smt2_pp.h"
 #include "ast/ast_util.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "smt_kernel.h"
+#include "smt/smt_context.h"
+#include "smt/smt_model_generator.h"
+#include "smt/theory_arith.h"
+#include "smt/theory_seq_empty.h"
+#include "smt/theory_str.h"
 
 /* TODO:
  *  1. better algorithm for checking solved form
@@ -37,6 +39,11 @@
 
 namespace smt {
 
+    const element& element::null() {
+        static const element e{element_t::NONE, ""};
+        return e;
+    }
+
     const bool element::operator==(const element& other) const {
         if (other.m_type != m_type) return false;
         return other.m_value == m_value;
@@ -55,6 +62,11 @@ namespace smt {
             os << BLUE << s.value() << " " << RESET;
         }
         return os;
+    }
+
+    const word_term& word_term::null() {
+        static const word_term w;
+        return w;
     }
 
     word_term word_term::of_string(const std::string& literal) {
@@ -140,6 +152,16 @@ namespace smt {
         return os;
     }
 
+    word_equation::word_equation(const smt::word_term& lhs, const smt::word_term& rhs) {
+        if (lhs < rhs) {
+            m_lhs = lhs;
+            m_rhs = rhs;
+        } else {
+            m_lhs = rhs;
+            m_rhs = lhs;
+        }
+    }
+
     const std::set<element> word_equation::variables() const {
         std::set<element> result;
         for (const auto& v : m_lhs.variables()) {
@@ -149,6 +171,26 @@ namespace smt {
             result.insert(v);
         }
         return result;
+    }
+
+    const element& word_equation::def_var() const {
+        if (m_lhs.length() == 1 && m_lhs.check_front(element_t::VAR)) {
+            return m_lhs.peek_front();
+        }
+        if (m_rhs.length() == 1 && m_rhs.check_front(element_t::VAR)) {
+            return m_rhs.peek_front();
+        }
+        return element::null();
+    }
+
+    const word_term& word_equation::def_body() const {
+        if (m_lhs.length() == 1 && m_lhs.check_front(element_t::VAR)) {
+            return m_rhs;
+        }
+        if (m_rhs.length() == 1 && m_rhs.check_front(element_t::VAR)) {
+            return m_lhs;
+        }
+        return word_term::null();
     }
 
     const bool word_equation::is_simply_unsat(const bool allow_empty_assign) const {
@@ -171,6 +213,10 @@ namespace smt {
         return false;
     }
 
+    const bool word_equation::is_in_definition_form() const {
+        return !(def_var() == element::null());
+    }
+
     const bool word_equation::check_heads(const element_t& lht, const element_t& rht) const {
         return m_lhs.check_front(lht) && m_rhs.check_front(rht);
     }
@@ -188,13 +234,9 @@ namespace smt {
     }
 
     const bool word_equation::operator<(const word_equation& other) const {
-        const word_term& larger_word_term = m_lhs < m_rhs ? m_rhs : m_lhs;
-        const word_term& smaller_word_term = m_lhs < m_rhs ? m_lhs : m_rhs;
-        const word_term& other_larger = other.m_lhs < other.m_rhs ? other.m_rhs : other.m_lhs;
-        const word_term& other_smaller = other.m_lhs < other.m_rhs ? other.m_lhs : other.m_rhs;
-        if (smaller_word_term < other_smaller) return true;
-        if (other_smaller < smaller_word_term) return false;
-        return larger_word_term < other_larger;
+        if (m_lhs < other.m_lhs) return true;
+        if (other.m_lhs < m_lhs) return false;
+        return m_rhs < other.m_rhs;
     }
 
     std::ostream& operator<<(std::ostream& os, const word_equation& we) {
@@ -213,15 +255,22 @@ namespace smt {
     }
 
     const bool state::is_inconsistent() const {
-        for (const auto& we: m_word_equations) {
+        for (const auto& we : m_word_equations) {
             if (we.is_simply_unsat()) return true;
         }
         return false;
     }
 
+    const bool state::is_in_definition_form() const {
+        for (const auto& we : m_word_equations) {
+            if (!we.is_in_definition_form()) return false;
+        }
+        return true;
+    }
+
     const bool state::is_in_solved_form() const {
-        // TODO: improve this
-        for (const auto& we: m_word_equations) {
+        if (is_in_definition_form() && definition_form_acyclic()) return true;
+        for (const auto& we : m_word_equations) {
             if (!(we.lhs().length() == 0 && we.rhs().length() == 0)) {
                 return false;
             }
@@ -286,6 +335,42 @@ namespace smt {
             os << we << std::endl;
         }
         return os;
+    }
+
+    const bool state::dag_def_check_node(const def_graph& graph, const def_node& node,
+                                         def_nodes& marked, def_nodes& checked) {
+        if (checked.find(node) != checked.end()) {
+            return true;
+        }
+        if (marked.find(node) != marked.end()) {
+            return false;
+        }
+        marked.insert(node);
+        auto next_it = graph.find(node);
+        if (next_it != graph.end()) {
+            for (const auto& next : next_it->second) {
+                if (!dag_def_check_node(graph, next, marked, checked)) return false;
+            }
+        }
+        checked.insert(node);
+        return true;
+    }
+
+    const bool state::definition_form_acyclic() const {
+        def_graph graph;
+        def_nodes marked;
+        def_nodes checked;
+        for (const auto& we : m_word_equations) {
+            const def_node& node = we.def_var();
+            if (graph.find(node) != graph.end()) {
+                return false; // definition not unique
+            }
+            graph[node] = we.def_body().variables();
+        }
+        for (const auto& kv : graph) {
+            if (!dag_def_check_node(graph, kv.first, marked, checked)) return false;
+        }
+        return true;
     }
 
     neilson_based_solver::neilson_based_solver(const state& root) : m_solution_found{false} {
