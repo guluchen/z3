@@ -1,6 +1,6 @@
 #include <algorithm>
-#include <queue>
-#include <map>
+#include <cstdlib>
+#include <ctime>
 #include "ast/ast_ll_pp.h"
 #include "ast/ast_pp.h"
 #include "ast/ast_smt2_pp.h"
@@ -83,6 +83,42 @@ namespace smt {
         return result;
     }
 
+    const bool word_term::prefix_mismatch_in_consts(const word_term& w1, const word_term& w2) {
+        auto it1 = w1.elements().begin();
+        auto it2 = w2.elements().begin();
+        if (it1 == w1.elements().end() || it2 == w2.elements().end()) return false;
+        while (*it1 == *it2) {
+            if (++it1 == w1.elements().end() || ++it2 == w2.elements().end()) return false;
+        }
+        return (it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
+                it1->value() != it2->value());
+    }
+
+    const bool word_term::suffix_mismatch_in_consts(const word_term& w1, const word_term& w2) {
+        auto it1 = w1.elements().end();
+        auto it2 = w2.elements().end();
+        if (it1 == w1.elements().begin() || it2 == w2.elements().begin()) return false;
+        while (*it1 == *it2) {
+            if (--it1 == w1.elements().begin() || --it2 == w2.elements().begin()) return false;
+        }
+        return (it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
+                it1->value() != it2->value());
+    }
+
+    const bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
+        if ((w1.length() == 0 && w2.length() != 0) || (w1.length() != 0 && w2.length() == 0)) {
+            return true;
+        }
+        return prefix_mismatch_in_consts(w1, w2) || suffix_mismatch_in_consts(w1, w2);
+    }
+
+    const bool word_term::unequalable(const word_term& w1, const word_term& w2) {
+        if ((w1.length() == 0 && w2.has_constant()) || (w2.length() == 0 && w1.has_constant())) {
+            return true;
+        }
+        return prefix_mismatch_in_consts(w1, w2) || suffix_mismatch_in_consts(w1, w2);
+    }
+
     word_term::word_term(const smt::word_term& other) {
         m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
     }
@@ -99,9 +135,7 @@ namespace smt {
 
     const bool word_term::has_constant() const {
         for (const auto& e : m_elements) {
-            if (e.type() == element_t::CONST) {
-                return true;
-            }
+            if (e.type() == element_t::CONST) return true;
         }
         return false;
     }
@@ -131,6 +165,10 @@ namespace smt {
             m_elements.erase(find_it++);
             find_it = std::find(find_it, m_elements.end(), tgt);
         }
+    }
+
+    const bool word_term::operator==(const smt::word_term& other) const {
+        return !(*this < other) && !(other < *this);
     }
 
     const bool word_term::operator<(const word_term& other) const {
@@ -173,7 +211,7 @@ namespace smt {
         return result;
     }
 
-    const element& word_equation::def_var() const {
+    const element& word_equation::definition_var() const {
         if (m_lhs.length() == 1 && m_lhs.check_front(element_t::VAR)) {
             return m_lhs.peek_front();
         }
@@ -183,7 +221,7 @@ namespace smt {
         return element::null();
     }
 
-    const word_term& word_equation::def_body() const {
+    const word_term& word_equation::definition_body() const {
         if (m_lhs.length() == 1 && m_lhs.check_front(element_t::VAR)) {
             return m_rhs;
         }
@@ -193,28 +231,13 @@ namespace smt {
         return word_term::null();
     }
 
-    const bool word_equation::is_simply_unsat(const bool allow_empty_assign) const {
-        if (allow_empty_assign) {
-            if ((m_lhs.length() == 0 && m_rhs.has_constant()) ||
-                (m_rhs.length() == 0 && m_lhs.has_constant())) {
-                return true;
-            }
-        } else {
-            if ((m_lhs.length() == 0 && m_rhs.length() != 0) ||
-                (m_lhs.length() != 0 && m_rhs.length() == 0)) {
-                return true;
-            }
-            // check inconsistent heads when having same length
-            const auto& lh = m_lhs.peek_front();
-            const auto& rh = m_rhs.peek_front();
-            if (check_heads(element_t::CONST, element_t::CONST) && lh.value() != rh.value())
-                return true;
-        }
-        return false;
+    const bool word_equation::is_simply_unsat(const bool allow_empty_var) const {
+        return allow_empty_var ? word_term::unequalable(m_lhs, m_rhs)
+                               : word_term::unequalable_no_empty_var(m_lhs, m_rhs);
     }
 
     const bool word_equation::is_in_definition_form() const {
-        return !(def_var() == element::null());
+        return !(definition_var() == element::null());
     }
 
     const bool word_equation::check_heads(const element_t& lht, const element_t& rht) const {
@@ -254,7 +277,36 @@ namespace smt {
         return result;
     }
 
-    const bool state::is_inconsistent() const {
+    const std::vector<std::vector<word_term>> state::equivalence_classes() const {
+        std::map<word_term, std::size_t> word_table;
+        std::vector<std::vector<word_term>> classes;
+        for (const auto& we : m_word_equations) {
+            const auto& w1 = we.lhs();
+            const auto& w2 = we.rhs();
+            const auto find_it1 = word_table.find(w1);
+            const auto find_it2 = word_table.find(w2);
+            if (find_it1 != word_table.end() && find_it2 != word_table.end()) continue;
+            if (find_it1 == word_table.end() && find_it2 == word_table.end()) {
+                classes.push_back(std::vector<word_term>{w1, w2});
+                const auto class_id = classes.size() - 1;
+                word_table[w1] = class_id;
+                word_table[w2] = class_id;
+                continue;
+            }
+            if (find_it1 != word_table.end()) {
+                const auto class_id = find_it1->second;
+                classes.at(class_id).push_back(w2);
+                word_table[w2] = class_id;
+            } else {
+                const auto class_id = find_it2->second;
+                classes.at(class_id).push_back(w1);
+                word_table[w1] = class_id;
+            }
+        }
+        return classes;
+    }
+
+    const bool state::is_simply_unsat() const {
         for (const auto& we : m_word_equations) {
             if (we.is_simply_unsat()) return true;
         }
@@ -269,13 +321,27 @@ namespace smt {
     }
 
     const bool state::is_in_solved_form() const {
-        if (is_in_definition_form() && definition_form_acyclic()) return true;
+        if (is_in_definition_form() && definition_acyclic()) return true;
         for (const auto& we : m_word_equations) {
-            if (!(we.lhs().length() == 0 && we.rhs().length() == 0)) {
-                return false;
-            }
+            if (!(we.lhs().length() == 0 && we.rhs().length() == 0)) return false;
         }
         return true;
+    }
+
+    const bool state::detect_unsat_in_equivalence_classes() const {
+        for (const auto& cls : equivalence_classes()) {
+            if (cls.size() == 2 && word_term::unequalable(cls.at(0), cls.at(1))) return true;
+            std::vector<bool> select(cls.size());
+            std::fill(select.end() - 2, select.end(), true);
+            do {
+                std::vector<word_term> selected(2);
+                for (std::size_t i = 0; i < cls.size(); i++) {
+                    if (select.at(i)) selected.push_back(cls.at(i));
+                }
+                if (word_term::unequalable(selected.at(0), selected.at(1))) return true;
+            } while (std::next_permutation(select.begin(), select.end()));
+        }
+        return false;
     }
 
     void state::add_word_equation(word_equation we) {
@@ -294,7 +360,7 @@ namespace smt {
 
     const std::list<state> state::transform() const {
         std::list<state> result;
-        if (is_inconsistent()) return result;
+        if (is_simply_unsat()) return result;
 
         const word_equation& curr_we = *m_word_equations.begin();
         const element& x = curr_we.lhs().peek_front();
@@ -339,12 +405,9 @@ namespace smt {
 
     const bool state::dag_def_check_node(const def_graph& graph, const def_node& node,
                                          def_nodes& marked, def_nodes& checked) {
-        if (checked.find(node) != checked.end()) {
-            return true;
-        }
-        if (marked.find(node) != marked.end()) {
-            return false;
-        }
+        if (checked.find(node) != checked.end()) return true;
+        if (marked.find(node) != marked.end()) return false;
+
         marked.insert(node);
         auto next_it = graph.find(node);
         if (next_it != graph.end()) {
@@ -356,16 +419,14 @@ namespace smt {
         return true;
     }
 
-    const bool state::definition_form_acyclic() const {
+    const bool state::definition_acyclic() const {
         def_graph graph;
         def_nodes marked;
         def_nodes checked;
         for (const auto& we : m_word_equations) {
-            const def_node& node = we.def_var();
-            if (graph.find(node) != graph.end()) {
-                return false; // definition not unique
-            }
-            graph[node] = we.def_body().variables();
+            const def_node& node = we.definition_var();
+            if (graph.find(node) != graph.end()) return false; // definition not unique
+            graph[node] = we.definition_body().variables();
         }
         for (const auto& kv : graph) {
             if (!dag_def_check_node(graph, kv.first, marked, checked)) return false;
@@ -385,7 +446,7 @@ namespace smt {
                 m_solution_found = true;
                 return;
             }
-            if (!curr_s.is_inconsistent() && m_processed.find(curr_s) == m_processed.end()) {
+            if (!curr_s.is_simply_unsat() && m_processed.find(curr_s) == m_processed.end()) {
                 std::cout << curr_s << std::endl;
                 m_processed.insert(curr_s);
                 for (const auto& var : curr_s.variables()) {
@@ -406,7 +467,10 @@ namespace smt {
             m_pending.pop();
             std::cout << "from " << curr_s << std::endl;
             for (const auto& next : curr_s.transform()) {
-                if (m_processed.find(next) == m_processed.end() && !next.is_inconsistent()) {
+                if (m_processed.find(next) == m_processed.end() && !next.is_simply_unsat()) {
+//                    if (next.detect_unsat_in_equivalence_classes()) {
+//                        return;
+//                    }
                     if (next.is_in_solved_form()) {
                         std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
                         m_solution_found = true;
@@ -588,8 +652,15 @@ namespace smt {
                   << " for variables and " << BLUE << "BLUE" << RESET << " for constants"
                   << std::endl;
 
-        const state& search_root = build_state_from_memo();
-        neilson_based_solver solver{search_root};
+        const state& root = build_state_from_memo();
+//        if (root.detect_unsat_in_equivalence_classes()) {
+//            if (block_dpllt_assignment_from_memo()) {
+//                TRACE("str", tout << "final check" << std::endl;);
+//                return FC_CONTINUE;
+//            }
+//        }
+
+        neilson_based_solver solver{root};
         solver.consider_var_empty_cases();
         if (solver.solution_found()) return FC_DONE;
         solver.check_sat();
@@ -620,8 +691,7 @@ namespace smt {
     }
 
     void theory_str::assert_axiom(expr *const e) {
-        if (e == nullptr) return;
-        if (get_manager().is_true(e)) return;
+        if (e == nullptr || get_manager().is_true(e)) return;
 
         ast_manager& m = get_manager();
         context& ctx = get_context();

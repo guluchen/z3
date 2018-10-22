@@ -1,10 +1,11 @@
 #ifndef _THEORY_STR_H_
 #define _THEORY_STR_H_
 
+#include <list>
 #include <set>
 #include <stack>
-#include <list>
 #include <map>
+#include <vector>
 #include "util/trail.h"
 #include "util/union_find.h"
 #include "util/scoped_vector.h"
@@ -45,6 +46,10 @@ namespace smt {
         static const word_term& null();
         static word_term of_string(const std::string& literal);
         static word_term of_variable(const std::string& name);
+        static const bool prefix_mismatch_in_consts(const word_term& w1, const word_term& w2);
+        static const bool suffix_mismatch_in_consts(const word_term& w1, const word_term& w2);
+        static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
+        static const bool unequalable(const word_term& w1, const word_term& w2);
         word_term() = default;
         word_term(const word_term& other);
         explicit word_term(std::list<element> v) : m_elements{std::move(v)} {}
@@ -57,6 +62,7 @@ namespace smt {
         void remove_front();
         void concat(const word_term& other);
         void replace(const element& tgt, const word_term& subst);
+        const bool operator==(const word_term& other) const;
         const bool operator<(const word_term& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_term& w);
     };
@@ -70,9 +76,9 @@ namespace smt {
         const word_term& lhs() const { return m_lhs; }
         const word_term& rhs() const { return m_rhs; }
         const std::set<element> variables() const;
-        const element& def_var() const;
-        const word_term& def_body() const;
-        const bool is_simply_unsat(bool allow_empty_assign = false) const;
+        const element& definition_var() const;
+        const word_term& definition_body() const;
+        const bool is_simply_unsat(bool allow_empty_var = false) const;
         const bool is_in_definition_form() const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
         void trim_prefix();
@@ -90,9 +96,11 @@ namespace smt {
     public:
         state() = default;
         const std::set<element> variables() const;
-        const bool is_inconsistent() const;
+        const std::vector<std::vector<word_term>> equivalence_classes() const;
+        const bool is_simply_unsat() const;
         const bool is_in_definition_form() const;
         const bool is_in_solved_form() const;
+        const bool detect_unsat_in_equivalence_classes() const;
         void add_word_equation(word_equation we);
         state replace(const element& tgt, const word_term& subst) const;
         const std::list<state> transform() const;
@@ -101,7 +109,7 @@ namespace smt {
     private:
         static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
                                              def_nodes& marked, def_nodes& checked);
-        const bool definition_form_acyclic() const;
+        const bool definition_acyclic() const;
     };
 
     class neilson_based_solver {
