@@ -56,6 +56,7 @@ namespace smt {
         const std::size_t length() const { return m_elements.size(); };
         const std::list<element>& elements() const { return m_elements; };
         const std::set<element> variables() const;
+        const bool is_empty() const { return m_elements.empty(); }
         const bool has_constant() const;
         const bool check_front(const element_t& t) const;
         const element& peek_front() const;
@@ -71,6 +72,7 @@ namespace smt {
         word_term m_lhs;
         word_term m_rhs;
     public:
+        static const word_equation& null();
         word_equation(const word_term& lhs, const word_term& rhs);
         word_equation(const word_equation& other) = default;
         const word_term& lhs() const { return m_lhs; }
@@ -78,11 +80,13 @@ namespace smt {
         const std::set<element> variables() const;
         const element& definition_var() const;
         const word_term& definition_body() const;
+        const bool is_empty() const { return m_lhs.is_empty() && m_rhs.is_empty(); }
         const bool is_simply_unsat(bool allow_empty_var = false) const;
         const bool is_in_definition_form() const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
         void trim_prefix();
         void replace(const element& tgt, const word_term& subst);
+        const bool operator==(const word_equation& other) const;
         const bool operator<(const word_equation& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
     };
@@ -97,6 +101,7 @@ namespace smt {
         state() = default;
         const std::set<element> variables() const;
         const std::vector<std::vector<word_term>> equivalence_classes() const;
+        const word_equation& first_none_empty_member() const;
         const bool is_simply_unsat() const;
         const bool is_in_definition_form() const;
         const bool is_in_solved_form() const;

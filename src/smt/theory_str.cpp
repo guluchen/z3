@@ -1,6 +1,4 @@
 #include <algorithm>
-#include <cstdlib>
-#include <ctime>
 #include "ast/ast_ll_pp.h"
 #include "ast/ast_pp.h"
 #include "ast/ast_smt2_pp.h"
@@ -57,9 +55,9 @@ namespace smt {
 
     std::ostream& operator<<(std::ostream& os, const element& s) {
         if (s.m_type == element_t::VAR) {
-            os << BOLDGREEN << s.value() << " " << RESET;
+            os << BOLDGREEN << s.value() << RESET;
         } else {
-            os << BLUE << s.value() << " " << RESET;
+            os << BLUE << s.value() << RESET;
         }
         return os;
     }
@@ -84,42 +82,44 @@ namespace smt {
     }
 
     const bool word_term::prefix_mismatch_in_consts(const word_term& w1, const word_term& w2) {
-        auto it1 = w1.elements().begin();
-        auto it2 = w2.elements().begin();
-        if (it1 == w1.elements().end() || it2 == w2.elements().end()) return false;
+        if (w1.is_empty() || w2.is_empty()) return false;
+
+        auto it1 = w1.m_elements.begin();
+        auto it2 = w2.m_elements.begin();
         while (*it1 == *it2) {
-            if (++it1 == w1.elements().end() || ++it2 == w2.elements().end()) return false;
+            if (++it1 == w1.m_elements.end() || ++it2 == w2.m_elements.end()) return false;
         }
-        return (it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
-                it1->value() != it2->value());
+        return it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
+               it1->value() != it2->value();
     }
 
     const bool word_term::suffix_mismatch_in_consts(const word_term& w1, const word_term& w2) {
-        auto it1 = w1.elements().end();
-        auto it2 = w2.elements().end();
-        if (it1 == w1.elements().begin() || it2 == w2.elements().begin()) return false;
+        if (w1.is_empty() || w2.is_empty()) return false;
+
+        auto it1 = w1.m_elements.end();
+        auto it2 = w2.m_elements.end();
         while (*it1 == *it2) {
-            if (--it1 == w1.elements().begin() || --it2 == w2.elements().begin()) return false;
+            if (--it1 == w1.m_elements.begin() || --it2 == w2.m_elements.begin()) return false;
         }
-        return (it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
-                it1->value() != it2->value());
+        return it1->type() == element_t::CONST && it2->type() == element_t::CONST &&
+               it1->value() != it2->value();
     }
 
     const bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
-        if ((w1.length() == 0 && w2.length() != 0) || (w1.length() != 0 && w2.length() == 0)) {
+        if ((w1.is_empty() && !w2.is_empty()) || (!w1.is_empty() && w2.is_empty())) {
             return true;
         }
         return prefix_mismatch_in_consts(w1, w2) || suffix_mismatch_in_consts(w1, w2);
     }
 
     const bool word_term::unequalable(const word_term& w1, const word_term& w2) {
-        if ((w1.length() == 0 && w2.has_constant()) || (w2.length() == 0 && w1.has_constant())) {
+        if ((w1.is_empty() && w2.has_constant()) || (w1.has_constant() && w2.is_empty())) {
             return true;
         }
         return prefix_mismatch_in_consts(w1, w2) || suffix_mismatch_in_consts(w1, w2);
     }
 
-    word_term::word_term(const smt::word_term& other) {
+    word_term::word_term(const word_term& other) {
         m_elements.insert(m_elements.begin(), other.m_elements.begin(), other.m_elements.end());
     }
 
@@ -145,12 +145,14 @@ namespace smt {
     }
 
     const element& word_term::peek_front() const {
-        // TODO: review the empty case
+        if (m_elements.empty()) return element::null();
+
         return *m_elements.begin();
     }
 
     void word_term::remove_front() {
-        // TODO: review the empty case
+        if (m_elements.empty()) return;
+
         m_elements.pop_front();
     }
 
@@ -167,7 +169,7 @@ namespace smt {
         }
     }
 
-    const bool word_term::operator==(const smt::word_term& other) const {
+    const bool word_term::operator==(const word_term& other) const {
         return !(*this < other) && !(other < *this);
     }
 
@@ -184,13 +186,22 @@ namespace smt {
     }
 
     std::ostream& operator<<(std::ostream& os, const word_term& w) {
-        for (const auto& e : w.m_elements) {
-            os << e;
+        if (w.is_empty()) {
+            os << " ";
+        } else {
+            for (const auto& e : w.m_elements) {
+                os << e << " ";
+            }
         }
         return os;
     }
 
-    word_equation::word_equation(const smt::word_term& lhs, const smt::word_term& rhs) {
+    const word_equation& word_equation::null() {
+        static const word_equation we{word_term::null(), word_term::null()};
+        return we;
+    }
+
+    word_equation::word_equation(const word_term& lhs, const word_term& rhs) {
         if (lhs < rhs) {
             m_lhs = lhs;
             m_rhs = rhs;
@@ -245,7 +256,7 @@ namespace smt {
     }
 
     void word_equation::trim_prefix() {
-        while (m_lhs.peek_front() == m_rhs.peek_front()) {
+        while (!m_lhs.is_empty() && !m_rhs.is_empty() && m_lhs.peek_front() == m_rhs.peek_front()) {
             m_lhs.remove_front();
             m_rhs.remove_front();
         }
@@ -256,6 +267,10 @@ namespace smt {
         m_rhs.replace(tgt, subst);
     }
 
+    const bool word_equation::operator==(const word_equation& other) const {
+        return !(*this < other) && !(other < *this);
+    }
+
     const bool word_equation::operator<(const word_equation& other) const {
         if (m_lhs < other.m_lhs) return true;
         if (other.m_lhs < m_lhs) return false;
@@ -263,7 +278,7 @@ namespace smt {
     }
 
     std::ostream& operator<<(std::ostream& os, const word_equation& we) {
-        os << we.m_lhs << " = " << we.m_rhs;
+        os << we.m_lhs << "= " << we.m_rhs;
         return os;
     }
 
@@ -283,8 +298,8 @@ namespace smt {
         for (const auto& we : m_word_equations) {
             const auto& w1 = we.lhs();
             const auto& w2 = we.rhs();
-            const auto find_it1 = word_table.find(w1);
-            const auto find_it2 = word_table.find(w2);
+            const auto& find_it1 = word_table.find(w1);
+            const auto& find_it2 = word_table.find(w2);
             if (find_it1 != word_table.end() && find_it2 != word_table.end()) continue;
             if (find_it1 == word_table.end() && find_it2 == word_table.end()) {
                 classes.push_back(std::vector<word_term>{w1, w2});
@@ -306,6 +321,13 @@ namespace smt {
         return classes;
     }
 
+    const word_equation& state::first_none_empty_member() const {
+        const auto& empty = [](const word_equation& we) { return we.is_empty(); };
+        const auto& it = std::find_if_not(m_word_equations.begin(), m_word_equations.end(), empty);
+        if (it == m_word_equations.end()) return word_equation::null();
+        return *it;
+    }
+
     const bool state::is_simply_unsat() const {
         for (const auto& we : m_word_equations) {
             if (we.is_simply_unsat()) return true;
@@ -321,11 +343,8 @@ namespace smt {
     }
 
     const bool state::is_in_solved_form() const {
-        if (is_in_definition_form() && definition_acyclic()) return true;
-        for (const auto& we : m_word_equations) {
-            if (!(we.lhs().length() == 0 && we.rhs().length() == 0)) return false;
-        }
-        return true;
+        return (is_in_definition_form() && definition_acyclic()) ||
+               (m_word_equations.size() == 1 && m_word_equations.begin()->is_empty());
     }
 
     const bool state::detect_unsat_in_equivalence_classes() const {
@@ -361,8 +380,9 @@ namespace smt {
     const std::list<state> state::transform() const {
         std::list<state> result;
         if (is_simply_unsat()) return result;
+        const word_equation& curr_we = first_none_empty_member();
+        if (curr_we == word_equation::null()) return result;
 
-        const word_equation& curr_we = *m_word_equations.begin();
         const element& x = curr_we.lhs().peek_front();
         const element& y = curr_we.rhs().peek_front();
         if (curr_we.check_heads(element_t::VAR, element_t::VAR)) {
@@ -409,7 +429,7 @@ namespace smt {
         if (marked.find(node) != marked.end()) return false;
 
         marked.insert(node);
-        auto next_it = graph.find(node);
+        const auto& next_it = graph.find(node);
         if (next_it != graph.end()) {
             for (const auto& next : next_it->second) {
                 if (!dag_def_check_node(graph, next, marked, checked)) return false;
@@ -461,30 +481,32 @@ namespace smt {
     }
 
     void neilson_based_solver::check_sat() {
-        std::cout << "start the check SAT procedure" << std::endl;
         while (!m_pending.empty()) {
             state curr_s = m_pending.top();
             m_pending.pop();
-            std::cout << "from " << curr_s << std::endl;
-            for (const auto& next : curr_s.transform()) {
-                if (m_processed.find(next) == m_processed.end() && !next.is_simply_unsat()) {
-//                    if (next.detect_unsat_in_equivalence_classes()) {
-//                        return;
-//                    }
-                    if (next.is_in_solved_form()) {
-                        std::cout << "to " << next << RED << "(solved form)" << RESET << std::endl;
-                        m_solution_found = true;
-                        return;
-                    }
-                    std::cout << "to " << next << std::endl;
-                    m_processed.insert(next);
-                    m_pending.push(next);
+            std::cout << "from:" << std::endl << curr_s << std::endl;
+            for (const auto& next_s : curr_s.transform()) {
+                if (m_processed.find(next_s) != m_processed.end()) {
+                    std::cout << "already had:" << std::endl << next_s << std::endl;
+                    continue;
                 }
+                if (next_s.is_simply_unsat()) {
+                    std::cout << "failed:" << std::endl << next_s << std::endl;
+                    continue;
+                }
+                if (next_s.is_in_solved_form()) {
+                    std::cout << "solved:" << std::endl << next_s << std::endl;
+                    m_solution_found = true;
+                    return;
+                }
+                std::cout << "to:" << std::endl << next_s << std::endl;
+                m_processed.insert(next_s);
+                m_pending.push(next_s);
             }
         }
     }
 
-    theory_str::theory_str(ast_manager& m, theory_str_params const& params) :
+    theory_str::theory_str(ast_manager& m, const theory_str_params& params) :
             theory{m.mk_family_id("seq")}, m_scope_level{0}, m_params{params} {
     }
 
@@ -557,10 +579,10 @@ namespace smt {
 
     model_value_proc *theory_str::mk_value(enode *n, model_generator& mg) {
         ast_manager& m = get_manager();
-        TRACE("str", tout << "mk_value for: " << mk_ismt2_pp(n->get_owner(), m) << " (sort "
-                          << mk_ismt2_pp(m.get_sort(n->get_owner()), m) << ")" << std::endl;);
         app_ref owner{m};
         owner = n->get_owner();
+        TRACE("str", tout << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
+                          << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
 
         // if the owner is not internalized, it doesn't have an enode associated.
         SASSERT(get_context().e_internalized(owner));
@@ -647,25 +669,28 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         context& ctx = get_context();
-        std::cout << "final_check at level: " << ctx.get_scope_level() << "\n" << std::endl;
-        std::cout << "identified root states (color: " << BOLDGREEN << "GREEN" << RESET
-                  << " for variables and " << BLUE << "BLUE" << RESET << " for constants"
+        std::cout << "final_check at level: " << ctx.get_scope_level() << std::endl;
+
+        // build root
+        std::cout << std::endl << "[Build Root] (color: " << BOLDGREEN << "GREEN" << RESET
+                  << " for variables and " << BLUE << "BLUE" << RESET << " for constants)"
                   << std::endl;
-
         const state& root = build_state_from_memo();
-//        if (root.detect_unsat_in_equivalence_classes()) {
-//            if (block_dpllt_assignment_from_memo()) {
-//                TRACE("str", tout << "final check" << std::endl;);
-//                return FC_CONTINUE;
-//            }
-//        }
-
+        std::cout << root << std::endl;
         neilson_based_solver solver{root};
+
+        // consider empty variables
+        std::cout << "[Consider Empty Variables]" << std::endl;
         solver.consider_var_empty_cases();
         if (solver.solution_found()) return FC_DONE;
+
+        // check SAT
+        std::cout << "[Check SAT]" << std::endl;
         solver.check_sat();
         if (solver.solution_found()) return FC_DONE;
 
+        // block current DPLLT instance
+        std::cout << "[Assert Blocking]" << std::endl;
         if (block_dpllt_assignment_from_memo()) {
             TRACE("str", tout << "final check" << std::endl;);
             return FC_CONTINUE;
@@ -750,11 +775,9 @@ namespace smt {
     }
 
     state theory_str::build_state_from_memo() const {
-        ast_manager& m = get_manager();
         state result;
         for (const auto& memo : m_we_expr_memo) {
-            std::cout << "formula:" << mk_ismt2_pp(memo.first, m) << "="
-                      << mk_ismt2_pp(memo.second, m) << std::endl;
+            std::cout << memo.first << " = " << memo.second << std::endl;
             const word_term& lhs = get_word_term(memo.first);
             const word_term& rhs = get_word_term(memo.second);
             result.add_word_equation(word_equation(rhs, lhs));
@@ -765,6 +788,7 @@ namespace smt {
     const bool theory_str::block_dpllt_assignment_from_memo() {
         ast_manager& m = get_manager();
         expr *refinement_expr = nullptr;
+        std::cout << "formulas:" << std::endl;
         for (const auto& memo : m_we_expr_memo) {
             expr *const e = m.mk_not(mk_eq_atom(memo.first, memo.second));
             if (refinement_expr == nullptr) {
@@ -772,10 +796,11 @@ namespace smt {
             } else {
                 refinement_expr = m.mk_or(refinement_expr, e);
             }
-            std::cout << memo.first << " = " << memo.second << " \n";
+            std::cout << memo.first << " = " << memo.second << std::endl;
         }
         if (refinement_expr != nullptr) {
-            std::cout << "asserting " << mk_pp(refinement_expr, m) << std::endl;
+            std::cout << "assertion:" << std::endl << mk_pp(refinement_expr, m) << std::endl
+                      << std::endl;
             assert_axiom(refinement_expr);
             return true;
         }
