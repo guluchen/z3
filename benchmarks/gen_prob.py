@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
-import sys
-import os
 import random
+import os
+
 from argparse import ArgumentParser
 from typing import Tuple, List
 
-symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-max_num_we = 3
-max_len_we = 3
-
-
 Elem = Tuple[int, int]
+symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+max_elems = 6
+min_elems = 1
+max_num_we = 3
+
+
+def random_elem_len() -> int:
+    return random.randrange(min_elems, max_elems + 1)
 
 
 def num_occurrence(l: List[Elem], c: Elem):
@@ -19,7 +22,7 @@ def num_occurrence(l: List[Elem], c: Elem):
 
 
 def gen_elem_random() -> Elem:
-    return random.randrange(0, len(symbols)), random.randrange(0, 2)  # 0 for variable, 1 for character
+    return random.randrange(0, len(symbols)), random.randrange(0, 2)  # 0: var, 1: const
 
 
 def print_elem(e: Elem) -> str:
@@ -33,10 +36,14 @@ class ElemList:
     def __init__(self):
         self.lhs: List[Elem] = list()
         self.rhs: List[Elem] = list()
+        self.lhs_len = random_elem_len()
+        self.rhs_len = random_elem_len()
 
     def assign(self, l1: List[Elem], l2: List[Elem]):
         self.lhs: List[Elem] = l1
         self.rhs: List[Elem] = l2
+        self.lhs_len = len(l1)
+        self.rhs_len = len(l2)
 
     def __len__(self) -> int:
         return len(self.lhs) + len(self.rhs)
@@ -44,7 +51,8 @@ class ElemList:
     def __eq__(self, other):
         if not isinstance(other, ElemList):
             return False
-        if len(self) != len(other):
+        if len(self) != len(
+                other) or self.lhs_len != other.lhs_len or self.rhs_len != other.rhs_len:
             return False
         if self.lhs == other.lhs and self.rhs == other.rhs:
             return True
@@ -52,7 +60,8 @@ class ElemList:
             return False
 
     def __str__(self):
-        return ''.join([print_elem(e) for e in self.lhs]) + ' = ' + ''.join([print_elem(e) for e in self.rhs])
+        return ''.join([print_elem(e) for e in self.lhs]) + ' = ' + ''.join(
+            [print_elem(e) for e in self.rhs])
 
     def __repr__(self):
         return str(self)
@@ -61,49 +70,32 @@ class ElemList:
         return hash(str(self))
 
     def is_full(self):
-        return len(self.lhs) == max_len_we and len(self.rhs) == max_len_we
+        return len(self.lhs) == self.lhs_len and len(self.rhs) == self.rhs_len
 
     def num_occurrence(self, e: Elem):
         return num_occurrence(self.lhs, e) + num_occurrence(self.rhs, e)
 
     def put_elem(self, e: Elem) -> bool:
-        if len(self.lhs) < max_len_we:
+        if len(self.lhs) < self.lhs_len:
             self.lhs.append(e)
             return True
-        elif len(self.rhs) < max_len_we:
+        elif len(self.rhs) < self.rhs_len:
             self.rhs.append(e)
             return True
         else:
             return False
 
-    def export_smt_3(self):  # assume length is 3
-        if not self.is_full():
-            return ''
+    def export_smt(self):
+        assert self.is_full()
 
-        elem_1 = export_elem_smt(self.lhs[0])
-        elem_2 = export_elem_smt(self.lhs[1])
-        elem_3 = export_elem_smt(self.lhs[2])
-        elem_4 = export_elem_smt(self.rhs[0])
-        elem_5 = export_elem_smt(self.rhs[1])
-        elem_6 = export_elem_smt(self.rhs[2])
-        return f'(assert (= (str.++ {elem_1} (str.++ {elem_2} {elem_3})) (str.++ {elem_4} (str.++ {elem_5} {elem_6}))))'
-
-    def export_smt(self):  # assume length is 3
-        if not self.is_full():
-            return ''
-
-        def export_smt_inner(idx: int, exp_str_l: str = '', exp_str_r: str = '') -> Tuple[str, str]:
-            if max_len_we - idx == 1:
-                assert exp_str_l == '' and exp_str_r == ''
-                return export_elem_smt(self.lhs[idx]), export_elem_smt(self.rhs[idx])
-            else:
-                return f'(str.++ {export_elem_smt(self.lhs[idx])} {exp_str_l})', \
-                       f'(str.++ {export_elem_smt(self.rhs[idx])} {exp_str_r})'
-
-        lhs_str = ''
-        rhs_str = ''
-        for idx in reversed(range(max_len_we)):
-            lhs_str, rhs_str = export_smt_inner(idx, lhs_str, rhs_str)
+        if self.lhs_len == 1:
+            lhs_str = export_elem_smt(self.lhs[0])
+        else:
+            lhs_str = '(str.++ ' + ' '.join([export_elem_smt(e) for e in self.lhs]) + ')'
+        if self.rhs_len == 1:
+            rhs_str = export_elem_smt(self.rhs[0])
+        else:
+            rhs_str = '(str.++ ' + ' '.join([export_elem_smt(e) for e in self.rhs]) + ')'
 
         return f'(assert (= {lhs_str} {rhs_str}))'
 
@@ -115,8 +107,12 @@ def export_elem_smt(e: Elem) -> str:
         return f'\"{symbols[e[0]]}\"'
 
 
-def export_concat(str1: str, str2: str) -> str:
-    return f'(str.++ {str1} {str2})'
+def export_smt_elems(idx: int, max_len: int, elems: List[Elem], exp_str: str = '') -> str:
+    if max_len - idx == 1:
+        assert exp_str == ''
+        return export_elem_smt(elems[idx])
+    else:
+        return f'(str.++ {export_elem_smt(elems[idx])} {exp_str})'
 
 
 class Problem:
@@ -152,6 +148,14 @@ class Problem:
         else:
             return True
 
+    def num_occurrence(self, e: Elem) -> int:
+        return sum([w.num_occurrence(e) for w in self.we_list])
+
+    def is_quadratic(self):
+        return True in \
+               {self.num_occurrence(v) <= 2 for v in
+                {e for w in self.we_list for e in w.lhs + w.rhs if e[1] == 0}}
+
     def put_elem(self, e: Elem):
         vacancy = [w for w in self.we_list if not w.is_full()]
         if len(vacancy) > 0:
@@ -159,14 +163,19 @@ class Problem:
         else:
             return False
 
+    def generate_quadratic(self):
+        while not self.is_full():
+            elem = gen_elem_random()
+            if elem[1] == 0 and self.is_elem_quadratic_ok(elem):  # check quadratic before add
+                self.put_elem(elem)
+            else:  # char or quadratic not set
+                self.put_elem(elem)
+        return self
+
     def generate(self):
         while not self.is_full():
             elem = gen_elem_random()
-            if elem[1] == 0:  # variable
-                if self.is_elem_quadratic_ok(elem):
-                    self.put_elem(elem)
-            else:  # char
-                self.put_elem(elem)
+            self.put_elem(elem)
         return self
 
     def reset(self):  # same as __init__
@@ -190,37 +199,42 @@ class Problem:
         return ret
 
 
-def main(argv):
+def main():
     # Set argument parser
     arg_parser = ArgumentParser(prog=None,
                                 usage=None,
-                                description="A simple SMT quadratic string problem generator. "
-                                            "A problem generated has three word equations "
-                                            "and each word equation has three elements "
-                                            "(variable or character) each side.",
+                                description="A simple SMT (quadratic) string problem generator.",
                                 epilog=None)
-    arg_parser.add_argument("-d", "--dir", help="Path to generate problems, default is ./", dest="path", default="./")
-    arg_parser.add_argument("-p", "--prefix", help="Prefix of files to be generated, default is test_",
+    arg_parser.add_argument("-d", "--dir", help="path to generate problems, default is `./`",
+                            dest="path", default="./")
+    arg_parser.add_argument("-p", "--prefix",
+                            help="prefix of files to be generated, default is `ttt_`",
                             dest="prefix", default="ttt_")
-    arg_parser.add_argument("-n", "--num", help="Number of problems to be generated, default is 100",
+    arg_parser.add_argument("-n", "--num",
+                            help="number of problems to be generated, default is 100",
                             dest="num", default="100", type=int)
+    arg_parser.add_argument("-q", "--quadratic",
+                            help="generate quadratic problems, default is on",
+                            dest="quadratic", default="on")
     args = arg_parser.parse_args()
 
     print('Generating problems....')
-    print(f'    dir   : {args.path}')
-    print(f'    prefix: {args.prefix}')
-    print(f'    num   : {args.num}')
-
-    # short test
-    # p = Problem().generate()
-    # print(p)
-    # print(p.export_smt())
-    # exit(0)
+    print(f'   output dir: {args.path}')
+    print(f'  file prefix: {args.prefix}')
+    print(f'  problem num: {args.num}')
+    print(f'    quadratic: {args.quadratic}')
 
     # Proceed problem generation
     problem_set = set()
-    while len(problem_set) < args.num:
-        problem_set.add(Problem().generate())
+    quadratic_flag = args.quadratic == 'on'
+    if quadratic_flag:  # generate set of quadratic problems
+        while len(problem_set) < args.num:
+            problem_set.add(Problem().generate_quadratic())
+    else:  # generate set of non-quadratic problems (at least one variable is non-quadratic)
+        while len(problem_set) < args.num:
+            prob = Problem().generate()
+            if not prob.is_quadratic():
+                problem_set.add(prob)
     if not os.path.exists(args.path):
         os.makedirs(args.path)
     os.chdir(args.path)
@@ -233,4 +247,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
