@@ -6,20 +6,20 @@
 #include <stack>
 #include <map>
 #include <vector>
-#include "util/trail.h"
-#include "util/union_find.h"
-#include "util/scoped_vector.h"
-#include "util/scoped_ptr_vector.h"
-#include "util/hashtable.h"
-#include "ast/ast_pp.h"
 #include "ast/arith_decl_plugin.h"
-#include "ast/rewriter/th_rewriter.h"
-#include "ast/rewriter/seq_rewriter.h"
-#include "ast/seq_decl_plugin.h"
-#include "smt/smt_theory.h"
+#include "ast/ast_pp.h"
 #include "smt/params/theory_str_params.h"
 #include "smt/proto_model/value_factory.h"
+#include "ast/rewriter/seq_rewriter.h"
+#include "ast/rewriter/th_rewriter.h"
+#include "ast/seq_decl_plugin.h"
 #include "smt/smt_model_generator.h"
+#include "smt/smt_theory.h"
+#include "util/hashtable.h"
+#include "util/scoped_vector.h"
+#include "util/scoped_ptr_vector.h"
+#include "util/trail.h"
+#include "util/union_find.h"
 
 namespace smt {
 
@@ -35,7 +35,10 @@ namespace smt {
         element(const element_t& t, std::string v) : m_type{t}, m_value{std::move(v)} {}
         const element_t& type() const { return m_type; }
         const std::string& value() const { return m_value; }
+        const bool typed(const element_t& t) const { return m_type == t; }
+        explicit operator bool() const { return *this != null(); };
         const bool operator==(const element& other) const;
+        const bool operator!=(const element& other) const { return !(*this == other); };
         const bool operator<(const element& other) const;
         friend std::ostream& operator<<(std::ostream& os, const element& e);
     };
@@ -46,24 +49,26 @@ namespace smt {
         static const word_term& null();
         static word_term of_string(const std::string& literal);
         static word_term of_variable(const std::string& name);
-        static const bool prefix_mismatch_in_consts(const word_term& w1, const word_term& w2);
-        static const bool suffix_mismatch_in_consts(const word_term& w1, const word_term& w2);
+        static const bool prefix_mismatched_in_consts(const word_term& w1, const word_term& w2);
+        static const bool suffix_mismatched_in_consts(const word_term& w1, const word_term& w2);
         static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
         static const bool unequalable(const word_term& w1, const word_term& w2);
         word_term() = default;
-        word_term(const word_term& other);
-        explicit word_term(std::list<element> v) : m_elements{std::move(v)} {}
+        word_term(std::initializer_list<element> list);
         const std::size_t length() const { return m_elements.size(); };
         const std::list<element>& elements() const { return m_elements; };
         const std::set<element> variables() const;
-        const bool is_empty() const { return m_elements.empty(); }
+        const bool empty() const { return m_elements.empty(); }
         const bool has_constant() const;
-        const bool check_front(const element_t& t) const;
-        const element& peek_front() const;
-        void remove_front();
+        const bool has_variable() const;
+        const bool check_head(const element_t& t) const;
+        const element& head() const;
+        void remove_head();
         void concat(const word_term& other);
         void replace(const element& tgt, const word_term& subst);
+        explicit operator bool() const { return *this != null(); };
         const bool operator==(const word_term& other) const;
+        const bool operator!=(const word_term& other) const { return !(*this == other); };
         const bool operator<(const word_term& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_term& w);
     };
@@ -74,19 +79,20 @@ namespace smt {
     public:
         static const word_equation& null();
         word_equation(const word_term& lhs, const word_term& rhs);
-        word_equation(const word_equation& other) = default;
         const word_term& lhs() const { return m_lhs; }
         const word_term& rhs() const { return m_rhs; }
         const std::set<element> variables() const;
         const element& definition_var() const;
         const word_term& definition_body() const;
-        const bool is_empty() const { return m_lhs.is_empty() && m_rhs.is_empty(); }
-        const bool is_simply_unsat(bool allow_empty_var = false) const;
-        const bool is_in_definition_form() const;
+        const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
+        const bool unsolvable(bool allow_empty_var = false) const;
+        const bool in_definition_form() const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
         void trim_prefix();
         void replace(const element& tgt, const word_term& subst);
+        explicit operator bool() const { return *this != null(); };
         const bool operator==(const word_equation& other) const;
+        const bool operator!=(const word_equation& other) const { return !(*this == other); };
         const bool operator<(const word_equation& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
     };
@@ -98,17 +104,16 @@ namespace smt {
     class state {
         std::set<word_equation> m_word_equations;
     public:
-        state() = default;
         const std::set<element> variables() const;
         const std::vector<std::vector<word_term>> equivalence_classes() const;
         const word_equation& first_none_empty_member() const;
-        const bool is_simply_unsat(bool allow_empty_var = false) const;
-        const bool is_in_definition_form() const;
-        const bool is_in_solved_form() const;
-        const bool detect_unsat_in_equivalence_classes() const;
-        void add_word_equation(word_equation we);
+        const bool unsolvable(bool allow_empty_var = false) const;
+        const bool in_definition_form() const;
+        const bool in_solved_form() const;
+        const bool unsolvable_in_equivalence_classes() const;
+        void add_word_equation(word_equation&& we);
         state replace(const element& tgt, const word_term& subst) const;
-        const std::list<state> transform() const;
+        const std::list<state> transform(bool allow_empty_var = false) const;
         const bool operator<(const state& other) const;
         friend std::ostream& operator<<(std::ostream& os, const state& s);
     private:
@@ -125,7 +130,7 @@ namespace smt {
         explicit neilson_based_solver(const state& root);
         const bool solution_found() const { return m_solution_found; }
         void consider_var_empty_cases();
-        void check_sat();
+        void check_sat(bool allow_empty_var = false);
     };
 
     using expr_pair = std::pair<expr_ref, expr_ref>;
