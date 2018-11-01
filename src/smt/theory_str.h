@@ -102,7 +102,7 @@ namespace smt {
         const std::set<element> variables() const;
         const std::vector<std::vector<word_term>> equivalence_classes() const;
         const word_equation& first_none_empty_member() const;
-        const bool is_simply_unsat() const;
+        const bool is_simply_unsat(bool allow_empty_var = false) const;
         const bool is_in_definition_form() const;
         const bool is_in_solved_form() const;
         const bool detect_unsat_in_equivalence_classes() const;

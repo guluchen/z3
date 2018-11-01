@@ -328,9 +328,9 @@ namespace smt {
         return *it;
     }
 
-    const bool state::is_simply_unsat() const {
+    const bool state::is_simply_unsat(bool allow_empty_var) const {
         for (const auto& we : m_word_equations) {
-            if (we.is_simply_unsat()) return true;
+            if (we.is_simply_unsat(allow_empty_var)) return true;
         }
         return false;
     }
@@ -466,7 +466,7 @@ namespace smt {
                 m_solution_found = true;
                 return;
             }
-            if (!curr_s.is_simply_unsat() && m_processed.find(curr_s) == m_processed.end()) {
+            if (!curr_s.is_simply_unsat(true) && m_processed.find(curr_s) == m_processed.end()) {
                 std::cout << curr_s << std::endl;
                 m_processed.insert(curr_s);
                 for (const auto& var : curr_s.variables()) {
