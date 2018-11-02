@@ -326,7 +326,7 @@ namespace smt {
 
     const bool state::unsolvable(const bool allow_empty_var) const {
         const bool& aev = allow_empty_var;
-        const auto& unsolvable = [=](const word_equation& we) { return we.unsolvable(aev); };
+        const auto& unsolvable = [&](const word_equation& we) { return we.unsolvable(aev); };
         return std::any_of(m_word_equations.begin(), m_word_equations.end(), unsolvable);
     }
 
@@ -340,9 +340,13 @@ namespace smt {
                (m_word_equations.size() == 1 && m_word_equations.begin()->empty());
     }
 
-    const bool state::unsolvable_in_equivalence_classes() const {
+    const bool state::unsolvable_in_equivalence_classes(const bool allow_empty_var) const {
+        const auto& unequalable = [&](const word_term& w1, const word_term& w2) {
+            return allow_empty_var ? word_term::unequalable(w1, w2)
+                                   : word_term::unequalable_no_empty_var(w1, w2);
+        };
         for (const auto& cls : equivalence_classes()) {
-            if (cls.size() == 2 && word_term::unequalable(cls.at(0), cls.at(1))) return true;
+            if (cls.size() == 2 && unequalable(cls.at(0), cls.at(1))) return true;
             std::vector<bool> select(cls.size());
             std::fill(select.end() - 2, select.end(), true);
             do {
@@ -350,7 +354,7 @@ namespace smt {
                 for (std::size_t i = 0; i < cls.size(); i++) {
                     if (select.at(i)) selected.push_back(cls.at(i));
                 }
-                if (word_term::unequalable(selected.at(0), selected.at(1))) return true;
+                if (unequalable(selected.at(0), selected.at(1))) return true;
             } while (std::next_permutation(select.begin(), select.end()));
         }
         return false;
@@ -485,7 +489,7 @@ namespace smt {
                     continue;
                 }
                 m_processed.insert(next_s);
-                if (next_s.unsolvable(allow_empty_var)) {
+                if (next_s.unsolvable_in_equivalence_classes(allow_empty_var)) {
                     STRACE("str", tout << "failed:\n" << next_s << std::endl;);
                     continue;
                 }
@@ -653,6 +657,9 @@ namespace smt {
         const state& root = build_state_from_memo();
         STRACE("str", tout << "root built:\n" << root;);
         neilson_based_solver solver{root};
+        if (root.unsolvable_in_equivalence_classes(true) && block_dpllt_assignment_from_memo()) {
+            return FC_CONTINUE;
+        }
 
         // consider empty variables
         STRACE("str", tout << "\n[Consider Empty Variables]\n";);

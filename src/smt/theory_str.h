@@ -110,7 +110,7 @@ namespace smt {
         const bool unsolvable(bool allow_empty_var = false) const;
         const bool in_definition_form() const;
         const bool in_solved_form() const;
-        const bool unsolvable_in_equivalence_classes() const;
+        const bool unsolvable_in_equivalence_classes(bool allow_empty_var = false) const;
         void add_word_equation(word_equation&& we);
         state replace(const element& tgt, const word_term& subst) const;
         const std::list<state> transform(bool allow_empty_var = false) const;
