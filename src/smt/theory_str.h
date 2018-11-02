@@ -99,7 +99,7 @@ namespace smt {
 
     using def_node = element;
     using def_nodes = std::set<def_node>;
-    using def_graph = std::map<element, def_nodes>;
+    using def_graph = std::map<def_node, def_nodes>;
 
     class state {
         std::set<word_equation> m_word_equations;
