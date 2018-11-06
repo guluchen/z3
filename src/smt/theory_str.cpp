@@ -89,7 +89,8 @@ namespace smt {
     }
 
     const bool word_term::unequalable(const word_term& w1, const word_term& w2) {
-        return (w1.empty() && w2.has_constant()) || (w1.has_constant() && w2.empty()) ||
+        return (!w1.has_variable() && w1.constant_count() < w2.constant_count()) ||
+               (!w2.has_variable() && w2.constant_count() < w1.constant_count()) ||
                prefix_mismatched_in_consts(w1, w2) || suffix_mismatched_in_consts(w1, w2);
     }
 
@@ -97,8 +98,13 @@ namespace smt {
         m_elements.insert(m_elements.begin(), list.begin(), list.end());
     }
 
-    const std::set<element> word_term::variables() const {
-        std::set<element> result;
+    const std::size_t word_term::constant_count() const {
+        const auto& is_const = [](const element& e) { return e.typed(element_t::CONST); };
+        return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
+    }
+
+    const element_set word_term::variables() const {
+        element_set result;
         for (const auto& e : m_elements) {
             if (e.typed(element_t::VAR)) {
                 result.insert(e);
@@ -137,11 +143,11 @@ namespace smt {
     }
 
     void word_term::replace(const element& tgt, const word_term& subst) {
-        auto find_it = std::find(m_elements.begin(), m_elements.end(), tgt);
-        while (find_it != m_elements.end()) {
-            m_elements.insert(find_it, subst.m_elements.begin(), subst.m_elements.end());
-            m_elements.erase(find_it++);
-            find_it = std::find(find_it, m_elements.end(), tgt);
+        auto fit = std::find(m_elements.begin(), m_elements.end(), tgt);
+        while (fit != m_elements.end()) {
+            m_elements.insert(fit, subst.m_elements.begin(), subst.m_elements.end());
+            m_elements.erase(fit++);
+            fit = std::find(fit, m_elements.end(), tgt);
         }
     }
 
@@ -163,8 +169,7 @@ namespace smt {
 
     std::ostream& operator<<(std::ostream& os, const word_term& w) {
         if (w.empty()) {
-            os << "\"\"" << std::flush;
-            return os;
+            return os << "\"\"" << std::flush;
         }
 
         bool in_consts = false;
@@ -172,9 +177,7 @@ namespace smt {
         if (head.typed(element_t::CONST)) {
             in_consts = true;
             os << '"' << head;
-        } else {
-            os << head;
-        }
+        } else os << head;
         for (auto it = ++(w.m_elements.begin()); it != w.m_elements.end(); it++) {
             if (it->typed(element_t::CONST)) {
                 if (!in_consts) {
@@ -189,8 +192,7 @@ namespace smt {
             }
         }
         if (in_consts) os << '"';
-        os << std::flush;
-        return os;
+        return os << std::flush;
     }
 
     const word_equation& word_equation::null() {
@@ -208,8 +210,8 @@ namespace smt {
         }
     }
 
-    const std::set<element> word_equation::variables() const {
-        std::set<element> result;
+    const element_set word_equation::variables() const {
+        element_set result;
         for (const auto& v : m_lhs.variables()) {
             result.insert(v);
         }
@@ -252,16 +254,37 @@ namespace smt {
         return m_lhs.check_head(lht) && m_rhs.check_head(rht);
     }
 
-    void word_equation::trim_prefix() {
-        while (!m_lhs.empty() && !m_rhs.empty() && m_lhs.head() == m_rhs.head()) {
-            m_lhs.remove_head();
-            m_rhs.remove_head();
+    word_equation word_equation::trim_prefix() const {
+        word_equation result{*this};
+        word_term& lhs = result.m_lhs;
+        word_term& rhs = result.m_rhs;
+        while (!lhs.empty() && !rhs.empty() && lhs.head() == rhs.head()) {
+            lhs.remove_head();
+            rhs.remove_head();
         }
+        return result;
     }
 
-    void word_equation::replace(const element& tgt, const word_term& subst) {
-        m_lhs.replace(tgt, subst);
-        m_rhs.replace(tgt, subst);
+    word_equation word_equation::replace(const element& tgt, const word_term& subst) const {
+        word_equation result{*this};
+        result.m_lhs.replace(tgt, subst);
+        result.m_rhs.replace(tgt, subst);
+        result.sort();
+        return result;
+    }
+
+    word_equation word_equation::remove(const element& tgt) const {
+        return replace(tgt, {});
+    }
+
+    word_equation word_equation::remove_all(const element_set& tgt) const {
+        word_equation result{*this};
+        for (const auto& e : tgt) {
+            result.m_lhs.replace(e, {});
+            result.m_rhs.replace(e, {});
+        }
+        result.sort();
+        return result;
     }
 
     const bool word_equation::operator==(const word_equation& other) const {
@@ -279,8 +302,14 @@ namespace smt {
         return os;
     }
 
-    const std::set<element> state::variables() const {
-        std::set<element> result;
+    void word_equation::sort() {
+        if (!(m_lhs < m_rhs)) {
+            std::swap(m_lhs, m_rhs);
+        }
+    }
+
+    const element_set state::variables() const {
+        element_set result;
         for (const auto& we : m_word_equations) {
             for (const auto& v : we.variables()) {
                 result.insert(v);
@@ -292,25 +321,29 @@ namespace smt {
     const std::vector<std::vector<word_term>> state::equivalence_classes() const {
         std::map<word_term, std::size_t> word_table;
         std::vector<std::vector<word_term>> classes;
-        for (const auto& we : m_word_equations) {
-            const auto& w1 = we.lhs();
-            const auto& w2 = we.rhs();
-            const auto& find_it1 = word_table.find(w1);
-            const auto& find_it2 = word_table.find(w2);
-            if (find_it1 != word_table.end() && find_it2 != word_table.end()) continue;
-            if (find_it1 == word_table.end() && find_it2 == word_table.end()) {
+        auto we_it = m_word_equations.begin();
+        if (we_it == m_word_equations.end()) return classes;
+        we_it->empty() ? we_it++ : we_it;
+        while (we_it != m_word_equations.end()) {
+            const word_term& w1 = we_it->lhs();
+            const word_term& w2 = we_it->rhs();
+            we_it++;
+            const auto& fit1 = word_table.find(w1);
+            const auto& fit2 = word_table.find(w2);
+            if (fit1 != word_table.end() && fit2 != word_table.end()) continue;
+            if (fit1 == word_table.end() && fit2 == word_table.end()) {
                 classes.push_back({w1, w2});
                 const auto class_id = classes.size() - 1;
                 word_table[w1] = class_id;
                 word_table[w2] = class_id;
                 continue;
             }
-            if (find_it1 != word_table.end()) {
-                const auto class_id = find_it1->second;
+            if (fit1 != word_table.end()) {
+                const auto class_id = fit1->second;
                 classes.at(class_id).push_back(w2);
                 word_table[w2] = class_id;
             } else {
-                const auto class_id = find_it2->second;
+                const auto class_id = fit2->second;
                 classes.at(class_id).push_back(w1);
                 word_table[w1] = class_id;
             }
@@ -320,8 +353,8 @@ namespace smt {
 
     const word_equation& state::first_none_empty_member() const {
         const auto& empty = [](const word_equation& we) { return we.empty(); };
-        const auto& it = std::find_if_not(m_word_equations.begin(), m_word_equations.end(), empty);
-        return it == m_word_equations.end() ? word_equation::null() : *it;
+        const auto& fit = std::find_if_not(m_word_equations.begin(), m_word_equations.end(), empty);
+        return fit == m_word_equations.end() ? word_equation::null() : *fit;
     }
 
     const bool state::unsolvable(const bool allow_empty_var) const {
@@ -341,18 +374,20 @@ namespace smt {
     }
 
     const bool state::unsolvable_in_equivalence_classes(const bool allow_empty_var) const {
-        const auto& unequalable = [&](const word_term& w1, const word_term& w2) {
-            return allow_empty_var ? word_term::unequalable(w1, w2)
-                                   : word_term::unequalable_no_empty_var(w1, w2);
-        };
+        const auto& unequalable = allow_empty_var ? word_term::unequalable
+                                                  : word_term::unequalable_no_empty_var;
         for (const auto& cls : equivalence_classes()) {
-            if (cls.size() == 2 && unequalable(cls.at(0), cls.at(1))) return true;
+            if (cls.size() == 2) {
+                if (unequalable(cls.at(0), cls.at(1))) return true;
+                continue;
+            }
             std::vector<bool> select(cls.size());
             std::fill(select.end() - 2, select.end(), true);
             do {
-                std::vector<word_term> selected(2);
+                std::vector<word_term> selected;
+                selected.reserve(2);
                 for (std::size_t i = 0; i < cls.size(); i++) {
-                    if (select.at(i)) selected.push_back(cls.at(i));
+                    select.at(i) ? selected.push_back(cls.at(i)) : (void) 0;
                 }
                 if (unequalable(selected.at(0), selected.at(1))) return true;
             } while (std::next_permutation(select.begin(), select.end()));
@@ -360,40 +395,52 @@ namespace smt {
         return false;
     }
 
-    void state::add_word_equation(word_equation&& we) {
+    void state::add_word_equation(const word_equation& we) {
         SASSERT(we);
 
-        we.trim_prefix();
-        m_word_equations.insert(std::move(we));
+        m_word_equations.insert(we.trim_prefix());
     }
 
     state state::replace(const element& tgt, const word_term& subst) const {
         state result;
-        for (auto we : m_word_equations) {
-            we.replace(tgt, subst);
-            result.add_word_equation(std::move(we));
+        for (const auto& we : m_word_equations) {
+            result.add_word_equation(we.replace(tgt, subst));
         }
         return result;
     }
 
-    const std::list<state> state::transform(const bool allow_empty_var) const {
-        std::list<state> result;
-        if (unsolvable(allow_empty_var)) return result;
-        const word_equation& curr_we = first_none_empty_member();
-        if (!curr_we) return result;
+    state state::remove(const element& tgt) const {
+        return replace(tgt, {});
+    }
 
-        const element& x = curr_we.lhs().head();
-        const element& y = curr_we.rhs().head();
+    state state::remove_all(const element_set& tgt) const {
+        state result;
+        for (const auto& we : m_word_equations) {
+            result.add_word_equation(we.remove_all(tgt));
+        }
+        return result;
+    }
+
+    const state_list state::transform(const bool allow_empty_var) const {
+        const word_equation& curr_we = first_none_empty_member();
+        SASSERT(!unsolvable(allow_empty_var) && curr_we);
+
+        const head_pair& hh = curr_we.heads();
+        state_list result;
+        if (allow_empty_var && curr_we.lhs().empty()) {
+            SASSERT(!curr_we.rhs().has_constant());
+            result.push_back(remove_all(curr_we.rhs().variables()));
+            return result;
+        }
+        const word_term& def_body = curr_we.definition_body();
+        if (def_body && (def_body.length() == 1 || !def_body.has_variable())) {
+            result.push_back(replace(curr_we.definition_var(), def_body));
+            return result;
+        }
         if (curr_we.check_heads(element_t::VAR, element_t::VAR)) {
-            result.push_back(replace(x, {y, x}));
-            result.push_back(replace(y, {x, y}));
-            result.push_back(replace(x, {y}));
+            transform_two_var(hh, result, allow_empty_var);
         } else {
-            const bool var_cons_headed = curr_we.lhs().check_head(element_t::VAR);
-            const element& v = var_cons_headed ? x : y;
-            const element& c = var_cons_headed ? y : x;
-            result.push_back(replace(v, {c, v}));
-            result.push_back(replace(v, {c}));
+            transform_one_var(hh, result, allow_empty_var);
         }
         return result;
     }
@@ -423,9 +470,9 @@ namespace smt {
         if (marked.find(node) != marked.end()) return false;
 
         marked.insert(node);
-        const auto& next_it = graph.find(node);
-        if (next_it != graph.end()) {
-            for (const auto& next : next_it->second) {
+        const auto& dept_dests = graph.find(node);
+        if (dept_dests != graph.end()) {
+            for (const auto& next : dept_dests->second) {
                 if (!dag_def_check_node(graph, next, marked, checked)) return false;
             }
         }
@@ -450,6 +497,35 @@ namespace smt {
         return true;
     }
 
+    void state::transform_one_var(const head_pair& hh, state_list& result, const bool aev) const {
+        SASSERT(hh.first);
+        SASSERT(hh.second);
+
+        const bool var_const_headed = hh.first.typed(element_t::VAR);
+        const element& v = var_const_headed ? hh.first : hh.second;
+        const element& c = var_const_headed ? hh.second : hh.first;
+        result.push_back(replace(v, {c, v}));
+        result.push_back(replace(v, {c}));
+        if (aev) {
+            result.push_back(remove(v));
+        }
+    }
+
+    void state::transform_two_var(const head_pair& hh, state_list& result, const bool aev) const {
+        SASSERT(hh.first);
+        SASSERT(hh.second);
+
+        const element& x = hh.first;
+        const element& y = hh.second;
+        result.push_back(replace(x, {y, x}));
+        result.push_back(replace(y, {x, y}));
+        result.push_back(replace(x, {y}));
+        if (aev) {
+            result.push_back(remove(x));
+            result.push_back(remove(y));
+        }
+    }
+
     neilson_based_solver::neilson_based_solver(const state& root) : m_solution_found{false} {
         m_pending.push(root);
     }
@@ -463,14 +539,14 @@ namespace smt {
             }
             m_pending.pop();
             if (m_processed.find(curr_case) != m_processed.end()) continue;
-            if (curr_case.unsolvable(true)) {
+            if (curr_case.unsolvable()) {
                 STRACE("str", tout << "failed:\n" << curr_case << std::endl;);
                 continue;
             }
             m_processed.insert(curr_case);
             STRACE("str", tout << "add:\n" << curr_case << std::endl;);
             for (const auto& var : curr_case.variables()) {
-                m_pending.push(curr_case.replace(var, {}));
+                m_pending.push(curr_case.remove(var));
             }
         }
         for (const auto& c : m_processed) {
@@ -483,9 +559,9 @@ namespace smt {
             state curr_s = m_pending.top();
             m_pending.pop();
             STRACE("str", tout << "from:\n" << curr_s << std::endl;);
-            for (const auto& next_s : curr_s.transform()) {
+            for (const auto& next_s : curr_s.transform(allow_empty_var)) {
                 if (m_processed.find(next_s) != m_processed.end()) {
-                    STRACE("str", tout << "already met:\n" << next_s << std::endl;);
+                    STRACE("str", tout << "already visited:\n" << next_s << std::endl;);
                     continue;
                 }
                 m_processed.insert(next_s);
@@ -497,6 +573,12 @@ namespace smt {
                     STRACE("str", tout << "solved:\n" << next_s << std::endl;);
                     m_solution_found = true;
                     return;
+                }
+                const word_equation_set& wes = next_s.word_equations();
+                if (wes.size() == 2 && wes.begin()->empty() &&
+                    (++wes.begin())->in_definition_form()) {
+                    STRACE("str", tout << "failed:\n" << next_s << std::endl;);
+                    continue;
                 }
                 STRACE("str", tout << "to:\n" << next_s << std::endl;);
                 m_pending.push(next_s);
@@ -657,20 +739,12 @@ namespace smt {
         const state& root = build_state_from_memo();
         STRACE("str", tout << "root built:\n" << root;);
         neilson_based_solver solver{root};
-        if (root.unsolvable_in_equivalence_classes(true) && block_dpllt_assignment_from_memo()) {
+        if (root.unsolvable_in_equivalence_classes() && block_dpllt_assignment_from_memo()) {
             return FC_CONTINUE;
         }
 
-        // consider empty variables
-        STRACE("str", tout << "\n[Consider Empty Variables]\n";);
-        solver.consider_var_empty_cases();
-        if (solver.solution_found()) {
-            STRACE("str", tout << "[Solved]\n";);
-            return FC_DONE;
-        }
-
         // check SAT
-        STRACE("str", tout << "[Check SAT]\n";);
+        STRACE("str", tout << "\n[Check SAT]\n";);
         solver.check_sat();
         if (solver.solution_found()) {
             STRACE("str", tout << "[Solved]\n";);

@@ -43,8 +43,11 @@ namespace smt {
         friend std::ostream& operator<<(std::ostream& os, const element& e);
     };
 
+    using element_list = std::list<element>;
+    using element_set = std::set<element>;
+
     class word_term {
-        std::list<element> m_elements;
+        element_list m_elements;
     public:
         static const word_term& null();
         static word_term of_string(const std::string& literal);
@@ -56,13 +59,14 @@ namespace smt {
         word_term() = default;
         word_term(std::initializer_list<element> list);
         const std::size_t length() const { return m_elements.size(); };
-        const std::list<element>& elements() const { return m_elements; };
-        const std::set<element> variables() const;
+        const std::size_t constant_count() const;
+        const element& head() const;
+        const element_list& elements() const { return m_elements; };
+        const element_set variables() const;
         const bool empty() const { return m_elements.empty(); }
         const bool has_constant() const;
         const bool has_variable() const;
         const bool check_head(const element_t& t) const;
-        const element& head() const;
         void remove_head();
         void concat(const word_term& other);
         void replace(const element& tgt, const word_term& subst);
@@ -73,6 +77,8 @@ namespace smt {
         friend std::ostream& operator<<(std::ostream& os, const word_term& w);
     };
 
+    using head_pair = std::pair<element, element>;
+
     class word_equation {
         word_term m_lhs;
         word_term m_rhs;
@@ -81,56 +87,72 @@ namespace smt {
         word_equation(const word_term& lhs, const word_term& rhs);
         const word_term& lhs() const { return m_lhs; }
         const word_term& rhs() const { return m_rhs; }
-        const std::set<element> variables() const;
+        const head_pair heads() const { return {m_lhs.head(), m_rhs.head()}; };
+        const element_set variables() const;
         const element& definition_var() const;
         const word_term& definition_body() const;
         const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
-        const bool unsolvable(bool allow_empty_var = false) const;
+        const bool unsolvable(bool allow_empty_var = true) const;
         const bool in_definition_form() const;
         const bool check_heads(const element_t& lht, const element_t& rht) const;
-        void trim_prefix();
-        void replace(const element& tgt, const word_term& subst);
+        word_equation trim_prefix() const;
+        word_equation replace(const element& tgt, const word_term& subst) const;
+        word_equation remove(const element& tgt) const;
+        word_equation remove_all(const element_set& tgt) const;
         explicit operator bool() const { return *this != null(); };
         const bool operator==(const word_equation& other) const;
         const bool operator!=(const word_equation& other) const { return !(*this == other); };
         const bool operator<(const word_equation& other) const;
         friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
+    private:
+        void sort();
     };
 
     using def_node = element;
     using def_nodes = std::set<def_node>;
     using def_graph = std::map<def_node, def_nodes>;
+    using word_equation_set = std::set<word_equation>;
+
+    class state;
+
+    using state_list = std::list<state>;
+    using state_set = std::set<state>;
 
     class state {
-        std::set<word_equation> m_word_equations;
+        word_equation_set m_word_equations;
     public:
-        const std::set<element> variables() const;
+        const word_equation_set& word_equations() const { return m_word_equations; };
+        const element_set variables() const;
         const std::vector<std::vector<word_term>> equivalence_classes() const;
         const word_equation& first_none_empty_member() const;
-        const bool unsolvable(bool allow_empty_var = false) const;
+        const bool unsolvable(bool allow_empty_var = true) const;
         const bool in_definition_form() const;
         const bool in_solved_form() const;
-        const bool unsolvable_in_equivalence_classes(bool allow_empty_var = false) const;
-        void add_word_equation(word_equation&& we);
+        const bool unsolvable_in_equivalence_classes(bool allow_empty_var = true) const;
+        void add_word_equation(const word_equation& we);
         state replace(const element& tgt, const word_term& subst) const;
-        const std::list<state> transform(bool allow_empty_var = false) const;
+        state remove(const element& tgt) const;
+        state remove_all(const element_set& tgt) const;
+        const state_list transform(bool allow_empty_var = true) const;
         const bool operator<(const state& other) const;
         friend std::ostream& operator<<(std::ostream& os, const state& s);
     private:
         static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
                                              def_nodes& marked, def_nodes& checked);
         const bool definition_acyclic() const;
+        void transform_one_var(const head_pair& hh, state_list& result, bool aev) const;
+        void transform_two_var(const head_pair& hh, state_list& result, bool aev) const;
     };
 
     class neilson_based_solver {
-        std::set<state> m_processed;
+        state_set m_processed;
         std::stack<state> m_pending;
         bool m_solution_found;
     public:
         explicit neilson_based_solver(const state& root);
         const bool solution_found() const { return m_solution_found; }
         void consider_var_empty_cases();
-        void check_sat(bool allow_empty_var = false);
+        void check_sat(bool allow_empty_var = true);
     };
 
     using expr_pair = std::pair<expr_ref, expr_ref>;
