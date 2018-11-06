@@ -23,7 +23,7 @@ from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
 from typing import Tuple, List
 
 TOP = dirname(dirname(abspath(__file__)))
-TOOL_DEFAULT_PATH = os.path.join(TOP, 'cmake-build-debug', 'z3')
+TOOL_DEFAULT_PATH = os.path.join(TOP, 'build', 'z3')
 TOOL = os.getenv('TOOL', TOOL_DEFAULT_PATH)
 CVC4 = os.getenv('CVC4', 'cvc4')
 Z3 = os.getenv('Z3', 'z3')
