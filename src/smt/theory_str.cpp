@@ -357,6 +357,13 @@ namespace smt {
         return fit == m_word_equations.end() ? word_equation::null() : *fit;
     }
 
+    const word_equation& state::only_one_left_member() const {
+        if (m_word_equations.size() == 2 && m_word_equations.begin()->empty()) {
+            return *(++m_word_equations.begin());
+        }
+        return word_equation::null();
+    }
+
     const bool state::unsolvable(const bool allow_empty_var) const {
         const bool& aev = allow_empty_var;
         const auto& unsolvable = [&](const word_equation& we) { return we.unsolvable(aev); };
@@ -365,7 +372,10 @@ namespace smt {
 
     const bool state::in_definition_form() const {
         const auto& in_def_form = [](const word_equation& we) { return we.in_definition_form(); };
-        return std::all_of(m_word_equations.begin(), m_word_equations.end(), in_def_form);
+        auto we_it = m_word_equations.begin();
+        if (we_it == m_word_equations.end()) return true;
+        we_it->empty() ? we_it++ : we_it;
+        return std::all_of(we_it, m_word_equations.end(), in_def_form);
     }
 
     const bool state::in_solved_form() const {
@@ -574,9 +584,13 @@ namespace smt {
                     m_solution_found = true;
                     return;
                 }
-                const word_equation_set& wes = next_s.word_equations();
-                if (wes.size() == 2 && wes.begin()->empty() &&
-                    (++wes.begin())->in_definition_form()) {
+                const word_equation& the_last_we = next_s.only_one_left_member();
+                if (the_last_we && the_last_we.in_definition_form()) {
+                    if (!the_last_we.definition_body().has_constant()) {
+                        STRACE("str", tout << "solved:\n" << next_s << std::endl;);
+                        m_solution_found = true;
+                        return;
+                    }
                     STRACE("str", tout << "failed:\n" << next_s << std::endl;);
                     continue;
                 }

@@ -125,6 +125,7 @@ namespace smt {
         const element_set variables() const;
         const std::vector<std::vector<word_term>> equivalence_classes() const;
         const word_equation& first_none_empty_member() const;
+        const word_equation& only_one_left_member() const;
         const bool unsolvable(bool allow_empty_var = true) const;
         const bool in_definition_form() const;
         const bool in_solved_form() const;
