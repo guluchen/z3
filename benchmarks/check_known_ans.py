@@ -31,10 +31,14 @@ def run_tool(filename: str) -> str:
 
 def check(prob_set_path: str, prob_notes: List[List[str]]):
     print(f'problem expected actual')
+    all_checked = True
     for prob, ans in prob_notes:
         result = run_tool(f'{prob_set_path}/{prob}')
         if result != ans:
+            all_checked = False
             print(f'{prob} {ans} {result}')
+    if all_checked:
+        print('all checked')
 
 
 def main():

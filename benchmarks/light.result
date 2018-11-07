@@ -1,0 +1,12 @@
+problem set path: light
+problems processed: 100
+
+maybe wrong: 0.  format: (prob, tool, cvc4, z3, z3str3)
+
+timeout: 0.  format: (prob, tool, cvc4, z3, z3str3)
+
+inconsistent: 4.  format: (prob, tool, cvc4, z3, z3str3)
+(ttt_041.smt2, unsat, timeout, timeout, unknown)
+(ttt_053.smt2, unsat, timeout, timeout, unknown)
+(ttt_057.smt2, sat, timeout, sat, sat)
+(ttt_062.smt2, unsat, unsat, unsat, timeout)
