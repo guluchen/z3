@@ -146,7 +146,7 @@ def check_ans(prob_set_path: str, prob_names: List[str]):
             tool_maybe_wrong.append(result)
 
         count += 1
-        if count % 1000 == 0:  # write partial result
+        if count % 100 == 0:  # write partial result
             write_ans_note(prob_set_path, ans_note)
             write_check_result(prob_set_path, count, tool_maybe_wrong, tool_timeout, inconsistent)
 
@@ -159,10 +159,10 @@ def main():
     # Set argument parser
     arg_parser = ArgumentParser(prog=None,
                                 usage=None,
-                                description="Handle given problems with our tool, cvc4, z3 and "
-                                            "compare them.",
+                                description='Handle given problems with our tool, cvc4, z3 and '
+                                            'compare them.',
                                 epilog=None)
-    arg_parser.add_argument("prob_set_path", help="path to the problems")
+    arg_parser.add_argument('prob_set_path', help='path to the problems')
     args = arg_parser.parse_args()
 
     # Run the check

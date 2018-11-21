@@ -45,10 +45,10 @@ def main():
     # Set argument parser
     arg_parser = ArgumentParser(prog=None,
                                 usage=None,
-                                description="Verify our tool using problems with known answers",
+                                description='Verify our tool using problems with known answers',
                                 epilog=None)
-    arg_parser.add_argument("prob_set_path", help="path to the problems")
-    arg_parser.add_argument("prob_ans_note", help="path to the answer note")
+    arg_parser.add_argument('prob_set_path', help='path to the problems')
+    arg_parser.add_argument('prob_ans_note', help='path to the answer note')
     args = arg_parser.parse_args()
 
     # Run the check

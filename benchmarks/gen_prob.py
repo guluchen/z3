@@ -1,248 +1,247 @@
 #!/usr/bin/env python3
 
-import random
 import os
+import random
 
 from argparse import ArgumentParser
-from typing import Tuple, List
+from enum import Enum, unique, auto
+from typing import List, Set
 
-Elem = Tuple[int, int]
-symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-max_elems = 6
-min_elems = 1
-max_num_we = 3
-
-
-def random_elem_len() -> int:
-    return random.randrange(min_elems, max_elems + 1)
+WORD_SIZE_MAX = int(os.getenv('WORD_SIZE_MAX', 6))
+WORD_SIZE_MIN = int(os.getenv('WORD_SIZE_MIN', 1))
+CONSTRAINT_NUMBER = int(os.getenv('CONSTRAINT_NUMBER', 3))
+SYMBOLS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 
 
-def num_occurrence(l: List[Elem], c: Elem):
-    return len([e for e in l if e == c])
+@unique
+class ElementType(Enum):
+    VAR = auto()
+    CONST = auto()
+
+    @classmethod
+    def random(cls):
+        return random.choice([ElementType.VAR, ElementType.CONST])
 
 
-def gen_elem_random() -> Elem:
-    return random.randrange(0, len(symbols)), random.randrange(0, 2)  # 0: var, 1: const
+class Element:
+    @classmethod
+    def random(cls):
+        return cls(ElementType.random(), random.choice(SYMBOLS))
 
-
-def print_elem(e: Elem) -> str:
-    if e[1] == 0:
-        return f'V({symbols[e[0]]})'
-    else:
-        return f'C({symbols[e[0]]})'
-
-
-class ElemList:
-    def __init__(self):
-        self.lhs: List[Elem] = list()
-        self.rhs: List[Elem] = list()
-        self.lhs_len = random_elem_len()
-        self.rhs_len = random_elem_len()
-
-    def assign(self, l1: List[Elem], l2: List[Elem]):
-        self.lhs: List[Elem] = l1
-        self.rhs: List[Elem] = l2
-        self.lhs_len = len(l1)
-        self.rhs_len = len(l2)
-
-    def __len__(self) -> int:
-        return len(self.lhs) + len(self.rhs)
-
-    def __eq__(self, other):
-        if not isinstance(other, ElemList):
-            return False
-        if len(self) != len(
-                other) or self.lhs_len != other.lhs_len or self.rhs_len != other.rhs_len:
-            return False
-        if self.lhs == other.lhs and self.rhs == other.rhs:
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        return ''.join([print_elem(e) for e in self.lhs]) + ' = ' + ''.join(
-            [print_elem(e) for e in self.rhs])
+    def __init__(self, typ: ElementType, value: str):
+        self.type: ElementType = typ
+        self.value: str = value
 
     def __repr__(self):
-        return str(self)
+        if self.type is ElementType.VAR:
+            return f'V({self.value})'
+        else:
+            return f'C({self.value})'
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return other.type == self.type and other.value == self.value
+        return False
 
     def __hash__(self):
         return hash(str(self))
 
+
+def is_var(e: Element):
+    return e.type is ElementType.VAR
+
+
+def render_element_list(l: List[Element]) -> str:
+    result = []
+    curr_str = ''
+    in_str = False
+    for e in l:
+        if in_str and is_var(e):
+            in_str = False
+            result.append(f'"{curr_str}"')
+            curr_str = ''
+        if is_var(e):
+            result.append(e.value)
+        else:
+            in_str = True
+            curr_str += e.value
+    if curr_str:
+        result.append(f'"{curr_str}"')
+    return result[0] if len(result) == 1 else f'(str.++ {" ".join(result)})'
+
+
+class WordConstraint:
+    def __init__(self, term_size_min: int = WORD_SIZE_MIN, term_size_max: int = WORD_SIZE_MAX):
+        self.lhs: List[Element] = []
+        self.rhs: List[Element] = []
+        self.should_fail: bool = bool(random.getrandbits(1))
+        self.lhs_size = random.randint(term_size_min, term_size_max)
+        self.rhs_size = random.randint(term_size_min, term_size_max)
+
+    def __repr__(self):
+        typ = 'WI' if self.should_fail else 'WE'
+        return f'{typ}({len(self.lhs)}/{self.lhs_size}, {len(self.rhs)}/{self.rhs_size})'
+
+    def __str__(self):
+        typ = '!=' if self.should_fail else '='
+        return ''.join(map(str, self.lhs)) + f' {typ} ' + ''.join(map(str, self.rhs))
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (other.is_full() and self.is_full() and other.should_fail == self.should_fail
+                    and other.lhs == self.lhs and other.rhs == self.rhs)
+        return False
+
     def is_full(self):
-        return len(self.lhs) == self.lhs_len and len(self.rhs) == self.rhs_len
+        return len(self.lhs) == self.lhs_size and len(self.rhs) == self.rhs_size
 
-    def num_occurrence(self, e: Elem):
-        return num_occurrence(self.lhs, e) + num_occurrence(self.rhs, e)
+    def count(self, e: Element) -> int:
+        return (self.lhs + self.rhs).count(e)
 
-    def put_elem(self, e: Elem) -> bool:
-        if len(self.lhs) < self.lhs_len:
+    def variables(self) -> Set[Element]:
+        return set(filter(is_var, self.lhs + self.rhs))
+
+    def put_element(self, e: Element) -> bool:
+        if len(self.lhs) < self.lhs_size:
             self.lhs.append(e)
             return True
-        elif len(self.rhs) < self.rhs_len:
+        elif len(self.rhs) < self.rhs_size:
             self.rhs.append(e)
             return True
         else:
             return False
 
-    def export_smt(self):
+    def render(self) -> str:
         assert self.is_full()
 
-        if self.lhs_len == 1:
-            lhs_str = export_elem_smt(self.lhs[0])
-        else:
-            lhs_str = '(str.++ ' + ' '.join([export_elem_smt(e) for e in self.lhs]) + ')'
-        if self.rhs_len == 1:
-            rhs_str = export_elem_smt(self.rhs[0])
-        else:
-            rhs_str = '(str.++ ' + ' '.join([export_elem_smt(e) for e in self.rhs]) + ')'
-
-        return f'(assert (= {lhs_str} {rhs_str}))'
-
-
-def export_elem_smt(e: Elem) -> str:
-    if e[1] == 0:  # variable
-        return symbols[e[0]]
-    else:
-        return f'\"{symbols[e[0]]}\"'
-
-
-def export_smt_elems(idx: int, max_len: int, elems: List[Elem], exp_str: str = '') -> str:
-    if max_len - idx == 1:
-        assert exp_str == ''
-        return export_elem_smt(elems[idx])
-    else:
-        return f'(str.++ {export_elem_smt(elems[idx])} {exp_str})'
+        equation = f'(= {render_element_list(self.lhs)} {render_element_list(self.rhs)})'
+        return f'(not {equation})' if self.should_fail else equation
 
 
 class Problem:
-    def __init__(self):
-        self.we_list: List[ElemList] = list()
-        for i in range(0, max_num_we):
-            self.we_list.append(ElemList())
+    @classmethod
+    def random(cls):
+        result = cls()
+        while not result.is_full():
+            result.put_element(Element.random())
+        return result
 
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Problem):
-            return self.we_list == other.we_list
-        else:
-            return False
+    @classmethod
+    def random_quadratic(cls):
+        result = cls()
+        while not result.is_full():
+            e = Element.random()
+            if is_var(e):
+                result.put_element(e) if result.count(e) < 2 else None
+            else:
+                result.put_element(e)
+        return result
 
-    def __str__(self):
-        return '\n'.join([str(w) for w in self.we_list])
+    def __init__(self, constraint_num: int = CONSTRAINT_NUMBER):
+        self.word_constraints: List[WordConstraint] = []
+        for i in range(0, constraint_num):
+            self.word_constraints.append(WordConstraint())
+        self.word_constraints[0].should_fail = False  # at least one equation
+        self.word_constraints[-1].should_fail = True  # at least one inequation
 
     def __repr__(self):
-        return '.'.join([repr(w) for w in self.we_list])
+        return '.'.join(map(repr, self.word_constraints))
+
+    def __str__(self):
+        return '\n'.join(map(str, self.word_constraints))
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, self.__class__):
+            return other.word_constraints == self.word_constraints
+        else:
+            return False
 
     def __hash__(self):
-        return hash(repr(self))
-
-    def is_elem_quadratic_ok(self, e: Elem) -> bool:
-        if sum([w.num_occurrence(e) for w in self.we_list]) < 2:
-            return True
-        else:
-            return False
+        return hash(str(self))
 
     def is_full(self):
-        if len([w for w in self.we_list if not w.is_full()]) > 0:
-            return False
-        else:
-            return True
-
-    def num_occurrence(self, e: Elem) -> int:
-        return sum([w.num_occurrence(e) for w in self.we_list])
+        return all(w.is_full() for w in self.word_constraints)
 
     def is_quadratic(self):
-        return True in \
-               {self.num_occurrence(v) <= 2 for v in
-                {e for w in self.we_list for e in w.lhs + w.rhs if e[1] == 0}}
+        return all(self.count(v) <= 2 for v in self.variables())
 
-    def put_elem(self, e: Elem):
-        vacancy = [w for w in self.we_list if not w.is_full()]
-        if len(vacancy) > 0:
-            return vacancy[0].put_elem(e)
-        else:
-            return False
+    def count(self, e: Element) -> int:
+        return sum(w.count(e) for w in self.word_constraints)
 
-    def generate_quadratic(self):
-        while not self.is_full():
-            elem = gen_elem_random()
-            if elem[1] == 0 and self.is_elem_quadratic_ok(elem):  # check quadratic before add
-                self.put_elem(elem)
-            else:  # char or quadratic not set
-                self.put_elem(elem)
-        return self
+    def variables(self) -> Set[Element]:
+        return {v for w in self.word_constraints for v in w.variables()}
 
-    def generate(self):
-        while not self.is_full():
-            elem = gen_elem_random()
-            self.put_elem(elem)
-        return self
+    def put_element(self, e: Element):
+        non_full_wc = next((w for w in self.word_constraints if not w.is_full()), None)
+        return non_full_wc.put_element(e) if non_full_wc else False
 
-    def reset(self):  # same as __init__
-        self.we_list: List[ElemList] = list()
-        for i in range(0, max_num_we):
-            self.we_list.append(ElemList())
+    def equalize_all_constraints(self):
+        for w in self.word_constraints:
+            w.should_fail = False
 
-    def variables(self):
-        return {symbols[e[0]] for w in self.we_list for e in w.lhs + w.rhs if e[1] == 0}
+    def render(self) -> str:
+        assert self.is_full()
 
-    def export_smt(self) -> str:
-        if not self.is_full():
-            return ''
-        var = self.variables()
-        ret = ''
-        for v in var:
-            ret += f'(declare-fun {v} () String)\n'
-        for w in self.we_list:
-            ret += f'{w.export_smt()}\n'
-        ret += '(check-sat)\n(get-model)'
-        return ret
+        result = ''
+        for v in self.variables():
+            result += f'(declare-fun {v.value} () String)\n'
+        for w in self.word_constraints:
+            result += f'(assert {w.render()})\n'
+        result += '(check-sat)\n(get-model)\n'
+        return result
 
 
 def main():
     # Set argument parser
     arg_parser = ArgumentParser(prog=None,
                                 usage=None,
-                                description="A simple SMT (quadratic) string problem generator.",
+                                description='A simple SMT (quadratic) string problem generator.',
                                 epilog=None)
-    arg_parser.add_argument("-d", "--dir", help="path to generate problems, default is `./`",
-                            dest="path", default="./")
-    arg_parser.add_argument("-p", "--prefix",
-                            help="prefix of files to be generated, default is `ttt_`",
-                            dest="prefix", default="ttt_")
-    arg_parser.add_argument("-n", "--num",
-                            help="number of problems to be generated, default is 100",
-                            dest="num", default="100", type=int)
-    arg_parser.add_argument("-q", "--quadratic",
-                            help="generate quadratic problems, default is on",
-                            dest="quadratic", default="on")
+    arg_parser.add_argument('prob_num', help='number of the problems to generate')
+    arg_parser.add_argument('-d', '--dir', help='path to generate problems, default is `./prob`',
+                            dest='dir', default='./prob')
+    arg_parser.add_argument('-p', '--prefix',
+                            help='prefix of the generated file names, default is `ttt_`',
+                            dest='prefix', default='ttt_')
+    arg_parser.add_argument('--non-quadratic',
+                            help='generate non-quadratic problems, default is off',
+                            dest='non_quadratic', action='store_true')
+    arg_parser.add_argument('--inequation',
+                            help='generate problems having inequations, default is off',
+                            dest='inequation', action='store_true')
     args = arg_parser.parse_args()
 
+    prob_num = int(args.prob_num)
+    output_dir = args.dir
+    file_prefix = args.prefix
     print('Generating problems....')
-    print(f'   output dir: {args.path}')
-    print(f'  file prefix: {args.prefix}')
-    print(f'  problem num: {args.num}')
-    print(f'    quadratic: {args.quadratic}')
+    print(f'   output dir: {output_dir}')
+    print(f'  file prefix: {file_prefix}')
+    print(f'  problem num: {prob_num}')
+    print(f'non-quadratic: {args.non_quadratic}')
+    print(f'   inequation: {args.inequation}')
 
     # Proceed problem generation
-    problem_set = set()
-    quadratic_flag = args.quadratic == 'on'
-    if quadratic_flag:  # generate set of quadratic problems
-        while len(problem_set) < args.num:
-            problem_set.add(Problem().generate_quadratic())
-    else:  # generate set of non-quadratic problems (at least one variable is non-quadratic)
-        while len(problem_set) < args.num:
-            prob = Problem().generate()
-            if not prob.is_quadratic():
-                problem_set.add(prob)
-    if not os.path.exists(args.path):
-        os.makedirs(args.path)
-    os.chdir(args.path)
+    problem_set: Set[Problem] = set()
+    if args.non_quadratic:
+        while len(problem_set) < prob_num:
+            p = Problem.random()
+            problem_set.add(p) if not p.is_quadratic() else None
+    else:
+        while len(problem_set) < prob_num:
+            problem_set.add(Problem.random_quadratic())
+    if not args.inequation:
+        for p in problem_set:
+            p.equalize_all_constraints()
+
+    # Output the generated problems
+    os.makedirs(output_dir) if not os.path.exists(output_dir) else None
+    os.chdir(output_dir)
     num = 1
     for p in problem_set:
-        filename = f'{args.prefix}{str(num).zfill(len(str(args.num)))}.smt2'
+        filename = f'{file_prefix}{str(num).zfill(len(str(prob_num)))}.smt2'
         with open(filename, 'w') as fp:
-            fp.write(p.export_smt())
+            fp.write(p.render())
         num += 1
 
 
