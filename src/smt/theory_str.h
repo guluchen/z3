@@ -45,11 +45,8 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const element& e);
         };
 
-        using element_list = std::list<element>;
-        using element_set = std::set<element>;
-
         class word_term {
-            element_list m_elements;
+            std::list<element> m_elements;
         public:
             static const word_term& null();
             static word_term of_string(const std::string& literal);
@@ -63,8 +60,7 @@ namespace smt {
             const std::size_t length() const { return m_elements.size(); }
             const std::size_t constant_count() const;
             const element& head() const;
-            const element_list& elements() const { return m_elements; }
-            const element_set variables() const;
+            const std::set<element> variables() const;
             const bool empty() const { return m_elements.empty(); }
             const bool has_constant() const;
             const bool has_variable() const;
@@ -79,7 +75,7 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const word_term& w);
         };
 
-        using head_pair = std::pair<element, element>;
+        using head_pair = std::pair<const element&, const element&>;
 
         class word_equation {
             word_term m_lhs;
@@ -90,7 +86,7 @@ namespace smt {
             const word_term& lhs() const { return m_lhs; }
             const word_term& rhs() const { return m_rhs; }
             const head_pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
-            const element_set variables() const;
+            const std::set<element> variables() const;
             const element& definition_var() const;
             const word_term& definition_body() const;
             const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
@@ -100,7 +96,7 @@ namespace smt {
             word_equation trim_prefix() const;
             word_equation replace(const element& tgt, const word_term& subst) const;
             word_equation remove(const element& tgt) const;
-            word_equation remove_all(const element_set& tgt) const;
+            word_equation remove_all(const std::set<element>& tgt) const;
             explicit operator bool() const { return *this != null(); }
             const bool operator==(const word_equation& other) const;
             const bool operator!=(const word_equation& other) const { return !(*this == other); }
@@ -110,31 +106,39 @@ namespace smt {
             void sort();
         };
 
-        using def_node = element;
-        using def_nodes = std::set<def_node>;
-        using def_graph = std::map<def_node, def_nodes>;
-        using word_equation_set = std::set<word_equation>;
-
-        class state;
-
-        using state_list = std::list<state>;
-        using state_set = std::set<state>;
-
         class state {
+            using def_node = element;
+            using def_nodes = std::set<def_node>;
+            using def_graph = std::map<def_node, def_nodes>;
+            using trans_source = std::pair<const word_equation&, const word_equation&>;
+
+            class transform {
+                const state& m_state;
+                const word_equation& m_src;
+                const bool m_src_should_fail;
+                std::list<state> m_result;
+
+                transform(const state& s, const word_equation& src, bool by_wi = false);
+                const bool src_vars_empty() const;
+                const bool src_var_well_defined() const;
+                const bool src_two_var_unequal() const;
+                void transform_one_var();
+                void transform_two_var();
+                std::list<state> compute();
+            };
+
             bool m_allow_empty_var = true;
-            word_equation_set m_wes_to_satisfy;
-            word_equation_set m_wes_to_fail;
+            std::set<word_equation> m_wes_to_satisfy;
+            std::set<word_equation> m_wes_to_fail;
         public:
             state() = default;
             explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
-            const element_set variables() const;
-            const word_equation_set& word_equations() const { return m_wes_to_satisfy; }
-            const word_equation_set& word_disequalities() const { return m_wes_to_fail; }
+            const std::set<element> variables() const;
             const word_equation& only_one_equation_left() const;
             const std::vector<std::vector<word_term>> equivalence_classes() const;
             const bool equivalence_classes_inconsistent() const;
             const bool disequalities_inconsistent() const;
-            const bool unsolvable() const;
+            const bool unsolvable_by_check() const;
             const bool unsolvable_by_inference() const;
             const bool in_definition_form() const;
             const bool in_solved_form() const;
@@ -143,21 +147,21 @@ namespace smt {
             void fail_constraint(const word_equation& we);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
-            state remove_all(const element_set& tgt) const;
-            const state_list transform() const;
+            state remove_all(const std::set<element>& tgt) const;
+            const std::list<state> transform() const;
             const bool operator<(const state& other) const;
             friend std::ostream& operator<<(std::ostream& os, const state& s);
         private:
             static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
                                                  def_nodes& marked, def_nodes& checked);
             const bool definition_acyclic() const;
-            const word_equation& transformation_source() const;
-            void transform_one_var(const head_pair& hh, state_list& result) const;
-            void transform_two_var(const head_pair& hh, state_list& result) const;
+            const trans_source transformation_source() const;
+            void transform_one_var(const head_pair& hh, std::list<state>& result) const;
+            void transform_two_var(const head_pair& hh, std::list<state>& result) const;
         };
 
         class neilson_based_solver {
-            state_set m_processed;
+            std::set<state> m_processed;
             std::stack<state> m_pending;
             bool m_solution_found;
         public:
