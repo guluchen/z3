@@ -340,9 +340,10 @@ namespace smt {
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
             m_result.push_back(m_state.replace(v, {c, v}));
-            m_result.push_back(m_state.replace(v, {c}));
             if (m_state.m_allow_empty_var) {
                 m_result.push_back(m_state.remove(v));
+            } else {
+                m_result.push_back(m_state.replace(v, {c}));
             }
         }
 
@@ -354,10 +355,11 @@ namespace smt {
             const element& y = hh.second;
             m_result.push_back(m_state.replace(x, {y, x}));
             m_result.push_back(m_state.replace(y, {x, y}));
-            m_result.push_back(m_state.replace(x, {y}));
             if (m_state.m_allow_empty_var) {
                 m_result.push_back(m_state.remove(x));
                 m_result.push_back(m_state.remove(y));
+            } else {
+                m_result.push_back(m_state.replace(x, {y}));
             }
         }
 
