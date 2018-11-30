@@ -7,37 +7,29 @@
 #include <map>
 #include <vector>
 #include "ast/arith_decl_plugin.h"
-#include "ast/ast_pp.h"
-#include "smt/params/theory_str_params.h"
-#include "smt/proto_model/value_factory.h"
-#include "ast/rewriter/seq_rewriter.h"
-#include "ast/rewriter/th_rewriter.h"
 #include "ast/seq_decl_plugin.h"
-#include "smt/smt_model_generator.h"
+#include "smt/params/theory_str_params.h"
 #include "smt/smt_theory.h"
-#include "util/hashtable.h"
 #include "util/scoped_vector.h"
-#include "util/scoped_ptr_vector.h"
-#include "util/trail.h"
-#include "util/union_find.h"
 
 namespace smt {
 
     namespace str {
 
-        enum class element_t {
-            CONST, VAR, NONE
-        };
-
         class element {
-            element_t m_type;
-            std::string m_value;
         public:
+            enum class t {
+                CONST, VAR, NONE
+            };
             static const element& null();
-            element(const element_t& t, std::string v) : m_type{t}, m_value{std::move(v)} {}
-            const element_t& type() const { return m_type; }
-            const std::string& value() const { return m_value; }
-            const bool typed(const element_t& t) const { return m_type == t; }
+        private:
+            element::t m_type;
+            zstring m_value;
+        public:
+            element(const element::t& t, const zstring& v) : m_type{t}, m_value{v} {}
+            const element::t& type() const { return m_type; }
+            const zstring& value() const { return m_value; }
+            const bool typed(const element::t& t) const { return m_type == t; }
             explicit operator bool() const { return *this != null(); }
             const bool operator==(const element& other) const;
             const bool operator!=(const element& other) const { return !(*this == other); }
@@ -46,15 +38,17 @@ namespace smt {
         };
 
         class word_term {
-            std::list<element> m_elements;
         public:
             static const word_term& null();
-            static word_term of_string(const std::string& literal);
-            static word_term of_variable(const std::string& name);
-            static const bool prefix_mismatched_in_consts(const word_term& w1, const word_term& w2);
-            static const bool suffix_mismatched_in_consts(const word_term& w1, const word_term& w2);
+            static word_term of_string(const zstring& str);
+            static word_term of_variable(const zstring& name);
+            static const bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
+            static const bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
             static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
             static const bool unequalable(const word_term& w1, const word_term& w2);
+        private:
+            std::list<element> m_elements;
+        public:
             word_term() = default;
             word_term(std::initializer_list<element> list);
             const std::size_t length() const { return m_elements.size(); }
@@ -64,7 +58,7 @@ namespace smt {
             const bool empty() const { return m_elements.empty(); }
             const bool has_constant() const;
             const bool has_variable() const;
-            const bool check_head(const element_t& t) const;
+            const bool check_head(const element::t& t) const;
             void remove_head();
             void concat(const word_term& other);
             void replace(const element& tgt, const word_term& subst);
@@ -78,10 +72,12 @@ namespace smt {
         using head_pair = std::pair<const element&, const element&>;
 
         class word_equation {
+        public:
+            static const word_equation& null();
+        private:
             word_term m_lhs;
             word_term m_rhs;
         public:
-            static const word_equation& null();
             word_equation(const word_term& lhs, const word_term& rhs);
             const word_term& lhs() const { return m_lhs; }
             const word_term& rhs() const { return m_rhs; }
@@ -92,7 +88,7 @@ namespace smt {
             const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
             const bool unsolvable(bool allow_empty_var = true) const;
             const bool in_definition_form() const;
-            const bool check_heads(const element_t& lht, const element_t& rht) const;
+            const bool check_heads(const element::t& lht, const element::t& rht) const;
             word_equation trim_prefix() const;
             word_equation replace(const element& tgt, const word_term& subst) const;
             word_equation remove(const element& tgt) const;
@@ -134,17 +130,17 @@ namespace smt {
             state() = default;
             explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
             const std::set<element> variables() const;
-            const word_equation& only_one_equation_left() const;
-            const std::vector<std::vector<word_term>> equivalence_classes() const;
-            const bool equivalence_classes_inconsistent() const;
-            const bool disequalities_inconsistent() const;
+            const word_equation& only_one_eq_left() const;
+            const std::vector<std::vector<word_term>> eq_classes() const;
+            const bool eq_classes_inconsistent() const;
+            const bool diseq_inconsistent() const;
             const bool unsolvable_by_check() const;
             const bool unsolvable_by_inference() const;
             const bool in_definition_form() const;
             const bool in_solved_form() const;
-            void allow_empty_variable(const bool enable) { m_allow_empty_var = enable; }
-            void satisfy_constraint(const word_equation& we);
-            void fail_constraint(const word_equation& we);
+            void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
+            void should_satisfy(const word_equation& we);
+            void should_fail(const word_equation& we);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
             state remove_all(const std::set<element>& tgt) const;
@@ -176,43 +172,44 @@ namespace smt {
     }
 
     class theory_str : public theory {
-        int m_scope_level;
+        int m_scope_level = 0;
         const theory_str_params& m_params;
-        scoped_vector<str::expr_pair> m_we_expr_memo;
-        scoped_vector<str::expr_pair> m_wi_expr_memo;
+        const arith_util m_util_a;
+        const seq_util m_util_s;
+        scoped_vector<str::expr_pair> m_word_eq_todo;
+        scoped_vector<str::expr_pair> m_word_diseq_todo;
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
     protected:
+        theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
         void init(context *ctx) override;
+        void add_theory_assumptions(expr_ref_vector& assumptions) override;
+        theory_var mk_var(enode *n) override;
         bool internalize_atom(app *atom, bool gate_ctx) override;
         bool internalize_term(app *term) override;
-        theory_var mk_var(enode *n) override;
-        theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
-        model_value_proc *mk_value(enode *n, model_generator& mg) override;
-        void add_theory_assumptions(expr_ref_vector& assumptions) override;
-        lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
-        void new_eq_eh(theory_var, theory_var) override;
-        void new_diseq_eh(theory_var, theory_var) override;
         void init_search_eh() override;
         void relevant_eh(app *n) override;
         void assign_eh(bool_var v, bool is_true) override;
+        void new_eq_eh(theory_var, theory_var) override;
+        void new_diseq_eh(theory_var, theory_var) override;
+        bool can_propagate() override;
+        void propagate() override;
         void push_scope_eh() override;
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
-        bool can_propagate() override;
-        void propagate() override;
+        model_value_proc *mk_value(enode *n, model_generator& mg) override;
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
+        lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
         const bool is_theory_str_term(expr *e) const;
-        decl_kind get_decl_kind(expr *e) const;
-        str::word_term get_word_term(expr *e) const;
-        str::state build_state_from_memo() const;
-        const bool block_dpllt_assignment_from_memo();
+        str::word_term mk_word_term(expr *e) const;
+        str::state mk_state_from_todo() const;
+        const bool block_curr_assignment();
     };
 
 }

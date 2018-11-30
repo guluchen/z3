@@ -1,16 +1,9 @@
 #include <algorithm>
 #include <functional>
-#include "ast/ast_ll_pp.h"
 #include "ast/ast_pp.h"
-#include "ast/ast_smt2_pp.h"
-#include "ast/ast_util.h"
-#include "ast/rewriter/seq_rewriter.h"
-#include "smt_kernel.h"
+#include "smt/theory_str.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
-#include "smt/theory_arith.h"
-#include "smt/theory_seq_empty.h"
-#include "smt/theory_str.h"
 
 /* TODO:
  *  1. better algorithm for checking solved form
@@ -25,7 +18,7 @@ namespace smt {
         using namespace std::placeholders;
 
         const element& element::null() {
-            static const element e{element_t::NONE, ""};
+            static const element e{element::t::NONE, ""};
             return e;
         }
 
@@ -49,22 +42,20 @@ namespace smt {
             return w;
         }
 
-        word_term word_term::of_string(const std::string& literal) {
+        word_term word_term::of_string(const zstring& str) {
             word_term result;
-            for (auto i = literal.length() - 2; i > 0; i--) {
-                result.m_elements.push_front(element{element_t::CONST, literal.substr(i, 1)});
+            for (std::size_t i = 0; i < str.length(); i++) {
+                result.m_elements.push_back({element::t::CONST, {str[i]}});
             }
             return result;
         }
 
-        word_term word_term::of_variable(const std::string& name) {
-            word_term result;
-            result.m_elements.push_front(element{element_t::VAR, name});
-            return result;
+        word_term word_term::of_variable(const zstring& name) {
+            return {{element::t::VAR, name}};
         }
 
         const bool
-        word_term::prefix_mismatched_in_consts(const word_term& w1, const word_term& w2) {
+        word_term::prefix_const_mismatched(const word_term& w1, const word_term& w2) {
             if (w1.empty() || w2.empty()) return false;
 
             auto it1 = w1.m_elements.begin();
@@ -72,12 +63,12 @@ namespace smt {
             while (*it1 == *it2) {
                 if (++it1 == w1.m_elements.end() || ++it2 == w2.m_elements.end()) return false;
             }
-            return it1->typed(element_t::CONST) && it2->typed(element_t::CONST) &&
+            return it1->typed(element::t::CONST) && it2->typed(element::t::CONST) &&
                    it1->value() != it2->value();
         }
 
         const bool
-        word_term::suffix_mismatched_in_consts(const word_term& w1, const word_term& w2) {
+        word_term::suffix_const_mismatched(const word_term& w1, const word_term& w2) {
             if (w1.empty() || w2.empty()) return false;
 
             auto it1 = w1.m_elements.end();
@@ -85,20 +76,20 @@ namespace smt {
             while (*it1 == *it2) {
                 if (--it1 == w1.m_elements.begin() || --it2 == w2.m_elements.begin()) return false;
             }
-            return it1->typed(element_t::CONST) && it2->typed(element_t::CONST) &&
+            return it1->typed(element::t::CONST) && it2->typed(element::t::CONST) &&
                    it1->value() != it2->value();
         }
 
         const bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
             return (!w1.has_variable() && w1.length() < w2.length()) ||
                    (!w2.has_variable() && w2.length() < w1.length()) ||
-                   prefix_mismatched_in_consts(w1, w2) || suffix_mismatched_in_consts(w1, w2);
+                   prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
         }
 
         const bool word_term::unequalable(const word_term& w1, const word_term& w2) {
             return (!w1.has_variable() && w1.constant_count() < w2.constant_count()) ||
                    (!w2.has_variable() && w2.constant_count() < w1.constant_count()) ||
-                   prefix_mismatched_in_consts(w1, w2) || suffix_mismatched_in_consts(w1, w2);
+                   prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
         }
 
         word_term::word_term(std::initializer_list<element> list) {
@@ -106,14 +97,14 @@ namespace smt {
         }
 
         const std::size_t word_term::constant_count() const {
-            static const auto& is_const = std::bind(&element::typed, _1, element_t::CONST);
+            static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
         }
 
         const std::set<element> word_term::variables() const {
             std::set<element> result;
             for (const auto& e : m_elements) {
-                if (e.typed(element_t::VAR)) {
+                if (e.typed(element::t::VAR)) {
                     result.insert(e);
                 }
             }
@@ -121,16 +112,16 @@ namespace smt {
         }
 
         const bool word_term::has_constant() const {
-            static const auto& is_const = std::bind(&element::typed, _1, element_t::CONST);
+            static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return std::any_of(m_elements.begin(), m_elements.end(), is_const);
         }
 
         const bool word_term::has_variable() const {
-            static const auto& is_var = std::bind(&element::typed, _1, element_t::VAR);
+            static const auto& is_var = std::bind(&element::typed, _1, element::t::VAR);
             return std::any_of(m_elements.begin(), m_elements.end(), is_var);
         }
 
-        const bool word_term::check_head(const element_t& t) const {
+        const bool word_term::check_head(const element::t& t) const {
             const element& h = head();
             return h && h.typed(t);
         }
@@ -176,12 +167,12 @@ namespace smt {
 
             bool in_consts = false;
             const element& head = w.m_elements.front();
-            if (head.typed(element_t::CONST)) {
+            if (head.typed(element::t::CONST)) {
                 in_consts = true;
                 os << '"' << head;
             } else os << head;
             for (auto it = ++(w.m_elements.begin()); it != w.m_elements.end(); it++) {
-                if (it->typed(element_t::CONST)) {
+                if (it->typed(element::t::CONST)) {
                     if (!in_consts) {
                         in_consts = true;
                         os << " \"" << *it;
@@ -224,20 +215,20 @@ namespace smt {
         }
 
         const element& word_equation::definition_var() const {
-            if (m_lhs.length() == 1 && m_lhs.check_head(element_t::VAR)) {
+            if (m_lhs.length() == 1 && m_lhs.check_head(element::t::VAR)) {
                 return m_lhs.head();
             }
-            if (m_rhs.length() == 1 && m_rhs.check_head(element_t::VAR)) {
+            if (m_rhs.length() == 1 && m_rhs.check_head(element::t::VAR)) {
                 return m_rhs.head();
             }
             return element::null();
         }
 
         const word_term& word_equation::definition_body() const {
-            if (m_lhs.length() == 1 && m_lhs.check_head(element_t::VAR)) {
+            if (m_lhs.length() == 1 && m_lhs.check_head(element::t::VAR)) {
                 return m_rhs;
             }
-            if (m_rhs.length() == 1 && m_rhs.check_head(element_t::VAR)) {
+            if (m_rhs.length() == 1 && m_rhs.check_head(element::t::VAR)) {
                 return m_lhs;
             }
             return word_term::null();
@@ -252,7 +243,7 @@ namespace smt {
             return (bool) definition_var();
         }
 
-        const bool word_equation::check_heads(const element_t& lht, const element_t& rht) const {
+        const bool word_equation::check_heads(const element::t& lht, const element::t& rht) const {
             return m_lhs.check_head(lht) && m_rhs.check_head(rht);
         }
 
@@ -336,7 +327,7 @@ namespace smt {
             const head_pair& hh = m_src.heads();
             SASSERT(hh.first && hh.second);
 
-            const bool var_const_headed = hh.first.typed(element_t::VAR);
+            const bool var_const_headed = hh.first.typed(element::t::VAR);
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
             m_result.push_back(m_state.replace(v, {c, v}));
@@ -374,7 +365,7 @@ namespace smt {
                 m_result.push_back(m_state.replace(var, m_src.definition_body()));
                 return m_result;
             }
-            if (m_src.check_heads(element_t::VAR, element_t::VAR)) {
+            if (m_src.check_heads(element::t::VAR, element::t::VAR)) {
                 transform_two_var();
             } else {
                 transform_one_var();
@@ -397,12 +388,12 @@ namespace smt {
             return result;
         }
 
-        const word_equation& state::only_one_equation_left() const {
+        const word_equation& state::only_one_eq_left() const {
             return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin()
                                                 : word_equation::null();
         }
 
-        const std::vector<std::vector<word_term>> state::equivalence_classes() const {
+        const std::vector<std::vector<word_term>> state::eq_classes() const {
             std::map<word_term, std::size_t> word_class_tbl;
             std::vector<std::vector<word_term>> classes;
             for (const auto& we : m_wes_to_satisfy) {
@@ -431,10 +422,10 @@ namespace smt {
             return classes;
         }
 
-        const bool state::equivalence_classes_inconsistent() const {
+        const bool state::eq_classes_inconsistent() const {
             const auto& unequalable = m_allow_empty_var ? word_term::unequalable
                                                         : word_term::unequalable_no_empty_var;
-            for (const auto& cls : equivalence_classes()) {
+            for (const auto& cls : eq_classes()) {
                 if (cls.size() == 2) {
                     if (unequalable(cls.at(0), cls.at(1))) return true;
                     continue;
@@ -455,18 +446,18 @@ namespace smt {
             return false;
         }
 
-        const bool state::disequalities_inconsistent() const {
+        const bool state::diseq_inconsistent() const {
             return !m_wes_to_fail.empty() && m_wes_to_fail.begin()->empty();
         }
 
         const bool state::unsolvable_by_check() const {
             const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_allow_empty_var);
             return std::any_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), unsolvable) ||
-                   disequalities_inconsistent();
+                   diseq_inconsistent();
         }
 
         const bool state::unsolvable_by_inference() const {
-            return disequalities_inconsistent() || equivalence_classes_inconsistent();
+            return diseq_inconsistent() || eq_classes_inconsistent();
         }
 
         const bool state::in_definition_form() const {
@@ -478,7 +469,7 @@ namespace smt {
             return (in_definition_form() && definition_acyclic()) || m_wes_to_satisfy.empty();
         }
 
-        void state::satisfy_constraint(const word_equation& we) {
+        void state::should_satisfy(const word_equation& we) {
             SASSERT(we);
 
             if (we.empty()) return;
@@ -487,7 +478,7 @@ namespace smt {
             m_wes_to_satisfy.insert(trimmed);
         }
 
-        void state::fail_constraint(const word_equation& we) {
+        void state::should_fail(const word_equation& we) {
             SASSERT(we);
 
             const word_equation& trimmed = we.trim_prefix();
@@ -498,10 +489,10 @@ namespace smt {
         state state::replace(const element& tgt, const word_term& subst) const {
             state result{m_allow_empty_var};
             for (const auto& we : m_wes_to_satisfy) {
-                result.satisfy_constraint(we.replace(tgt, subst));
+                result.should_satisfy(we.replace(tgt, subst));
             }
             for (const auto& we : m_wes_to_fail) {
-                result.fail_constraint(we.replace(tgt, subst));
+                result.should_fail(we.replace(tgt, subst));
             }
             return result;
         }
@@ -513,10 +504,10 @@ namespace smt {
         state state::remove_all(const std::set<element>& tgt) const {
             state result{m_allow_empty_var};
             for (const auto& we : m_wes_to_satisfy) {
-                result.satisfy_constraint(we.remove_all(tgt));
+                result.should_satisfy(we.remove_all(tgt));
             }
             for (const auto& we : m_wes_to_fail) {
-                result.fail_constraint(we.remove_all(tgt));
+                result.should_fail(we.remove_all(tgt));
             }
             return result;
         }
@@ -538,7 +529,7 @@ namespace smt {
                 return result;
             }
 
-            if (curr_we.check_heads(element_t::VAR, element_t::VAR)) {
+            if (curr_we.check_heads(element::t::VAR, element::t::VAR)) {
                 transform_two_var(hh, result);
             } else {
                 transform_one_var(hh, result);
@@ -607,7 +598,9 @@ namespace smt {
                 SASSERT(!m_wes_to_fail.begin()->empty());
                 return {null, *m_wes_to_fail.begin()};
             }
-            if (m_wes_to_fail.empty()) return {*m_wes_to_satisfy.begin(), null};
+            if (m_wes_to_fail.empty()) {
+                return {*m_wes_to_satisfy.begin(), null};
+            }
             SASSERT(!m_wes_to_fail.begin()->empty());
             const word_equation& we = *m_wes_to_satisfy.begin();
             const word_equation& wi = *m_wes_to_fail.begin();
@@ -618,7 +611,7 @@ namespace smt {
             SASSERT(hh.first);
             SASSERT(hh.second);
 
-            const bool var_const_headed = hh.first.typed(element_t::VAR);
+            const bool var_const_headed = hh.first.typed(element::t::VAR);
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
             result.push_back(replace(v, {c, v}));
@@ -668,7 +661,7 @@ namespace smt {
             }
             std::set<state> processed;
             for (auto c : m_processed) {
-                c.allow_empty_variable(false);
+                c.allow_empty_var(false);
                 processed.insert(c);
                 m_pending.push(std::move(c));
             }
@@ -696,7 +689,7 @@ namespace smt {
                         m_solution_found = true;
                         return;
                     }
-                    const word_equation& last_we = next_s.only_one_equation_left();
+                    const word_equation& last_we = next_s.only_one_eq_left();
                     if (last_we && last_we.in_definition_form()) {
                         // solved form check failed, the we in definition form must be recursive
                         const word_equation& last_we_recursive_def = last_we;
@@ -717,7 +710,7 @@ namespace smt {
     }
 
     theory_str::theory_str(ast_manager& m, const theory_str_params& params)
-            : theory{m.mk_family_id("seq")}, m_scope_level{0}, m_params{params} {
+            : theory{m.mk_family_id("seq")}, m_params{params}, m_util_a{m}, m_util_s{m} {
     }
 
     void theory_str::display(std::ostream& os) const {
@@ -726,6 +719,29 @@ namespace smt {
 
     void theory_str::init(context *ctx) {
         theory::init(ctx);
+    }
+
+    void theory_str::add_theory_assumptions(expr_ref_vector& assumptions) {
+        STRACE("str", tout << "add theory assumption for theory_str" << std::endl;);
+    }
+
+    theory_var theory_str::mk_var(enode *const n) {
+        STRACE("str", tout << "mk_var for " << mk_pp(n->get_owner(), get_manager()) << std::endl;);
+        if (!is_theory_str_term(n->get_owner())) {
+            return null_theory_var;
+        }
+        if (is_attached_to_var(n)) {
+            const theory_var& v = n->get_th_var(get_id());
+            STRACE("str", tout << "already attached to theory var #" << v << std::endl;);
+            return v;
+        } else {
+            context& ctx = get_context();
+            const theory_var& v = theory::mk_var(n);
+            ctx.attach_th_var(n, this, v);
+            ctx.mark_as_relevant(n);
+            STRACE("str", tout << "new theory var #" << v << ": " << get_enode(v) << std::endl;);
+            return v;
+        }
     }
 
     bool theory_str::internalize_atom(app *const atom, const bool gate_ctx) {
@@ -737,7 +753,7 @@ namespace smt {
         ast_manager& m = get_manager();
         context& ctx = get_context();
         SASSERT(term->get_family_id() == get_family_id());
-        STRACE("str", tout << "internalizing term: " << mk_ismt2_pp(term, m) << std::endl;);
+        STRACE("str", tout << "internalize term: " << mk_pp(term, m) << std::endl;);
 
         const unsigned num_args = term->get_num_args();
         for (unsigned i = 0; i < num_args; i++) {
@@ -766,71 +782,13 @@ namespace smt {
         return true;
     }
 
-    theory_var theory_str::mk_var(enode *const n) {
-        STRACE("str", tout << "mk_var for " << mk_pp(n->get_owner(), get_manager()) << std::endl;);
-        if (!(is_theory_str_term(n->get_owner()))) {
-            return null_theory_var;
-        }
-        if (is_attached_to_var(n)) {
-            const theory_var& v = n->get_th_var(get_id());
-            STRACE("str", tout << "already attached to theory var #" << v << std::endl;);
-            return v;
-        } else {
-            context& ctx = get_context();
-            const theory_var& v = theory::mk_var(n);
-            ctx.attach_th_var(n, this, v);
-            ctx.mark_as_relevant(n);
-            STRACE("str", tout << "new theory var #" << v << ": " << get_enode(v) << std::endl;);
-            return v;
-        }
-    }
-
-    model_value_proc *theory_str::mk_value(enode *const n, model_generator& mg) {
-        ast_manager& m = get_manager();
-        app_ref owner{m};
-        owner = n->get_owner();
-        // if the owner is not internalized, it doesn't have an e-node associated.
-        SASSERT(get_context().e_internalized(owner));
-        STRACE("str", tout << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                           << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
-        return alloc(expr_wrapper_proc, owner);
-    }
-
-    void theory_str::add_theory_assumptions(expr_ref_vector& assumptions) {
-        STRACE("str", tout << "add theory assumption for theory_str" << std::endl;);
-    }
-
-    lbool theory_str::validate_unsat_core(expr_ref_vector& unsat_core) {
-        return l_undef;
-    }
-
-    void theory_str::new_eq_eh(theory_var x, theory_var y) {
-        ast_manager& m = get_manager();
-        enode *const n1 = get_enode(x);
-        enode *const n2 = get_enode(y);
-        const str::expr_pair we{expr_ref{n1->get_owner(), m}, expr_ref{n2->get_owner(), m}};
-        m_we_expr_memo.push_back(we);
-        STRACE("str", tout << "new eq: " << mk_ismt2_pp(n1->get_owner(), m) << " = "
-                           << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
-    }
-
-    void theory_str::new_diseq_eh(theory_var x, theory_var y) {
-        ast_manager& m = get_manager();
-        enode *const n1 = get_enode(x);
-        enode *const n2 = get_enode(y);
-        const str::expr_pair wi{expr_ref{n1->get_owner(), m}, expr_ref{n2->get_owner(), m}};
-        m_wi_expr_memo.push_back(wi);
-        STRACE("str", tout << "new diseq: not (" << mk_ismt2_pp(n1->get_owner(), m) << " = "
-                           << mk_ismt2_pp(n2->get_owner(), m) << ')' << std::endl;);
-    }
-
     void theory_str::init_search_eh() {
         STRACE("str", tout << "init search" << std::endl;);
     }
 
     void theory_str::relevant_eh(app *const n) {
         (void) n;
-        STRACE("str", tout << "relevant: " << mk_ismt2_pp(n, get_manager()) << std::endl;);
+        STRACE("str", tout << "relevant: " << mk_pp(n, get_manager()) << std::endl;);
     }
 
     void theory_str::assign_eh(bool_var v, const bool is_true) {
@@ -841,48 +799,20 @@ namespace smt {
                            << " is_true: " << is_true << std::endl;);
     }
 
-    void theory_str::push_scope_eh() {
-        m_scope_level += 1;
-        m_we_expr_memo.push_scope();
-        m_wi_expr_memo.push_scope();
-        STRACE("str", tout << "push to " << m_scope_level << std::endl;);
+    void theory_str::new_eq_eh(theory_var x, theory_var y) {
+        ast_manager& m = get_manager();
+        const expr_ref l{get_enode(x)->get_owner(), m};
+        const expr_ref r{get_enode(y)->get_owner(), m};
+        m_word_eq_todo.push_back({l, r});
+        STRACE("str", tout << "new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;);
     }
 
-    void theory_str::pop_scope_eh(const unsigned num_scopes) {
-        m_scope_level -= num_scopes;
-        m_we_expr_memo.pop_scope(num_scopes);
-        m_wi_expr_memo.pop_scope(num_scopes);
-        STRACE("str", tout << "pop " << num_scopes << " to " << m_scope_level << std::endl;);
-    }
-
-    void theory_str::reset_eh() {
-        STRACE("str", tout << "resetting" << std::endl;);
-    }
-
-    final_check_status theory_str::final_check_eh() {
-        if (m_we_expr_memo.empty()) return FC_DONE;
-        context& ctx = get_context();
-        (void) ctx;
-        TRACE("str", tout << "final_check at level " << ctx.get_scope_level() << std::endl;);
-
-        const str::state& root = build_state_from_memo();
-        STRACE("str", tout << "root built:\n" << root << std::endl;);
-        str::neilson_based_solver solver{root};
-        if (root.unsolvable_by_inference() && block_dpllt_assignment_from_memo()) {
-            return FC_CONTINUE;
-        }
-        solver.check_sat();
-        if (solver.solution_found()) {
-            STRACE("str", tout << "[Solved]\n";);
-            return FC_DONE;
-        }
-
-        if (block_dpllt_assignment_from_memo()) {
-            return FC_CONTINUE;
-        } else {
-            STRACE("str", dump_assignments(););
-            return FC_DONE;
-        }
+    void theory_str::new_diseq_eh(theory_var x, theory_var y) {
+        ast_manager& m = get_manager();
+        const expr_ref l{get_enode(x)->get_owner(), m};
+        const expr_ref r{get_enode(y)->get_owner(), m};
+        m_word_diseq_todo.push_back({l, r});
+        STRACE("str", tout << "new diseq: " << mk_pp(l, m) << " != " << mk_pp(r, m) << std::endl;);
     }
 
     bool theory_str::can_propagate() {
@@ -890,27 +820,80 @@ namespace smt {
     }
 
     void theory_str::propagate() {
-        STRACE("str", tout << "propagating..." << std::endl;);
+        STRACE("str", tout << "propagate" << std::endl;);
+    }
+
+    void theory_str::push_scope_eh() {
+        m_scope_level += 1;
+        m_word_eq_todo.push_scope();
+        m_word_diseq_todo.push_scope();
+        STRACE("str", tout << "push to " << m_scope_level << std::endl;);
+    }
+
+    void theory_str::pop_scope_eh(const unsigned num_scopes) {
+        m_scope_level -= num_scopes;
+        m_word_eq_todo.pop_scope(num_scopes);
+        m_word_diseq_todo.pop_scope(num_scopes);
+        STRACE("str", tout << "pop " << num_scopes << " to " << m_scope_level << std::endl;);
+    }
+
+    void theory_str::reset_eh() {
+        STRACE("str", tout << "reset" << std::endl;);
+    }
+
+    final_check_status theory_str::final_check_eh() {
+        if (m_word_eq_todo.empty()) return FC_DONE;
+        TRACE("str", tout << "final_check level " << get_context().get_scope_level() << std::endl;);
+
+        const str::state& root = mk_state_from_todo();
+        STRACE("str", tout << "root built:\n" << root << std::endl;);
+        str::neilson_based_solver solver{root};
+        if (root.unsolvable_by_inference() && block_curr_assignment()) {
+            return FC_CONTINUE;
+        }
+        solver.check_sat();
+        if (solver.solution_found()) {
+            STRACE("str", tout << "[Solved]\n";);
+            return FC_DONE;
+        } else if (block_curr_assignment()) {
+            return FC_CONTINUE;
+        } else {
+            STRACE("str", dump_assignments(););
+            return FC_DONE;
+        }
+    }
+
+    model_value_proc *theory_str::mk_value(enode *const n, model_generator& mg) {
+        ast_manager& m = get_manager();
+        app *const tgt = n->get_owner();
+        (void) m;
+        // if the owner is not internalized, it doesn't have an e-node associated.
+        SASSERT(get_context().e_internalized(tgt));
+        STRACE("str", tout << "mk_value for: " << mk_pp(tgt, m) << " (sort "
+                           << mk_pp(m.get_sort(tgt), m) << ")" << std::endl;);
+        return alloc(expr_wrapper_proc, tgt);
     }
 
     void theory_str::init_model(model_generator& mg) {
-        STRACE("str", tout << "initializing model..." << std::endl;);
+        STRACE("str", tout << "init model" << std::endl;);
     }
 
     void theory_str::finalize_model(model_generator& mg) {
-        STRACE("str", tout << "finalizing model..." << std::endl;);
+        STRACE("str", tout << "finalize model" << std::endl;);
+    }
+
+    lbool theory_str::validate_unsat_core(expr_ref_vector& unsat_core) {
+        return l_undef;
     }
 
     void theory_str::assert_axiom(expr *const e) {
         if (e == nullptr || get_manager().is_true(e)) return;
 
-        ast_manager& m = get_manager();
         context& ctx = get_context();
-        expr_ref ex{e, m};
-        if (!ctx.b_internalized(ex)) {
-            ctx.internalize(ex, false);
+        if (!ctx.b_internalized(e)) {
+            ctx.internalize(e, false);
         }
-        literal lit(ctx.get_literal(ex));
+        literal lit{ctx.get_literal(e)};
         ctx.mark_as_relevant(lit);
         ctx.mk_th_axiom(get_id(), 1, &lit);
     }
@@ -919,85 +902,72 @@ namespace smt {
         STRACE("str", \
                 ast_manager& m = get_manager();
                 context& ctx = get_context();
-                tout << "dumping all assignments:\n";
+                tout << "dump all assignments:\n";
                 expr_ref_vector assignments{m};
                 ctx.get_assignments(assignments);
                 for (expr *const e : assignments) {
-                    tout << mk_ismt2_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (NOT REL)\n")
-                         << std::flush;
+                    tout << mk_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (NOT REL)\n");
                 }
+                tout << std::flush;
         );
     }
 
     const bool theory_str::is_theory_str_term(expr *const e) const {
-        ast_manager& m = get_manager();
-        return (m.get_sort(e) == m.mk_sort(m.mk_family_id("seq"), _STRING_SORT, 0, nullptr));
+        return m_util_s.str.is_string_term(e);
     }
 
-    decl_kind theory_str::get_decl_kind(expr *const e) const {
-        return to_app(e)->get_decl_kind();
-    }
-
-    str::word_term theory_str::get_word_term(expr *const e) const {
-        if (get_decl_kind(e) == OP_STRING_CONST) {
-            std::stringstream ss;
-            ss << mk_ismt2_pp(e, get_manager());
-            return str::word_term::of_string(ss.str());
+    str::word_term theory_str::mk_word_term(expr *const e) const {
+        zstring s;
+        if (m_util_s.str.is_string(e, s)) {
+            return str::word_term::of_string(s);
         }
-        if (get_decl_kind(e) == OP_SEQ_CONCAT) {
+        if (m_util_s.str.is_concat(e)) {
             str::word_term result;
-            const unsigned num_args = to_app(e)->get_num_args();
-            for (unsigned i = 0; i < num_args; i++) {
-                const str::word_term& sub_term = get_word_term(to_app(e)->get_arg(i));
-                result.concat(sub_term);
+            for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
+                result.concat(mk_word_term(to_app(e)->get_arg(i)));
             }
             return result;
         }
-        std::stringstream ss;
-        ss << mk_ismt2_pp(e, get_manager());
-        return str::word_term::of_variable(ss.str());
+        func_decl *const fun = to_app(e)->get_decl();
+        SASSERT(fun->get_arity() == 0 && fun->get_range()->get_family_id() == get_family_id());
+        return str::word_term::of_variable({fun->get_name().bare_str()});
     }
 
-    str::state theory_str::build_state_from_memo() const {
+    str::state theory_str::mk_state_from_todo() const {
         str::state result;
-        STRACE("str", tout << "[Build State]\nword equation memo:\n";);
-        STRACE("str", if (m_we_expr_memo.empty()) tout << "--\n";);
-        for (const auto& we : m_we_expr_memo) {
-            STRACE("str", tout << we.first << " = " << we.second << std::endl;);
-            const str::word_term& lhs = get_word_term(we.first);
-            const str::word_term& rhs = get_word_term(we.second);
-            result.satisfy_constraint(str::word_equation{rhs, lhs});
+        STRACE("str", tout << "[Build State]\nword equation todo:\n";);
+        STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
+        for (const auto& eq : m_word_eq_todo) {
+            STRACE("str", tout << eq.first << " = " << eq.second << std::endl;);
+            result.should_satisfy({mk_word_term(eq.first), mk_word_term(eq.second)});
         }
-        STRACE("str", tout << "word disequality memo:\n";);
-        STRACE("str", if (m_wi_expr_memo.empty()) tout << "--\n";);
-        for (const auto& wi : m_wi_expr_memo) {
-            STRACE("str", tout << "not (" << wi.first << " = " << wi.second << ")\n";);
-            const str::word_term& lhs = get_word_term(wi.first);
-            const str::word_term& rhs = get_word_term(wi.second);
-            result.fail_constraint(str::word_equation{rhs, lhs});
+        STRACE("str", tout << "word disequality todo:\n";);
+        STRACE("str", if (m_word_diseq_todo.empty()) tout << "--\n";);
+        for (const auto& diseq : m_word_diseq_todo) {
+            STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
+            result.should_fail({mk_word_term(diseq.first), mk_word_term(diseq.second)});
         }
         STRACE("str", tout << std::endl;);
         return result;
     }
 
-    const bool theory_str::block_dpllt_assignment_from_memo() {
+    const bool theory_str::block_curr_assignment() {
         ast_manager& m = get_manager();
-        expr *refinement_expr = nullptr;
-        STRACE("str", tout << "[Assert Blocking]\nformulas:\n";);
-        for (const auto& we : m_we_expr_memo) {
+        expr *refinement = nullptr;
+        STRACE("str", tout << "[Assert Axioms]\nformulas:\n";);
+        for (const auto& we : m_word_eq_todo) {
             expr *const e = m.mk_not(mk_eq_atom(we.first, we.second));
-            refinement_expr = refinement_expr == nullptr ? e : m.mk_or(refinement_expr, e);
+            refinement = refinement == nullptr ? e : m.mk_or(refinement, e);
             STRACE("str", tout << we.first << " = " << we.second << '\n';);
         }
-        for (const auto& wi : m_wi_expr_memo) {
+        for (const auto& wi : m_word_diseq_todo) {
             expr *const e = mk_eq_atom(wi.first, wi.second);
-            refinement_expr = refinement_expr == nullptr ? e : m.mk_or(refinement_expr, e);
-            STRACE("str", tout << "not (" << wi.first << " = " << wi.second << ")\n";);
+            refinement = refinement == nullptr ? e : m.mk_or(refinement, e);
+            STRACE("str", tout << wi.first << " != " << wi.second << '\n';);
         }
-        if (refinement_expr != nullptr) {
-            assert_axiom(refinement_expr);
-            STRACE("str", tout << "assertion:\n" << mk_pp(refinement_expr, m) << "\n\n"
-                               << std::flush;);
+        if (refinement != nullptr) {
+            assert_axiom(refinement);
+            STRACE("str", tout << "assertion:\n" << mk_pp(refinement, m) << "\n\n" << std::flush;);
             return true;
         }
         return false;
