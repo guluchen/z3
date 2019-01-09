@@ -42,7 +42,7 @@ namespace smt {
             return w;
         }
 
-        word_term word_term::of_string(const zstring& str) {
+        word_term word_term::from_string(const zstring& str) {
             word_term result;
             for (std::size_t i = 0; i < str.length(); i++) {
                 result.m_elements.push_back({element::t::CONST, {str[i]}});
@@ -50,7 +50,7 @@ namespace smt {
             return result;
         }
 
-        word_term word_term::of_variable(const zstring& name) {
+        word_term word_term::from_variable(const zstring& name) {
             return {{element::t::VAR, name}};
         }
 
@@ -919,7 +919,7 @@ namespace smt {
     str::word_term theory_str::mk_word_term(expr *const e) const {
         zstring s;
         if (m_util_s.str.is_string(e, s)) {
-            return str::word_term::of_string(s);
+            return str::word_term::from_string(s);
         }
         if (m_util_s.str.is_concat(e)) {
             str::word_term result;
@@ -930,7 +930,7 @@ namespace smt {
         }
         func_decl *const fun = to_app(e)->get_decl();
         SASSERT(fun->get_arity() == 0 && fun->get_range()->get_family_id() == get_family_id());
-        return str::word_term::of_variable({fun->get_name().bare_str()});
+        return str::word_term::from_variable({fun->get_name().bare_str()});
     }
 
     str::state theory_str::mk_state_from_todo() const {

@@ -40,8 +40,8 @@ namespace smt {
         class word_term {
         public:
             static const word_term& null();
-            static word_term of_string(const zstring& str);
-            static word_term of_variable(const zstring& name);
+            static word_term from_string(const zstring& str);
+            static word_term from_variable(const zstring& name);
             static const bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static const bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
             static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
