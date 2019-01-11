@@ -107,22 +107,6 @@ namespace smt {
             using def_nodes = std::set<def_node>;
             using def_graph = std::map<def_node, def_nodes>;
             using trans_source = std::pair<const word_equation&, const word_equation&>;
-
-            class transform {
-                const state& m_state;
-                const word_equation& m_src;
-                const bool m_src_should_fail;
-                std::list<state> m_result;
-
-                transform(const state& s, const word_equation& src, bool by_wi = false);
-                const bool src_vars_empty() const;
-                const bool src_var_well_defined() const;
-                const bool src_two_var_unequal() const;
-                void transform_one_var();
-                void transform_two_var();
-                std::list<state> compute();
-            };
-
             bool m_allow_empty_var = true;
             std::set<word_equation> m_wes_to_satisfy;
             std::set<word_equation> m_wes_to_fail;
