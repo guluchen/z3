@@ -22,11 +22,11 @@ namespace smt {
             return e;
         }
 
-        const bool element::operator==(const element& other) const {
+        bool element::operator==(const element& other) const {
             return other.m_type == m_type && other.m_value == m_value;
         }
 
-        const bool element::operator<(const element& other) const {
+        bool element::operator<(const element& other) const {
             if (m_type < other.m_type) return true;
             if (m_type > other.m_type) return false;
             return m_value < other.m_value;
@@ -54,8 +54,7 @@ namespace smt {
             return {{element::t::VAR, name}};
         }
 
-        const bool
-        word_term::prefix_const_mismatched(const word_term& w1, const word_term& w2) {
+        bool word_term::prefix_const_mismatched(const word_term& w1, const word_term& w2) {
             if (w1.empty() || w2.empty()) return false;
 
             auto it1 = w1.m_elements.begin();
@@ -67,8 +66,7 @@ namespace smt {
                    it1->value() != it2->value();
         }
 
-        const bool
-        word_term::suffix_const_mismatched(const word_term& w1, const word_term& w2) {
+        bool word_term::suffix_const_mismatched(const word_term& w1, const word_term& w2) {
             if (w1.empty() || w2.empty()) return false;
 
             auto it1 = w1.m_elements.end();
@@ -80,13 +78,13 @@ namespace smt {
                    it1->value() != it2->value();
         }
 
-        const bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
+        bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
             return (!w1.has_variable() && w1.length() < w2.length()) ||
                    (!w2.has_variable() && w2.length() < w1.length()) ||
                    prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
         }
 
-        const bool word_term::unequalable(const word_term& w1, const word_term& w2) {
+        bool word_term::unequalable(const word_term& w1, const word_term& w2) {
             return (!w1.has_variable() && w1.constant_count() < w2.constant_count()) ||
                    (!w2.has_variable() && w2.constant_count() < w1.constant_count()) ||
                    prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
@@ -96,12 +94,12 @@ namespace smt {
             m_elements.insert(m_elements.begin(), list.begin(), list.end());
         }
 
-        const std::size_t word_term::constant_count() const {
+        std::size_t word_term::constant_count() const {
             static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
         }
 
-        const std::set<element> word_term::variables() const {
+        std::set<element> word_term::variables() const {
             std::set<element> result;
             for (const auto& e : m_elements) {
                 if (e.typed(element::t::VAR)) {
@@ -111,23 +109,23 @@ namespace smt {
             return result;
         }
 
-        const bool word_term::has_constant() const {
+        const element& word_term::head() const {
+            return m_elements.empty() ? element::null() : m_elements.front();
+        }
+
+        bool word_term::has_constant() const {
             static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return std::any_of(m_elements.begin(), m_elements.end(), is_const);
         }
 
-        const bool word_term::has_variable() const {
+        bool word_term::has_variable() const {
             static const auto& is_var = std::bind(&element::typed, _1, element::t::VAR);
             return std::any_of(m_elements.begin(), m_elements.end(), is_var);
         }
 
-        const bool word_term::check_head(const element::t& t) const {
+        bool word_term::check_head(const element::t& t) const {
             const element& h = head();
             return h && h.typed(t);
-        }
-
-        const element& word_term::head() const {
-            return m_elements.empty() ? element::null() : m_elements.front();
         }
 
         void word_term::remove_head() {
@@ -149,11 +147,11 @@ namespace smt {
             }
         }
 
-        const bool word_term::operator==(const word_term& other) const {
+        bool word_term::operator==(const word_term& other) const {
             return !(*this < other) && !(other < *this);
         }
 
-        const bool word_term::operator<(const word_term& other) const {
+        bool word_term::operator<(const word_term& other) const {
             if (m_elements.size() < other.m_elements.size()) return true;
             if (m_elements.size() > other.m_elements.size()) return false;
             // when having same length, do lexicographical compare
@@ -203,7 +201,7 @@ namespace smt {
             }
         }
 
-        const std::set<element> word_equation::variables() const {
+        std::set<element> word_equation::variables() const {
             std::set<element> result;
             for (const auto& v : m_lhs.variables()) {
                 result.insert(v);
@@ -234,16 +232,16 @@ namespace smt {
             return word_term::null();
         }
 
-        const bool word_equation::unsolvable(const bool allow_empty_var) const {
+        bool word_equation::unsolvable(const bool allow_empty_var) const {
             return allow_empty_var ? word_term::unequalable(m_lhs, m_rhs)
                                    : word_term::unequalable_no_empty_var(m_lhs, m_rhs);
         }
 
-        const bool word_equation::in_definition_form() const {
+        bool word_equation::in_definition_form() const {
             return (bool) definition_var();
         }
 
-        const bool word_equation::check_heads(const element::t& lht, const element::t& rht) const {
+        bool word_equation::check_heads(const element::t& lht, const element::t& rht) const {
             return m_lhs.check_head(lht) && m_rhs.check_head(rht);
         }
 
@@ -280,11 +278,11 @@ namespace smt {
             return result;
         }
 
-        const bool word_equation::operator==(const word_equation& other) const {
+        bool word_equation::operator==(const word_equation& other) const {
             return !(*this < other) && !(other < *this);
         }
 
-        const bool word_equation::operator<(const word_equation& other) const {
+        bool word_equation::operator<(const word_equation& other) const {
             if (m_lhs < other.m_lhs) return true;
             if (other.m_lhs < m_lhs) return false;
             return m_rhs < other.m_rhs;
@@ -301,7 +299,7 @@ namespace smt {
             }
         }
 
-        const std::set<element> state::variables() const {
+        std::set<element> state::variables() const {
             std::set<element> result;
             for (const auto& we : m_wes_to_satisfy) {
                 for (const auto& v : we.variables()) {
@@ -316,12 +314,7 @@ namespace smt {
             return result;
         }
 
-        const word_equation& state::only_one_eq_left() const {
-            return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin()
-                                                : word_equation::null();
-        }
-
-        const std::vector<std::vector<word_term>> state::eq_classes() const {
+        std::vector<std::vector<word_term>> state::eq_classes() const {
             std::map<word_term, std::size_t> word_class_tbl;
             std::vector<std::vector<word_term>> classes;
             for (const auto& we : m_wes_to_satisfy) {
@@ -350,7 +343,12 @@ namespace smt {
             return classes;
         }
 
-        const bool state::eq_classes_inconsistent() const {
+        const word_equation& state::only_one_eq_left() const {
+            return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin()
+                                                : word_equation::null();
+        }
+
+        bool state::eq_classes_inconsistent() const {
             const auto& unequalable = m_allow_empty_var ? word_term::unequalable
                                                         : word_term::unequalable_no_empty_var;
             for (const auto& cls : eq_classes()) {
@@ -374,26 +372,26 @@ namespace smt {
             return false;
         }
 
-        const bool state::diseq_inconsistent() const {
+        bool state::diseq_inconsistent() const {
             return !m_wes_to_fail.empty() && m_wes_to_fail.begin()->empty();
         }
 
-        const bool state::unsolvable_by_check() const {
+        bool state::unsolvable_by_check() const {
             const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_allow_empty_var);
             return std::any_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), unsolvable) ||
                    diseq_inconsistent();
         }
 
-        const bool state::unsolvable_by_inference() const {
+        bool state::unsolvable_by_inference() const {
             return diseq_inconsistent() || eq_classes_inconsistent();
         }
 
-        const bool state::in_definition_form() const {
+        bool state::in_definition_form() const {
             static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
             return std::all_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), in_def_form);
         }
 
-        const bool state::in_solved_form() const {
+        bool state::in_solved_form() const {
             return (in_definition_form() && definition_acyclic()) || m_wes_to_satisfy.empty();
         }
 
@@ -440,7 +438,7 @@ namespace smt {
             return result;
         }
 
-        const std::list<state> state::transform() const {
+        std::list<state> state::transform() const {
             SASSERT(!unsolvable_by_check() && !m_wes_to_satisfy.empty());
             const word_equation& curr_we = *m_wes_to_satisfy.begin();
             const head_pair& hh = curr_we.heads();
@@ -465,7 +463,7 @@ namespace smt {
             return result;
         }
 
-        const bool state::operator<(const state& other) const {
+        bool state::operator<(const state& other) const {
             if (m_allow_empty_var != other.m_allow_empty_var) return false;
             if (m_wes_to_satisfy.size() < other.m_wes_to_satisfy.size()) return true;
             if (m_wes_to_satisfy.size() > other.m_wes_to_satisfy.size()) return false;
@@ -485,7 +483,7 @@ namespace smt {
             return os << std::flush;
         }
 
-        const bool state::dag_def_check_node(const def_graph& graph, const def_node& node,
+        bool state::dag_def_check_node(const def_graph& graph, const def_node& node,
                                              def_nodes& marked, def_nodes& checked) {
             if (checked.find(node) != checked.end()) return true;
             if (marked.find(node) != marked.end()) return false;
@@ -501,7 +499,7 @@ namespace smt {
             return true;
         }
 
-        const bool state::definition_acyclic() const {
+        bool state::definition_acyclic() const {
             SASSERT(in_definition_form());
 
             def_graph graph;
@@ -516,23 +514,6 @@ namespace smt {
                 if (!dag_def_check_node(graph, dept_dests.first, marked, checked)) return false;
             }
             return true;
-        }
-
-        const state::trans_source state::transformation_source() const {
-            SASSERT(!m_wes_to_satisfy.empty() || !m_wes_to_fail.empty());
-
-            const word_equation& null = word_equation::null();
-            if (m_wes_to_satisfy.empty()) {
-                SASSERT(!m_wes_to_fail.begin()->empty());
-                return {null, *m_wes_to_fail.begin()};
-            }
-            if (m_wes_to_fail.empty()) {
-                return {*m_wes_to_satisfy.begin(), null};
-            }
-            SASSERT(!m_wes_to_fail.begin()->empty());
-            const word_equation& we = *m_wes_to_satisfy.begin();
-            const word_equation& wi = *m_wes_to_fail.begin();
-            return we < wi ? trans_source{we, null} : trans_source{null, wi};
         }
 
         void state::transform_one_var(const head_pair& hh, std::list<state>& result) const {
@@ -840,7 +821,7 @@ namespace smt {
         );
     }
 
-    const bool theory_str::is_theory_str_term(expr *const e) const {
+    bool theory_str::is_theory_str_term(expr *const e) const {
         return m_util_s.str.is_string_term(e);
     }
 
@@ -879,7 +860,7 @@ namespace smt {
         return result;
     }
 
-    const bool theory_str::block_curr_assignment() {
+    bool theory_str::block_curr_assignment() {
         ast_manager& m = get_manager();
         expr *refinement = nullptr;
         STRACE("str", tout << "[Assert Axioms]\nformulas:\n";);
