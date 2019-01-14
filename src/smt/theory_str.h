@@ -372,6 +372,11 @@ namespace smt {
         * Collect constant strings (from left to right) in an AST node.
         */
         void get_const_regex_str_asts_in_node(expr * node, expr_ref_vector & astList);
+
+        /*
+         * Collect important vars in AST node
+         */
+        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList);
         eautomaton* get_automaton(expr* re);
 
         void track_variable_scope(expr * var);

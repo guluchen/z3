@@ -3244,12 +3244,13 @@ namespace smt {
                 if (!u.str.is_string(*it)) {
                     int len = -1;
                     if (is_importantVar(*it, eqc_roots, len)) {
-                        STRACE("str", tout << "\t "<< mk_pp(*it, m) << ": " << len << std::endl;);
+                        STRACE("str", tout << __LINE__ << "\t "<< mk_pp(*it, m) << ": " << len << std::endl;);
                         imp = true;
                         maxLen = (maxLen == -1 || len == -1) ? -1 : (maxLen < len ? len : maxLen);
                     }
                 }
             }
+
             if (imp)
                 for (expr_ref_vector::iterator itor = eqList.begin(); itor != eqList.end(); ++itor){
                     STRACE("str", tout << "\t \t"<< mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
@@ -3288,19 +3289,26 @@ namespace smt {
         for (const auto& we : m_wi_expr_memo){
             if (we.first.get() == nn){
                 zstring value;
-                if (u.str.is_string(we.second.get(), value))
+                if (u.str.is_string(we.second.get(), value)) {
                     len = value.length();
+                    STRACE("str", tout << "\t " << mk_pp(we.first.get(), m) << " == \"" << value << "\"" << std::endl;);
+                }
                 if (len != 0)
                     return true;
             }
             else if (we.second.get() == nn){
                 zstring value;
-                if (u.str.is_string(we.first.get(), value))
+                if (u.str.is_string(we.first.get(), value)) {
                     len = value.length();
+                    STRACE("str", tout << "\t " << mk_pp(we.second.get(), m) << " == \"" << value << "\"" << std::endl;);
+                }
                 if (len != 0)
                     return true;
             }
         }
+
+        len = -1;
+        STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 
         // not equal to any concat/const
         expr_ref_vector eqList(m);
@@ -3321,6 +3329,7 @@ namespace smt {
                     expr* arg0 = to_app(n)->get_arg(0);
                     expr* arg1 = to_app(n)->get_arg(1);
                     if (arg0 == nn || arg1 == nn) {
+                        STRACE("str", tout << __FUNCTION__ << ": increase occurrences because of " << mk_pp(n, m) << std::endl;);
                         cnt++;
                         if (cnt == 2)
                             break;
@@ -3328,8 +3337,10 @@ namespace smt {
                     }
                 }
             }
-            if (cnt >= 2)
+            if (cnt >= 2) {
+                STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " has > 2 occurrences" << std::endl;);
                 return true;
+            }
             else if (cnt == 0)
                 return false;
             else {
@@ -3506,8 +3517,12 @@ namespace smt {
                 // get lhs
                 STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " == " << mk_pp(*it, m) << std::endl;);
                 expr* arg0 = to_app(*it)->get_arg(0);
+                expr* arg1 = to_app(*it)->get_arg(1);
+                
+                STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
                 std::set<expr *> eqLhs;
                 if (parents.find(arg0) == parents.end()) {
+                    STRACE("str", tout << __LINE__ << " tracing " << mk_pp(arg0, m) << std::endl;);
                     std::set<expr*> lhsParents;
                     lhsParents.insert(parents.begin(), parents.end());
                     lhsParents.insert(arg0);
@@ -3518,7 +3533,6 @@ namespace smt {
                 }
 
                 // get rhs
-                expr* arg1 = to_app(*it)->get_arg(1);
                 std::set<expr *> eqRhs;
                 if (parents.find(arg1) == parents.end()) {
                     STRACE("str", tout << __LINE__ << " tracing " << mk_pp(arg1, m) << std::endl;);
@@ -3590,10 +3604,16 @@ namespace smt {
 
         // continuing refining
         for (const auto& nn : eqConcat){
+            STRACE("str", tout << __LINE__ << " refining concat " << mk_pp(nn, m) << std::endl;);
             expr_ref_vector tmp(m);
             get_const_regex_str_asts_in_node(nn, tmp);
             if (tmp.size() != 0)
                 result.insert(nn);
+            else {
+                get_important_asts_in_node(nn, importantVars, tmp);
+                if (tmp.size() != 0)
+                    result.insert(nn);
+            }
         }
 
         if (result.size() == 0)
@@ -5145,6 +5165,28 @@ namespace smt {
                     astList.push_back(node);
                     break;
                 }
+            }
+        }
+    }
+
+    /*
+     * Collect important vars in AST node
+     */
+    void theory_str::get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList) {
+        STRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(node, get_manager()) << std::endl;);
+        for (const auto& p : importantVars)
+            if (p.first == node) {
+                STRACE("str", tout << "\t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);
+                astList.push_back(node);
+                break;
+            }
+
+        if (is_app(node)) {
+            app * func_app = to_app(node);
+            unsigned int argCount = func_app->get_num_args();
+            for (unsigned int i = 0; i < argCount; i++) {
+                expr * argAst = func_app->get_arg(i);
+                get_important_asts_in_node(argAst, importantVars, astList);
             }
         }
     }
