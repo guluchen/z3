@@ -3213,6 +3213,7 @@ namespace smt {
         std::set<std::pair<expr*, int>> importantVars = collect_important_vars(eqc_roots);
         std::map<expr*, std::set<expr*>> eq_combination = construct_eq_combination(importantVars);
         const str::state& root = build_state_from_memo();
+        underapproximation(eq_combination, importantVars, root);
 //        STRACE("str", tout << "root built:\n" << root << std::endl;);
 //        str::neilson_based_solver solver{root};
 //        if (root.unsolvable_by_inference() && block_dpllt_assignment_from_memo()) {
@@ -3230,6 +3231,629 @@ namespace smt {
 //            STRACE("str", dump_assignments(););
 //            return FC_DONE;
 //        }
+    }
+
+    void theory_str::underapproximation(
+            std::map<expr*, std::set<expr*>> eq_combination,
+            std::set<std::pair<expr*, int>> importantVars,
+            str::state root) {
+
+    }
+
+    void theory_str::convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                                       std::map<expr*, int> importantVars){
+        clock_t t = clock();
+        for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
+
+            std::string tmp = " ";
+            clock_t t;
+
+            /* different tactic for size of it->second */
+            const int flatP = 1;
+            const int maxPConsidered = 6;
+            unsigned maxLocal = findMaxP(it->second);
+            STRACE("str", tout << __LINE__ <<  " maxLocal:  " << maxLocal << std::endl;);
+
+            if (it->second.size() == 0)
+                continue;
+
+            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
+                std::vector<std::pair<expr*, int>> lhs_elements = createEquality({it->first});
+                /* compare with others */
+                for (const auto& element: it->second) {
+                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
+                    t = clock();
+                    std::vector<std::string> result = equalityToSMT(sumStringVector({it->first}),
+                                                                    sumStringVector(element),
+                                                                    lhs_elements,
+                                                                    rhs_elements
+                    );
+                    t = clock() - t;
+                    if (result.size() != 0) {
+                        /* sync result */
+                        global_smtStatements.emplace_back(result);
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                        /* trivial unsat */
+                        trivialUnsat = true;
+                    }
+                }
+
+            }
+            else if (maxLocal > maxPConsidered) {
+                /* add an eq = flat . flat . flat, then other equalities will compare with it */
+                std::vector<expr*> genericFlat = createSetOfFlatVariables(flatP);
+                std::vector<std::pair<expr*, int>> lhs_elements = createEquality(genericFlat);
+                /* compare with others */
+                for (const auto& element: it->second) {
+                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
+                    t = clock();
+                    std::vector<std::string> result = equalityToSMT(
+                            sumStringVector(genericFlat),
+                            sumStringVector(element),
+                            lhs_elements,
+                            rhs_elements
+                    );
+                    t = clock() - t;
+                    if (result.size() != 0) {
+                        /* sync result */
+                        global_smtStatements.emplace_back(result);
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                        /* trivial unsat */
+                        trivialUnsat = true;
+                    }
+                }
+            }
+            else {
+
+                /* work as usual */
+                for (unsigned i = 0; i < it->second.size(); ++i)
+                    for (unsigned j = i + 1; j < it->second.size(); ++j) {
+                        /* optimize: find longest common prefix and posfix */
+                        ptr_vector<expr> lhs;
+                        ptr_vector<expr> rhs;
+                        optimizeEquality(it->second[i], it->second[j], lhs, rhs);
+
+                        if (lhs.size() == 0 || rhs.size() == 0){
+                            global_smtStatements.push_back({constraintsIfEmpty(lhs, rhs)});
+                            continue;
+                        }
+
+                        /* [i] = [j] */
+                        std::vector<std::pair<expr*, int>> lhs_elements = createEquality(lhs);
+                        std::vector<std::pair<expr*, int>> rhs_elements = createEquality(rhs);
+                        t = clock();
+                        std::vector<std::string> result = equalityToSMT(
+                                sumStringVector(it->second[i]),
+                                sumStringVector(it->second[j]),
+                                lhs_elements,
+                                rhs_elements
+                        );
+                        t = clock() - t;
+                        if (result.size() != 0) {
+                            /* sync result*/
+                            global_smtStatements.emplace_back(result);
+                        }
+                        else {
+                            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                            /* trivial unsat */
+                            trivialUnsat = true;
+                        }
+                    }
+            }
+
+        }
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+    }
+
+    /*
+     * convert lhs == rhs to SMT formula
+     */
+    std::vector<std::string> theory_str::equalityToSMT(
+            std::string lhs, std::string rhs,
+            std::vector<std::pair<expr*, int>> lhs_elements,
+            std::vector<std::pair<expr*, int>> rhs_elements,
+            int p = PMAX){
+
+        std::string tmp01;
+        std::string tmp02;
+        for (unsigned i = 0; i < lhs_elements.size(); ++i)
+            tmp01 = tmp01 + "---" + expr2str(lhs_elements[i].first);
+        for (unsigned i = 0; i < rhs_elements.size(); ++i)
+            tmp01 = tmp01 + "+++" + expr2str(rhs_elements[i].first);
+        if (generatedEqualities.find(tmp01) == generatedEqualities.end()){
+            std::vector<std::string> cases = collectAllPossibleArrangements(
+                    lhs, rhs,
+                    lhs_elements,
+                    rhs_elements,
+                    p);
+            generatedEqualities.emplace(tmp01);
+            return cases;
+        }
+        else
+            return {TRUESTR};
+    }
+
+
+    /*
+     * lhs: size of the lhs
+     * rhs: size of the rhs
+     * lhs_elements: elements of lhs
+     * rhs_elements: elements of rhs
+     *
+     * Pre-Condition: x_i == 0 --> x_i+1 == 0
+     *
+     */
+    std::vector<std::string> theory_str::collectAllPossibleArrangements(
+            std::string lhs_str, std::string rhs_str,
+            std::vector<std::pair<std::string, int>> lhs_elements,
+            std::vector<std::pair<std::string, int>> rhs_elements,
+            int p = PMAX){
+        /* first base case */
+        clock_t t = clock();
+
+#if 1
+        /* because arrangements are reusable, we use "general" functions */
+        handleCase_0_0_general();
+
+        /* second base case : first row and first column */
+        handleCase_0_n_general(lhs_elements.size(), rhs_elements.size());
+        handleCase_n_0_general(lhs_elements.size(), rhs_elements.size());
+
+        /* general cases */
+        handleCase_n_n_general(lhs_elements.size(), rhs_elements.size());
+
+        /* because of "general" functions, we need to refine arrangements */
+        std::vector<Arrangment> possibleCases;
+        if ((lhs_elements[0].first.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == QMAX)||
+            (lhs_elements.size() == 2 &&
+             ((connectedVariables.find(lhs_elements[0].first) != connectedVariables.end() && lhs_elements[1].second % QMAX == 1) ||
+              (lhs_elements[0].second % QCONSTMAX == -1 && lhs_elements[1].second % QCONSTMAX == 0)))) {
+            /* create manually */
+            /*9999999 10000000 vs 1 1 1 1 1 */
+            possibleCases.emplace_back(manuallyCreate_arrangment(lhs_elements, rhs_elements));
+        }
+        else {
+            updatePossibleArrangements(lhs_elements, rhs_elements, arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)], possibleCases);
+        }
+#else
+        arrangements.clear();
+        handleCase_0_0(arrangements);
+
+        /* second base case : first row and first column */
+        handleCase_0_n(lhs_elements, rhs_elements);
+        handleCase_n_0(lhs_elements, rhs_elements);
+
+        /* general cases */
+        handleCase_n_n(lhs_elements, rhs_elements);
+#endif
+
+        std::vector<std::string> cases;
+#if 0
+        /* 1 vs n, 1 vs 1, n vs 1 */
+        for (int i = 0; i < arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)].size(); ++i) {
+            std::string tmp = arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].
+                    generateSMT(PMAX, lhs_str, rhs_str, lhs_elements, rhs_elements, connectedVariables, newVars);
+            if (tmp.length() > 0) {
+                cases.emplace_back(tmp);
+            }
+            else {
+            }
+	}
+#else
+
+        /* 1 vs n, 1 vs 1, n vs 1 */
+        for (unsigned i = 0; i < possibleCases.size(); ++i) {
+
+            if (passNotContainMapReview(possibleCases[i], lhs_elements, rhs_elements)) {
+//			arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
+                possibleCases[i].constMap.clear();
+                possibleCases[i].constMap.insert(constMap.begin(), constMap.end());
+                std::string tmp = possibleCases[i].
+                        generateSMT(p, lhs_str, rhs_str, lhs_elements, rhs_elements, connectedVariables);
+
+                if (tmp.length() > 0) {
+                    cases.emplace_back(tmp);
+                    arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
+                    __debugPrint(logFile, "%d %s\n", __LINE__, tmp.c_str());
+                }
+                else {
+                }
+            }
+        }
+#endif
+        return cases;
+
+    }
+
+    /*
+     * First base case
+     */
+    void theory_str::handleCase_0_0_general(){
+        std::vector<int> tmpLeft;
+        std::vector<int> tmpRight;
+
+        if (arrangements[std::make_pair(0, 0)].size() == 0) {
+            /* left = right */
+            tmpLeft.emplace_back(0);
+            tmpRight.emplace_back(0);
+            arrangements[std::make_pair(0, 0)].emplace_back(Arrangment(tmpLeft, tmpRight, constMap, connectingSize));
+        }
+    }
+
+    /*
+     * 2nd base case [0] = (sum rhs...)
+     */
+    void theory_str::handleCase_0_n_general(
+            int lhs,
+            int rhs){
+
+        /* left always has SUMFLAT */
+        std::vector<int> tmpLeft;
+        tmpLeft.emplace_back(SUMFLAT);
+
+        /* right has i number of 0 */
+        std::vector<int> tmpRight;
+        tmpRight.emplace_back(0);
+
+        for (int i = 1 ; i < rhs; ++i){
+            tmpRight.emplace_back(0);
+
+            std::vector<Arrangment> tmp04;
+            tmp04.emplace_back(Arrangment(tmpLeft, tmpRight, constMap, connectingSize));
+
+            /* update */
+            /* add directly without checking */
+            if (arrangements[std::make_pair(0, i)].size() == 0) {
+                arrangements[std::make_pair(0, i)] = tmp04;
+            }
+        }
+    }
+
+    /*
+     * 2nd base case (sum lhs...) = [0]
+     */
+    void handleCase_n_0_general(
+            int lhs,
+            int rhs){
+
+        /* right always has SUMFLAT */
+        std::vector<int> tmpRight;
+        tmpRight.emplace_back(SUMFLAT);
+
+        /* left has i number of 0 */
+        std::vector<int> tmpLeft;
+        tmpLeft.emplace_back(0);
+
+        for (int i = 1; i < lhs; ++i) {
+            tmpLeft.emplace_back(0);
+
+            std::vector<Arrangment> tmp04;
+            tmp04.emplace_back(Arrangment(tmpLeft, tmpRight, constMap, connectingSize));
+
+            /* add directly without checking */
+            if (arrangements[std::make_pair(i, 0)].size() == 0) {
+                arrangements[std::make_pair(i, 0)] = tmp04;
+            }
+        }
+    }
+
+    /*
+     * general case
+     */
+    void handleCase_n_n_general(
+            int lhs,
+            int rhs){
+
+        for (int i = 0 ; i < lhs; ++i)
+            for (int j = 0; j < rhs; ++j)
+                if (arrangements.find(std::make_pair(i,j)) == arrangements.end()){
+                    /* 2.0 [i] = empty */
+                    std::vector<Arrangment> tmp01_ext = arrangements[std::make_pair(i - 1, j)];
+                    for (unsigned int t = 0 ; t < tmp01_ext.size(); ++t) {
+                        tmp01_ext[t].addLeft(EMPTYFLAT);
+                    }
+
+                    /* 2.1 [j] = empty */
+                    std::vector<Arrangment> tmp02_ext = arrangements[std::make_pair(i, j - 1)];
+                    for (unsigned int t = 0 ; t < tmp02_ext.size(); ++t) {
+                        tmp02_ext[t].addRight(EMPTYFLAT);
+                    }
+
+                    /* 3.1 [i] = sum(k...j) */
+                    std::vector<Arrangment> tmp03;
+
+                    {
+                        /* [i] = sum (0..j) */
+                        std::vector<int> tmpLeft;
+                        for (int k = 0; k < i; ++k)
+                            tmpLeft.emplace_back(EMPTYFLAT);
+                        tmpLeft.emplace_back(SUMFLAT);
+
+                        std::vector<int> tmpRight;
+                        for (int k = 0 ; k <= j; ++k)
+                            tmpRight.emplace_back(i);
+
+                        SASSERT ((int)tmpLeft.size() == i + 1);
+                        SASSERT ((int)tmpRight.size() == j + 1);
+                        tmp03.emplace_back(Arrangment(tmpLeft, tmpRight, constMap, connectingSize));
+                    }
+
+                    /* [i] = sum (k..j) */
+                    for (int k = 1; k < j; ++k) {
+                        std::vector<Arrangment> tmp03_ext = arrangements[std::make_pair(i - 1, k - 1)];
+                        for (unsigned int t = 0; t < tmp03_ext.size(); ++t) {
+
+                            tmp03_ext[t].addLeft(SUMFLAT);
+                            for (int tt = k; tt <= j; ++tt)
+                                tmp03_ext[t].addRight(i);
+
+
+                            SASSERT ((int)tmp03_ext[t].left_arr.size() == i + 1);
+                            SASSERT ((int)tmp03_ext[t].right_arr.size() == j + 1);
+                        }
+
+                        tmp03.insert(tmp03.end(), tmp03_ext.begin(), tmp03_ext.end());
+                    }
+
+                    /* 3.2 right = sum(...left) */
+                    std::vector<Arrangment> tmp04;
+
+                    /* sum (k..i)  = [j] */
+                    for (int k = 1; k < i; ++k) {
+                        std::vector<Arrangment> tmp04_ext = arrangements[std::make_pair(k - 1, j - 1)];
+                        for (unsigned int t = 0; t < tmp04_ext.size(); ++t) {
+                            tmp04_ext[t].addRight(SUMFLAT);
+                            for (int tt = k; tt <= i; ++tt)
+                                tmp04_ext[t].addLeft(j);
+
+                            SASSERT ((int)tmp04_ext[t].left_arr.size() == i + 1);
+                            SASSERT ((int)tmp04_ext[t].right_arr.size() == j + 1);
+                        }
+
+                        tmp04.insert(tmp04.end(), tmp04_ext.begin(), tmp04_ext.end());
+                    }
+
+                    {
+                        /* sum (0..i)  = [j] */
+                        std::vector<int> tmpLeft;
+                        for (int k = 0 ; k <= i; ++k)
+                            tmpLeft.emplace_back(j);
+
+                        std::vector<int> tmpRight;
+                        for (int k = 0; k < j; ++k)
+                            tmpRight.emplace_back(EMPTYFLAT);
+                        tmpRight.emplace_back(SUMFLAT);
+
+                        SASSERT ((int)tmpLeft.size() == i + 1);
+                        SASSERT ((int)tmpRight.size() == j + 1);
+                        tmp04.emplace_back(Arrangment(tmpLeft, tmpRight, constMap, connectingSize));
+                    }
+
+                    /* fourth case: left = right */
+                    std::vector<Arrangment> tmp05 = arrangements[std::make_pair(i - 1, j - 1)];
+                    for (unsigned int k = 0; k < tmp05.size(); ++k) {
+                        tmp05[k].addRight(i);
+                        tmp05[k].addLeft(j);
+                    }
+
+                    /* update */
+                    /* add directly */
+                    std::vector<Arrangment> possibleCases;
+                    possibleCases.insert(possibleCases.end(), tmp03.begin(), tmp03.end());
+                    possibleCases.insert(possibleCases.end(), tmp04.begin(), tmp04.end());
+                    possibleCases.insert(possibleCases.end(), tmp05.begin(), tmp05.end());
+                    arrangements[std::make_pair(i, j)] = possibleCases;
+                }
+    }
+
+    std::string theory_str::expr2str(expr* node){
+        std::stringstream ss;
+        ast_manager &m = get_manager();
+        ss << mk_pp(node, m);
+        return ss.str();
+    }
+
+    /*
+     * Create a general value that the component belongs to
+     */
+    std::string theory_str::sumStringVector(expr* node){
+        if (is_app(node)) {
+            app *ap = to_app(node);
+            if (u.str.is_concat(ap)){
+                ptr_vector<expr> list;
+                get_nodes_in_concat(node, list);
+                return sumStringVector(list);
+            }
+        }
+        return sumStringVector({node});
+    }
+
+    std::string theory_str::sumStringVector(ptr_vector<expr> list){
+        std::string value = "";
+        /* create a general value that the component belongs to */
+        for (unsigned k = 0; k < list.size(); ++k)
+            value = value + expr2str(list[k]) + " ";
+        return value;
+    }
+
+    std::string theory_str::sumStringVector(std::vector<expr*> list){
+        std::string value = "";
+        /* create a general value that the component belongs to */
+        for (unsigned k = 0; k < list.size(); ++k)
+            value = value + expr2str(list[k]) + " ";
+        return value;
+    }
+
+    /*
+     * extra variables
+     */
+    std::vector<expr*> theory_str::createSetOfFlatVariables(int flatP, std::map<expr*, int> &importantVars) {
+        ast_manager &m = get_manager();
+        std::vector<expr*> result;
+        for (int i = 0 ; i < flatP; ++i) {
+            std::string varName = FLATPREFIX + std::to_string(noFlatVariables + i);
+            expr_ref newVar(mk_str_var(varName), m);
+            result.emplace_back(newVar);
+            importantVars[newVar] = -1;
+        }
+        noFlatVariables = noFlatVariables + flatP;
+        return result;
+    }
+
+    std::vector<std::pair<expr*, int>> theory_str::createEquality(expr* node){
+        if (is_app(node)) {
+            app *ap = to_app(node);
+            if (u.str.is_concat(ap)){
+                ptr_vector<expr> list;
+                get_nodes_in_concat(node, list);
+                return createEquality(list);
+            }
+        }
+
+        return createEquality({node});
+    }
+
+    std::vector<std::pair<expr*, int>> theory_str::createEquality(ptr_vector<expr> list){
+        std::vector<expr*> l;
+        for (unsigned i = 0; i < list.size(); ++i)
+            l.push_back(list[i]);
+        return createEquality(l);
+    }
+
+    /*
+     * Input: x . y
+     * Output: flat . flat . flat . flat . flat . flat
+     */
+    std::vector<std::pair<expr*, int>> theory_str::createEquality(std::vector<expr*> list){
+        std::vector<std::pair<expr*, int>> elements;
+
+        for (unsigned k = 0; k < list.size(); ++k) {
+            zstring content;
+            if (u.str.is_string(list[k], content)) {
+                if (content.length() > 0) /* const string */ {
+                    if (varPieces.find(list[k]) == varPieces.end())
+                        varPieces[list[k]] = 0;
+                    for (int j = varPieces[list[k]]; j < varPieces[list[k]] + QCONSTMAX; ++j) { /* split variables into QMAX parts */
+                        elements.emplace_back(std::make_pair(list[k], -(j + 1)));
+                    }
+                    varPieces[list[k]] += QCONSTMAX;
+                }
+            }
+            else {
+                // check if it is a regex var
+                bool isRegexVar = false;
+                for (const auto& we: membership_memo) {
+                    if (we.first == list[k]){
+                        isRegexVar = true;
+                        elements.emplace_back(we.second, REGEX_CODE);
+                        break;
+                    }
+                }
+
+                if (!isRegexVar) {
+                    if (varPieces.find(list[k]) == varPieces.end())
+                        varPieces[list[k]] = 0;
+                    for (int j = varPieces[list[k]];
+                         j < varPieces[list[k]] + QMAX; ++j) { /* split variables into QMAX parts */
+                        elements.emplace_back(std::make_pair(list[k], j));
+                    }
+                    varPieces[list[k]] += QMAX;
+                }
+            }
+        }
+
+        return elements;
+    }
+
+    std::vector<expr*> theory_str::set2vector(std::set<expr*> s){
+        std::vector<expr*> v;
+        v.insert(v.end(), s.begin(), s.end());
+        return v;
+    }
+
+    /*
+     *
+     */
+    unsigned theory_str::findMaxP(std::vector<expr*> v){
+        unsigned maxLocal = 0;
+
+        for (unsigned i = 0; i < v.size(); ++i)
+            for (unsigned j = i + 1; j < v.size(); ++j){
+
+                /* optimize: find longest common prefix and posfix */
+                ptr_vector<expr> lhs;
+                ptr_vector<expr> rhs;
+                optimizeEquality(v[i], v[j], lhs, rhs);
+
+                unsigned cnt = 0;
+                for (unsigned i = 0; i < lhs.size(); ++i) {
+                    zstring value;
+                    if (u.str.is_string(lhs[i], value)) {
+                        if (value.length() > 0)
+                            cnt++;
+                    }
+                    else
+                        cnt++;
+                }
+                maxLocal = cnt > maxLocal ? cnt : maxLocal;
+
+                cnt = 0;
+                for (unsigned i = 0; i < rhs.size(); ++i) {
+                    zstring value;
+                    if (u.str.is_string(rhs[i], value)) {
+                        if (value.length() > 0)
+                            cnt++;
+                    }
+                    else
+                        cnt++;
+                }
+                maxLocal = cnt > maxLocal ? cnt : maxLocal;
+            }
+
+        return maxLocal;
+    }
+
+    /*
+     * cut the same prefix and suffix
+     */
+    void theory_str::optimizeEquality(
+            expr* lhs,
+            expr* rhs,
+            ptr_vector<expr> &new_lhs,
+            ptr_vector<expr> &new_rhs){
+        /* cut prefix */
+        ptr_vector<expr> lhsVec;
+        get_nodes_in_concat(lhs, lhsVec);
+
+        ptr_vector<expr> rhsVec;
+        get_nodes_in_concat(rhs, rhsVec);
+
+        /* cut prefix */
+        int prefix = -1;
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (lhsVec[i] == rhsVec[i])
+                prefix = i;
+            else
+                break;
+
+        /* cut suffix */
+        int suffix = -1;
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (lhsVec[lhsVec.size() - 1 - i] == rhsVec[rhsVec.size() - 1 - i])
+                suffix = i;
+            else
+                break;
+
+        // create new concats
+        for (unsigned i = prefix + 1; i < lhsVec.size() - suffix - 1; ++i)
+            new_lhs.push_back(lhsVec[i]);
+
+        for (unsigned i = prefix + 1; i < rhsVec.size() - suffix - 1; ++i)
+            new_lhs.push_back(rhsVec[i]);
     }
 
     std::set<std::pair<expr*, int>> theory_str::collect_important_vars(std::set<expr*> eqc_roots){
