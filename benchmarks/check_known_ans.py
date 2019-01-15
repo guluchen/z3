@@ -54,6 +54,8 @@ def main():
     # Run the check
     prob_set_path = os.path.normpath(args.prob_set_path)
     print(f'problem set path: {prob_set_path}')
+    print(f'       tool path: {TOOL}')
+    print(f'         timeout: {TIMEOUT}s')
     prob_ans_note = os.path.normpath(args.prob_ans_note)
     note_file = open(prob_ans_note)
     prob_notes = [line.strip().split() for line in note_file.readlines()]

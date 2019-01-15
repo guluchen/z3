@@ -171,6 +171,8 @@ def main():
     prob_count = len(prob_names)
     print(f'  problem set path: {prob_set_path}')
     print(f'number of problems: {prob_count}')
+    print(f'         tool path: {TOOL}')
+    print(f'           timeout: {TIMEOUT}s')
 
     check_ans(prob_set_path, prob_names)
 
