@@ -11,6 +11,7 @@
 #include "smt/params/theory_str_params.h"
 #include "smt/smt_theory.h"
 #include "util/scoped_vector.h"
+#include "ast/rewriter/th_rewriter.h"
 
 namespace smt {
 
@@ -133,7 +134,7 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const state& s);
         private:
             static bool dag_def_check_node(const def_graph& graph, const def_node& node,
-                                                 def_nodes& marked, def_nodes& checked);
+                                           def_nodes& marked, def_nodes& checked);
             bool definition_acyclic() const;
             void transform_one_var(const head_pair& hh, std::list<state>& result) const;
             void transform_two_var(const head_pair& hh, std::list<state>& result) const;
@@ -157,8 +158,11 @@ namespace smt {
     class theory_str : public theory {
         int m_scope_level = 0;
         const theory_str_params& m_params;
-        const arith_util m_util_a;
-        const seq_util m_util_s;
+        arith_util m_util_a;
+        seq_util m_util_s;
+        int m_fresh_id;
+        th_rewriter m_rewrite;
+
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
     public:
@@ -188,8 +192,14 @@ namespace smt {
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
     private:
         void assert_axiom(expr *e);
-        void dump_assignments();
+        void assert_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal,
+                          literal l4 = null_literal, literal l5 = null_literal);
+        void add_extract_axiom(expr *e);
+        void dump_assignments() const;
         bool is_theory_str_term(expr *e) const;
+        bool is_word_term(expr *e) const;
+        app *mk_str_var(std::string name);
+        literal mk_literal(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo() const;
         bool block_curr_assignment();
