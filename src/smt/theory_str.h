@@ -228,7 +228,6 @@ namespace smt {
 
         class Arrangment{
         public:
-
             std::vector<int> left_arr;
             std::vector<int> right_arr;
 
@@ -248,6 +247,12 @@ namespace smt {
                 /* extra info */
                 constMap.insert(_constMap.begin(), _constMap.end());
                 connectingSize = _connectingSize;
+            }
+
+            Arrangment(std::vector<int> _left_arr,
+                       std::vector<int> _right_arr){
+                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
+                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
             }
 
             void addLeft(int number) {
@@ -374,7 +379,6 @@ namespace smt {
                     }
                     pos += currentSplit[i];
                 }
-//		__debugPrint(logFile, "%d TRUE\n", __LINE__);
                 return true;
             }
 
@@ -2742,7 +2746,7 @@ namespace smt {
                                      elementNames[i].first.find('|') == std::string::npos){
                                 /* regex plus */
                                 size_t endPos = elementNames[i].first.find(')');
-                                assert(endPos != std::string::npos);
+                                SASSERT(endPos != std::string::npos);
                                 min_rhs += endPos - 1;
                             }
                         }
@@ -3353,10 +3357,10 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              */
             bool isPossibleArrangement(
-                    std::vector<std::pair<std::string, int>> lhs_elements,
-                    std::vector<std::pair<std::string, int>> rhs_elements){
+                    std::vector<std::pair<expr*, int>> lhs_elements,
+                    std::vector<std::pair<expr*, int>> rhs_elements){
                 /* bla bla */
-                for (unsigned int i = 0; i < left_arr.size(); ++i)
+                for (unsigned i = 0; i < left_arr.size(); ++i)
                     if (left_arr[i] != -1){
                         for (int j = i - 1; j >= 0; --j){
                             if (lhs_elements[j].second < lhs_elements[i].second) { /* same var */
@@ -3367,7 +3371,7 @@ namespace smt {
                                 break;
                         }
                     }
-                for (unsigned int i = 0; i < right_arr.size(); ++i)
+                for (unsigned i = 0; i < right_arr.size(); ++i)
                     if (right_arr[i] != -1){
                         for (int j = i - 1; j >= 0; --j){
                             if (rhs_elements[j].second < rhs_elements[i].second) { /* same var */
@@ -3394,14 +3398,6 @@ namespace smt {
                     STRACE("str", tout << right_arr[i] << " " << std::endl;);
                 STRACE("str", tout <<  std::endl;);
             }
-
-            expr* createEqualConstraint(expr* x, expr* y){
-                context & ctx = get_context();
-                ast_manager & m = get_manager();
-                expr_ref premise(ctx.mk_eq_atom(x, y), m);
-                return premise;
-            }
-
         };
 
     public:
@@ -3436,6 +3432,48 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            /*
+             * Given a flat,
+             * generate its size constraint
+             */
+            std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            /*
+             *
+             */
+            std::string generateFlatIter(std::pair<expr*, int> a);
+            /*
+             * Given a flat,
+             * generate its size constraint
+             */
+            std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            int canBeOptimized_LHS(
+                    int i, int startPos, int j,
+                    std::vector<int> left_arr,
+                    std::vector<int> right_arr,
+                    std::vector<std::pair<std::string, int>> lhs_elements,
+                    std::vector<std::pair<std::string, int>> rhs_elements);
+            /*
+             * Given a flat,
+             * generate its array name
+             */
+            std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
+            /*
+            * First base case
+            */
+            void handleCase_0_0_general();
+            /*
+             * 2nd base case [0] = (sum rhs...)
+             */
+            void handleCase_0_n_general(int lhs, int rhs);
+            /*
+             * 2nd base case (sum lhs...) = [0]
+             */
+            void handleCase_n_0_general(int lhs, int rhs);
+            /*
+             * general case
+             */
+            void handleCase_n_n_general(int lhs, int rhs);
+            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v);
             std::string expr2str(expr* node);
             /*
              * Create a general value that the component belongs to
@@ -3716,6 +3754,7 @@ namespace smt {
         std::set<std::string> generatedEqualities;
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
+        std::map<expr*, std::string> constMap;
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
