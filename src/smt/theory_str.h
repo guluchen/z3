@@ -1,10 +1,13 @@
 #ifndef _THEORY_STR_H_
 #define _THEORY_STR_H_
 
+#include <functional>
 #include <list>
 #include <set>
 #include <stack>
 #include <map>
+#include <queue>
+#include <unordered_map>
 #include <vector>
 #include "ast/arith_decl_plugin.h"
 #include "ast/seq_decl_plugin.h"
@@ -21,6 +24,9 @@ namespace smt {
         public:
             enum class t {
                 CONST, VAR, NONE
+            };
+            struct hash {
+                std::size_t operator()(const element& e) const;
             };
             static const element& null();
         private:
@@ -40,6 +46,9 @@ namespace smt {
 
         class word_term {
         public:
+            struct hash {
+                std::size_t operator()(const word_term& w) const;
+            };
             static const word_term& null();
             static word_term from_string(const zstring& str);
             static word_term from_variable(const zstring& name);
@@ -53,8 +62,9 @@ namespace smt {
             word_term() = default;
             word_term(std::initializer_list<element> list);
             std::size_t length() const { return m_elements.size(); }
-            std::size_t constant_count() const;
+            std::size_t constant_num() const;
             std::set<element> variables() const;
+            const std::list<element>& content() const { return m_elements; }
             const element& head() const;
             bool empty() const { return m_elements.empty(); }
             bool has_constant() const;
@@ -74,6 +84,9 @@ namespace smt {
 
         class word_equation {
         public:
+            struct hash {
+                std::size_t operator()(const word_equation& we) const;
+            };
             static const word_equation& null();
         private:
             word_term m_lhs;
@@ -103,52 +116,143 @@ namespace smt {
             void sort();
         };
 
+        class regex {
+        };
+
+        class automaton {
+        };
+
+        class language {
+        public:
+            using pair = std::pair<language, language>;
+            enum class t {
+                RE, AUT
+            };
+            union v {
+                regex re;
+                automaton aut;
+            };
+            struct hash {
+                std::size_t operator()(const language& l) const { return 0; };
+            };
+        private:
+            language::t m_type;
+            language::v m_value;
+        public:
+            language(const language::t& t, language::v&& v) : m_type{t}, m_value{std::move(v)} {}
+            const language::t& type() const { return m_type; }
+            const language::v& value() const { return m_value; }
+            bool typed(const language::t& t) const { return m_type == t; }
+            language complement() const { return {t::AUT, {}}; }
+            language concat(const language& other) const { return {t::AUT, {}}; }
+            language intersect(const language& other) const { return {t::AUT, {}}; }
+            language remove_prefix(const element& e) const { return {t::AUT, {}}; }
+            std::list<language::pair> split() const { return {}; }
+            bool operator==(const language& other) const { return true; }
+            bool operator!=(const language& other) const { return !(*this == other); }
+        };
+
         class state {
+        public:
+            struct hash {
+                std::size_t operator()(const state& s) const;
+            };
+        private:
             using def_node = element;
             using def_nodes = std::set<def_node>;
             using def_graph = std::map<def_node, def_nodes>;
-            using trans_source = std::pair<const word_equation&, const word_equation&>;
             bool m_allow_empty_var = true;
             std::set<word_equation> m_wes_to_satisfy;
             std::set<word_equation> m_wes_to_fail;
+            std::unordered_map<element, language, element::hash> m_lang_to_satisfy;
         public:
             state() = default;
             explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
+            std::size_t word_eq_num() const { return m_wes_to_satisfy.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
+            const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
+            bool allows_empty_var() const { return m_allow_empty_var; }
+            bool in_definition_form() const;
+            bool in_solved_form() const;
             bool eq_classes_inconsistent() const;
             bool diseq_inconsistent() const;
             bool unsolvable_by_check() const;
             bool unsolvable_by_inference() const;
-            bool in_definition_form() const;
-            bool in_solved_form() const;
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
-            void should_satisfy(const word_equation& we);
-            void should_fail(const word_equation& we);
+            void add_word_eq(const word_equation& we);
+            void add_word_diseq(const word_equation& we);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
             state remove_all(const std::set<element>& tgt) const;
-            std::list<state> transform() const;
+            bool operator==(const state& other) const;
+            bool operator!=(const state& other) const { return !(*this == other); }
             bool operator<(const state& other) const;
             friend std::ostream& operator<<(std::ostream& os, const state& s);
         private:
             static bool dag_def_check_node(const def_graph& graph, const def_node& node,
                                            def_nodes& marked, def_nodes& checked);
             bool definition_acyclic() const;
-            void transform_one_var(const head_pair& hh, std::list<state>& result) const;
-            void transform_two_var(const head_pair& hh, std::list<state>& result) const;
         };
 
-        class neilson_based_solver {
-            std::set<state> m_processed;
-            std::stack<state> m_pending;
-            bool m_solution_found;
+        using state_cref = std::reference_wrapper<const state>;
+
+        enum class result {
+            SAT, UNSAT, UNKNOWN
+        };
+
+        class neilsen_transforms {
         public:
-            explicit neilson_based_solver(const state& root);
-            const bool solution_found() const { return m_solution_found; }
-            void explore_var_empty_cases();
-            void check_sat();
+            struct move {
+                enum class t {
+                    TO_EMPTY,
+                    TO_CONST,
+                    TO_VAR,
+                    TO_VAR_VAR,
+                    TO_CHAR_VAR,
+                };
+                const state_cref m_from;
+                const move::t m_type;
+                const std::vector<element> m_record;
+                move add_record(const element& e) const;
+            };
+            using action = std::pair<move, state>;
+            class mk_move {
+                const state& m_state;
+                const word_equation& m_src;
+            public:
+                mk_move(const state& s, const word_equation& src);
+                std::list<action> operator()();
+            private:
+                bool src_vars_empty();
+                bool src_var_is_const();
+                action prop_empty();
+                action prop_const();
+                std::list<action> handle_two_var();
+                std::list<action> handle_one_var();
+            };
+            class record_graph {
+                std::unordered_map<state, std::list<move>, state::hash> m_backward_def;
+            public:
+                bool contains(const state& s) const;
+                const std::list<move>& incoming_moves(const state& s) const;
+                void add_move(move&& m, const state& s);
+                const state& add_state(state&& s);
+            };
+        private:
+            result m_status = result::UNKNOWN;
+            record_graph m_records;
+            std::stack<state_cref> m_pending;
+        public:
+            explicit neilsen_transforms(state&& root);
+            bool in_status(const result& t) const { return m_status == t; };
+            bool should_explore_all() const;
+            result check(bool split_var_empty_ahead = false);
+        private:
+            result split_var_empty_cases();
+            std::queue<state_cref> split_first_level_var_empty();
+            std::list<action> transform(const state& s) const;
         };
 
         using expr_pair = std::pair<expr_ref, expr_ref>;

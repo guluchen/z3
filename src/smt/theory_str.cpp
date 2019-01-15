@@ -1,21 +1,22 @@
 #include <algorithm>
-#include <functional>
 #include "ast/ast_pp.h"
 #include "smt/theory_str.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
-
-/* TODO:
- *  1. better algorithm for checking solved form
- *  2. on-the-fly over-approximation
- *  3. better algorithm for computing state transform
- */
 
 namespace smt {
 
     namespace str {
 
         using namespace std::placeholders;
+
+        std::size_t element::hash::operator()(const element& e) const {
+            using enum_t = std::underlying_type<t>::type;
+            static const auto string_hash{std::hash<std::string>{}};
+            static const auto enum_t_hash{std::hash<enum_t>{}};
+            const auto n = static_cast<enum_t>(e.type());
+            return string_hash(e.value().encode()) ^ enum_t_hash(n);
+        }
 
         const element& element::null() {
             static const element e{element::t::NONE, ""};
@@ -35,6 +36,15 @@ namespace smt {
         std::ostream& operator<<(std::ostream& os, const element& s) {
             os << s.value();
             return os;
+        }
+
+        std::size_t word_term::hash::operator()(const word_term& w) const {
+            static const auto element_hash{element::hash{}};
+            std::size_t result{37633};
+            for (const auto& e : w.m_elements) {
+                result += element_hash(e);
+            }
+            return result;
         }
 
         const word_term& word_term::null() {
@@ -85,8 +95,8 @@ namespace smt {
         }
 
         bool word_term::unequalable(const word_term& w1, const word_term& w2) {
-            return (!w1.has_variable() && w1.constant_count() < w2.constant_count()) ||
-                   (!w2.has_variable() && w2.constant_count() < w1.constant_count()) ||
+            return (!w1.has_variable() && w1.constant_num() < w2.constant_num()) ||
+                   (!w2.has_variable() && w2.constant_num() < w1.constant_num()) ||
                    prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
         }
 
@@ -94,7 +104,7 @@ namespace smt {
             m_elements.insert(m_elements.begin(), list.begin(), list.end());
         }
 
-        std::size_t word_term::constant_count() const {
+        std::size_t word_term::constant_num() const {
             static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
         }
@@ -148,7 +158,11 @@ namespace smt {
         }
 
         bool word_term::operator==(const word_term& other) const {
-            return !(*this < other) && !(other < *this);
+            const auto begin = m_elements.begin();
+            const auto end = m_elements.end();
+            const auto other_begin = other.m_elements.begin();
+            return m_elements.size() == other.m_elements.size() &&
+                   std::mismatch(begin, end, other_begin).first == end; // no mismatch
         }
 
         bool word_term::operator<(const word_term& other) const {
@@ -184,6 +198,11 @@ namespace smt {
             }
             if (in_consts) os << '"';
             return os << std::flush;
+        }
+
+        std::size_t word_equation::hash::operator()(const word_equation& we) const {
+            static const auto word_term_hash{word_term::hash{}};
+            return word_term_hash(we.m_lhs) + word_term_hash(we.m_rhs);
         }
 
         const word_equation& word_equation::null() {
@@ -227,6 +246,7 @@ namespace smt {
                 return m_rhs;
             }
             if (m_rhs.length() == 1 && m_rhs.check_head(element::t::VAR)) {
+                SASSERT(m_lhs.length() <= 1);
                 return m_lhs;
             }
             return word_term::null();
@@ -279,7 +299,7 @@ namespace smt {
         }
 
         bool word_equation::operator==(const word_equation& other) const {
-            return !(*this < other) && !(other < *this);
+            return m_lhs == other.m_lhs && m_rhs == other.m_rhs;
         }
 
         bool word_equation::operator<(const word_equation& other) const {
@@ -297,6 +317,24 @@ namespace smt {
             if (!(m_lhs < m_rhs)) {
                 std::swap(m_lhs, m_rhs);
             }
+        }
+
+        std::size_t state::hash::operator()(const state& s) const {
+            static const auto element_hash{element::hash{}};
+            static const auto word_equation_hash{word_equation::hash{}};
+            static const auto language_hash{language::hash{}};
+            std::size_t result{22447};
+            result += s.m_allow_empty_var ? 10093 : 0;
+            for (const auto& we : s.m_wes_to_satisfy) {
+                result += word_equation_hash(we);
+            }
+            for (const auto& we : s.m_wes_to_fail) {
+                result += word_equation_hash(we);
+            }
+            for (const auto& kv : s.m_lang_to_satisfy) {
+                result += element_hash(kv.first) + language_hash(kv.second);
+            }
+            return result;
         }
 
         std::set<element> state::variables() const {
@@ -343,9 +381,23 @@ namespace smt {
             return classes;
         }
 
+        const word_equation& state::smallest_eq() const {
+            return m_wes_to_satisfy.empty() ? word_equation::null()
+                                            : *m_wes_to_satisfy.begin();
+        }
+
         const word_equation& state::only_one_eq_left() const {
             return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin()
                                                 : word_equation::null();
+        }
+
+        bool state::in_definition_form() const {
+            static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
+            return std::all_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), in_def_form);
+        }
+
+        bool state::in_solved_form() const {
+            return (in_definition_form() && definition_acyclic()) || m_wes_to_satisfy.empty();
         }
 
         bool state::eq_classes_inconsistent() const {
@@ -386,39 +438,30 @@ namespace smt {
             return diseq_inconsistent() || eq_classes_inconsistent();
         }
 
-        bool state::in_definition_form() const {
-            static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
-            return std::all_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), in_def_form);
-        }
-
-        bool state::in_solved_form() const {
-            return (in_definition_form() && definition_acyclic()) || m_wes_to_satisfy.empty();
-        }
-
-        void state::should_satisfy(const word_equation& we) {
+        void state::add_word_eq(const word_equation& we) {
             SASSERT(we);
 
             if (we.empty()) return;
-            const word_equation& trimmed = we.trim_prefix();
+            word_equation&& trimmed = we.trim_prefix();
             if (trimmed.empty()) return;
-            m_wes_to_satisfy.insert(trimmed);
+            m_wes_to_satisfy.insert(std::move(trimmed));
         }
 
-        void state::should_fail(const word_equation& we) {
+        void state::add_word_diseq(const word_equation& we) {
             SASSERT(we);
 
-            const word_equation& trimmed = we.trim_prefix();
+            word_equation&& trimmed = we.trim_prefix();
             if (trimmed.unsolvable(m_allow_empty_var)) return;
-            m_wes_to_fail.insert(trimmed);
+            m_wes_to_fail.insert(std::move(trimmed));
         }
 
         state state::replace(const element& tgt, const word_term& subst) const {
             state result{m_allow_empty_var};
             for (const auto& we : m_wes_to_satisfy) {
-                result.should_satisfy(we.replace(tgt, subst));
+                result.add_word_eq(we.replace(tgt, subst));
             }
             for (const auto& we : m_wes_to_fail) {
-                result.should_fail(we.replace(tgt, subst));
+                result.add_word_diseq(we.replace(tgt, subst));
             }
             return result;
         }
@@ -430,37 +473,19 @@ namespace smt {
         state state::remove_all(const std::set<element>& tgt) const {
             state result{m_allow_empty_var};
             for (const auto& we : m_wes_to_satisfy) {
-                result.should_satisfy(we.remove_all(tgt));
+                result.add_word_eq(we.remove_all(tgt));
             }
             for (const auto& we : m_wes_to_fail) {
-                result.should_fail(we.remove_all(tgt));
+                result.add_word_diseq(we.remove_all(tgt));
             }
             return result;
         }
 
-        std::list<state> state::transform() const {
-            SASSERT(!unsolvable_by_check() && !m_wes_to_satisfy.empty());
-            const word_equation& curr_we = *m_wes_to_satisfy.begin();
-            const head_pair& hh = curr_we.heads();
-
-            std::list<state> result;
-            if (m_allow_empty_var && curr_we.lhs().empty()) {
-                SASSERT(!curr_we.rhs().has_constant());
-                result.push_back(remove_all(curr_we.rhs().variables()));
-                return result;
-            }
-            const word_term& def_body = curr_we.definition_body();
-            if (def_body && (def_body.length() == 1 || !def_body.has_variable())) {
-                result.push_back(replace(curr_we.definition_var(), def_body));
-                return result;
-            }
-
-            if (curr_we.check_heads(element::t::VAR, element::t::VAR)) {
-                transform_two_var(hh, result);
-            } else {
-                transform_one_var(hh, result);
-            }
-            return result;
+        bool state::operator==(const state& other) const {
+            return m_allow_empty_var == other.m_allow_empty_var &&
+                   m_wes_to_satisfy == other.m_wes_to_satisfy &&
+                   m_wes_to_fail == other.m_wes_to_fail &&
+                   m_lang_to_satisfy == other.m_lang_to_satisfy;
         }
 
         bool state::operator<(const state& other) const {
@@ -516,112 +541,254 @@ namespace smt {
             return true;
         }
 
-        void state::transform_one_var(const head_pair& hh, std::list<state>& result) const {
-            SASSERT(hh.first);
-            SASSERT(hh.second);
+        neilsen_transforms::move neilsen_transforms::move::add_record(const element& e) const {
+            std::vector<element> r{m_record};
+            r.push_back(e);
+            return {m_from, m_type, std::move(r)};
+        };
 
+        neilsen_transforms::mk_move::mk_move(const state& s, const word_equation& src)
+                : m_state{s}, m_src{src} {}
+
+        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::operator()() {
+            if (src_vars_empty()) {
+                SASSERT(!m_src.rhs().has_constant());
+                return {prop_empty()};
+            }
+            if (src_var_is_const()) {
+                return {prop_const()};
+            }
+            if (m_src.check_heads(element::t::VAR, element::t::VAR)) {
+                return handle_two_var();
+            }
+            return handle_one_var();
+        }
+
+        bool neilsen_transforms::mk_move::src_vars_empty() {
+            return m_state.allows_empty_var() && m_src.lhs().empty();
+        }
+
+        bool neilsen_transforms::mk_move::src_var_is_const() {
+            const word_term& def_body = m_src.definition_body();
+            return def_body && (def_body.length() == 1 || !def_body.has_variable());
+        }
+
+        neilsen_transforms::action neilsen_transforms::mk_move::prop_empty() {
+            const std::set<element> empty_vars{m_src.rhs().variables()};
+            const std::vector<element> record{empty_vars.begin(), empty_vars.end()};
+            return {{m_state, move::t::TO_EMPTY, record}, m_state.remove_all(empty_vars)};
+        }
+
+        neilsen_transforms::action neilsen_transforms::mk_move::prop_const() {
+            const element& var = m_src.definition_var();
+            const word_term& def = m_src.definition_body();
+            std::vector<element> record{var};
+            record.insert(record.end(), def.content().begin(), def.content().end());
+            return {{m_state, move::t::TO_CONST, record}, m_state.replace(var, def)};
+        }
+
+        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_two_var() {
+            const head_pair& hh = m_src.heads();
+            const element& x = hh.first;
+            const element& y = hh.second;
+            std::list<action> result;
+            result.push_back({{m_state, move::t::TO_VAR_VAR, {x, y}}, m_state.replace(x, {y, x})});
+            result.push_back({{m_state, move::t::TO_VAR_VAR, {y, x}}, m_state.replace(y, {x, y})});
+            if (m_state.allows_empty_var()) {
+                result.push_back({{m_state, move::t::TO_EMPTY, {x}}, m_state.remove(x)});
+                result.push_back({{m_state, move::t::TO_EMPTY, {y}}, m_state.remove(y)});
+            } else {
+                result.push_back({{m_state, move::t::TO_VAR, {x, y}}, m_state.replace(x, {y})});
+            }
+            return result;
+        }
+
+        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_one_var() {
+            const head_pair& hh = m_src.heads();
             const bool var_const_headed = hh.first.typed(element::t::VAR);
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
-            result.push_back(replace(v, {c, v}));
-            result.push_back(replace(v, {c}));
-            if (m_allow_empty_var) {
-                result.push_back(remove(v));
+            std::list<action> result;
+            result.push_back({{m_state, move::t::TO_CHAR_VAR, {v, c}}, m_state.replace(v, {c, v})});
+            if (m_state.allows_empty_var()) {
+                result.push_back({{m_state, move::t::TO_EMPTY, {v}}, m_state.remove(v)});
+            } else {
+                result.push_back({{m_state, move::t::TO_CONST, {c}}, m_state.replace(v, {c})});
             }
+            return result;
         }
 
-        void state::transform_two_var(const head_pair& hh, std::list<state>& result) const {
-            SASSERT(hh.first);
-            SASSERT(hh.second);
-
-            const element& x = hh.first;
-            const element& y = hh.second;
-            result.push_back(replace(x, {y, x}));
-            result.push_back(replace(y, {x, y}));
-            result.push_back(replace(x, {y}));
-            if (m_allow_empty_var) {
-                result.push_back(remove(x));
-                result.push_back(remove(y));
-            }
+        bool neilsen_transforms::record_graph::contains(const state& s) const {
+            return m_backward_def.find(s) != m_backward_def.end();
         }
 
-        neilson_based_solver::neilson_based_solver(const state& root) : m_solution_found{false} {
-            m_pending.push(root);
+        const std::list<neilsen_transforms::move>&
+        neilsen_transforms::record_graph::incoming_moves(const state& s) const {
+            SASSERT(contains(s));
+            return m_backward_def.find(s)->second;
         }
 
-        void neilson_based_solver::explore_var_empty_cases() {
-            while (!m_pending.empty()) {
-                const state curr_case{std::move(m_pending.top())};
-                if (curr_case.in_solved_form()) {
-                    m_solution_found = true;
-                    return;
-                }
-                m_pending.pop();
-                if (m_processed.find(curr_case) != m_processed.end()) continue;
-                if (curr_case.unsolvable_by_check()) {
-                    STRACE("str", tout << "failed:\n" << curr_case << std::endl;);
-                    continue;
-                }
-                m_processed.insert(curr_case);
-                STRACE("str", tout << "add:\n" << curr_case << std::endl;);
-                for (const auto& var : curr_case.variables()) {
-                    m_pending.push(curr_case.remove(var));
-                }
-            }
-            std::set<state> processed;
-            for (auto c : m_processed) {
-                c.allow_empty_var(false);
-                processed.insert(c);
-                m_pending.push(std::move(c));
-            }
-            m_processed = std::move(processed);
+        void neilsen_transforms::record_graph::add_move(move&& m, const state& s) {
+            SASSERT(contains(m.m_from) && contains(s));
+            m_backward_def[s].emplace_back(std::move(m));
         }
 
-        void neilson_based_solver::check_sat() {
+        const state& neilsen_transforms::record_graph::add_state(state&& s) {
+            SASSERT(!contains(s));
+            auto&& pair = std::make_pair(std::move(s), std::list<move>{});
+            return m_backward_def.emplace(std::move(pair)).first->first;
+        }
+
+        neilsen_transforms::neilsen_transforms(state&& root) {
+            const state& s = m_records.add_state(std::move(root));
+            m_pending.emplace(s);
+        }
+
+        bool neilsen_transforms::should_explore_all() const {
+            return false;
+        }
+
+        result neilsen_transforms::check(const bool split_var_empty_ahead) {
+            if (in_status(result::SAT)) return m_status;
+            if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) {
+                return m_status = result::SAT;
+            }
             STRACE("str", tout << "[Check SAT]\n";);
             while (!m_pending.empty()) {
-                state curr_s = m_pending.top();
+                const state& curr_s = m_pending.top();
                 m_pending.pop();
                 STRACE("str", tout << "from:\n" << curr_s << std::endl;);
-                for (const auto& next_s : curr_s.transform()) {
-                    if (m_processed.find(next_s) != m_processed.end()) {
-                        STRACE("str", tout << "already visited:\n" << next_s << std::endl;);
+                for (auto& action : transform(curr_s)) {
+                    if (m_records.contains(action.second)) {
+                        m_records.add_move(std::move(action.first), action.second);
+                        STRACE("str", tout << "already visited:\n" << action.second << std::endl;);
                         continue;
                     }
-                    m_processed.insert(next_s);
-                    if (next_s.unsolvable_by_inference()) {
-                        STRACE("str", tout << "failed:\n" << next_s << std::endl;);
+                    const state& s = m_records.add_state(std::move(action.second));
+                    m_records.add_move(std::move(action.first), s);
+                    if (s.unsolvable_by_inference()) {
+                        STRACE("str", tout << "failed:\n" << s << std::endl;);
                         continue;
                     }
-                    if (next_s.in_solved_form()) {
-                        STRACE("str", tout << "solved:\n" << next_s << std::endl;);
-                        m_solution_found = true;
-                        return;
+                    if (s.in_solved_form()) {
+                        STRACE("str", tout << "[Solved]\n" << s << std::endl;);
+                        return m_status = result::SAT;
                     }
-                    const word_equation& last_we = next_s.only_one_eq_left();
-                    if (last_we && last_we.in_definition_form()) {
+                    const word_equation& only_one_left = s.only_one_eq_left();
+                    if (only_one_left && only_one_left.in_definition_form()) {
                         // solved form check failed, the we in definition form must be recursive
-                        const word_equation& last_we_recursive_def = last_we;
+                        const word_equation& last_we_recursive_def = only_one_left;
                         if (!last_we_recursive_def.definition_body().has_constant()) {
-                            STRACE("str", tout << "solved:\n" << next_s << std::endl;);
-                            m_solution_found = true;
-                            return;
+                            STRACE("str", tout << "[Solved]\n" << s << std::endl;);
+                            return m_status = result::SAT;
                         }
-                        STRACE("str", tout << "failed:\n" << next_s << std::endl;);
+                        STRACE("str", tout << "failed:\n" << s << std::endl;);
                         continue;
                     }
-                    STRACE("str", tout << "to:\n" << next_s << std::endl;);
-                    m_pending.push(next_s);
+                    STRACE("str", tout << "to:\n" << s << std::endl;);
+                    m_pending.emplace(s);
                 }
             }
+            return result::UNSAT;
+        }
+
+        result neilsen_transforms::split_var_empty_cases() {
+            STRACE("str", tout << "[Split Empty Variable Cases]\n";);
+            std::queue<state_cref> pending{split_first_level_var_empty()};
+            SASSERT(m_pending.empty());
+            if (in_status(result::SAT)) return m_status;
+            while (!pending.empty()) {
+                const state& curr_s = pending.front();
+                pending.pop();
+                m_pending.emplace(curr_s);
+                for (const auto& var : curr_s.variables()) {
+                    state&& next_s = curr_s.remove(var);
+                    next_s.allow_empty_var(false);
+                    if (m_records.contains(next_s)) {
+                        for (const auto& m : m_records.incoming_moves(curr_s)) {
+                            m_records.add_move(m.add_record(var), next_s);
+                        }
+                        continue;
+                    }
+                    next_s.allow_empty_var(true);
+                    if (!should_explore_all() && next_s.in_solved_form()) {
+                        const state& s = m_records.add_state(std::move(next_s));
+                        for (const auto& m : m_records.incoming_moves(curr_s)) {
+                            m_records.add_move(m.add_record(var), s);
+                        }
+                        STRACE("str", tout << "[Solved]\n" << s << std::endl;);
+                        return m_status = result::SAT;
+                    }
+                    if (next_s.unsolvable_by_check()) {
+                        next_s.allow_empty_var(false);
+                        const state& s = m_records.add_state(std::move(next_s));
+                        for (const auto& m : m_records.incoming_moves(curr_s)) {
+                            m_records.add_move(m.add_record(var), s);
+                        }
+                        STRACE("str", tout << "failed:\n" << curr_s << std::endl;);
+                        continue;
+                    }
+                    next_s.allow_empty_var(false);
+                    const state& s = m_records.add_state(std::move(next_s));
+                    for (const auto& m : m_records.incoming_moves(curr_s)) {
+                        m_records.add_move(m.add_record(var), s);
+                    }
+                    pending.emplace(s);
+                    STRACE("str", tout << "add:\n" << s << std::endl;);
+                }
+            }
+            SASSERT(in_status(result::UNKNOWN));
+            return m_status;
+        }
+
+        std::queue<state_cref> neilsen_transforms::split_first_level_var_empty() {
+            std::queue<state_cref> result;
+            while (!m_pending.empty()) {
+                const state& curr_s = m_pending.top();
+                m_pending.pop();
+                for (const auto& var : curr_s.variables()) {
+                    state&& next_s = curr_s.remove(var);
+                    next_s.allow_empty_var(false);
+                    if (m_records.contains(next_s)) {
+                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, next_s);
+                        continue;
+                    }
+                    next_s.allow_empty_var(true);
+                    if (!should_explore_all() && next_s.in_solved_form()) {
+                        const state& s = m_records.add_state(std::move(next_s));
+                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
+                        m_status = result::SAT;
+                        STRACE("str", tout << "[Solved]\n" << s << std::endl;);
+                        return {};
+                    }
+                    if (next_s.unsolvable_by_check()) {
+                        next_s.allow_empty_var(false);
+                        const state& s = m_records.add_state(std::move(next_s));
+                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
+                        STRACE("str", tout << "failed:\n" << curr_s << std::endl;);
+                        continue;
+                    }
+                    next_s.allow_empty_var(false);
+                    const state& s = m_records.add_state(std::move(next_s));
+                    m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
+                    result.emplace(s);
+                    STRACE("str", tout << "add:\n" << s << std::endl;);
+                }
+            }
+            return result;
+        }
+
+        std::list<neilsen_transforms::action> neilsen_transforms::transform(const state& s) const {
+            SASSERT(!s.unsolvable_by_check() && s.word_eq_num() != 0);
+            // no diseq-only handling for now
+            return mk_move{s, s.smallest_eq()}();
         }
 
     }
 
     theory_str::theory_str(ast_manager& m, const theory_str_params& params)
             : theory{m.mk_family_id("seq")}, m_params{params}, m_util_a{m}, m_util_s{m},
-              m_fresh_id{0}, m_rewrite{m} {
-    }
+              m_fresh_id{0}, m_rewrite{m} {}
 
     void theory_str::display(std::ostream& os) const {
         os << "theory_str display" << std::endl;
@@ -636,7 +803,8 @@ namespace smt {
     }
 
     theory_var theory_str::mk_var(enode *const n) {
-        STRACE("str", tout << "mk_var for " << mk_pp(n->get_owner(), get_manager()) << std::endl;);
+        STRACE("str",
+               tout << "mk_var for " << mk_pp(n->get_owner(), get_manager()) << std::endl;);
         if (!is_theory_str_term(n->get_owner())) {
             return null_theory_var;
         }
@@ -778,23 +946,22 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
+        using namespace str;
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check level " << get_context().get_scope_level() << std::endl;);
 
-        const str::state& root = mk_state_from_todo();
+        str::state&& root = mk_state_from_todo();
         STRACE("str", tout << "root built:\n" << root << std::endl;);
-        str::neilson_based_solver solver{root};
         if (root.unsolvable_by_inference() && block_curr_assignment()) {
             return FC_CONTINUE;
         }
-        solver.check_sat();
-        if (solver.solution_found()) {
-            STRACE("str", tout << "[Solved]\n";);
+        neilsen_transforms solver{std::move(root)};
+        if (solver.check() == result::SAT) {
             return FC_DONE;
         } else if (block_curr_assignment()) {
             return FC_CONTINUE;
         } else {
-            STRACE("str", dump_assignments(););
+            dump_assignments();
             return FC_DONE;
         }
     }
@@ -1013,14 +1180,14 @@ namespace smt {
         STRACE("str", tout << "[Build State]\nword equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
+            result.add_word_eq({mk_word_term(eq.first), mk_word_term(eq.second)});
             STRACE("str", tout << eq.first << " = " << eq.second << std::endl;);
-            result.should_satisfy({mk_word_term(eq.first), mk_word_term(eq.second)});
         }
         STRACE("str", tout << "word disequality todo:\n";);
         STRACE("str", if (m_word_diseq_todo.empty()) tout << "--\n";);
         for (const auto& diseq : m_word_diseq_todo) {
+            result.add_word_diseq({mk_word_term(diseq.first), mk_word_term(diseq.second)});
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
-            result.should_fail({mk_word_term(diseq.first), mk_word_term(diseq.second)});
         }
         STRACE("str", tout << std::endl;);
         return result;
