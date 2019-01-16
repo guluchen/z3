@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <sstream>
 #include "ast/ast_pp.h"
 #include "smt/theory_str.h"
 #include "smt/smt_context.h"
@@ -861,34 +862,31 @@ namespace smt {
     }
 
     void theory_str::init_search_eh() {
-        context& ctx = get_context();
-        unsigned nFormulas = ctx.get_num_asserted_formulas();
-        for (unsigned i = 0; i < nFormulas; ++i) {
-            //expr * ex = ctx.get_asserted_formula(i);
-            //set_up_axioms(ex);
-        }
         STRACE("str", tout << "init search" << std::endl;);
     }
 
     void theory_str::relevant_eh(app *const n) {
         if (m_util_s.str.is_extract(n)) {
-            add_extract_axiom(n);
-        }
-        if (m_util_s.str.is_index(n) ||
+           add_extract_axiom(n);
+            std::cout << "extract: " << mk_pp(n, get_manager()) << std::endl;
+
+        }else if(m_util_s.str.is_contains(n)){
+            add_contains_axiom(n);
+            std::cout << "contains: " << mk_pp(n, get_manager()) << std::endl;
+
+        } else if (m_util_s.str.is_index(n) ||
             m_util_s.str.is_replace(n) ||
-            m_util_s.str.is_extract(n) ||
             m_util_s.str.is_at(n) ||
             m_util_s.str.is_empty(n) ||
             m_util_s.str.is_string(n) ||
             m_util_s.str.is_itos(n) ||
             m_util_s.str.is_stoi(n)) {
             std::cout << "relevant: " << mk_pp(n, get_manager()) << std::endl;
-
-            app *new_var = mk_str_var("a");
-            std::cout << "new var: " << mk_pp(new_var, get_manager()) << std::endl;
+        }else{
         }
         STRACE("str", tout << "relevant: " << mk_pp(n, get_manager()) << std::endl;);
     }
+
 
     void theory_str::assign_eh(bool_var v, const bool is_true) {
         // YFC: membership constraint goes here
@@ -902,10 +900,12 @@ namespace smt {
         ast_manager& m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
-        if (is_word_term(l) && is_word_term(r)) {
+//        if (is_word_term(l) && is_word_term(r)) {
             m_word_eq_todo.push_back({l, r});
             STRACE("str", tout << "new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;);
-        }
+//        }else{
+//            std::cout << "unhandled new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;
+//        }
     }
 
     void theory_str::new_diseq_eh(theory_var x, theory_var y) {
@@ -938,6 +938,7 @@ namespace smt {
         m_scope_level -= num_scopes;
         m_word_eq_todo.pop_scope(num_scopes);
         m_word_diseq_todo.pop_scope(num_scopes);
+        m_rewrite.reset();
         STRACE("str", tout << "pop " << num_scopes << " to " << m_scope_level << std::endl;);
     }
 
@@ -1001,6 +1002,7 @@ namespace smt {
         ctx.mk_th_axiom(get_id(), 1, &lit);
     }
 
+
     void theory_str::assert_axiom(literal l1, literal l2, literal l3, literal l4, literal l5) {
         context& ctx = get_context();
         literal_vector lits;
@@ -1059,37 +1061,52 @@ namespace smt {
       |e| = min(l, |s| - i) for 0 <= i < |s| and 0 < |l|
     */
 
-    void theory_str::add_extract_axiom(expr *e) {
+    void theory_str::add_extract_axiom(expr* e) {
         ast_manager& m = get_manager();
-        TRACE("seq", tout << mk_pp(e, m) << "\n";);
-        expr *s = nullptr, *i = nullptr, *l = nullptr;
+        expr* s = nullptr, *i = nullptr, *l = nullptr;
         VERIFY(m_util_s.str.is_extract(e, s, i, l));
+        //e = extract(s, i, l), s = xey
 
         expr_ref x(mk_str_var("x"), m);
-        expr_ref ls(m_util_s.str.mk_length(s), m);
-        expr_ref lx(m_util_s.str.mk_length(x), m);
-        expr_ref le(m_util_s.str.mk_length(e), m);
-        expr_ref ls_minus_i_l(m_util_a.mk_sub(m_util_a.mk_sub(ls, i), l), m);
         expr_ref y(mk_str_var("y"), m);
         expr_ref xe(m_util_s.str.mk_concat(x, e), m);
         expr_ref xey(m_util_s.str.mk_concat(xe, y), m);
         expr_ref zero(m_util_a.mk_int(0), m);
+        expr_ref le(m_util_s.str.mk_length(e), m);
+        expr_ref ls(m_util_s.str.mk_length(s), m);
+        expr_ref lx(m_util_s.str.mk_length(x), m);
+        expr_ref ls_minus_i_l(m_util_a.mk_sub(m_util_a.mk_sub(ls, i), l), m);
         expr_ref i_minus_ls(m_util_a.mk_sub(i, ls), m);
+        expr_ref ls_minus_i(m_util_a.mk_sub(ls, i), m);
+        m_rewrite(ls_minus_i);
 
-        literal i_ge_0 = mk_literal(m_util_a.mk_ge(i, zero));
-        literal ls_le_i = mk_literal(m_util_a.mk_le(i_minus_ls, zero));
-        literal li_ge_ls = mk_literal(m_util_a.mk_ge(ls_minus_i_l, zero));
+        literal i_ge_0    = mk_literal(m_util_a.mk_gt(i, zero));
+        literal ls_le_i   = mk_literal(m_util_a.mk_le(i_minus_ls, zero));
+        literal li_ge_ls  = mk_literal(m_util_a.mk_ge(ls_minus_i_l, zero));
         literal l_ge_zero = mk_literal(m_util_a.mk_ge(l, zero));
-        literal ls_le_0 = mk_literal(m_util_a.mk_le(ls, zero));
+        literal ls_le_0   = mk_literal(m_util_a.mk_le(ls, zero));
 
-        assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(xey, s, false));
+        assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(s, xey,false));
         assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(lx, i, false));
         assert_axiom(~i_ge_0, ~ls_le_i, ~l_ge_zero, ~li_ge_ls, mk_eq(le, l, false));
-        assert_axiom(~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, m_util_a.mk_sub(ls, i), false));
+        assert_axiom(~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, ls_minus_i, false));
         assert_axiom(~i_ge_0, ~ls_le_i, l_ge_zero, mk_eq(le, zero, false));
         assert_axiom(i_ge_0, mk_eq(le, zero, false));
         assert_axiom(ls_le_i, mk_eq(le, zero, false));
         assert_axiom(~ls_le_0, mk_eq(le, zero, false));
+    }
+
+    void theory_str::add_contains_axiom(expr* e) {
+        ast_manager& m = get_manager();
+        expr* x = nullptr, *y = nullptr;
+        VERIFY(m_util_s.str.is_contains(e, x, y));
+        //e = contains(x, y)
+
+        expr_ref p(mk_str_var("p"), m);
+        expr_ref s(mk_str_var("s"), m);
+        expr_ref pys(m_util_s.str.mk_concat(m_util_s.str.mk_concat(p, y), s), m);
+
+        assert_axiom(mk_eq(x, pys, false));
     }
 
     void theory_str::dump_assignments() const {
@@ -1170,9 +1187,13 @@ namespace smt {
             }
             return result;
         }
-        func_decl *const fun = to_app(e)->get_decl();
-        SASSERT(fun->get_arity() == 0 && fun->get_range()->get_family_id() == get_family_id());
-        return str::word_term::from_variable({fun->get_name().bare_str()});
+
+        std::cout<<mk_pp(e, get_manager())<<std::endl;
+//        func_decl *const fun = to_app(e)->get_decl();
+        std::stringstream ss;
+        ss<<mk_pp(e, get_manager());
+        //SASSERT(fun->get_arity() == 0 && fun->get_range()->get_family_id() == get_family_id());
+        return str::word_term::from_variable({ss.str().data()});
     }
 
     str::state theory_str::mk_state_from_todo() const {
@@ -1214,5 +1235,4 @@ namespace smt {
         }
         return false;
     }
-
 }

@@ -299,6 +299,7 @@ namespace smt {
         void assert_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal,
                           literal l4 = null_literal, literal l5 = null_literal);
         void add_extract_axiom(expr *e);
+        void add_contains_axiom(expr *e);
         void dump_assignments() const;
         bool is_theory_str_term(expr *e) const;
         bool is_word_term(expr *e) const;
