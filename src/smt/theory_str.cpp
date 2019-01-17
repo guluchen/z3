@@ -726,6 +726,7 @@ namespace smt {
             /* Internal setup */
               search_started(false),
               m_autil(m),
+              m_arrayUtil(m),
               u(m),
               m_scope_level(0),
               m_rewrite(m),
@@ -3237,11 +3238,11 @@ namespace smt {
             std::map<expr*, std::set<expr*>> eq_combination,
             std::set<std::pair<expr*, int>> importantVars,
             str::state root) {
-        printEqualMap(eq_combination);
-        staticIntegerAnalysis(fileDir);
-        resetUnderapprox(wellForm);
-        initUnderapprox(rewriterStrMap);
-        additionalHandling(rewriterStrMap);
+//        printEqualMap(eq_combination);
+//        staticIntegerAnalysis(fileDir);
+//        resetUnderapprox(wellForm);
+        initUnderapprox(eq_combination);
+//        additionalHandling(rewriterStrMap);
     }
 
     void theory_str::initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination){
@@ -3270,6 +3271,7 @@ namespace smt {
 
         // create all tmp vars
         std::map<std::string, expr*> allIntVars;
+        std::map<std::string, expr*> allArrVars;
         for(const auto& v : allStrExprs){
             for (int i = 0; i < QMAX; ++i) {
                 std::string flatSize = generateFlatSize(std::make_pair(v, i), "");
@@ -3283,7 +3285,9 @@ namespace smt {
             }
 
             if (!u.str.is_string(v) && !is_app(v)){
-                std::string flatSize = generateFlatArray(std::make_pair(v, 0), ""); ...........................................................................
+                std::string flatArr = generateFlatArray(std::make_pair(v, 0), "");
+                expr_ref v1(mk_arr_var(flatArr), m);
+                allArrVars[flatArr] = v1;
             }
         }
     }
@@ -3405,7 +3409,7 @@ namespace smt {
             std::vector<std::pair<expr*, int>> lhs_elements,
             std::vector<std::pair<expr*, int>> rhs_elements,
             std::map<expr*, int> connectedVariables,
-            int p = PMAX){
+            int p){
 
         std::string tmp01;
         std::string tmp02;
@@ -3442,7 +3446,7 @@ namespace smt {
             std::vector<std::pair<expr*, int>> lhs_elements,
             std::vector<std::pair<expr*, int>> rhs_elements,
             std::map<expr*, int> connectedVariables,
-            int p = PMAX){
+            int p){
         /* first base case */
         clock_t t = clock();
 
@@ -3493,7 +3497,6 @@ namespace smt {
                 }
             }
         }
-#endif
         return cases;
 
     }
@@ -6180,6 +6183,30 @@ namespace smt {
     app * theory_str::mk_str_to_re(expr * n){
         expr * args[1] = {n};
         app * a = get_manager().mk_app(get_id(), _OP_STRING_TO_REGEXP, 0, nullptr, 1, args);
+        return a;
+    }
+
+    app * theory_str::mk_arr_var(std::string name) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
+
+        sort * arr_sort = m.mk_sort(m_arrayUtil.get_family_id(), ARRAY_SORT);
+        app * a = mk_fresh_const(name.c_str(), arr_sort);
+
+        ctx.internalize(a, false);
+        SASSERT(ctx.get_enode(a) != NULL);
+        SASSERT(ctx.e_internalized(a));
+        ctx.mark_as_relevant(a);
+        // I'm assuming that this combination will do the correct thing in the integer theory.
+
+        //mk_var(ctx.get_enode(a));
+        m_trail.push_back(a);
+        //variable_set.insert(a);
+        //internal_variable_set.insert(a);
+        //track_variable_scope(a);
+
         return a;
     }
 

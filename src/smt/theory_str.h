@@ -3432,6 +3432,79 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            void underapproximation(
+                std::map<expr*, std::set<expr*>> eq_combination,
+                std::set<std::pair<expr*, int>> importantVars,
+                str::state root);
+            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination);
+
+            void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                                           std::map<expr*, int> importantVars);
+
+            /*
+             * convert lhs == rhs to SMT formula
+             */
+            std::vector<expr*> equalityToSMT(
+                std::string lhs, std::string rhs,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::map<expr*, int> connectedVariables,
+                int p = PMAX);
+
+            /*
+             * lhs: size of the lhs
+             * rhs: size of the rhs
+             * lhs_elements: elements of lhs
+             * rhs_elements: elements of rhs
+             *
+             * Pre-Condition: x_i == 0 --> x_i+1 == 0
+             *
+             */
+            std::vector<expr*> collectAllPossibleArrangements(
+                std::string lhs_str, std::string rhs_str,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::map<expr*, int> connectedVariables,
+                int p = PMAX);
+
+            void updatePossibleArrangements(
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::vector<Arrangment> tmp,
+                std::vector<Arrangment> &possibleCases);
+
+            /*
+             *
+             */
+            Arrangment manuallyCreate_arrangment(
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements);
+
+            bool passNotContainMapReview(
+                Arrangment a,
+                std::vector<std::pair<std::string, int>> lhs_elements,
+                std::vector<std::pair<std::string, int>> rhs_elements);
+
+            /*
+             * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
+             */
+            std::string generateSMT(int p,
+                                            std::vector<int> left_arr,
+                                            std::vector<int> right_arr,
+                                            std::string lhs_str, std::string rhs_str,
+                                            std::vector<std::pair<expr*, int>> lhs_elements,
+                                            std::vector<std::pair<expr*, int>> rhs_elements,
+                                            std::map<expr*, int> connectedVariables);
+            /*
+             * Flat = sum (flats)
+             */
+            std::string generateConstraint02(
+                std::pair<expr*, int> a,
+                std::vector<std::pair<expr*, int>> elementNames,
+                std::string lhs_str, std::string rhs_str,
+                int pMax,
+                std::map<expr*, int> connectedVariables,
+                bool optimizing);
             /*
              * Given a flat,
              * generate its size constraint
@@ -3627,6 +3700,7 @@ namespace smt {
         app * mk_unroll(expr * n, expr * bound);
         app * mk_unroll_bound_var();
         app * mk_str_to_re(expr *);
+        app * mk_arr_var(std::string name);
 
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         expr * get_eqc_value(expr * n, bool & hasEqcValue);
@@ -3663,6 +3737,7 @@ namespace smt {
         th_rewriter      m_rewrite;
         seq_rewriter m_seq_rewrite;
         arith_util m_autil;
+        array_util m_arrayUtil;
         seq_util u;
         expr_ref_vector m_trail; // trail for generated terms
         th_union_find m_find;
