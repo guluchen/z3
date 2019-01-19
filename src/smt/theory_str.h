@@ -261,18 +261,17 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level = 0;
+        int m_aux_var_count = 0;
         const theory_str_params& m_params;
+        th_rewriter m_rewrite;
         arith_util m_util_a;
         seq_util m_util_s;
-        int m_fresh_id;
-        th_rewriter m_rewrite;
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
-    protected:
         theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
         void init(context *ctx) override;
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
@@ -295,19 +294,20 @@ namespace smt {
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
     private:
-        void assert_axiom(expr *e);
-        void assert_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal,
-                          literal l4 = null_literal, literal l5 = null_literal);
-        void add_extract_axiom(expr *e);
-        void add_contains_axiom(expr *e);
-        void dump_assignments() const;
-        bool is_theory_str_term(expr *e) const;
-        bool is_word_term(expr *e) const;
-        app *mk_str_var(std::string name);
+        bool is_of_this_theory(expr * e) const;
+        bool is_string_sort(expr *e) const;
+        app *mk_string_var_expr(const std::string& name);
         literal mk_literal(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo() const;
-        bool block_curr_assignment();
+        void add_axiom(expr *e);
+        void add_clause(std::initializer_list<literal> ls);
+        void set_conflict(const literal_vector& ls);
+        void block_curr_assignment();
+        void handle_extract(expr *e);
+        void handle_contains(expr *e);
+        void handle_in_re(expr *e, bool is_true);
+        void dump_assignments() const;
     };
 
 }
