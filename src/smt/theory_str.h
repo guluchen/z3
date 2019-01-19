@@ -569,15 +569,18 @@ namespace smt {
              * generate its size constraint
              */
             std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarSize(std::pair<expr*, int> a, std::string l_r_hs);
             /*
              *
              */
             std::string generateFlatIter(std::pair<expr*, int> a);
+            expr* getExprVarIter(std::pair<expr*, int> a, std::string l_r_hs);
             /*
              * Given a flat,
              * generate its size constraint
              */
             std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarFlatSize(std::pair<expr*, int> a, std::string l_r_hs);
 
             int canBeOptimized_LHS(
                     int i, int startPos, int j,
@@ -597,6 +600,7 @@ namespace smt {
              * generate its array name
              */
             std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarFlatArray(std::pair<expr*, int> a, std::string l_r_hs);
             /*
             * First base case
             */

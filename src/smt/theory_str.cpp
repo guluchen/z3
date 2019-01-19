@@ -3910,17 +3910,11 @@ namespace smt {
                         else if (QCONSTMAX == 1)
                             min_rhs += value.length();
                     }
-                    else if (elementNames[i].second == REGEX_CODE &&
-                             elementNames[i].first.find('+') != std::string::npos &&
-                             elementNames[i].first.find('|') == std::string::npos){
-                        /* regex plus */
-                        size_t endPos = elementNames[i].first.find(')');
-                        SASSERT(endPos != std::string::npos);
-                        min_rhs += endPos - 1;
+                    else if (elementNames[i].second == REGEX_CODE){
                     }
                 }
                 if (max_lhs < min_rhs) {
-                    return "";
+                    return NULL;
                 }
             }
             else {
@@ -3976,7 +3970,7 @@ namespace smt {
                     if (strSplits.size() > 0)
                         result = result + " " + orConstraint(strSplits);
                     else
-                        result = "";
+                        result = NULL;
                     break;
 
                 case 3:
@@ -3997,7 +3991,7 @@ namespace smt {
                     if (strSplits.size() > 0)
                         result = result + " " + orConstraint(strSplits);
                     else
-                        return "";
+                        return NULL;
                     break;
                 default:
                     SASSERT (false);
@@ -4070,6 +4064,10 @@ namespace smt {
         return result;
     }
 
+    expr* theory_str::getExprVarSize(std::pair<expr*, int> a, std::string l_r_hs){
+        return mk_strlen(a.first);
+    }
+
     /*
      *
      */
@@ -4090,6 +4088,15 @@ namespace smt {
             result = "1";
         }
         return result;
+    }
+
+    expr* theory_str::getExprVarIter(std::pair<expr*, int> a, std::string l_r_hs){
+        if (u.str.is_string(a.first)){
+            return mk_int(1);
+        }
+        else {
+            return iterMap[a.first][a.second];
+        }
     }
 
     /*
@@ -4117,6 +4124,10 @@ namespace smt {
         return result;
     }
 
+    expr* theory_str::getExprVarFlatSize(std::pair<expr*, int> a, std::string l_r_hs){
+        return lenMap[a.first][a.second];
+    }
+
     /*
 	 * Given a flat,
 	 * generate its array name
@@ -4137,6 +4148,12 @@ namespace smt {
         }
         return result;
     }
+
+    expr* theory_str::getExprVarFlatArray(std::pair<expr*, int> a, std::string l_r_hs){
+        return arrMap[a.first];
+    }
+
+
 
     int theory_str::canBeOptimized_LHS(
             int i, int startPos, int j,
