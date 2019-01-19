@@ -375,159 +375,6 @@ namespace smt {
             }
 
             /*
-             *
-             */
-            int canBeOptimized_LHS(
-                    int i, int startPos, int j,
-                    std::vector<std::pair<std::string, int>> lhs_elements,
-                    std::vector<std::pair<std::string, int>> rhs_elements){
-//		__debugPrint(logFile, "%d *** %s ***: %d: %d -> %d\n", __LINE__, __FUNCTION__, i, startPos, j);
-                if (left_arr[i] == SUMFLAT && right_arr[j] == i){
-                    /* check forward */
-                    if (i < (int)left_arr.size() - 1 &&
-                        lhs_elements[i + 1].first.compare(lhs_elements[i].first) == 0) {
-
-                        if (left_arr[i + 1] == EMPTYFLAT){
-                            return RIGHT_EMPTY;
-                        }
-                        else if (left_arr[i + 1] == SUMFLAT){
-                            return RIGHT_SUM;
-                        }
-                        else if (j + 1 < (int)rhs_elements.size()){
-                            if (left_arr[i + 1] == j + 1 &&
-                                right_arr[j + 1] == i + 1){
-                                return RIGHT_EQUAL;
-                            }
-                        }
-                    }
-                    /* check backward */
-                    if (i > 0 &&
-                        lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0) {
-                        if (left_arr[i - 1] == EMPTYFLAT){
-                            return LEFT_EMPTY;
-                        }
-                        else if (left_arr[i - 1] == SUMFLAT)
-                            return LEFT_SUM;
-                        else if (startPos > 0){
-//					__debugPrint(logFile, "%d %d vs %d\n", __LINE__, left_arr[i - 1], right_arr[j - 1]);
-                            if (left_arr[i - 1] == startPos - 1 &&
-                                right_arr[startPos - 1] == i - 1 &&
-                                lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0){
-                                return LEFT_EQUAL;
-                            }
-                        }
-                    }
-                }
-                else if (left_arr[i] == j && right_arr[j] == i){
-                    /* check forward */
-                    if (i < (int)left_arr.size() - 1 &&
-                        left_arr[i + 1] != SUMFLAT &&
-                        lhs_elements[i + 1].first.compare(lhs_elements[i].first) == 0) {
-                        if (left_arr[i + 1] == EMPTYFLAT){
-                            return RIGHT_EMPTY;
-                        }
-                        else if (j + 1 < (int)rhs_elements.size()){
-                            if (left_arr[i + 1] == j + 1 &&
-                                right_arr[j + 1] == i + 1 &&
-                                rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0){
-                                return RIGHT_EQUAL;
-                            }
-                        }
-                    }
-                    /* check backward */
-                    if (i > 0 &&
-                        left_arr[i - 1] != SUMFLAT &&
-                        lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0) {
-                        if (left_arr[i - 1] == EMPTYFLAT){
-                            return LEFT_EMPTY;
-                        }
-                        else if (startPos > 0){
-                            if (left_arr[i - 1] == startPos - 1 &&
-                                right_arr[startPos - 1] == i - 1 &&
-                                rhs_elements[startPos - 1].first.compare(rhs_elements[startPos].first) == 0){
-                                return LEFT_EQUAL;
-                            }
-                        }
-                    }
-                }
-                return NONE;
-            }
-
-            /*
-             *
-             */
-            int canBeOptimized_RHS(
-                    int i, int startPos, int j,
-                    std::vector<std::pair<std::string, int>> lhs_elements,
-                    std::vector<std::pair<std::string, int>> rhs_elements){
-                if (right_arr[j] == SUMFLAT && left_arr[i] == j){
-                    /* check forward */
-                    if (j < (int)right_arr.size() - 1 &&
-                        rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0) {
-                        if (right_arr[j + 1] == EMPTYFLAT){
-                            return RIGHT_EMPTY;
-                        }
-                        else if (right_arr[j + 1] == SUMFLAT)
-                            return RIGHT_SUM;
-                        else if (i + 1 < (int)lhs_elements.size()){
-                            if (left_arr[i + 1] == j + 1 &&
-                                right_arr[j + 1] == i + 1){
-                                return NONE;
-                            }
-                        }
-                    }
-                    /* check backward */
-                    if (j > 0 &&
-                        rhs_elements[j - 1].first.compare(rhs_elements[j].first) == 0) {
-                        if (right_arr[j - 1] == EMPTYFLAT){
-                            return LEFT_EMPTY;
-                        }
-                        else if (right_arr[j - 1] == SUMFLAT)
-                            return LEFT_SUM;
-                        else if (startPos > 0){
-                            if (left_arr[startPos - 1] == j - 1 &&
-                                right_arr[j - 1] == startPos - 1){
-                                return NONE;
-                            }
-                        }
-                    }
-                }
-                else if (left_arr[i] == j && right_arr[j] == i){
-                    /* check forward */
-                    if (i < (int)left_arr.size() - 1 &&
-                        left_arr[i + 1] != SUMFLAT &&
-                        lhs_elements[i + 1].first.compare(lhs_elements[i].first) == 0) {
-                        if (left_arr[i + 1] == EMPTYFLAT){
-                            return RIGHT_EMPTY;
-                        }
-                        else if (i + 1 < (int)lhs_elements.size()){
-                            if (left_arr[i + 1] == j + 1 &&
-                                right_arr[j + 1] == i + 1 &&
-                                rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0){
-                                return RIGHT_EQUAL;
-                            }
-                        }
-                    }
-                    /* check backward */
-                    if (i > 0 &&
-                        left_arr[i - 1] != SUMFLAT &&
-                        lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0) {
-                        if (left_arr[i - 1] == EMPTYFLAT){
-                            return LEFT_EMPTY;
-                        }
-                        else if (startPos > 0){
-                            if (left_arr[i - 1] == startPos - 1 &&
-                                right_arr[startPos - 1] == i - 1 &&
-                                rhs_elements[startPos - 1].first.compare(rhs_elements[startPos].first) == 0){
-                                return LEFT_EQUAL;
-                            }
-                        }
-                    }
-                }
-                return NONE;
-            }
-
-            /*
              * we do not allow empty flats in the middle
              */
             bool isPossibleArrangement(){
@@ -710,7 +557,7 @@ namespace smt {
             /*
              * Flat = sum (flats)
              */
-            std::string generateConstraint02(
+            expr* generateConstraint02(
                 std::pair<expr*, int> a,
                 std::vector<std::pair<expr*, int>> elementNames,
                 std::string lhs_str, std::string rhs_str,
@@ -731,7 +578,15 @@ namespace smt {
              * generate its size constraint
              */
             std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+
             int canBeOptimized_LHS(
+                    int i, int startPos, int j,
+                    std::vector<int> left_arr,
+                    std::vector<int> right_arr,
+                    std::vector<std::pair<std::string, int>> lhs_elements,
+                    std::vector<std::pair<std::string, int>> rhs_elements);
+
+            int canBeOptimized_RHS(
                     int i, int startPos, int j,
                     std::vector<int> left_arr,
                     std::vector<int> right_arr,
@@ -1042,6 +897,11 @@ namespace smt {
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
         std::map<expr*, std::string> constMap;
+
+        std::map<expr*, std::vector<expr*>> lenMap;
+        std::map<expr*, std::vector<expr*>> iterMap;
+        std::map<expr*, expr*> arrMap;
+
     private:
         void assert_axiom(expr *e);
         void dump_assignments();

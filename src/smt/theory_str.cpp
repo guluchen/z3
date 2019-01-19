@@ -3248,6 +3248,10 @@ namespace smt {
     void theory_str::initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination){
         ast_manager & m = get_manager();
         std::set<expr*> allStrExprs;
+        lenMap.clear();
+        iterMap.clear();
+        arrMap.clear();
+
         for (const auto& v : eq_combination){
             if (is_app(v.first)) {
                 app *ap = to_app(v.first);
@@ -3284,9 +3288,11 @@ namespace smt {
 
                 expr_ref v1(mk_int_var(flatSize), m);
                 allIntVars[flatSize] = v1;
+                lenMap[v].push_back(v1);
 
                 expr_ref v2(mk_int_var(flatIter), m);
                 allIntVars[flatIter] = v2;
+                iterMap[v].push_back(v1);
             }
 
             if (is_app(v)){
@@ -3295,6 +3301,7 @@ namespace smt {
                     std::string flatArr = generateFlatArray(std::make_pair(v, 0), "");
                     expr_ref v1(mk_arr_var(flatArr), m);
                     allArrVars[flatArr] = v1;
+                    arrMap[v] = v1;
                     STRACE("str", tout << "arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
                 }
             }
@@ -3303,111 +3310,111 @@ namespace smt {
 
     void theory_str::convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                        std::map<expr*, int> importantVars){
-//        clock_t t = clock();
-//        for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
-//
-//            std::string tmp = " ";
-//            clock_t t;
-//
-//            /* different tactic for size of it->second */
-//            const int flatP = 1;
-//            const int maxPConsidered = 6;
-//            unsigned maxLocal = findMaxP(it->second);
-//            STRACE("str", tout << __LINE__ <<  " maxLocal:  " << maxLocal << std::endl;);
-//
-//            if (it->second.size() == 0)
-//                continue;
-//
-//            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
-//                std::vector<std::pair<expr*, int>> lhs_elements = createEquality({it->first});
-//                /* compare with others */
-//                for (const auto& element: it->second) {
-//                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
-//                    t = clock();
-//                    std::vector<expr*> result = equalityToSMT(sumStringVector({it->first}),
-//                                                                    sumStringVector(element),
-//                                                                    lhs_elements,
-//                                                                    rhs_elements
-//                    );
-//                    t = clock() - t;
-//                    if (result.size() != 0) {
-//                        /* sync result */
-//                        global_smtStatements.emplace_back(result);
-//                    }
-//                    else {
-//                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-//                        /* trivial unsat */
-//                        trivialUnsat = true;
-//                    }
-//                }
-//
-//            }
-//            else if (maxLocal > maxPConsidered) {
-//                /* add an eq = flat . flat . flat, then other equalities will compare with it */
-//                std::vector<expr*> genericFlat = createSetOfFlatVariables(flatP);
-//                std::vector<std::pair<expr*, int>> lhs_elements = createEquality(genericFlat);
-//                /* compare with others */
-//                for (const auto& element: it->second) {
-//                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
-//                    t = clock();
-//                    std::vector<std::string> result = equalityToSMT(
-//                            sumStringVector(genericFlat),
-//                            sumStringVector(element),
-//                            lhs_elements,
-//                            rhs_elements
-//                    );
-//                    t = clock() - t;
-//                    if (result.size() != 0) {
-//                        /* sync result */
-//                        global_smtStatements.emplace_back(result);
-//                    }
-//                    else {
-//                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-//                        /* trivial unsat */
-//                        trivialUnsat = true;
-//                    }
-//                }
-//            }
-//            else {
-//
-//                /* work as usual */
-//                for (unsigned i = 0; i < it->second.size(); ++i)
-//                    for (unsigned j = i + 1; j < it->second.size(); ++j) {
-//                        /* optimize: find longest common prefix and posfix */
-//                        ptr_vector<expr> lhs;
-//                        ptr_vector<expr> rhs;
-//                        optimizeEquality(it->second[i], it->second[j], lhs, rhs);
-//
-//                        if (lhs.size() == 0 || rhs.size() == 0){
-//                            global_smtStatements.push_back({constraintsIfEmpty(lhs, rhs)});
-//                            continue;
-//                        }
-//
-//                        /* [i] = [j] */
-//                        std::vector<std::pair<expr*, int>> lhs_elements = createEquality(lhs);
-//                        std::vector<std::pair<expr*, int>> rhs_elements = createEquality(rhs);
-//                        t = clock();
-//                        std::vector<std::string> result = equalityToSMT(
-//                                sumStringVector(it->second[i]),
-//                                sumStringVector(it->second[j]),
-//                                lhs_elements,
-//                                rhs_elements
-//                        );
-//                        t = clock() - t;
-//                        if (result.size() != 0) {
-//                            /* sync result*/
-//                            global_smtStatements.emplace_back(result);
-//                        }
-//                        else {
-//                            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-//                            /* trivial unsat */
-//                            trivialUnsat = true;
-//                        }
-//                    }
-//            }
-//
-//        }
-//        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+        clock_t t = clock();
+        for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
+
+            std::string tmp = " ";
+            clock_t t;
+
+            /* different tactic for size of it->second */
+            const int flatP = 1;
+            const int maxPConsidered = 6;
+            unsigned maxLocal = findMaxP(it->second);
+            STRACE("str", tout << __LINE__ <<  " maxLocal:  " << maxLocal << std::endl;);
+
+            if (it->second.size() == 0)
+                continue;
+
+            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
+                std::vector<std::pair<expr*, int>> lhs_elements = createEquality({it->first});
+                /* compare with others */
+                for (const auto& element: it->second) {
+                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
+                    t = clock();
+                    std::vector<expr*> result = equalityToSMT(sumStringVector({it->first}),
+                                                                    sumStringVector(element),
+                                                                    lhs_elements,
+                                                                    rhs_elements
+                    );
+                    t = clock() - t;
+                    if (result.size() != 0) {
+                        /* sync result */
+                        global_smtStatements.emplace_back(result);
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                        /* trivial unsat */
+                        trivialUnsat = true;
+                    }
+                }
+
+            }
+            else if (maxLocal > maxPConsidered) {
+                /* add an eq = flat . flat . flat, then other equalities will compare with it */
+                std::vector<expr*> genericFlat = createSetOfFlatVariables(flatP);
+                std::vector<std::pair<expr*, int>> lhs_elements = createEquality(genericFlat);
+                /* compare with others */
+                for (const auto& element: it->second) {
+                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
+                    t = clock();
+                    std::vector<std::string> result = equalityToSMT(
+                            sumStringVector(genericFlat),
+                            sumStringVector(element),
+                            lhs_elements,
+                            rhs_elements
+                    );
+                    t = clock() - t;
+                    if (result.size() != 0) {
+                        /* sync result */
+                        global_smtStatements.emplace_back(result);
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                        /* trivial unsat */
+                        trivialUnsat = true;
+                    }
+                }
+            }
+            else {
+
+                /* work as usual */
+                for (unsigned i = 0; i < it->second.size(); ++i)
+                    for (unsigned j = i + 1; j < it->second.size(); ++j) {
+                        /* optimize: find longest common prefix and posfix */
+                        ptr_vector<expr> lhs;
+                        ptr_vector<expr> rhs;
+                        optimizeEquality(it->second[i], it->second[j], lhs, rhs);
+
+                        if (lhs.size() == 0 || rhs.size() == 0){
+                            global_smtStatements.push_back({constraintsIfEmpty(lhs, rhs)});
+                            continue;
+                        }
+
+                        /* [i] = [j] */
+                        std::vector<std::pair<expr*, int>> lhs_elements = createEquality(lhs);
+                        std::vector<std::pair<expr*, int>> rhs_elements = createEquality(rhs);
+                        t = clock();
+                        std::vector<std::string> result = equalityToSMT(
+                                sumStringVector(it->second[i]),
+                                sumStringVector(it->second[j]),
+                                lhs_elements,
+                                rhs_elements
+                        );
+                        t = clock() - t;
+                        if (result.size() != 0) {
+                            /* sync result*/
+                            global_smtStatements.emplace_back(result);
+                        }
+                        else {
+                            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+                            /* trivial unsat */
+                            trivialUnsat = true;
+                        }
+                    }
+            }
+
+        }
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
     /*
@@ -3558,13 +3565,13 @@ namespace smt {
 //                for (unsigned j = 0; j < rhs_elements.size(); ++j)
 //                    if (a.right_arr[j] == (int)i) {
 //                        if (rhs_elements[j].second < 0) {
-//                            std::string strContent = "";
+//                            zstring strContent;
 //                            if (isRegexStr(rhs_elements[j].first)) {
 //                                if (rhs_elements[j].first.find('+') != std::string::npos)
 //                                    strContent = parse_regex_full_content(rhs_elements[j].first);
 //                            }
 //                            else
-//                                strContent = rhs_elements[j].first;
+//                                strContent = u.str.is_string(rhs_elements[j].first);
 //                            for (const auto notContain : notContainMap)
 //                                if (notContain.first.first.compare(lhs_elements[i].first) == 0 &&
 //                                    strContent.find(notContain.first.second) != std::string::npos) {
@@ -3593,6 +3600,8 @@ namespace smt {
         return true;
     }
 
+
+
     /*
      * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
      */
@@ -3603,267 +3612,265 @@ namespace smt {
                             std::vector<std::pair<expr*, int>> lhs_elements,
                             std::vector<std::pair<expr*, int>> rhs_elements,
                             std::map<expr*, int> connectedVariables){
-//        std::vector<std::string> result_element;
-//
-//        bool checkLeft[lhs_elements.size()];
-//        bool checkRight[rhs_elements.size()];
-//        memset(checkLeft, 0, sizeof checkLeft);
-//        memset(checkRight, 0, sizeof checkRight);
-//
-//        /* do the left */
-//        for (unsigned i = 0; i < left_arr.size(); ++i)
-//            if (!checkLeft[i]) {
-//                if (left_arr[i] == SUMFLAT) { /* a = bx + cy */
-//                    checkLeft[i] = true;
-//
-//                    std::vector<std::pair<expr*, int>> elements;
-//                    unsigned j = 0;
-//                    int startPos = -1;
-//                    for (j = 0; j < right_arr.size(); ++j)
-//                        if (right_arr[j] == (int)i) {
-//                            if (startPos == -1)
-//                                startPos = (int)j;
-//                            elements.emplace_back(rhs_elements[j]);
-//                            checkRight[j] = true;
-//                        }
-//                        else if (startPos >= 0)
-//                            break;
-//                    j--;
-//                    /* select optimization mode */
-//                    int optimizing = canBeOptimized_LHS(i, startPos, j, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-//
-////					__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
-//                    switch (optimizing) {
-//                        case NONE:
-//                            break;
-//                        case LEFT_EMPTY:
-//                            checkLeft[i - 1] = true;
-//                            break;
-//                        case LEFT_EQUAL:
-//                            checkLeft[i - 1] = true;
-//                            checkRight[startPos - 1] = true;
-//                            elements.insert(elements.begin(), rhs_elements[startPos - 1]);
-//                            break;
-//                        case LEFT_SUM:
-//                        SASSERT (false);
-//                            break;
-//                        case RIGHT_EMPTY:
-//                            checkLeft[i + 1] = true;
-//                            break;
-//                        case RIGHT_EQUAL:
-//                            checkLeft[i + 1] = true;
-//                            checkRight[j + 1] = true;
-//                            elements.emplace_back(rhs_elements[j + 1]);
-//                            break;
-//                        case RIGHT_SUM:
-//                            checkLeft[i + 1] = true;
-//                            for (unsigned k = j + 1; k < right_arr.size(); ++k)
-//                                if (right_arr[k] == (int)i + 1) {
-//                                    elements.emplace_back(rhs_elements[k]);
-//                                    checkRight[k] = true;
-//                                }
-//                                else
-//                                    break;
-//                            break;
-//                        default:
-//                        SASSERT (false);
-//                            break;
-//                    }
-//
-//                    std::string tmp = generateConstraint02(
-//                            lhs_elements[i],
-//                            elements,
-//                            lhs_str, rhs_str,
-//                            p,
-//                            connectedVariables,
-//                            optimizing != NONE);
-//
-//                    if (tmp.length() == 0) { /* cannot happen due to const */
-//                        STRACE("str", tout << __LINE__ <<  " 02 because of lhs@i: " << i << std::endl;);
-//                        return "";
-//                    }
-//                    result_element.emplace_back(tmp);
-//
-//                }
-//                else if (left_arr[i] == EMPTYFLAT) {
-//
-//                    /* empty */
-//                    /* some first flats can be empty */
-//                    if (lhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
-//                        if (lhs_elements[i].first.length() <= 0 ||
-//                            (QCONSTMAX == 2 && i + 1 < lhs_elements.size() && left_arr[i + 1] == EMPTYFLAT && lhs_elements[i].first.length() > 0) ||
-//                            (QCONSTMAX == 1 && lhs_elements[i].first.length() > 0)) /* const string is empty */ {
-//                            return "";
-//                        }
-//                    }
-//                    checkLeft[i] = true;
-//                    std::string tmp = generateConstraint00(lhs_elements[i], lhs_str);
-//
-//                    if (tmp.length() == 0) {/* cannot happen due to const */
-//                        return "";
-//                    }
-//                    result_element.emplace_back(tmp);
-//                }
-//            }
-//
-//        /* do the right */
-//        for (unsigned i = 0; i < right_arr.size(); ++i)
-//            if (!checkRight[i]){
-//                if (right_arr[i] == SUMFLAT) { /* a = bx + cy */
-//                    checkRight[i] = true;
-//
-//                    std::vector<std::pair<expr*, int>> elements;
-//                    unsigned j = 0;
-//                    int startPos = -1;
-//                    for (j = 0; j < left_arr.size(); ++j)
-//                        if (left_arr[j] == (int)i) {
-//                            if (startPos == -1)
-//                                startPos = (int)j;
-//                            elements.emplace_back(lhs_elements[j]);
-//                            checkLeft[j] = true;
-//                        }
-//                        else if (startPos >= 0)
-//                            break;
-//                    j--;
-//                    /* select optimization mode */
-//                    int optimizing = canBeOptimized_RHS(j, startPos, i, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-//                    switch (optimizing) {
-//                        case NONE:
-//                            break;
-//                        case LEFT_EMPTY:
-//                            checkRight[i - 1] = true;
-//                            break;
-//                        case LEFT_EQUAL:
-//                            checkRight[i - 1] = true;
-//                            checkLeft[startPos - 1] = true;
-//                            elements.insert(elements.begin(), lhs_elements[startPos - 1]);
-//                            break;
-//                        case LEFT_SUM:
-//                        SASSERT (false);
-//                            break;
-//                        case RIGHT_EMPTY:
-//                            checkRight[i + 1] = true;
-//                            break;
-//                        case RIGHT_EQUAL:
-//                            checkRight[i + 1] = true;
-//                            checkLeft[j + 1] = true;
-//                            elements.emplace_back(lhs_elements[j + 1]);
-//                            break;
-//                        case RIGHT_SUM:
-//                            checkRight[i + 1] = true;
-//                            for (unsigned k = j + 1; k < left_arr.size(); ++k)
-//                                if (left_arr[k] == (int)i + 1) {
-//                                    elements.emplace_back(lhs_elements[k]);
-//                                    checkLeft[k] = true;
-//                                }
-//                            break;
-//                        default:
-//                        SASSERT (false);
-//                            break;
-//                    }
-////					__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
-//                    std::string tmp = generateConstraint02(
-//                            rhs_elements[i],
-//                            elements,
-//                            rhs_str, lhs_str,
-//                            p,
-//                            connectedVariables, optimizing != NONE);
-//                    if (tmp.length() == 0) { /* cannot happen due to const */
-//                        STRACE("str", tout << __LINE__ <<  " 02 because of rhs@i: " << i << std::endl;);
-//                        return "";
-//                    }
-//                    result_element.emplace_back(tmp);
-//                }
-//                else if (right_arr[i] == EMPTYFLAT) {
-//                    /* empty */
-//                    /* some first flats can be empty */
-//                    if (rhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
-//                        if (rhs_elements[i].first.length() <= SPLIT_LOWER_BOUND - 2 ||
-//                            (QCONSTMAX == 2 &&
-//                             i + 1 < rhs_elements.size() &&
-//                             right_arr[i + 1] == EMPTYFLAT &&
-//                             rhs_elements[i].first.length() > 0) ||
-//                            (QCONSTMAX == 1 &&
-//                             rhs_elements[i].first.length() > 0))/*const string is empty*/
-//                            return "";
-//                    }
-//                    checkRight[i] = true;
-//                    std::string tmp = generateConstraint00(rhs_elements[i], rhs_str);
-//                    if (tmp.length() == 0) {/* cannot happen due to const */
-//                        return "";
-//                    }
-//                    result_element.emplace_back(tmp);
-//                }
-//            }
-//
-//        /* do the rest */
-//        /* do not need AND */
-//        std::string constraint01 = "";
-//        for (unsigned int i = 0 ; i < lhs_elements.size(); ++i)
-//            if (checkLeft[i] == false) {
-//                checkLeft[i] = true;
-//                checkRight[left_arr[i]] = true;
-//
-//                unsigned j = 0;
-//                for (j = 0; j < right_arr.size(); ++j)
-//                    if (right_arr[j] == (int)i) {
-//                        checkRight[j] = true;
-//                        break;
-//                    }
-//
-//                /* select optimization mode */
-//                int optimizing = canBeOptimized_LHS(i, -1, j, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-//                switch (optimizing) {
-//                    case NONE:
-//                        break;
-//                    case LEFT_EMPTY:
-//                    SASSERT (false);
-//                        break;
-//                    case LEFT_EQUAL:
-//                    SASSERT (false);
-//                        break;
-//                    case LEFT_SUM:
-//                    SASSERT (false);
-//                        break;
-//                    case RIGHT_EMPTY:
-//                    SASSERT (false);
-//                        break;
-//                    case RIGHT_EQUAL:
-//                        checkLeft[i + 1] = true;
-//                        checkRight[j + 1] = true;
-//                        break;
-//                    case RIGHT_SUM:
-//                    SASSERT (false);
-//                        break;
-//                    default:
-//                    SASSERT (false);
-//                        break;
-//                }
-////				__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
-//                std::string tmp = generateConstraint01(
-//                        lhs_str, rhs_str,
-//                        lhs_elements[i],
-//                        (std::pair<expr*, int>)rhs_elements[left_arr[i]],
-//                        p,
-//                        connectedVariables,
-//                        optimizing != NONE);
-//                if (tmp.length() == 0) { /* cannot happen due to const */
-//                    return "";
-//                }
-//                constraint01 = constraint01 + tmp + " ";
-//            }
-//
-//        if (constraint01.length() > 5) {
-//            result_element.emplace_back(constraint01);
-//        }
-//
-//        for (unsigned i = 0 ; i < rhs_elements.size(); ++i)
-//            if (checkRight[i] == false) {
-//                STRACE("str", tout << __LINE__ <<  " error rhs@i: " << i << std::endl;);
-//                SASSERT (false);
-//            }
-//
-//        /* sum up */
+        std::vector<expr*> result_element;
+
+        bool checkLeft[lhs_elements.size()];
+        bool checkRight[rhs_elements.size()];
+        memset(checkLeft, 0, sizeof checkLeft);
+        memset(checkRight, 0, sizeof checkRight);
+
+        /* do the left */
+        for (unsigned i = 0; i < left_arr.size(); ++i)
+            if (!checkLeft[i]) {
+                if (left_arr[i] == SUMFLAT) { /* a = bx + cy */
+                    checkLeft[i] = true;
+
+                    std::vector<std::pair<expr*, int>> elements;
+                    unsigned j = 0;
+                    int startPos = -1;
+                    for (j = 0; j < right_arr.size(); ++j)
+                        if (right_arr[j] == (int)i) {
+                            if (startPos == -1)
+                                startPos = (int)j;
+                            elements.emplace_back(rhs_elements[j]);
+                            checkRight[j] = true;
+                        }
+                        else if (startPos >= 0)
+                            break;
+                    j--;
+                    /* select optimization mode */
+                    int optimizing = canBeOptimized_LHS(i, startPos, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+
+//					__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
+                    switch (optimizing) {
+                        case NONE:
+                            break;
+                        case LEFT_EMPTY:
+                            checkLeft[i - 1] = true;
+                            break;
+                        case LEFT_EQUAL:
+                            checkLeft[i - 1] = true;
+                            checkRight[startPos - 1] = true;
+                            elements.insert(elements.begin(), rhs_elements[startPos - 1]);
+                            break;
+                        case LEFT_SUM:
+                        SASSERT (false);
+                            break;
+                        case RIGHT_EMPTY:
+                            checkLeft[i + 1] = true;
+                            break;
+                        case RIGHT_EQUAL:
+                            checkLeft[i + 1] = true;
+                            checkRight[j + 1] = true;
+                            elements.emplace_back(rhs_elements[j + 1]);
+                            break;
+                        case RIGHT_SUM:
+                            checkLeft[i + 1] = true;
+                            for (unsigned k = j + 1; k < right_arr.size(); ++k)
+                                if (right_arr[k] == (int)i + 1) {
+                                    elements.emplace_back(rhs_elements[k]);
+                                    checkRight[k] = true;
+                                }
+                                else
+                                    break;
+                            break;
+                        default:
+                        SASSERT (false);
+                            break;
+                    }
+
+                    expr* tmp = generateConstraint02(
+                            lhs_elements[i],
+                            elements,
+                            lhs_str, rhs_str,
+                            p,
+                            connectedVariables,
+                            optimizing != NONE);
+
+                    if (tmp == NULL) { /* cannot happen due to const */
+                        STRACE("str", tout << __LINE__ <<  " 02 because of lhs@i: " << i << std::endl;);
+                        return NULL;
+                    }
+                    result_element.emplace_back(tmp);
+
+                }
+                else if (left_arr[i] == EMPTYFLAT) {
+
+                    /* empty */
+                    /* some first flats can be empty */
+                    zstring value;
+                    if (u.str.is_string(lhs_elements[i].first, value) && lhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
+                        if (value.length() <= 0 ||
+                            (QCONSTMAX == 2 && i + 1 < lhs_elements.size() && left_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
+                            (QCONSTMAX == 1 && value.length() > 0)) /* const string is empty */ {
+                            return NULL;
+                        }
+                    }
+                    checkLeft[i] = true;
+                    expr* tmp = generateConstraint00(lhs_elements[i], lhs_str);
+
+                    if (tmp == NULL) {/* cannot happen due to const */
+                        return NULL;
+                    }
+                    result_element.emplace_back(tmp);
+                }
+            }
+
+        /* do the right */
+        for (unsigned i = 0; i < right_arr.size(); ++i)
+            if (!checkRight[i]){
+                if (right_arr[i] == SUMFLAT) { /* a = bx + cy */
+                    checkRight[i] = true;
+
+                    std::vector<std::pair<expr*, int>> elements;
+                    unsigned j = 0;
+                    int startPos = -1;
+                    for (j = 0; j < left_arr.size(); ++j)
+                        if (left_arr[j] == (int)i) {
+                            if (startPos == -1)
+                                startPos = (int)j;
+                            elements.emplace_back(lhs_elements[j]);
+                            checkLeft[j] = true;
+                        }
+                        else if (startPos >= 0)
+                            break;
+                    j--;
+                    /* select optimization mode */
+                    int optimizing = canBeOptimized_RHS(j, startPos, i, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+                    switch (optimizing) {
+                        case NONE:
+                            break;
+                        case LEFT_EMPTY:
+                            checkRight[i - 1] = true;
+                            break;
+                        case LEFT_EQUAL:
+                            checkRight[i - 1] = true;
+                            checkLeft[startPos - 1] = true;
+                            elements.insert(elements.begin(), lhs_elements[startPos - 1]);
+                            break;
+                        case LEFT_SUM:
+                        SASSERT (false);
+                            break;
+                        case RIGHT_EMPTY:
+                            checkRight[i + 1] = true;
+                            break;
+                        case RIGHT_EQUAL:
+                            checkRight[i + 1] = true;
+                            checkLeft[j + 1] = true;
+                            elements.emplace_back(lhs_elements[j + 1]);
+                            break;
+                        case RIGHT_SUM:
+                            checkRight[i + 1] = true;
+                            for (unsigned k = j + 1; k < left_arr.size(); ++k)
+                                if (left_arr[k] == (int)i + 1) {
+                                    elements.emplace_back(lhs_elements[k]);
+                                    checkLeft[k] = true;
+                                }
+                            break;
+                        default:
+                        SASSERT (false);
+                            break;
+                    }
+//					__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
+                    expr* tmp = generateConstraint02(
+                            rhs_elements[i],
+                            elements,
+                            rhs_str, lhs_str,
+                            p,
+                            connectedVariables, optimizing != NONE);
+                    if (tmp == NULL) { /* cannot happen due to const */
+                        STRACE("str", tout << __LINE__ <<  " 02 because of rhs@i: " << i << std::endl;);
+                        return NULL;
+                    }
+                    result_element.emplace_back(tmp);
+                }
+                else if (right_arr[i] == EMPTYFLAT) {
+                    /* empty */
+                    /* some first flats can be empty */
+                    zstring value;
+                    if (rhs_elements[i].second % QCONSTMAX == -1 && u.str.is_string(rhs_elements[i].first, value)) /* head of const */ {
+                        if (value.length() <= 0 ||
+                            (QCONSTMAX == 2 && i + 1 < rhs_elements.size() && right_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
+                            (QCONSTMAX == 1 && value.length() > 0))/*const string is empty*/
+                            return NULL;
+                    }
+                    checkRight[i] = true;
+                    expr* tmp = generateConstraint00(rhs_elements[i], rhs_str);
+                    if (tmp == NULL) {/* cannot happen due to const */
+                        return NULL;
+                    }
+                    result_element.emplace_back(tmp);
+                }
+            }
+
+        /* do the rest */
+        /* do not need AND */
+        expr* constraint01 = "";
+        for (unsigned int i = 0 ; i < lhs_elements.size(); ++i)
+            if (checkLeft[i] == false) {
+                checkLeft[i] = true;
+                checkRight[left_arr[i]] = true;
+
+                unsigned j = 0;
+                for (j = 0; j < right_arr.size(); ++j)
+                    if (right_arr[j] == (int)i) {
+                        checkRight[j] = true;
+                        break;
+                    }
+
+                /* select optimization mode */
+                int optimizing = canBeOptimized_LHS(i, -1, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+                switch (optimizing) {
+                    case NONE:
+                        break;
+                    case LEFT_EMPTY:
+                    SASSERT (false);
+                        break;
+                    case LEFT_EQUAL:
+                    SASSERT (false);
+                        break;
+                    case LEFT_SUM:
+                    SASSERT (false);
+                        break;
+                    case RIGHT_EMPTY:
+                    SASSERT (false);
+                        break;
+                    case RIGHT_EQUAL:
+                        checkLeft[i + 1] = true;
+                        checkRight[j + 1] = true;
+                        break;
+                    case RIGHT_SUM:
+                    SASSERT (false);
+                        break;
+                    default:
+                    SASSERT (false);
+                        break;
+                }
+//				__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
+                expr* tmp = generateConstraint01(
+                        lhs_str, rhs_str,
+                        lhs_elements[i],
+                        (std::pair<expr*, int>)rhs_elements[left_arr[i]],
+                        p,
+                        connectedVariables,
+                        optimizing != NONE);
+                if (tmp == NULL) { /* cannot happen due to const */
+                    return NULL;
+                }
+                constraint01 = constraint01 + tmp + " ";
+            }
+
+        if (constraint01.length() > 5) {
+            result_element.emplace_back(constraint01);
+        }
+
+        for (unsigned i = 0 ; i < rhs_elements.size(); ++i)
+            if (checkRight[i] == false) {
+                STRACE("str", tout << __LINE__ <<  " error rhs@i: " << i << std::endl;);
+                SASSERT (false);
+            }
+
+        /* sum up */
         std::string result = "(and \n";
 //        for (unsigned i = 0 ; i < result_element.size(); ++i)
 //            result = result + result_element[i] + "\n";
@@ -3875,7 +3882,7 @@ namespace smt {
     /*
      * Flat = sum (flats)
      */
-    std::string theory_str::generateConstraint02(
+    expr* theory_str::generateConstraint02(
             std::pair<expr*, int> a,
             std::vector<std::pair<expr*, int>> elementNames,
             std::string lhs_str, std::string rhs_str,
@@ -3885,159 +3892,159 @@ namespace smt {
         ast_manager &m = get_manager();
         context &ctx = get_context();
 
-        std::string result = "";
+        expr* result = NULL;
 
-//        if (a.second < 0) { /* const string or regex */
-//            /* check feasibility */
-//
-//            if (a.second != REGEX_CODE) {
-//                zstring value;
-//                u.str.is_string(a.first, value);
-//                int max_lhs = value.length();
-//                int min_rhs = 0;
-//                for (unsigned i = 0; i < elementNames.size(); ++i) {
-//                    if (elementNames[i].second % QCONSTMAX == -1) {
-//                        u.str.is_string(elementNames[i].first, value);
-//                        if (QCONSTMAX == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % QCONSTMAX == 0)
-//                            min_rhs += value.length();
-//                        else if (QCONSTMAX == 1)
-//                            min_rhs += value.length();
-//                    }
-//                    else if (elementNames[i].second == REGEX_CODE &&
-//                             elementNames[i].first.find('+') != std::string::npos &&
-//                             elementNames[i].first.find('|') == std::string::npos){
-//                        /* regex plus */
-//                        size_t endPos = elementNames[i].first.find(')');
-//                        SASSERT(endPos != std::string::npos);
-//                        min_rhs += endPos - 1;
-//                    }
-//                }
-//                if (max_lhs < min_rhs) {
-//                    return "";
-//                }
-//            }
-//            else {
-//                /* regex */
-//                // TODO: to be completed
-//            }
-//
-//            /* collect */
-//            /* only handle the case of splitting const string into two parts*/
-//            std::vector<std::string> addElements;
-//            for (unsigned i = 0 ; i < elementNames.size(); ++i){
-//                addElements.emplace_back(createMultiplyOperator(generateFlatSize(elementNames[i], rhs_str),
-//                                                                generateFlatIter(elementNames[i])));
-//            }
-//
-//            std::string len_lhs = "";
-//            if (optimizing != NONE)
-//                len_lhs = generateVarSize(a);
-//            else
-//                len_lhs = generateFlatSize(a, lhs_str);
-//            result += createEqualConstraint(len_lhs, addConstraint_full(addElements));
-//
-//            int splitType = findSplitType(elementNames, connectedVariables);
-//            STRACE("str", tout << __LINE__ <<  " const = sum(flats), splitType = " << splitType << std::endl;);
-//
-//            /*
-//             * 0: No const, No connected var
-//             * 1: const		No connected var
-//             * 2: no const, connected var
-//             * 3: have both
-//             */
-//            std::vector<std::vector<int>> allPossibleSplits;
-//            std::set<std::string> strSplits;
-//            switch (splitType) {
-//                case SIMPLE_CASE:
-//                    break;
-//                case CONNECTED_ONLY:
-//                    /* handle connected var */
-//                    result = result + " " + toConstraint_ConnectedVar(
-//                            a, elementNames,
-//                            lhs_str, rhs_str,
-//                            connectedVariables,
-//                            optimizing != NONE,
-//                            pMax);
-//                    break;
-//                case CONST_ONLY:
-//                    /* handle const */
-//                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
-//                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
-//                        strSplits.emplace(toConstraint_NoConnectedVar(a, elementNames, allPossibleSplits[i], lhs_str, rhs_str, optimizing != NONE));
-//                    }
-//
-//                    if (strSplits.size() > 0)
-//                        result = result + " " + orConstraint(strSplits);
-//                    else
-//                        result = "";
-//                    break;
-//
-//                case 3:
-//                    /* handle connected var */
-//                    /* handle const */
-//                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
-//                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
-//                        /* check feasibility */
-//                        strSplits.emplace(
-//                                toConstraint_havingConnectedVar_andConst(
-//                                        a,
-//                                        elementNames,
-//                                        allPossibleSplits[i], lhs_str, rhs_str,
-//                                        connectedVariables,
-//                                        optimizing != NONE,
-//                                        pMax));
-//                    }
-//                    if (strSplits.size() > 0)
-//                        result = result + " " + orConstraint(strSplits);
-//                    else
-//                        return "";
-//                    break;
-//                default:
-//                    SASSERT (false);
-//                    break;
-//            }
-//        }
-//
-//        else {
-//            /* do not need AND */
-//            /* result = sum (length) */
-//            if (optimizing)
-//                result = result + "(= " + generateVarSize(a, lhs_str) + " (+ ";
-//            else
-//                result = result + "(= " + generateFlatSize(a, lhs_str) + " (+ ";
-//            for (unsigned i = 0; i < elementNames.size(); ++i) {
-//                result = result + createMultiplyOperator(generateFlatSize(elementNames[i], rhs_str),
-//                                                         generateFlatIter(elementNames[i])) + " ";
-//            }
-//
-//            if (elementNames.size() == 1)
-//                result = result + " 0";
-//
-//            result = result + ")) ";
-//
-//            /* DO NOT care about empty flats or not*/
-//
-//            /* handle const for connected variables*/
-//            if (connectedVariables.find(a.first) != connectedVariables.end())
-//                result = result + unrollConnectedVariable(
-//                        a, elementNames,
-//                        lhs_str, rhs_str,
-//                        connectedVariables, optimizing);
-//
-//            /* case 2 */
-//            std::string constraints01 = "(= " + generateFlatIter(a) + " (+ ";
-//            std::string constraints02 = "";
-//            for (const auto& s : elementNames){
-//                constraints02 = constraints02 + createEqualConstraint(generateFlatSize(a, lhs_str), generateFlatSize(s, rhs_str)) + " "; /* size = size */
-//                constraints01 = constraints01 + generateFlatIter(s) + " "; /* iter = sum iter*/
-//            }
-//            constraints01 = constraints01 + ")) ";
-//
-//            constraints01 = "(and " + constraints01 + " " + constraints02 + ")";
-//
-//            result = "(or (and " + result + + "))";
-////			result = "(or (and " + result + + ") " + constraints01 + ")";
-//        }
+        if (a.second < 0) { /* const string or regex */
+            /* check feasibility */
+
+            if (a.second != REGEX_CODE) {
+                zstring value;
+                u.str.is_string(a.first, value);
+                int max_lhs = value.length();
+                int min_rhs = 0;
+                for (unsigned i = 0; i < elementNames.size(); ++i) {
+                    if (elementNames[i].second % QCONSTMAX == -1) {
+                        u.str.is_string(elementNames[i].first, value);
+                        if (QCONSTMAX == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % QCONSTMAX == 0)
+                            min_rhs += value.length();
+                        else if (QCONSTMAX == 1)
+                            min_rhs += value.length();
+                    }
+                    else if (elementNames[i].second == REGEX_CODE &&
+                             elementNames[i].first.find('+') != std::string::npos &&
+                             elementNames[i].first.find('|') == std::string::npos){
+                        /* regex plus */
+                        size_t endPos = elementNames[i].first.find(')');
+                        SASSERT(endPos != std::string::npos);
+                        min_rhs += endPos - 1;
+                    }
+                }
+                if (max_lhs < min_rhs) {
+                    return "";
+                }
+            }
+            else {
+                /* regex */
+                // TODO: to be completed
+            }
+
+            /* collect */
+            /* only handle the case of splitting const string into two parts*/
+            std::vector<std::string> addElements;
+            for (unsigned i = 0 ; i < elementNames.size(); ++i){
+                addElements.emplace_back(createMultiplyOperator(generateFlatSize(elementNames[i], rhs_str),
+                                                                generateFlatIter(elementNames[i])));
+            }
+
+            std::string len_lhs = "";
+            if (optimizing != NONE)
+                len_lhs = generateVarSize(a);
+            else
+                len_lhs = generateFlatSize(a, lhs_str);
+            result += createEqualConstraint(len_lhs, addConstraint_full(addElements));
+
+            int splitType = findSplitType(elementNames, connectedVariables);
+            STRACE("str", tout << __LINE__ <<  " const = sum(flats), splitType = " << splitType << std::endl;);
+
+            /*
+             * 0: No const, No connected var
+             * 1: const		No connected var
+             * 2: no const, connected var
+             * 3: have both
+             */
+            std::vector<std::vector<int>> allPossibleSplits;
+            std::set<std::string> strSplits;
+            switch (splitType) {
+                case SIMPLE_CASE:
+                    break;
+                case CONNECTED_ONLY:
+                    /* handle connected var */
+                    result = result + " " + toConstraint_ConnectedVar(
+                            a, elementNames,
+                            lhs_str, rhs_str,
+                            connectedVariables,
+                            optimizing != NONE,
+                            pMax);
+                    break;
+                case CONST_ONLY:
+                    /* handle const */
+                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
+                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
+                        strSplits.emplace(toConstraint_NoConnectedVar(a, elementNames, allPossibleSplits[i], lhs_str, rhs_str, optimizing != NONE));
+                    }
+
+                    if (strSplits.size() > 0)
+                        result = result + " " + orConstraint(strSplits);
+                    else
+                        result = "";
+                    break;
+
+                case 3:
+                    /* handle connected var */
+                    /* handle const */
+                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
+                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
+                        /* check feasibility */
+                        strSplits.emplace(
+                                toConstraint_havingConnectedVar_andConst(
+                                        a,
+                                        elementNames,
+                                        allPossibleSplits[i], lhs_str, rhs_str,
+                                        connectedVariables,
+                                        optimizing != NONE,
+                                        pMax));
+                    }
+                    if (strSplits.size() > 0)
+                        result = result + " " + orConstraint(strSplits);
+                    else
+                        return "";
+                    break;
+                default:
+                    SASSERT (false);
+                    break;
+            }
+        }
+
+        else {
+            /* do not need AND */
+            /* result = sum (length) */
+            if (optimizing)
+                result = result + "(= " + generateVarSize(a, lhs_str) + " (+ ";
+            else
+                result = result + "(= " + generateFlatSize(a, lhs_str) + " (+ ";
+            for (unsigned i = 0; i < elementNames.size(); ++i) {
+                result = result + createMultiplyOperator(generateFlatSize(elementNames[i], rhs_str),
+                                                         generateFlatIter(elementNames[i])) + " ";
+            }
+
+            if (elementNames.size() == 1)
+                result = result + " 0";
+
+            result = result + ")) ";
+
+            /* DO NOT care about empty flats or not*/
+
+            /* handle const for connected variables*/
+            if (connectedVariables.find(a.first) != connectedVariables.end())
+                result = result + unrollConnectedVariable(
+                        a, elementNames,
+                        lhs_str, rhs_str,
+                        connectedVariables, optimizing);
+
+            /* case 2 */
+            std::string constraints01 = "(= " + generateFlatIter(a) + " (+ ";
+            std::string constraints02 = "";
+            for (const auto& s : elementNames){
+                constraints02 = constraints02 + createEqualConstraint(generateFlatSize(a, lhs_str), generateFlatSize(s, rhs_str)) + " "; /* size = size */
+                constraints01 = constraints01 + generateFlatIter(s) + " "; /* iter = sum iter*/
+            }
+            constraints01 = constraints01 + ")) ";
+
+            constraints01 = "(and " + constraints01 + " " + constraints02 + ")";
+
+            result = "(or (and " + result + + "))";
+//			result = "(or (and " + result + + ") " + constraints01 + ")";
+        }
 
 
         return result;
@@ -4207,6 +4214,79 @@ namespace smt {
         return NONE;
     }
 
+    int theory_str::canBeOptimized_RHS(
+            int i, int startPos, int j,
+            std::vector<int> left_arr,
+            std::vector<int> right_arr,
+            std::vector<std::pair<std::string, int>> lhs_elements,
+            std::vector<std::pair<std::string, int>> rhs_elements){
+//		__debugPrint(logFile, "%d *** %s ***: %d: %d -> %d\n", __LINE__, __FUNCTION__, i, startPos, j);
+        if (right_arr[j] == SUMFLAT && left_arr[i] == j){
+            /* check forward */
+            if (j < (int)right_arr.size() - 1 &&
+                rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0) {
+                if (right_arr[j + 1] == EMPTYFLAT){
+                    return RIGHT_EMPTY;
+                }
+                else if (right_arr[j + 1] == SUMFLAT)
+                    return RIGHT_SUM;
+                else if (i + 1 < (int)lhs_elements.size()){
+                    if (left_arr[i + 1] == j + 1 &&
+                        right_arr[j + 1] == i + 1){
+                        return NONE;
+                    }
+                }
+            }
+            /* check backward */
+            if (j > 0 &&
+                rhs_elements[j - 1].first.compare(rhs_elements[j].first) == 0) {
+                if (right_arr[j - 1] == EMPTYFLAT){
+                    return LEFT_EMPTY;
+                }
+                else if (right_arr[j - 1] == SUMFLAT)
+                    return LEFT_SUM;
+                else if (startPos > 0){
+                    if (left_arr[startPos - 1] == j - 1 &&
+                        right_arr[j - 1] == startPos - 1){
+                        return NONE;
+                    }
+                }
+            }
+        }
+        else if (left_arr[i] == j && right_arr[j] == i){
+            /* check forward */
+            if (i < (int)left_arr.size() - 1 &&
+                left_arr[i + 1] != SUMFLAT &&
+                lhs_elements[i + 1].first.compare(lhs_elements[i].first) == 0) {
+                if (left_arr[i + 1] == EMPTYFLAT){
+                    return RIGHT_EMPTY;
+                }
+                else if (i + 1 < (int)lhs_elements.size()){
+                    if (left_arr[i + 1] == j + 1 &&
+                        right_arr[j + 1] == i + 1 &&
+                        rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0){
+                        return RIGHT_EQUAL;
+                    }
+                }
+            }
+            /* check backward */
+            if (i > 0 &&
+                left_arr[i - 1] != SUMFLAT &&
+                lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0) {
+                if (left_arr[i - 1] == EMPTYFLAT){
+                    return LEFT_EMPTY;
+                }
+                else if (startPos > 0){
+                    if (left_arr[i - 1] == startPos - 1 &&
+                        right_arr[startPos - 1] == i - 1 &&
+                        rhs_elements[startPos - 1].first.compare(rhs_elements[startPos].first) == 0){
+                        return LEFT_EQUAL;
+                    }
+                }
+            }
+        }
+        return NONE;
+    }
     /*
      * First base case
      */
@@ -6200,10 +6280,7 @@ namespace smt {
         STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
         sort * int_sort = m.mk_sort(m_autil.get_family_id(), INT_SORT);
         sort * arr_sort = m_arrayUtil.mk_array_sort(int_sort, int_sort);
-//        sort * arr_sort = m.mk_sort(m_arrayUtil.get_family_id(), ARRAY_SORT);
-        STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
         app * a = mk_fresh_const(name.c_str(), arr_sort);
-        STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
         ctx.internalize(a, false);
         SASSERT(ctx.get_enode(a) != NULL);
         SASSERT(ctx.e_internalized(a));
