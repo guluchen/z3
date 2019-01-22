@@ -867,31 +867,59 @@ namespace smt {
 
     void theory_str::relevant_eh(app *const n) {
         if (m_util_s.str.is_extract(n)) {
-           add_extract_axiom(n);
-            std::cout << "extract: " << mk_pp(n, get_manager()) << std::endl;
-
-        }else if(m_util_s.str.is_contains(n)){
-            add_contains_axiom(n);
-            std::cout << "contains: " << mk_pp(n, get_manager()) << std::endl;
-
-        } else if (m_util_s.str.is_index(n) ||
-            m_util_s.str.is_replace(n) ||
-            m_util_s.str.is_at(n) ||
-            m_util_s.str.is_empty(n) ||
-            m_util_s.str.is_string(n) ||
-            m_util_s.str.is_itos(n) ||
-            m_util_s.str.is_stoi(n)) {
-            std::cout << "relevant: " << mk_pp(n, get_manager()) << std::endl;
-        }else{
+            add_substr_axiom(n);
+        }else if(m_util_s.str.is_itos(n)){
+           // add_itos_axiom(n);
+        }else if(m_util_s.str.is_stoi(n)){
+           // add_stoi_axiom(n);
+        }else if(m_util_s.str.is_at(n)){
+           add_char_at_axiom(n);
+        }else if(m_util_s.str.is_replace(n)){
+           // add_replace_axiom(n);
+        }else if(m_util_s.str.is_index(n)){
+           add_index_of_axiom(n);
         }
         STRACE("str", tout << "relevant: " << mk_pp(n, get_manager()) << std::endl;);
     }
 
 
     void theory_str::assign_eh(bool_var v, const bool is_true) {
-        // YFC: membership constraint goes here
-        (void) v;
-        (void) is_true;
+        ast_manager& m = get_manager();
+        context & ctx = get_context();
+        expr* e = ctx.bool_var2expr(v);
+        expr* e1 = nullptr, *e2 = nullptr;
+        expr_ref f(m);
+
+        if (m_util_s.str.is_prefix(e, e1, e2)) {
+            if (is_true) {
+                add_prefix_axiom(e);
+            }
+            else{
+                TRACE("str", tout << "todo: not " << mk_pp(e, m) << "\n";);
+            }
+        }
+        else if (m_util_s.str.is_suffix(e, e1, e2)) {
+            if (is_true) {
+                add_suffix_axiom(e);
+            }
+            else {
+                TRACE("str", tout << "todo: not " << mk_pp(e, m) << "\n";);
+            }
+        }
+        else if (m_util_s.str.is_contains(e, e1, e2)) {
+            expr_ref_vector disj(m);
+            if (is_true) {
+                add_contains_axiom(e);
+            }
+            else {
+                TRACE("str", tout << "todo: not " << mk_pp(e, m) << "\n";);
+            }
+        }
+        else {
+            TRACE("str", tout << "unhandled literal" << mk_pp(e, m) << "\n";);
+            UNREACHABLE();
+        }
+
         STRACE("str", tout << "assign: v" << v << " #" << get_context().bool_var2expr(v)->get_id()
                            << " is_true: " << is_true << std::endl;);
     }
@@ -900,12 +928,8 @@ namespace smt {
         ast_manager& m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
-//        if (is_word_term(l) && is_word_term(r)) {
-            m_word_eq_todo.push_back({l, r});
-            STRACE("str", tout << "new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;);
-//        }else{
-//            std::cout << "unhandled new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;
-//        }
+        m_word_eq_todo.push_back({l, r});
+        STRACE("str", tout << "new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << std::endl;);
     }
 
     void theory_str::new_diseq_eh(theory_var x, theory_var y) {
@@ -1035,7 +1059,7 @@ namespace smt {
     }
 
     /*
-      Note: this is copied from theory_seq.cpp
+      Note: this is copied and modified from theory_seq.cpp
       TBD: check semantics of extract, a.k.a, substr(s, i ,l)
 
       let e = extract(s, i, l)
@@ -1061,40 +1085,259 @@ namespace smt {
       |e| = min(l, |s| - i) for 0 <= i < |s| and 0 < |l|
     */
 
-    void theory_str::add_extract_axiom(expr* e) {
+    void theory_str::add_substr_axiom(expr *e) {
         ast_manager& m = get_manager();
+
         expr* s = nullptr, *i = nullptr, *l = nullptr;
         VERIFY(m_util_s.str.is_extract(e, s, i, l));
-        //e = extract(s, i, l), s = xey
 
-        expr_ref x(mk_str_var("x"), m);
-        expr_ref y(mk_str_var("y"), m);
-        expr_ref xe(m_util_s.str.mk_concat(x, e), m);
-        expr_ref xey(m_util_s.str.mk_concat(xe, y), m);
-        expr_ref zero(m_util_a.mk_int(0), m);
-        expr_ref le(m_util_s.str.mk_length(e), m);
+        expr_ref x(mk_skolem(symbol("m_pre"), s, i), m);
         expr_ref ls(m_util_s.str.mk_length(s), m);
         expr_ref lx(m_util_s.str.mk_length(x), m);
-        expr_ref ls_minus_i_l(m_util_a.mk_sub(m_util_a.mk_sub(ls, i), l), m);
-        expr_ref i_minus_ls(m_util_a.mk_sub(i, ls), m);
-        expr_ref ls_minus_i(m_util_a.mk_sub(ls, i), m);
-        m_rewrite(ls_minus_i);
+        expr_ref le(m_util_s.str.mk_length(e), m);
+        expr_ref ls_minus_i_l(mk_sub(mk_sub(ls, i), l), m);
+        expr_ref y(mk_skolem(symbol("m_post"), s, ls_minus_i_l), m);
+        expr_ref xe(m_util_s.str.mk_concat(x, e),m);
+        expr_ref xey(m_util_s.str.mk_concat(x, e, y),m);
+        expr_ref zero(m_util_a.mk_int(0), m);
 
-        literal i_ge_0    = mk_literal(m_util_a.mk_gt(i, zero));
-        literal ls_le_i   = mk_literal(m_util_a.mk_le(i_minus_ls, zero));
+        literal i_ge_0    = mk_literal(m_util_a.mk_ge(i, zero));
+        literal ls_le_i   = mk_literal(m_util_a.mk_le(mk_sub(i, ls), zero));
         literal li_ge_ls  = mk_literal(m_util_a.mk_ge(ls_minus_i_l, zero));
         literal l_ge_zero = mk_literal(m_util_a.mk_ge(l, zero));
         literal ls_le_0   = mk_literal(m_util_a.mk_le(ls, zero));
 
-        assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(s, xey,false));
+        assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(xey, s, false));
         assert_axiom(~i_ge_0, ~ls_le_i, mk_eq(lx, i, false));
         assert_axiom(~i_ge_0, ~ls_le_i, ~l_ge_zero, ~li_ge_ls, mk_eq(le, l, false));
-        assert_axiom(~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, ls_minus_i, false));
+        assert_axiom(~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, mk_sub(ls, i), false));
         assert_axiom(~i_ge_0, ~ls_le_i, l_ge_zero, mk_eq(le, zero, false));
         assert_axiom(i_ge_0, mk_eq(le, zero, false));
         assert_axiom(ls_le_i, mk_eq(le, zero, false));
         assert_axiom(~ls_le_0, mk_eq(le, zero, false));
+
     }
+
+
+
+
+    void theory_str::add_index_of_axiom(expr* i) {
+        ast_manager& m = get_manager();
+        expr* s = nullptr, *t = nullptr, *offset = nullptr;
+        rational r;
+        VERIFY(m_util_s.str.is_index(i, t, s) ||
+               m_util_s.str.is_index(i, t, s, offset));
+
+
+        expr_ref minus_one(m_util_a.mk_int(-1), m);
+        expr_ref zero(m_util_a.mk_int(0), m);
+
+        expr_ref emp(m_util_s.str.mk_empty(m.get_sort(t)),m);
+
+        literal cnt = mk_literal(m_util_s.str.mk_contains(t, s));
+        literal i_eq_m1 = mk_eq(i, minus_one, false);
+        literal i_eq_0 = mk_eq(i, zero, false);
+        literal s_eq_empty = mk_eq(s, emp, false);;
+        literal t_eq_empty = mk_eq(t, emp, false);;
+
+        assert_axiom(cnt,  i_eq_m1);
+        assert_axiom(~t_eq_empty, s_eq_empty, i_eq_m1);
+
+        if (!offset || (m_util_a.is_numeral(offset, r) && r.is_zero())) {
+            expr_ref x  = mk_skolem(symbol("m_indexof_left"), t, s);
+            expr_ref y  = mk_skolem(symbol("m_indexof_right"), t, s);
+            expr_ref xsy(m_util_s.str.mk_concat(x, s, y), m);
+            expr_ref lenx(m_util_s.str.mk_length(x), m);
+            assert_axiom(~s_eq_empty, i_eq_0);
+            assert_axiom(~cnt, s_eq_empty, mk_eq(t, xsy, false));
+            assert_axiom(~cnt, s_eq_empty, mk_eq(i, lenx, false));
+            assert_axiom(~cnt, mk_literal(m_util_a.mk_ge(i, zero)));
+            //tightest_prefix(s, x);
+        }
+        else {
+
+            expr_ref len_t(m_util_s.str.mk_length(t), m);
+            literal offset_ge_len = mk_literal(m_util_a.mk_ge(mk_sub(offset, len_t), zero));
+            literal offset_le_len = mk_literal(m_util_a.mk_le(mk_sub(offset, len_t), zero));
+            literal i_eq_offset = mk_eq(i, offset, false);
+            assert_axiom(~offset_ge_len, s_eq_empty, i_eq_m1);
+            assert_axiom(offset_le_len, i_eq_m1);
+            assert_axiom(~offset_ge_len, ~offset_le_len, ~s_eq_empty, i_eq_offset);
+
+            expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s, offset);
+            expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s, offset);
+            expr_ref indexof0(m_util_s.str.mk_index(y, s, zero), m);
+            expr_ref offset_p_indexof0(m_util_a.mk_add(offset, indexof0), m);
+            literal offset_ge_0 = mk_literal(m_util_a.mk_ge(offset, zero));
+
+            assert_axiom(~offset_ge_0, offset_ge_len, mk_eq(t, m_util_s.str.mk_concat(x, y), false));
+            assert_axiom(~offset_ge_0, offset_ge_len, mk_eq(m_util_s.str.mk_length(x), offset, false));
+            assert_axiom(~offset_ge_0, offset_ge_len,
+                      ~mk_eq(indexof0, minus_one, false), i_eq_m1);
+            assert_axiom(~offset_ge_0, offset_ge_len,
+                      ~mk_literal(m_util_a.mk_ge(indexof0, zero)),
+                      mk_eq(offset_p_indexof0, i, false));
+
+            // offset < 0 => -1 = i
+            assert_axiom(offset_ge_0, i_eq_m1);
+        }
+    }
+
+
+
+
+///* Note: the main difference to the encoding in theory_seq: when j < 0, it is treated as zero
+//  in this encoding. (This is the behavior of the Java string indexof method)
+//
+//  let i = Index(t, s, j):
+//  // index of s in t starting at j.
+//
+//  !contains(t, s) --> i = -1
+//
+//  case j <= 0:
+//    case |s| = 0: i = 0, which is encoded as |s|!= 0 \/ i = 0
+//    case |s| > 0 /\ contains(t, s) --> (t = xsy /\ i = len(x) /\ tightest_prefix(x, s))
+//    case |s| > 0 /\ !contains(t, s): already coverered by !contains(t, s) --> i = -1
+//
+//  case j > 0:
+//    case |s| = 0: i = ite(j>|t|, |t|, j), which equals (i=|t| \/ j>=|t|) /\ (i=j \/ j< |t|)
+//    case |s| > 0 /\ j >= |t|: i = -1
+//    case |s| > 0 /\ j < |t|: t = xy /\ |x| = j /\ (indexof(y,s,0) = -1 --> i = -1)
+//                 /\ (indexof(y,s,0) >= 0 --> i = indexof(y,s,0) + j)
+//
+// */
+//    void theory_str::add_index_of_axiom(expr* i) {
+//        ast_manager& m = get_manager();
+//        expr* s = nullptr, *t = nullptr, *j = nullptr;
+//        rational r;
+//        VERIFY(m_util_s.str.is_index(i, t, s) ||
+//               m_util_s.str.is_index(i, t, s, j));
+//
+////        std::cout<<"i: "<<mk_pp(i,get_manager())<<" t: "<<mk_pp(t,get_manager())<<" s: "
+////                 <<mk_pp(s,get_manager())<<" j: "
+////                 <<mk_pp(j,get_manager())<<" with type: "<< to_app(j)->get_decl_kind() <<std::endl;
+//
+//        expr_ref minus_one(m_util_a.mk_int(-1), m);
+//        expr_ref zero(m_util_a.mk_int(0), m);
+//        expr_ref one(m_util_a.mk_int(1), m);
+//        expr_ref emp(m_util_s.str.mk_empty(m.get_sort(t)),m);
+//
+//
+//        literal cnt_t_s = mk_literal(m_util_s.str.mk_contains(t, s));
+//        literal i_eq_m1 = mk_eq(i, minus_one, false);
+//        literal i_eq_0 = mk_eq(i, zero, false);
+//        expr_ref ls(m_util_s.str.mk_length(s), m);
+//
+//        literal s_eq_empty = mk_eq(s, emp, false);
+//
+//        // ~contains(t, s) --> i = -1, which equals contains(t, s) \/ i = -1
+//        assert_axiom(cnt_t_s,  i_eq_m1);
+//
+//        if (!j || (m_util_a.is_numeral(j, r) && r.is_zero())) {// j <= 0
+//
+//
+//            //case |s| = 0: i = 0, which is encoded as |s|!= 0 \/ i = 0
+//            assert_axiom(~s_eq_empty, i_eq_0);
+//
+//
+//            //case |s| > 0 /\ contains(t, s) --> (t = xsy /\ i = len(x) /\ tightest_prefix(x, s))
+//            expr_ref x(mk_str_var("x"), m);
+//            expr_ref y(mk_str_var("y"), m);
+//            expr_ref xsy(m_util_s.str.mk_concat(x, s, y), m);
+//            expr_ref lenx(m_util_s.str.mk_length(x), m);
+//            assert_axiom(s_eq_empty, ~cnt_t_s, mk_eq(t, xsy, false));
+//            assert_axiom(s_eq_empty, ~cnt_t_s, mk_eq(i, lenx, false));
+//
+//            //tightest_prefix(s,x): meaning s=pc, |c|=1, !contains(xp,s)
+//            expr_ref p(mk_str_var("p"), m);
+//            expr_ref c(mk_str_var("c"), m);
+//            expr_ref lc(m_util_s.str.mk_length(c), m);
+//            expr_ref pc(m_util_s.str.mk_concat(p, c),m);
+//            literal cnt_xp_s = mk_literal(m_util_s.str.mk_contains(m_util_s.str.mk_concat(x, p), s));
+//
+//            assert_axiom(s_eq_empty, ~cnt_t_s, mk_eq(s, pc, false));
+//            assert_axiom(s_eq_empty, ~cnt_t_s, mk_eq(lc,one,false));
+//            assert_axiom(s_eq_empty, ~cnt_t_s, ~cnt_xp_s);
+//            assert_axiom(~cnt_xp_s);
+//        }
+//        else { // j > 0
+//            expr_ref lt(m_util_s.str.mk_length(t), m);
+//            literal j_ge_t = mk_literal(m_util_a.mk_ge(m_util_a.mk_sub(j, lt), zero));
+//
+//            literal j_gt_0 = mk_literal(m_util_a.mk_gt(j, zero));
+//
+//            //case |s| = 0: i = ite(j>|t|, |t|, j), which equals (i=|t| \/ j>=|t|) /\ (i=j \/ j< |t|)
+//            literal i_eq_t = mk_literal(m_util_a.mk_eq(i, lt));
+//            literal i_eq_j = mk_literal(m_util_a.mk_eq(i, j));
+//
+//
+//
+//            assert_axiom(~j_gt_0, ~s_eq_empty, i_eq_t, j_ge_t);
+//            assert_axiom(~j_gt_0, ~s_eq_empty, i_eq_j, ~j_ge_t);
+//
+//
+//            //case |s| > 0 /\ j >= |t|: i = -1
+//            assert_axiom(~j_gt_0, s_eq_empty, ~ j_ge_t, i_eq_m1);
+//
+//            //case |s| > 0 /\ j < |t|: t = xy /\ |x| = j /\ (indexof(y,s,0) = -1 --> i = -1)
+//            // /\ (indexof(y,s,0) >= 0 --> i = indexof(y,s,0) + j)
+//
+//            expr_ref x(mk_str_var("x"), m);
+//            expr_ref y(mk_str_var("y"), m);
+//            literal t_eq_xy = mk_eq(t, m_util_s.str.mk_concat(x, y), false);
+//            literal x_eq_j = mk_eq(m_util_s.str.mk_length(x), j, false);
+//            expr_ref idxof0(m_util_s.str.mk_index(y, s, zero), m);
+//            literal idxof0_eq_m1 = mk_eq(idxof0, minus_one, false);
+//            expr_ref idxof0_p_j(m_util_a.mk_add(j, idxof0), m);
+//            literal idxof0_ge_zero = mk_eq(idxof0, zero, false);
+//            literal i_eq_idxof0_p_j = mk_eq(i,idxof0_p_j, false);
+//
+//            assert_axiom(~j_gt_0, s_eq_empty, j_ge_t, t_eq_xy);
+//            assert_axiom(~j_gt_0, s_eq_empty, j_ge_t, x_eq_j);
+//            assert_axiom(~j_gt_0, s_eq_empty, j_ge_t, ~idxof0_eq_m1, i_eq_m1);
+//            assert_axiom(~j_gt_0, s_eq_empty, j_ge_t, ~idxof0_ge_zero, i_eq_idxof0_p_j);
+//
+//            literal j_ge_0 = mk_literal(m_util_a.mk_ge(j, zero));
+//            assert_axiom(j_ge_0, i_eq_m1);
+//        }
+//    }
+
+
+/*
+   Note: this is copied and modified from theory_seq.cpp
+   let e = at(s, i)
+
+   0 <= i < len(s) -> s = xey & len(x) = i & len(e) = 1
+   i < 0 \/ i >= len(s) -> e = empty
+
+*/
+    void theory_str::add_char_at_axiom(expr* e) {
+        ast_manager& m = get_manager();
+        expr* s = nullptr, *i = nullptr;
+        VERIFY(m_util_s.str.is_at(e, s, i));
+        expr_ref len_e(m_util_s.str.mk_length(e), m);
+        expr_ref len_s(m_util_s.str.mk_length(s), m);
+        expr_ref zero(m_util_a.mk_int(0), m);
+        expr_ref one(m_util_a.mk_int(1), m);
+        expr_ref x = mk_skolem(symbol("m_char_at_left"), s, i);
+        expr_ref y = mk_skolem(symbol("m_char_at_right"), s, mk_sub(mk_sub(len_s, i), one));
+        expr_ref xey(m_util_s.str.mk_concat(x, m_util_s.str.mk_concat(e, y)), m);
+        expr_ref len_x(m_util_s.str.mk_length(x), m);
+        expr_ref emp(m_util_s.str.mk_empty(m.get_sort(e)), m);
+
+        literal i_ge_0 = mk_literal(m_util_a.mk_ge(i, zero));
+        literal i_ge_len_s = mk_literal(m_util_a.mk_ge(mk_sub(i, m_util_s.str.mk_length(s)), zero));
+
+
+        assert_axiom(~i_ge_0, i_ge_len_s, mk_eq(s, xey, false));
+        assert_axiom(~i_ge_0, i_ge_len_s, mk_eq(one, len_e, false));
+        assert_axiom(~i_ge_0, i_ge_len_s, mk_eq(i, len_x, false));
+
+        assert_axiom(i_ge_0, mk_eq(e, emp, false));
+        assert_axiom(~i_ge_len_s, mk_eq(e, emp, false));
+
+    }
+
 
     void theory_str::add_contains_axiom(expr* e) {
         ast_manager& m = get_manager();
@@ -1102,11 +1345,35 @@ namespace smt {
         VERIFY(m_util_s.str.is_contains(e, x, y));
         //e = contains(x, y)
 
-        expr_ref p(mk_str_var("p"), m);
-        expr_ref s(mk_str_var("s"), m);
+        expr_ref p = mk_skolem(symbol("m_contains_left"), x, y);
+        expr_ref s = mk_skolem(symbol("m_contains_right"), x, y);
         expr_ref pys(m_util_s.str.mk_concat(m_util_s.str.mk_concat(p, y), s), m);
 
         assert_axiom(mk_eq(x, pys, false));
+    }
+
+    void theory_str::add_prefix_axiom(expr* e) {
+        ast_manager& m = get_manager();
+        expr* x = nullptr, *y = nullptr;
+        VERIFY(m_util_s.str.is_prefix(e, x, y));
+        //e = prefix(x, y), check if y is a prefix of x
+
+        expr_ref s = mk_skolem(symbol("m_prefix_right"), x, y);
+        expr_ref ys(m_util_s.str.mk_concat(y, s), m);
+
+        assert_axiom(mk_eq(x, ys, false));
+    }
+
+    void theory_str::add_suffix_axiom(expr* e) {
+        ast_manager& m = get_manager();
+        expr* x = nullptr, *y = nullptr;
+        VERIFY(m_util_s.str.is_suffix(e, x, y));
+        //e = suffix(x, y), check if y is a suffix of x
+
+        expr_ref p = mk_skolem(symbol("m_suffix_left"), x, y);
+        expr_ref py(m_util_s.str.mk_concat(p, y), m);
+
+        assert_axiom(mk_eq(x, py, false));
     }
 
     void theory_str::dump_assignments() const {
@@ -1143,20 +1410,37 @@ namespace smt {
         return false;
     }
 
-    app *theory_str::mk_str_var(std::string name) {
-        context& ctx = get_context();
-        sort *string_sort = m_util_s.str.mk_string_sort();
+//    app *theory_str::mk_str_var(std::string name) {
+//        context& ctx = get_context();
+//        sort *string_sort = m_util_s.str.mk_string_sort();
+//
+//        //the code below create an array of integer expressions of size one with a fresh integer value
+//        expr *args[1] = {m_util_a.mk_numeral(rational(m_fresh_id), true)};
+//        m_fresh_id++;
+//        unsigned len = 1;
+//
+//        app *a = m_util_s.mk_skolem(symbol(name.c_str()), len, args, string_sort);
+//        ctx.internalize(a, false);
+//        mk_var(ctx.get_enode(a));
+//
+//        return a;
+//    }
+    expr_ref theory_str::mk_sub(expr* a, expr* b) {
+        ast_manager& m = get_manager();
+        expr_ref result(m_util_a.mk_sub(a, b), m);
+        m_rewrite(result);
+        return result;
+    }
 
-        //the code below create an array of integer expressions of size one with a fresh integer value
-        expr *args[1] = {m_util_a.mk_numeral(rational(m_fresh_id), true)};
-        m_fresh_id++;
-        unsigned len = 1;
+    expr_ref theory_str::mk_skolem(symbol const& name, expr* e1, expr* e2, expr* e3, expr*e4, sort* range) {
+        ast_manager& m = get_manager();
+        expr* es[4] = { e1, e2, e3, e4 };
+        unsigned len = e4?4:(e3?3:(e2?2:1));
 
-        app *a = m_util_s.mk_skolem(symbol(name.c_str()), len, args, string_sort);
-        ctx.internalize(a, false);
-        mk_var(ctx.get_enode(a));
-
-        return a;
+        if (!range) {
+            range = m.get_sort(e1);
+        }
+        return expr_ref(m_util_s.mk_skolem(name, len, es, range), m);
     }
 
     literal theory_str::mk_literal(expr *const e) {
@@ -1164,8 +1448,7 @@ namespace smt {
         expr_ref ex(e, m);
         m_rewrite(ex);
         context& ctx = get_context();
-
-        std::cout << "internalize " << mk_pp(ex, m) << "\n";
+//        std::cout << "internalize " << mk_pp(ex, m) << "\n";
 
         if (!ctx.e_internalized(ex)) {
             ctx.internalize(ex, false);
@@ -1188,7 +1471,6 @@ namespace smt {
             return result;
         }
 
-        std::cout<<mk_pp(e, get_manager())<<std::endl;
 //        func_decl *const fun = to_app(e)->get_decl();
         std::stringstream ss;
         ss<<mk_pp(e, get_manager());

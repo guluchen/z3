@@ -298,12 +298,18 @@ namespace smt {
         void assert_axiom(expr *e);
         void assert_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal,
                           literal l4 = null_literal, literal l5 = null_literal);
-        void add_extract_axiom(expr *e);
+        void add_substr_axiom(expr *e);
         void add_contains_axiom(expr *e);
+        void add_prefix_axiom(expr *e);
+        void add_suffix_axiom(expr *e);
+        void add_char_at_axiom(expr *e);
+        void add_replace_axiom(expr *e);
+        void add_index_of_axiom(expr *e);
+        expr_ref mk_sub(expr* a, expr* b);
         void dump_assignments() const;
         bool is_theory_str_term(expr *e) const;
         bool is_word_term(expr *e) const;
-        app *mk_str_var(std::string name);
+        expr_ref mk_skolem(symbol const& s, expr* e1, expr* e2 = nullptr, expr* e3 = nullptr, expr* e4 = nullptr, sort* range = nullptr);
         literal mk_literal(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo() const;
