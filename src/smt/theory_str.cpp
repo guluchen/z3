@@ -640,9 +640,9 @@ namespace smt {
             return m_backward_def.emplace(std::move(pair)).first->first;
         }
 
-        neilsen_transforms::neilsen_transforms(state&& root) {
-            const state& s = m_records.add_state(std::move(root));
-            m_pending.emplace(s);
+        neilsen_transforms::neilsen_transforms(state&& root)
+                : m_rec_root{m_records.add_state(std::move(root))} {
+            m_pending.push(m_rec_root);
         }
 
         bool neilsen_transforms::should_explore_all() const {
@@ -672,8 +672,8 @@ namespace smt {
                         continue;
                     }
                     if (s.in_solved_form()) {
-                        STRACE("str", tout << "[Solved]\n" << s << '\n';);
-                        return m_status = result::SAT;
+                        if (finish_after_found(s)) return result::SAT;
+                        continue;
                     }
                     const word_equation& only_one_left = s.only_one_eq_left();
                     if (only_one_left && only_one_left.in_definition_form()) {
@@ -687,10 +687,20 @@ namespace smt {
                         continue;
                     }
                     STRACE("str", tout << "to:\n" << s << '\n';);
-                    m_pending.emplace(s);
+                    m_pending.push(s);
                 }
             }
             return result::UNSAT;
+        }
+
+        bool neilsen_transforms::finish_after_found(const state& s) {
+            m_rec_success_leaves.insert(s);
+            if (!should_explore_all()) {
+                STRACE("str", tout << "[Solved]\n" << s << '\n';);
+                m_status = result::SAT;
+                return true;
+            }
+            return false;
         }
 
         result neilsen_transforms::split_var_empty_cases() {
@@ -701,7 +711,7 @@ namespace smt {
             while (!pending.empty()) {
                 const state& curr_s = pending.front();
                 pending.pop();
-                m_pending.emplace(curr_s);
+                m_pending.push(curr_s);
                 for (const auto& var : curr_s.variables()) {
                     state&& next_s = curr_s.remove(var);
                     next_s.allow_empty_var(false);
@@ -712,13 +722,13 @@ namespace smt {
                         continue;
                     }
                     next_s.allow_empty_var(true);
-                    if (!should_explore_all() && next_s.in_solved_form()) {
+                    if (next_s.in_solved_form()) {
                         const state& s = m_records.add_state(std::move(next_s));
                         for (const auto& m : m_records.incoming_moves(curr_s)) {
                             m_records.add_move(m.add_record(var), s);
                         }
-                        STRACE("str", tout << "[Solved]\n" << s << '\n';);
-                        return m_status = result::SAT;
+                        if (finish_after_found(s)) return result::SAT;
+                        continue;
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
@@ -734,7 +744,7 @@ namespace smt {
                     for (const auto& m : m_records.incoming_moves(curr_s)) {
                         m_records.add_move(m.add_record(var), s);
                     }
-                    pending.emplace(s);
+                    pending.push(s);
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
             }
@@ -755,12 +765,11 @@ namespace smt {
                         continue;
                     }
                     next_s.allow_empty_var(true);
-                    if (!should_explore_all() && next_s.in_solved_form()) {
+                    if (next_s.in_solved_form()) {
                         const state& s = m_records.add_state(std::move(next_s));
                         m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
-                        m_status = result::SAT;
-                        STRACE("str", tout << "[Solved]\n" << s << '\n';);
-                        return {};
+                        if (finish_after_found(s)) return {};
+                        continue;
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
@@ -772,7 +781,7 @@ namespace smt {
                     next_s.allow_empty_var(false);
                     const state& s = m_records.add_state(std::move(next_s));
                     m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
-                    result.emplace(s);
+                    result.push(s);
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
             }
@@ -1119,7 +1128,7 @@ namespace smt {
     void theory_str::handle_extract(expr *const e) {
         ast_manager& m = get_manager();
         expr *s = nullptr, *i = nullptr, *l = nullptr;
-        SASSERT(m_util_s.str.is_extract(e, s, i, l));
+        VERIFY(m_util_s.str.is_extract(e, s, i, l));
         //e = extract(s, i, l), s = xey
 
         expr_ref x(mk_string_var_expr("x"), m);
@@ -1154,7 +1163,7 @@ namespace smt {
     void theory_str::handle_contains(expr *const e) {
         // e = contains(x, y)
         expr *x = nullptr, *y = nullptr;
-        SASSERT(m_util_s.str.is_contains(e, x, y));
+        VERIFY(m_util_s.str.is_contains(e, x, y));
         ast_manager& m = get_manager();
 
         expr_ref p(mk_string_var_expr("p"), m);

@@ -8,6 +8,7 @@
 #include <map>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "ast/arith_decl_plugin.h"
 #include "ast/seq_decl_plugin.h"
@@ -197,6 +198,7 @@ namespace smt {
         };
 
         using state_cref = std::reference_wrapper<const state>;
+        using state_cref_set = std::unordered_set<state_cref, state::hash, std::equal_to<state>>;
 
         enum class result {
             SAT, UNSAT, UNKNOWN
@@ -243,6 +245,8 @@ namespace smt {
         private:
             result m_status = result::UNKNOWN;
             record_graph m_records;
+            state_cref m_rec_root;
+            state_cref_set m_rec_success_leaves;
             std::stack<state_cref> m_pending;
         public:
             explicit neilsen_transforms(state&& root);
@@ -250,6 +254,7 @@ namespace smt {
             bool should_explore_all() const;
             result check(bool split_var_empty_ahead = false);
         private:
+            bool finish_after_found(const state& s);
             result split_var_empty_cases();
             std::queue<state_cref> split_first_level_var_empty();
             std::list<action> transform(const state& s) const;
@@ -294,7 +299,7 @@ namespace smt {
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
     private:
-        bool is_of_this_theory(expr * e) const;
+        bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         app *mk_string_var_expr(const std::string& name);
         literal mk_literal(expr *e);
