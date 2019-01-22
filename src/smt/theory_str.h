@@ -139,14 +139,13 @@ namespace smt {
             language::t m_type;
             language::v m_value;
         public:
-            language(const language::t& t, language::v&& v) : m_type{t}, m_value{std::move(v)} {}
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
-            language complement() const { return {t::AUT, {}}; }
-            language concat(const language& other) const { return {t::AUT, {}}; }
-            language intersect(const language& other) const { return {t::AUT, {}}; }
-            language remove_prefix(const element& e) const { return {t::AUT, {}}; }
+            language complement() const { return {}; }
+            language concat(const language& other) const { return {}; }
+            language intersect(const language& other) const { return {}; }
+            language remove_prefix(const element& e) const { return {}; }
             std::list<language::pair> split() const { return {}; }
             bool operator==(const language& other) const { return true; }
             bool operator!=(const language& other) const { return !(*this == other); }
