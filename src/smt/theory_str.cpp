@@ -651,9 +651,7 @@ namespace smt {
 
         result neilsen_transforms::check(const bool split_var_empty_ahead) {
             if (in_status(result::SAT)) return m_status;
-            if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) {
-                return m_status = result::SAT;
-            }
+            if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) return m_status;
             STRACE("str", tout << "[Check SAT]\n";);
             while (!m_pending.empty()) {
                 const state& curr_s = m_pending.top();
@@ -672,7 +670,7 @@ namespace smt {
                         continue;
                     }
                     if (s.in_solved_form()) {
-                        if (finish_after_found(s)) return result::SAT;
+                        if (finish_after_found(s)) return m_status;
                         continue;
                     }
                     const word_equation& only_one_left = s.only_one_eq_left();
@@ -680,8 +678,8 @@ namespace smt {
                         // solved form check failed, the we in definition form must be recursive
                         const word_equation& last_we_recursive_def = only_one_left;
                         if (!last_we_recursive_def.definition_body().has_constant()) {
-                            STRACE("str", tout << "[Solved]\n" << s << '\n';);
-                            return m_status = result::SAT;
+                            if (finish_after_found(s)) return m_status;
+                            continue;
                         }
                         STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
@@ -690,11 +688,13 @@ namespace smt {
                     m_pending.push(s);
                 }
             }
-            return result::UNSAT;
+            m_status = should_explore_all() && !m_rec_success_leaves.empty() ? result::SAT
+                                                                             : result::UNSAT;
+            return m_status;
         }
 
         bool neilsen_transforms::finish_after_found(const state& s) {
-            m_rec_success_leaves.push_back(s);
+            m_rec_success_leaves.emplace_back(s);
             if (!should_explore_all()) {
                 STRACE("str", tout << "[Solved]\n" << s << '\n';);
                 m_status = result::SAT;
@@ -727,7 +727,7 @@ namespace smt {
                         for (const auto& m : m_records.incoming_moves(curr_s)) {
                             m_records.add_move(m.add_record(var), s);
                         }
-                        if (finish_after_found(s)) return result::SAT;
+                        if (finish_after_found(s)) return m_status;
                         continue;
                     }
                     if (next_s.unsolvable_by_check()) {
@@ -748,7 +748,8 @@ namespace smt {
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
             }
-            SASSERT(in_status(result::UNKNOWN));
+            m_status = should_explore_all() && !m_rec_success_leaves.empty() ? result::SAT
+                                                                             : result::UNKNOWN;
             return m_status;
         }
 
