@@ -589,7 +589,7 @@ namespace smt {
         }
 
         std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_two_var() {
-            const head_pair& hh = m_src.heads();
+            const element::pair& hh = m_src.heads();
             const element& x = hh.first;
             const element& y = hh.second;
             std::list<action> result;
@@ -605,7 +605,7 @@ namespace smt {
         }
 
         std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_one_var() {
-            const head_pair& hh = m_src.heads();
+            const element::pair& hh = m_src.heads();
             const bool var_const_headed = hh.first.typed(element::t::VAR);
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
@@ -694,7 +694,7 @@ namespace smt {
         }
 
         bool neilsen_transforms::finish_after_found(const state& s) {
-            m_rec_success_leaves.insert(s);
+            m_rec_success_leaves.push_back(s);
             if (!should_explore_all()) {
                 STRACE("str", tout << "[Solved]\n" << s << '\n';);
                 m_status = result::SAT;
@@ -705,7 +705,7 @@ namespace smt {
 
         result neilsen_transforms::split_var_empty_cases() {
             STRACE("str", tout << "[Split Empty Variable Cases]\n";);
-            std::queue<state_cref> pending{split_first_level_var_empty()};
+            std::queue<state::cref> pending{split_first_level_var_empty()};
             SASSERT(m_pending.empty());
             if (in_status(result::SAT)) return m_status;
             while (!pending.empty()) {
@@ -752,8 +752,8 @@ namespace smt {
             return m_status;
         }
 
-        std::queue<state_cref> neilsen_transforms::split_first_level_var_empty() {
-            std::queue<state_cref> result;
+        std::queue<state::cref> neilsen_transforms::split_first_level_var_empty() {
+            std::queue<state::cref> result;
             while (!m_pending.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();

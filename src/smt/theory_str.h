@@ -23,6 +23,7 @@ namespace smt {
 
         class element {
         public:
+            using pair = std::pair<element, element>;
             enum class t {
                 CONST, VAR, NONE
             };
@@ -81,8 +82,6 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const word_term& w);
         };
 
-        using head_pair = std::pair<element, element>;
-
         class word_equation {
         public:
             struct hash {
@@ -94,7 +93,7 @@ namespace smt {
             word_term m_rhs;
         public:
             word_equation(const word_term& lhs, const word_term& rhs);
-            head_pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
+            element::pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
             std::set<element> variables() const;
             const word_term& lhs() const { return m_lhs; }
             const word_term& rhs() const { return m_rhs; }
@@ -140,7 +139,7 @@ namespace smt {
             language::t m_type;
             language::v m_value;
         public:
-            language(const language::t& t, language::v&& v) : m_type{t}, m_value{std::move(v)} {}
+            language(const language::t& t, language::v&& v) : m_type{t}, m_value{v} {}
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
@@ -155,6 +154,7 @@ namespace smt {
 
         class state {
         public:
+            using cref = std::reference_wrapper<const state>;
             struct hash {
                 std::size_t operator()(const state& s) const;
             };
@@ -197,9 +197,6 @@ namespace smt {
             bool definition_acyclic() const;
         };
 
-        using state_cref = std::reference_wrapper<const state>;
-        using state_cref_set = std::unordered_set<state_cref, state::hash, std::equal_to<state>>;
-
         enum class result {
             SAT, UNSAT, UNKNOWN
         };
@@ -214,7 +211,7 @@ namespace smt {
                     TO_VAR_VAR,
                     TO_CHAR_VAR,
                 };
-                const state_cref m_from;
+                const state::cref m_from;
                 const move::t m_type;
                 const std::vector<element> m_record;
                 move add_record(const element& e) const;
@@ -245,9 +242,9 @@ namespace smt {
         private:
             result m_status = result::UNKNOWN;
             record_graph m_records;
-            state_cref m_rec_root;
-            state_cref_set m_rec_success_leaves;
-            std::stack<state_cref> m_pending;
+            state::cref m_rec_root;
+            std::list<state::cref> m_rec_success_leaves;
+            std::stack<state::cref> m_pending;
         public:
             explicit neilsen_transforms(state&& root);
             bool in_status(const result& t) const { return m_status == t; };
@@ -256,7 +253,7 @@ namespace smt {
         private:
             bool finish_after_found(const state& s);
             result split_var_empty_cases();
-            std::queue<state_cref> split_first_level_var_empty();
+            std::queue<state::cref> split_first_level_var_empty();
             std::list<action> transform(const state& s) const;
         };
 
