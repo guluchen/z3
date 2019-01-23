@@ -495,8 +495,11 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::set<std::pair<expr*, int>> importantVars,
                 str::state root);
-            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination);
-
+            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars);
+                /*
+                *
+                */
+                void  initConnectingSize(std::map<expr*, int> importantVars, bool prep = true);
             void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars);
 
@@ -564,23 +567,287 @@ namespace smt {
                 int pMax,
                 std::map<expr*, int> connectedVariables,
                 bool optimizing);
+
+                /*
+                * Input: split a string
+                * Output: SMT
+                */
+                expr* toConstraint_havingConnectedVar_andConst(
+                        std::pair<expr*, int> a, /* const || regex */
+                        std::vector<std::pair<expr*, int> > elementNames, /* const + connected var */
+                        std::vector<int> split,
+                        std::string lhs, std::string rhs,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax);
+
+                    /*
+                    *
+                    */
+                    expr* lengthConstraint_toConnectedVarConstraint(
+                            std::pair<expr*, int> a, /* const || regex */
+                            std::vector<std::pair<expr*, int> > elementNames,
+                            std::vector<std::string> subElements,
+                            int currentPos,
+                            int subLength,
+                            std::string lhs, std::string rhs,
+                            std::map<expr*, int> connectedVariables,
+                            bool optimizing,
+                            int pMax);
+
+                        /*
+                        *
+                        */
+                        expr* connectedVar_atSpecificLocation(
+                                std::pair<expr*, int> a, /* const or regex */
+                                std::vector<std::pair<expr*, int>> elementNames, /* have connected var */
+                                int connectedVarPos,
+                                int connectedVarLength,
+                                std::string lhs, std::string rhs,
+                                std::map<expr*, int> connectedVariables,
+                                bool optimizing,
+                                int pMax);
+                /*
+                 * Input: split a string
+                 * Output: SMT
+                 */
+                expr* toConstraint_NoConnectedVar(
+                        std::pair<expr*, int> a, /* const || regex */
+                        std::vector<std::pair<expr*, int> > elementNames, /* no connected var */
+                        std::vector<int> split,
+                        std::string lhs, std::string rhs,
+                        bool optimizing);
+                /*
+                 *
+                 */
+                expr* unrollConnectedVariable(
+                        std::pair<expr*, int> a, /* connected variable */
+                        std::vector<std::pair<expr*, int> > elementNames, /* contain const */
+                        std::string lhs_str, std::string rhs_str,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax = PMAX);
+                    /*
+                     * Generate constraints for the case
+                     * X = T . "abc" . Y . Z
+                     * constPos: position of const element
+                     * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
+                     */
+                    expr* handle_SubConst_WithPosition_array(
+                            std::pair<expr*, int> a, // connected var
+                            std::vector<std::pair<expr*, int>> elementNames,
+                            std::string lhs_str, std::string rhs_str,
+                            int constPos,
+                            bool optimizing,
+                            int pMax = PMAX);
+
+                        /*
+                        * Generate constraints for the case
+                        * X = T . "abc"* . Y . Z
+                        * regexPos: position of regex element
+                        * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
+                        */
+                        expr* handle_Regex_WithPosition_array(
+                                std::pair<expr*, int> a, // connected var
+                                std::vector<std::pair<expr*, int>> elementNames,
+                                std::string lhs_str, std::string rhs_str,
+                                int regexPos,
+                                bool optimizing,
+                                int pMax = PMAX,
+                                expr* extraConstraint = NULL/* length = ? */
+                        );
+
+                        /*
+                        * Generate constraints for the case
+                        * X = T . "abc" . Y . Z
+                        * constPos: position of const element
+                        * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
+                        */
+                        expr* handle_Const_WithPosition_array(
+                                std::pair<expr*, int> a,
+                                std::vector<std::pair<expr*, int>> elementNames,
+                                std::string lhs_str, std::string rhs_str,
+                                int constPos,
+                                zstring value, /* value of regex */
+                                int start, int finish,
+                                bool optimizing,
+                                int pMax = PMAX,
+                                expr* extraConstraint = NULL /* length = ? */);
+
+                    /*
+                    * connected = a + connected + b
+                    */
+                    expr* handle_connected_connected_array(
+                            std::pair<expr*, int> a,
+                            std::vector<std::pair<expr*, int>> elementNames,
+                            std::string lhs_str, std::string rhs_str,
+                            int pos,
+                            int bound,
+                            bool optimizing,
+                            int pMax = PMAX);
+
+                /*
+                 *
+                 */
+                expr* toConstraint_ConnectedVar(
+                        std::pair<expr*, int> a, /* const or regex */
+                        std::vector<std::pair<expr*, int>> elementNames, /* have connected var, do not have const */
+                        std::string lhs, std::string rhs,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax);
+                /*
+                 * elementNames[pos] is a connected.
+                 * how many parts of that connected variable are in the const | regex
+                 */
+                int find_partsOfConnectedVariablesInAVector(
+                        int pos,
+                        std::vector<std::pair<expr*, int>> elementNames,
+                        expr* &subLen);
+                /*
+                * pre elements + pre fix of itself
+                */
+                expr* leng_prefix_lhs(std::pair<expr*, int> a,
+                                          std::vector<std::pair<expr*, int>> elementNames,
+                                          std::string lhs, std::string rhs,
+                                          int pos,
+                                          bool optimizing,
+                                          bool unrollMode);
+
+                /*
+                *  pre fix of itself
+                */
+                expr* leng_prefix_rhs(
+                        std::pair<expr*, int> a, /* var */
+                        std::string rhs,
+                        bool unrollMode);
+
+                /*
+                 * 0: No const, No connected var
+                * 1: const		No connected var
+                * 2: no const, connected var
+                * 3: have both
+                */
+                int findSplitType(
+                        std::vector<std::pair<expr*, int>> elementNames,
+                        std::map<expr*, int> connectedVariables);
+
+                /*
+                * Input: constA and a number of flats
+                * Output: all possible ways to split constA
+                */
+                std::vector<std::vector<int> > collectAllPossibleSplits(
+                        std::pair<expr*, int> lhs,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        bool optimizing);
+
+                /*
+                * textLeft: length of string
+                * nMax: number of flats
+                * pMax: size of a flat
+                *
+                * Pre-Condition: 1st flat and n-th flat must be greater than 0
+                * Output: of the form 1 * 1 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 3 + 2 * 3 = 10
+                */
+                void collectAllPossibleSplits_const(
+                        int pos,
+                        zstring str, /* const */
+                        int pMax,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<int> currentSplit,
+                        std::vector<std::vector<int> > &allPossibleSplits
+                );
+
+                bool feasibleSplit_const(
+                        zstring str,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<int> currentSplit);
             /*
              * Given a flat,
              * generate its size constraint
              */
             std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarSize(std::pair<expr*, int> a, std::string l_r_hs);
+            expr* getExprVarSize(std::pair<expr*, int> a);
             /*
              *
              */
             std::string generateFlatIter(std::pair<expr*, int> a);
-            expr* getExprVarIter(std::pair<expr*, int> a, std::string l_r_hs);
+            expr* getExprVarFlatIter(std::pair<expr*, int> a);
             /*
              * Given a flat,
              * generate its size constraint
              */
             std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarFlatSize(std::pair<expr*, int> a, std::string l_r_hs);
+            expr* getExprVarFlatSize(std::pair<expr*, int> a);
+
+            /*
+             *
+             */
+            expr* createEqualOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createMultiplyOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createModOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createAddOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createAddOperator(expr_ref_vector adds);
+            /*
+             *
+             */
+            expr* createLessOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createLessEqOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createGreaterOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createGreaterEqOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            expr* createAndOperator(expr_ref_vector ands);
+
+            /*
+             *
+             */
+            expr* createOrOperator(expr_ref_vector ors);
+
+            /*
+             *
+             */
+            expr* createNotOperator(expr_ref x);
+
+            /*
+             *
+             */
+            expr* createImpliesOperator(expr* a, expr* b);
+
+            /*
+             *
+             */
+            expr* createSelectOperator(expr* x, expr* y);
 
             int canBeOptimized_LHS(
                     int i, int startPos, int j,
@@ -600,7 +867,7 @@ namespace smt {
              * generate its array name
              */
             std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarFlatArray(std::pair<expr*, int> a, std::string l_r_hs);
+            expr* getExprVarFlatArray(std::pair<expr*, int> a);
             /*
             * First base case
             */
@@ -888,6 +1155,7 @@ namespace smt {
 
 
         // under approximation vars
+        static const int CONNECTINGSIZE = 300;
         static const int QCONSTMAX = 2;
         static const int QMAX = 2;
         static const int PMAX = 2;
@@ -905,7 +1173,7 @@ namespace smt {
         std::map<expr*, std::vector<expr*>> lenMap;
         std::map<expr*, std::vector<expr*>> iterMap;
         std::map<expr*, expr*> arrMap;
-
+        int connectingSize;
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
