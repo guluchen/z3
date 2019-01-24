@@ -1356,24 +1356,24 @@ namespace smt {
         ast_manager& m = get_manager();
         expr* x = nullptr, *y = nullptr;
         VERIFY(m_util_s.str.is_prefix(e, x, y));
-        //e = prefix(x, y), check if y is a prefix of x
+        //e = prefix(x, y), check if x is a prefix of y
 
         expr_ref s = mk_skolem(symbol("m_prefix_right"), x, y);
-        expr_ref ys(m_util_s.str.mk_concat(y, s), m);
+        expr_ref xs(m_util_s.str.mk_concat(x, s), m);
 
-        assert_axiom(mk_eq(x, ys, false));
+        assert_axiom(mk_eq(y, xs, false));
     }
 
     void theory_str::add_suffix_axiom(expr* e) {
         ast_manager& m = get_manager();
         expr* x = nullptr, *y = nullptr;
         VERIFY(m_util_s.str.is_suffix(e, x, y));
-        //e = suffix(x, y), check if y is a suffix of x
+        //e = suffix(x, y), check if x is a suffix of y
 
         expr_ref p = mk_skolem(symbol("m_suffix_left"), x, y);
-        expr_ref py(m_util_s.str.mk_concat(p, y), m);
+        expr_ref px(m_util_s.str.mk_concat(p, x), m);
 
-        assert_axiom(mk_eq(x, py, false));
+        assert_axiom(mk_eq(y, px, false));
     }
 
     void theory_str::dump_assignments() const {
