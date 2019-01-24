@@ -14,13 +14,13 @@
 (declare-fun tmpStr2 () String)
 
 
-
 (assert (= filename_0 s) )
+
 
 (assert (ite (str.contains filename_0 "/")
              (and (= filename_0 (str.++ tmpStr0 (str.++ "/" tmpStr1) ) )
                   (not (str.contains tmpStr1 "/") )
-                  (= i1 (str.len tmpStr0) )             
+                  (= i1 (str.len tmpStr0) )
              )
              (= i1 (- 0 1) )
         )
@@ -29,18 +29,17 @@
 
 (assert (ite (not (= i1 (- 0 1) ) )
              (and (= i2 (- (str.len filename_0) i1) )
-                  (= filename_1 (str.substr filename_0 i1 i2) )                  
+                  (= filename_1 (str.substr filename_0 i1 i2) )
              )
              (= filename_1 filename_0)
         ) 
 )
 
 
-
 (assert (ite (not (= i3 (- 0 1) ) )
              (= filename_2 (str.substr filename_1 0 i3) )
              (= filename_2 filename_1)
-        ) 
+        )
 )
 
 

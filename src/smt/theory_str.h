@@ -297,13 +297,13 @@ namespace smt {
         void assert_axiom(expr *e);
         void assert_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal,
                           literal l4 = null_literal, literal l5 = null_literal);
-        void add_substr_axiom(expr *e);
-        void add_contains_axiom(expr *e);
-        void add_prefix_axiom(expr *e);
-        void add_suffix_axiom(expr *e);
-        void add_char_at_axiom(expr *e);
-        void add_replace_axiom(expr *e);
-        void add_index_of_axiom(expr *e);
+        void handle_substr(expr *e);
+        void handle_contains(expr *e);
+        void handle_prefix(expr *e);
+        void handle_suffix(expr *e);
+        void handle_char_at(expr *e);
+        void handle_replace(expr *e);
+        void handle_index_of(expr *e);
         expr_ref mk_sub(expr* a, expr* b);
         void dump_assignments() const;
         bool is_theory_str_term(expr *e) const;
