@@ -13,8 +13,10 @@
 #include "ast/arith_decl_plugin.h"
 #include "ast/seq_decl_plugin.h"
 #include "smt/params/theory_str_params.h"
+#include "smt/smt_kernel.h"
 #include "smt/smt_theory.h"
 #include "util/scoped_vector.h"
+#include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 
 namespace smt {
@@ -120,6 +122,94 @@ namespace smt {
         };
 
         class automaton {
+        public:
+            using ptr = std::unique_ptr<automaton>;
+            using sptr = std::shared_ptr<automaton>;
+            using ptr_pair = std::pair<ptr, ptr>;
+        public:
+            virtual ~automaton() = 0;
+            bool contains(automaton::sptr other);
+            automaton::ptr minimize();
+            automaton::ptr complement();
+            automaton::ptr intersect(automaton::sptr other);
+            automaton::ptr remove_prefix(const element& e);
+            std::list<automaton::ptr_pair> split();
+            virtual bool operator==(automaton::sptr other) = 0;
+            virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
+        private:
+            virtual bool contains_imp(automaton::sptr other) = 0;
+            virtual automaton::ptr minimize_imp() = 0;
+            virtual automaton::ptr complement_imp() = 0;
+            virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
+            virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
+            virtual std::list<ptr_pair> split_imp() = 0;
+        };
+
+        class zaut : public automaton {
+        public:
+            using ptr = std::unique_ptr<zaut>;
+            using sptr = std::shared_ptr<zaut>;
+            using ptr_pair = std::pair<ptr, ptr>;
+            using internal_t = ::automaton<sym_expr, sym_expr_manager>;
+            using maker = re2automaton;
+            using handler = symbolic_automata<sym_expr, sym_expr_manager>;
+            using symbol_manager = sym_expr_manager;
+            class symbol_expr : public boolean_algebra<sym_expr *> {
+            public:
+                using expr_t = sym_expr *;
+            private:
+                ast_manager& m_ast_man;
+                expr_solver& m_solver;
+            public:
+                symbol_expr(ast_manager& m, expr_solver& s) : m_ast_man{m}, m_solver{s} {}
+                expr_t mk_true() override;
+                expr_t mk_false() override;
+                expr_t mk_and(expr_t e1, expr_t e2) override;
+                expr_t mk_and(unsigned size, const expr_t *es) override;
+                expr_t mk_or(expr_t e1, expr_t e2) override;
+                expr_t mk_or(unsigned size, const expr_t *es) override;
+                expr_t mk_not(expr_t e) override;
+                lbool is_sat(expr_t e) override;
+            };
+            class symbol_expr_solver : public expr_solver {
+                kernel m_kernel;
+            public:
+                symbol_expr_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
+                lbool check_sat(expr *e) override;
+            };
+        private:
+            handler& m_handler;
+            internal_t *m_imp;
+        public:
+            explicit zaut(handler& h, internal_t *a) : m_handler{h}, m_imp{a} {}
+            ~zaut() override { dealloc(m_imp); };
+            bool contains(automaton::sptr other);
+            zaut::ptr minimize();
+            zaut::ptr complement();
+            zaut::ptr intersect(automaton::sptr other);
+            zaut::ptr remove_prefix(const element& e);
+            std::list<zaut::ptr_pair> split();
+            bool operator==(automaton::sptr other) override;
+        private:
+            zaut::ptr mk_ptr(internal_t *a) const;
+            bool contains_imp(automaton::sptr other) override;
+            automaton::ptr minimize_imp() override;
+            automaton::ptr complement_imp() override;
+            automaton::ptr intersect_imp(automaton::sptr other) override;
+            automaton::ptr remove_prefix_imp(const element& e) override;
+            std::list<automaton::ptr_pair> split_imp() override;
+        };
+
+        class zaut_adaptor {
+            zaut::symbol_manager m_sym_man;
+            zaut::symbol_expr_solver m_sym_solver;
+            zaut::symbol_expr m_sym_boolean_algebra;
+            zaut::maker m_aut_make;
+            zaut::handler m_aut_man;
+            std::map<expr *, zaut::sptr> m_re_aut_cache;
+        public:
+            zaut_adaptor(ast_manager& m, context& ctx);
+            automaton::sptr mk_from_re_expr(expr *re);
         };
 
         class language {
@@ -130,7 +220,9 @@ namespace smt {
             };
             union v {
                 regex re;
-                automaton aut;
+                automaton::sptr aut;
+                v() {}
+                ~v() {}
             };
             struct hash {
                 std::size_t operator()(const language& l) const { return 0; };
@@ -139,16 +231,19 @@ namespace smt {
             language::t m_type;
             language::v m_value;
         public:
-            language(const language::t& t, language::v&& v) : m_type{t}, m_value{v} {}
+            explicit language(automaton::sptr a) : m_type{t::AUT} { m_value.aut = std::move(a); }
+            language(const language& other);
+            language(language&& other) noexcept;
+            ~language();
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
-            language complement() const { return {t::AUT, {}}; }
-            language concat(const language& other) const { return {t::AUT, {}}; }
-            language intersect(const language& other) const { return {t::AUT, {}}; }
-            language remove_prefix(const element& e) const { return {t::AUT, {}}; }
-            std::list<language::pair> split() const { return {}; }
-            bool operator==(const language& other) const { return true; }
+            language complement() const;
+            language concat(const language& other) const;
+            language intersect(const language& other) const;
+            language remove_prefix(const element& e) const;
+            std::list<language::pair> split() const;
+            bool operator==(const language& other) const { return true; };
             bool operator!=(const language& other) const { return !(*this == other); }
         };
 
@@ -268,6 +363,7 @@ namespace smt {
         th_rewriter m_rewrite;
         arith_util m_util_a;
         seq_util m_util_s;
+        std::unique_ptr<str::zaut_adaptor> m_aut_imp;
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
@@ -301,6 +397,7 @@ namespace smt {
         app *mk_string_var_expr(const std::string& name);
         literal mk_literal(expr *e);
         str::word_term mk_word_term(expr *e) const;
+        str::language mk_language(expr *e);
         str::state mk_state_from_todo() const;
         void add_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);

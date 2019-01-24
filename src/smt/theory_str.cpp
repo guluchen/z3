@@ -1,9 +1,12 @@
 #include <algorithm>
 #include <sstream>
 #include "ast/ast_pp.h"
+#include "ast/rewriter/bool_rewriter.h"
 #include "smt/theory_str.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
+
+#include "math/automata/symbolic_automata_def.h"
 
 namespace smt {
 
@@ -320,6 +323,227 @@ namespace smt {
             }
         }
 
+        automaton::~automaton() {
+        }
+
+        bool automaton::contains(automaton::sptr other) {
+            return contains_imp(std::move(other));
+        }
+
+        automaton::ptr automaton::minimize() {
+            return minimize_imp();
+        }
+
+        automaton::ptr automaton::complement() {
+            return complement_imp();
+        }
+
+        automaton::ptr automaton::intersect(automaton::sptr other) {
+            return intersect_imp(std::move(other));
+        }
+
+        automaton::ptr automaton::remove_prefix(const element& e) {
+            return remove_prefix_imp(e);
+        }
+
+        std::list<automaton::ptr_pair> automaton::split() {
+            return split_imp();
+        }
+
+        using zaut_symbol_t = zaut::symbol_expr::expr_t;
+
+        zaut_symbol_t zaut::symbol_expr::mk_true() {
+            expr_ref e{m_ast_man.mk_true(), m_ast_man};
+            return sym_expr::mk_pred(e, m_ast_man.mk_bool_sort());
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_false() {
+            expr_ref e{m_ast_man.mk_false(), m_ast_man};
+            return sym_expr::mk_pred(e, m_ast_man.mk_bool_sort());
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_and(zaut_symbol_t e1, zaut_symbol_t e2) {
+            if (e1->is_char() && e2->is_char()) {
+                if (e1->get_char() == e2->get_char()) return e1;
+                if (m_ast_man.are_distinct(e1->get_char(), e2->get_char())) {
+                    expr_ref e{m_ast_man.mk_false(), m_ast_man};
+                    return sym_expr::mk_pred(e, e1->get_sort());
+                }
+            }
+            sort *s = e1->get_sort();
+            if (m_ast_man.is_bool(s)) {
+                s = e2->get_sort();
+            }
+            var_ref v{m_ast_man.mk_var(0, s), m_ast_man};
+            expr_ref fml1 = e1->accept(v);
+            expr_ref fml2 = e2->accept(v);
+            if (m_ast_man.is_true(fml1)) return e2;
+            if (m_ast_man.is_true(fml2)) return e1;
+            if (fml1 == fml2) return e1;
+            expr_ref e{m_ast_man};
+            bool_rewriter{m_ast_man}.mk_and(fml1, fml2, e);
+            return sym_expr::mk_pred(e, e1->get_sort());
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_and(unsigned size, const zaut_symbol_t *es) {
+            switch (size) {
+                case 0:
+                    return mk_true();
+                case 1:
+                    return es[0];
+                default: {
+                    zaut_symbol_t e = es[0];
+                    for (unsigned i = 1; i < size; ++i) {
+                        e = mk_and(e, es[i]);
+                    }
+                    return e;
+                }
+            }
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_or(zaut_symbol_t e1, zaut_symbol_t e2) {
+            if (e1->is_char() && e2->is_char() && e1->get_char() == e2->get_char()) return e1;
+            if (e1 == e2) return e1;
+            var_ref v(m_ast_man.mk_var(0, e1->get_sort()), m_ast_man);
+            expr_ref fml1 = e1->accept(v);
+            expr_ref fml2 = e2->accept(v);
+            if (m_ast_man.is_false(fml1)) return e2;
+            if (m_ast_man.is_false(fml2)) return e1;
+            expr_ref e{m_ast_man};
+            bool_rewriter{m_ast_man}.mk_or(fml1, fml2, e);
+            return sym_expr::mk_pred(e, e1->get_sort());
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_or(unsigned size, const zaut_symbol_t *es) {
+            switch (size) {
+                case 0:
+                    return mk_false();
+                case 1:
+                    return es[0];
+                default: {
+                    zaut_symbol_t e = es[0];
+                    for (unsigned i = 1; i < size; ++i) {
+                        e = mk_or(e, es[i]);
+                    }
+                    return e;
+                }
+            }
+        }
+
+        zaut_symbol_t zaut::symbol_expr::mk_not(zaut_symbol_t e) {
+            var_ref v{m_ast_man.mk_var(0, e->get_sort()), m_ast_man};
+            expr_ref fml{m_ast_man.mk_not(e->accept(v)), m_ast_man};
+            return sym_expr::mk_pred(fml, e->get_sort());
+        }
+
+        lbool zaut::symbol_expr::is_sat(zaut_symbol_t e) {
+            if (e->is_char()) return l_true;
+            if (e->is_range()) {
+                // TODO: check lower is below upper
+            }
+            expr_ref v{m_ast_man.mk_fresh_const("x", e->get_sort()), m_ast_man};
+            expr_ref fml = e->accept(v);
+            if (m_ast_man.is_true(fml)) return l_true;
+            if (m_ast_man.is_false(fml)) return l_false;
+            return m_solver.check_sat(fml);
+        }
+
+        lbool zaut::symbol_expr_solver::check_sat(expr *const e) {
+            m_kernel.push();
+            m_kernel.assert_expr(e);
+            lbool r = m_kernel.check();
+            m_kernel.pop(1);
+            return r;
+        }
+
+        bool zaut::contains(automaton::sptr other) {
+            zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
+            return m_handler.mk_product(*m_imp, *m_handler.mk_complement(*o->m_imp))->is_empty();
+        }
+
+        zaut::ptr zaut::minimize() {
+            return mk_ptr(m_handler.mk_minimize(*m_imp));
+        }
+
+        zaut::ptr zaut::complement() {
+            return mk_ptr(m_handler.mk_complement(*m_imp));
+        }
+
+        zaut::ptr zaut::intersect(automaton::sptr other) {
+            zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
+            return mk_ptr(m_handler.mk_product(*m_imp, *o->m_imp));
+        }
+
+        zaut::ptr zaut::remove_prefix(const element& e) {
+        }
+
+        std::list<zaut::ptr_pair> zaut::split() {
+        }
+
+        bool zaut::operator==(automaton::sptr other) {
+            return contains(other) && other->contains(mk_ptr(m_imp));
+        }
+
+        zaut::ptr zaut::mk_ptr(zaut::internal_t *a) const {
+            return ptr{new zaut{m_handler, a}};
+        }
+
+        bool zaut::contains_imp(automaton::sptr other) {
+            return contains(std::move(other));
+        }
+
+        automaton::ptr zaut::minimize_imp() {
+            return minimize();
+        }
+
+        automaton::ptr zaut::complement_imp() {
+            return complement();
+        }
+
+        automaton::ptr zaut::intersect_imp(automaton::sptr other) {
+            return intersect(std::move(other));
+        }
+
+        automaton::ptr zaut::remove_prefix_imp(const element& e) {
+            return remove_prefix(e);
+        }
+
+        std::list<automaton::ptr_pair> zaut::split_imp() {
+            std::list<automaton::ptr_pair> result;
+            for (auto& kv : split()) {
+                result.emplace_back(std::make_pair(std::move(kv.first), std::move(kv.second)));
+            }
+            return result;
+        }
+
+        zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
+                : m_sym_solver{m, ctx.get_fparams()}, m_sym_boolean_algebra{m, m_sym_solver},
+                  m_aut_make{m}, m_aut_man{m_sym_man, m_sym_boolean_algebra} {}
+
+        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *re) {
+            if (m_re_aut_cache.find(re) != m_re_aut_cache.end()) {
+                return m_re_aut_cache[re];
+            }
+            if (!m_aut_make.has_solver()) {
+                m_aut_make.set_solver(&m_sym_solver);
+            }
+            zaut a{m_aut_man, m_aut_make(re)};
+            auto&& pair = std::make_pair(re, a.minimize());
+            return m_re_aut_cache.emplace(std::move(pair)).first->second;
+        }
+
+        language::language(const language& other) : m_type{other.m_type} {
+            if (typed(t::AUT)) m_value.aut = other.m_value.aut;
+        }
+
+        language::language(language&& other) noexcept : m_type{other.m_type} {
+            if (typed(t::AUT)) m_value.aut = std::move(other.m_value.aut);
+        }
+
+        language::~language() {
+            if (typed(t::AUT)) m_value.aut.~shared_ptr();
+        }
+
         std::size_t state::hash::operator()(const state& s) const {
             static const auto element_hash{element::hash{}};
             static const auto word_equation_hash{word_equation::hash{}};
@@ -631,7 +855,7 @@ namespace smt {
 
         void neilsen_transforms::record_graph::add_move(move&& m, const state& s) {
             SASSERT(contains(m.m_from) && contains(s));
-            m_backward_def[s].emplace_back(std::move(m));
+            m_backward_def[s].push_back(std::move(m));
         }
 
         const state& neilsen_transforms::record_graph::add_state(state&& s) {
@@ -952,7 +1176,7 @@ namespace smt {
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check level " << get_context().get_scope_level() << '\n';);
 
-        str::state&& root = mk_state_from_todo();
+        state&& root = mk_state_from_todo();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
@@ -1019,12 +1243,13 @@ namespace smt {
     }
 
     str::word_term theory_str::mk_word_term(expr *const e) const {
+        using namespace str;
         zstring s;
         if (m_util_s.str.is_string(e, s)) {
-            return str::word_term::from_string(s);
+            return word_term::from_string(s);
         }
         if (m_util_s.str.is_concat(e)) {
-            str::word_term result;
+            word_term result;
             for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
                 result.concat(mk_word_term(to_app(e)->get_arg(i)));
             }
@@ -1032,7 +1257,16 @@ namespace smt {
         }
         std::stringstream ss;
         ss << mk_pp(e, get_manager());
-        return str::word_term::from_variable({ss.str().data()});
+        return word_term::from_variable({ss.str().data()});
+    }
+
+    str::language theory_str::mk_language(expr *const e) {
+        using namespace str;
+        if (!m_aut_imp) {
+            m_aut_imp = std::unique_ptr<zaut_adaptor>(
+                    new zaut_adaptor{get_manager(), get_context()});
+        }
+        return language{m_aut_imp->mk_from_re_expr(e)};
     }
 
     str::state theory_str::mk_state_from_todo() const {
@@ -1078,6 +1312,11 @@ namespace smt {
     }
 
     void theory_str::set_conflict(const literal_vector& lv) {
+        context& ctx = get_context();
+        const auto& js = ext_theory_conflict_justification{
+                get_id(), ctx.get_region(), lv.size(), lv.c_ptr(), 0, nullptr, 0, nullptr};
+        ctx.set_conflict(ctx.mk_justification(js));
+        TRACE("str", ctx.display_literals_verbose(tout << "[Conflict]\n", lv) << '\n';);
     }
 
     void theory_str::block_curr_assignment() {
@@ -1175,6 +1414,26 @@ namespace smt {
     }
 
     void theory_str::handle_in_re(expr *const e, const bool is_true) {
+        expr *s = nullptr, *re = nullptr;
+        VERIFY(m_util_s.str.is_in_re(e, s, re));
+        ast_manager& m = get_manager();
+
+        expr_ref tmp{e, m};
+        m_rewrite(tmp);
+        if (m.is_true(tmp) != is_true) {
+            literal_vector lv;
+            lv.push_back(is_true ? mk_literal(e) : ~mk_literal(e));
+            set_conflict(lv);
+            return;
+        }
+        expr_ref r{re, m};
+        context& ctx = get_context();
+        literal l = ctx.get_literal(e);
+        if (!is_true) {
+            r = m_util_s.re.mk_complement(re);
+            l.neg();
+        }
+        str::language lang = mk_language(r);
     }
 
     void theory_str::dump_assignments() const {
