@@ -1404,14 +1404,14 @@ namespace smt {
         expr *s = nullptr, *i = nullptr, *l = nullptr;
         VERIFY(m_util_s.str.is_extract(e, s, i, l));
 
-        expr_ref x(mk_skolem(symbol("m_pre"), s, i), m);
+        expr_ref x(mk_skolem(symbol("m_substr_left"), s, i), m);
         expr_ref ls(m_util_s.str.mk_length(s), m);
         expr_ref lx(m_util_s.str.mk_length(x), m);
         expr_ref le(m_util_s.str.mk_length(e), m);
         expr_ref ls_minus_i_l(mk_sub(mk_sub(ls, i), l), m);
-        expr_ref y(mk_skolem(symbol("m_post"), s, ls_minus_i_l), m);
-        expr_ref xe(m_util_s.str.mk_concat(x, e), m);
-        expr_ref xey(m_util_s.str.mk_concat(x, e, y), m);
+        expr_ref y(mk_skolem(symbol("m_substr_right"), s, ls_minus_i_l), m);
+        expr_ref xe(m_util_s.str.mk_concat(x, e),m);
+        expr_ref xey(m_util_s.str.mk_concat(x, e, y),m);
         expr_ref zero(m_util_a.mk_int(0), m);
 
         literal i_ge_0 = mk_literal(m_util_a.mk_ge(i, zero));
