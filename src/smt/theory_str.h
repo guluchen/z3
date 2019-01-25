@@ -6,6 +6,7 @@
 #include <set>
 #include <stack>
 #include <map>
+#include <memory>
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
