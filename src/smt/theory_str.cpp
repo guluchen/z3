@@ -724,6 +724,9 @@ namespace smt {
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
+            if (s.m_wes_to_satisfy.empty()) {
+                return os << "(no word equation left)" << std::endl;
+            }
             for (const auto& we : s.m_wes_to_satisfy) {
                 os << we << '\n';
             }
@@ -870,7 +873,7 @@ namespace smt {
         }
 
         bool neilsen_transforms::should_explore_all() const {
-            return false;
+            return true;
         }
 
         result neilsen_transforms::check(const bool split_var_empty_ahead) {
@@ -917,9 +920,9 @@ namespace smt {
         }
 
         bool neilsen_transforms::finish_after_found(const state& s) {
+            STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
             m_rec_success_leaves.emplace_back(s);
             if (!should_explore_all()) {
-                STRACE("str", tout << "[Solved]\n" << s << '\n';);
                 m_status = result::SAT;
                 return true;
             }
@@ -1206,9 +1209,11 @@ namespace smt {
         }
         neilsen_transforms solver{std::move(root)};
         if (solver.check() == result::SAT) {
+            TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
         }
         block_curr_assignment();
+        TRACE("str", tout << "final_check ends\n";);
         return FC_CONTINUE;
     }
 
