@@ -458,7 +458,7 @@ namespace smt {
 
         bool zaut::contains(automaton::sptr other) {
             zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
-            return m_handler.mk_product(*m_imp, *m_handler.mk_complement(*o->m_imp))->is_empty();
+            return m_handler.mk_product(*o->m_imp, *m_handler.mk_complement(*m_imp))->is_empty();
         }
 
         zaut::ptr zaut::minimize() {
