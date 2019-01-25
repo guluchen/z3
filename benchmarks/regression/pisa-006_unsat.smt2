@@ -32,7 +32,7 @@
                   (= filename_1 (str.substr filename_0 i1 i2) )
              )
              (= filename_1 filename_0)
-        ) 
+        )
 )
 
 
