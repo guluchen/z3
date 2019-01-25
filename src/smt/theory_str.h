@@ -358,7 +358,6 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level = 0;
-        int m_aux_var_count = 0;
         const theory_str_params& m_params;
         th_rewriter m_rewrite;
         arith_util m_util_a;
@@ -394,18 +393,23 @@ namespace smt {
     private:
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
-        app *mk_string_var_expr(const std::string& name);
+        expr_ref mk_sub(expr* a, expr* b);
+        expr_ref mk_skolem(symbol const& s, expr* e1, expr* e2 = nullptr, expr* e3 = nullptr, expr* e4 = nullptr, sort* range = nullptr);
         literal mk_literal(expr *e);
-        str::word_term mk_word_term(expr *e) const;
         str::language mk_language(expr *e);
+        str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo() const;
         void add_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);
-        void set_conflict(const literal_vector& ls);
-        void block_curr_assignment();
-        void handle_extract(expr *e);
+        void handle_char_at(expr *e);
+        void handle_substr(expr *e);
+        void handle_index_of(expr *e);
+        void handle_prefix(expr *e);
+        void handle_suffix(expr *e);
         void handle_contains(expr *e);
         void handle_in_re(expr *e, bool is_true);
+        void set_conflict(const literal_vector& ls);
+        void block_curr_assignment();
         void dump_assignments() const;
     };
 
