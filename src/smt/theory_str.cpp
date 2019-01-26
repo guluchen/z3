@@ -607,13 +607,11 @@ namespace smt {
         }
 
         const word_equation& state::smallest_eq() const {
-            return m_wes_to_satisfy.empty() ? word_equation::null()
-                                            : *m_wes_to_satisfy.begin();
+            return m_wes_to_satisfy.empty() ? word_equation::null() : *m_wes_to_satisfy.begin();
         }
 
         const word_equation& state::only_one_eq_left() const {
-            return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin()
-                                                : word_equation::null();
+            return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin() : word_equation::null();
         }
 
         bool state::in_definition_form() const {
@@ -1124,7 +1122,6 @@ namespace smt {
         context& ctx = get_context();
         expr *e = ctx.bool_var2expr(v);
         expr *e1 = nullptr, *e2 = nullptr;
-        expr_ref f(m);
 
         if (m_util_s.str.is_prefix(e, e1, e2)) {
             if (is_true) {
@@ -1145,7 +1142,7 @@ namespace smt {
                 TRACE("str", tout << "TODO: not (" << mk_pp(e, m) << ")\n";);
             }
         } else if (m_util_s.str.is_in_re(e)) {
-            STRACE("str", tout << (is_true ? "" : "not ") << mk_pp(e, get_manager()) << "\n";);
+            STRACE("str", tout << (is_true ? "" : "not ") << mk_pp(e, m) << "\n";);
             handle_in_re(e, is_true);
         } else {
             TRACE("str", tout << "unhandled literal" << mk_pp(e, m) << "\n";);
@@ -1158,7 +1155,7 @@ namespace smt {
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
         m_word_eq_todo.push_back({l, r});
-        STRACE("str", tout << "new eq: " << mk_pp(l, m) << " = " << mk_pp(r, m) << '\n';);
+        STRACE("str", tout << "new eq: " << l << " = " << r << '\n';);
     }
 
     void theory_str::new_diseq_eh(theory_var x, theory_var y) {
@@ -1166,7 +1163,7 @@ namespace smt {
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
         m_word_diseq_todo.push_back({l, r});
-        STRACE("str", tout << "new diseq: " << mk_pp(l, m) << " != " << mk_pp(r, m) << '\n';);
+        STRACE("str", tout << "new diseq: " << l << " != " << r << '\n';);
     }
 
     bool theory_str::can_propagate() {
@@ -1484,7 +1481,7 @@ namespace smt {
             add_clause({~cnt, s_eq_empty, mk_eq(t, xsy, false)});
             add_clause({~cnt, s_eq_empty, mk_eq(e, lenx, false)});
             add_clause({~cnt, mk_literal(m_util_a.mk_ge(e, zero))});
-            //tightest_prefix(s, x);
+            // tightest_prefix(s, x);
         } else {
             expr_ref len_t(m_util_s.str.mk_length(t), m);
             literal offset_ge_len = mk_literal(m_util_a.mk_ge(mk_sub(offset, len_t), zero));
@@ -1578,7 +1575,7 @@ namespace smt {
         const auto& js = ext_theory_conflict_justification{
                 get_id(), ctx.get_region(), lv.size(), lv.c_ptr(), 0, nullptr, 0, nullptr};
         ctx.set_conflict(ctx.mk_justification(js));
-        TRACE("str", ctx.display_literals_verbose(tout << "[Conflict]\n", lv) << '\n';);
+        STRACE("str", ctx.display_literals_verbose(tout << "[Conflict]\n", lv) << '\n';);
     }
 
     void theory_str::block_curr_assignment() {
@@ -1612,4 +1609,5 @@ namespace smt {
                 }
         );
     }
+
 }
