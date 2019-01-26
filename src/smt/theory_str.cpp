@@ -1554,7 +1554,7 @@ namespace smt {
 
         expr_ref tmp{e, m};
         m_rewrite(tmp);
-        if (m.is_true(tmp) != is_true) {
+        if ((m.is_false(tmp) && is_true) || (m.is_true(tmp) && !is_true)) {
             literal_vector lv;
             lv.push_back(is_true ? mk_literal(e) : ~mk_literal(e));
             set_conflict(lv);
