@@ -20,6 +20,7 @@
 #include "util/scoped_ptr_vector.h"
 #include "util/trail.h"
 #include "util/union_find.h"
+#include "smt/smt_arith_value.h"
 
 #define ROUNDCHECK 1
 #define LOCALSPLITMAX 20
@@ -495,18 +496,25 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::set<std::pair<expr*, int>> importantVars,
                 str::state root);
+
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars);
                 /*
                 *
                 */
                 void  initConnectingSize(std::map<expr*, int> importantVars, bool prep = true);
+                    void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
             void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars);
-
+            /*
+             *
+             */
+            expr* constraintsIfEmpty(
+                    ptr_vector<expr> lhs,
+                    ptr_vector<expr> rhs);
             /*
              * convert lhs == rhs to SMT formula
              */
-            std::vector<expr*> equalityToSMT(
+            expr* equalityToSMT(
                 std::string lhs, std::string rhs,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
@@ -522,7 +530,7 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              *
              */
-            std::vector<expr*> collectAllPossibleArrangements(
+            expr_ref_vector collectAllPossibleArrangements(
                 std::string lhs_str, std::string rhs_str,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
@@ -557,6 +565,27 @@ namespace smt {
                                             std::vector<std::pair<expr*, int>> lhs_elements,
                                             std::vector<std::pair<expr*, int>> rhs_elements,
                                             std::map<expr*, int> connectedVariables);
+
+            /*
+             *
+             * Flat = empty
+             */
+
+            expr* generateConstraint00(
+                    std::pair<expr*, int> a,
+                    std::string l_r_hs);
+
+            /*
+             * Flat = Flat
+             * size = size && it = it  ||
+             * size = size && it = 1
+             */
+            expr* generateConstraint01(
+                    std::string lhs_str, std::string rhs_str,
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    int pMax,
+                    std::map<expr*, int> connectedVariables,
+                    bool optimizing);
             /*
              * Flat = sum (flats)
              */
@@ -587,7 +616,7 @@ namespace smt {
                     expr* lengthConstraint_toConnectedVarConstraint(
                             std::pair<expr*, int> a, /* const || regex */
                             std::vector<std::pair<expr*, int> > elementNames,
-                            std::vector<std::string> subElements,
+                            expr_ref_vector subElements,
                             int currentPos,
                             int subLength,
                             std::string lhs, std::string rhs,
@@ -757,6 +786,25 @@ namespace smt {
                         std::vector<int> currentSplit,
                         std::vector<std::vector<int> > &allPossibleSplits
                 );
+
+                zstring parse_regex_content(expr* a);
+
+                zstring parse_regex_full_content(expr* a);
+
+
+                bool isUnionStr(expr* a);
+
+                bool isUnionStr(zstring a);
+
+                std::set<zstring > extendComponent(zstring  s);
+
+                std::vector<zstring> collectAlternativeComponents(zstring  s);
+
+                /*
+                * (a|b|c)*_xxx --> range <a, c>
+                */
+                std::pair<int, int> collectCharRange(zstring a);
+                std::pair<int, int> collectCharRange(expr* a);
 
                 bool feasibleSplit_const(
                         zstring str,
@@ -1050,6 +1098,8 @@ namespace smt {
         zstring get_std_regex_str(expr * regex);
         bool get_len_value(expr* e, rational& val);
         bool get_arith_value(expr* e, rational& val) const;
+        bool lower_bound(expr* _e, rational& lo) const;
+        bool upper_bound(expr* _e, rational& hi) const;
         void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
         /*
          * Collect constant strings (from left to right) in an AST node.
