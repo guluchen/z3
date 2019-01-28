@@ -158,6 +158,11 @@ namespace smt {
             class symbol_expr : public boolean_algebra<sym_expr *> {
             public:
                 using expr_t = sym_expr *;
+                struct displayer {
+                    std::ostream& display(std::ostream& os, expr_t e) const {
+                        return e->display(os);
+                    }
+                };
             private:
                 ast_manager& m_ast_man;
                 expr_solver& m_solver;
@@ -182,7 +187,10 @@ namespace smt {
             handler& m_handler;
             internal_t *m_imp;
         public:
-            explicit zaut(handler& h, internal_t *a) : m_handler{h}, m_imp{a} {}
+            explicit zaut(handler& h, internal_t *a) : m_handler{h}, m_imp{a} {
+                symbol_expr::displayer d{}; // TODO: for temporary testing
+                a->display(std::cout, d);
+            }
             ~zaut() override { dealloc(m_imp); };
             bool contains(automaton::sptr other);
             zaut::ptr minimize();
@@ -203,13 +211,14 @@ namespace smt {
 
         class zaut_adaptor {
             zaut::symbol_manager m_sym_man;
-            zaut::symbol_expr_solver m_sym_solver;
-            zaut::symbol_expr m_sym_boolean_algebra;
+            zaut::symbol_expr_solver* m_sym_solver;
+            zaut::symbol_expr* m_sym_boolean_algebra;
+            zaut::handler* m_aut_man;
             zaut::maker m_aut_make;
-            zaut::handler m_aut_man;
             std::map<expr *, zaut::sptr> m_re_aut_cache;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
+            ~zaut_adaptor();
             automaton::sptr mk_from_re_expr(expr *re);
         };
 
@@ -367,6 +376,7 @@ namespace smt {
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
+        scoped_vector<str::expr_pair> m_membership_todo;
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
@@ -394,12 +404,14 @@ namespace smt {
     private:
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
+        bool is_regex_sort(expr *e) const;
         expr_ref mk_sub(expr* a, expr* b);
         expr_ref mk_skolem(symbol const& s, expr* e1, expr* e2 = nullptr, expr* e3 = nullptr, expr* e4 = nullptr, sort* range = nullptr);
         literal mk_literal(expr *e);
+        bool_var mk_bool_var(expr *e);
         str::language mk_language(expr *e);
         str::word_term mk_word_term(expr *e) const;
-        str::state mk_state_from_todo() const;
+        str::state mk_state_from_todo();
         void add_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
