@@ -350,6 +350,10 @@ namespace smt {
             return split_imp();
         }
 
+        std::set<unsigned> automaton::reachable_states(unsigned st) const {
+            return reachable_states_imp(st);
+        }
+
         using zaut_symbol_t = zaut::symbol_expr::expr_t;
 
         zaut_symbol_t zaut::symbol_expr::mk_true() {
@@ -477,7 +481,56 @@ namespace smt {
         zaut::ptr zaut::remove_prefix(const element& e) {
         }
 
+        //WIP
         std::list<zaut::ptr_pair> zaut::split() {
+            std::set<unsigned> states = reachable_states(m_imp->init());
+            unsigned_vector fin = m_imp->final_states();
+            std::list<zaut::ptr_pair> ret;
+            moves_t mvs; //assume that set of states consists of consecutive numbers (from 0).
+
+            for (auto st : states) {
+                mvs.append(m_imp->get_moves_from(st));
+            }
+
+            for (auto middle : states) {
+                internal_t* cl1 = m_imp->clone();
+                internal_t* cl2 = alloc(internal_t, m_sym_man, middle, m_imp->final_states(), mvs);
+                for(auto fin : fin) {
+                    cl1->remove_from_final_states(fin);
+                }
+                cl1->add_to_final_states(middle);
+                ptr ptr1 = mk_ptr(cl1);
+                ptr ptr2 = mk_ptr(cl2);
+                ret.push_back(std::make_pair(ptr1->minimize(), ptr2->minimize()));
+            }
+            return ret;
+        }
+
+        //WIP
+        std::set<unsigned> zaut::reachable_states(unsigned st) const {
+            std::vector<unsigned> todo;
+            zaut::moves_t mvs;
+            std::set<unsigned> ret({st});
+            unsigned act;
+
+            todo.push_back(st);
+            while(!todo.empty()) {
+                act = todo.back();
+                todo.pop_back();
+                m_imp->get_moves_from(act, mvs, false); //assume that we have automaton without eps transitions
+                for (unsigned i = 0; i < mvs.size(); i++) {
+                    ref_t con(mvs[i].t(), m_sym_man);
+                    lbool is_sat = m_sym_boolean_algebra.is_sat(con);
+                    if (is_sat == l_undef || is_sat == l_false)
+                        continue;
+                    if (ret.find(mvs[i].dst()) != ret.end())
+                    {
+                        ret.emplace(mvs[i].dst());
+                        todo.push_back(mvs[i].dst());
+                    }
+                }
+            }
+            return ret;
         }
 
         bool zaut::operator==(automaton::sptr other) {
@@ -485,7 +538,7 @@ namespace smt {
         }
 
         zaut::ptr zaut::mk_ptr(zaut::internal_t *a) const {
-            return ptr{new zaut{m_handler, a}};
+            return ptr{new zaut{m_handler, a, m_sym_man, m_sym_boolean_algebra}};
         }
 
         bool zaut::contains_imp(automaton::sptr other) {
@@ -516,6 +569,10 @@ namespace smt {
             return result;
         }
 
+        std::set<unsigned> zaut::reachable_states_imp(unsigned st) const {
+            return reachable_states(st);
+        }
+
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
                 : m_sym_solver{m, ctx.get_fparams()}, m_sym_boolean_algebra{m, m_sym_solver},
                   m_aut_make{m}, m_aut_man{m_sym_man, m_sym_boolean_algebra} {}
@@ -527,7 +584,7 @@ namespace smt {
             if (!m_aut_make.has_solver()) {
                 m_aut_make.set_solver(&m_sym_solver);
             }
-            zaut a{m_aut_man, m_aut_make(re)};
+            zaut a{m_aut_man, m_aut_make(re), m_sym_man, m_sym_boolean_algebra};
             auto&& pair = std::make_pair(re, a.minimize());
             return m_re_aut_cache.emplace(std::move(pair)).first->second;
         }

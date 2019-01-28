@@ -135,6 +135,7 @@ namespace smt {
             automaton::ptr intersect(automaton::sptr other);
             automaton::ptr remove_prefix(const element& e);
             std::list<automaton::ptr_pair> split();
+            std::set<unsigned> reachable_states(unsigned st) const;
             virtual bool operator==(automaton::sptr other) = 0;
             virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
         private:
@@ -144,6 +145,7 @@ namespace smt {
             virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
             virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
             virtual std::list<ptr_pair> split_imp() = 0;
+            virtual std::set<unsigned> reachable_states_imp(unsigned st) const = 0;
         };
 
         class zaut : public automaton {
@@ -155,6 +157,8 @@ namespace smt {
             using maker = re2automaton;
             using handler = symbolic_automata<sym_expr, sym_expr_manager>;
             using symbol_manager = sym_expr_manager;
+            using moves_t = internal_t::moves;
+            using ref_t = obj_ref<sym_expr, sym_expr_manager>;
             class symbol_expr : public boolean_algebra<sym_expr *> {
             public:
                 using expr_t = sym_expr *;
@@ -181,8 +185,11 @@ namespace smt {
         private:
             handler& m_handler;
             internal_t *m_imp;
+            symbol_manager& m_sym_man;
+            symbol_expr& m_sym_boolean_algebra;
         public:
-            explicit zaut(handler& h, internal_t *a) : m_handler{h}, m_imp{a} {}
+            explicit zaut(handler& h, internal_t *a, symbol_manager& s, symbol_expr& ba) : m_handler{h}, m_imp{a},
+              m_sym_man{s}, m_sym_boolean_algebra{ba} {}
             ~zaut() override { dealloc(m_imp); };
             bool contains(automaton::sptr other);
             zaut::ptr minimize();
@@ -191,6 +198,7 @@ namespace smt {
             zaut::ptr remove_prefix(const element& e);
             std::list<zaut::ptr_pair> split();
             bool operator==(automaton::sptr other) override;
+            std::set<unsigned> reachable_states(unsigned st) const;
         private:
             zaut::ptr mk_ptr(internal_t *a) const;
             bool contains_imp(automaton::sptr other) override;
@@ -199,6 +207,7 @@ namespace smt {
             automaton::ptr intersect_imp(automaton::sptr other) override;
             automaton::ptr remove_prefix_imp(const element& e) override;
             std::list<automaton::ptr_pair> split_imp() override;
+            std::set<unsigned> reachable_states_imp(unsigned st) const override;
         };
 
         class zaut_adaptor {
