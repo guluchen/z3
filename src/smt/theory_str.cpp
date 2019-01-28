@@ -3238,6 +3238,7 @@ namespace smt {
             std::map<expr*, std::set<expr*>> eq_combination,
             std::set<std::pair<expr*, int>> importantVars,
             str::state root) {
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
 //        printEqualMap(eq_combination);
 //        staticIntegerAnalysis(fileDir);
 //        resetUnderapprox(wellForm);
@@ -3252,6 +3253,7 @@ namespace smt {
     }
 
     void theory_str::staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         std::set<expr*> allStrExprs;
         std::set<expr*> allConstExprs;
@@ -3291,17 +3293,19 @@ namespace smt {
             }
             else {
                 rational lo(-1), hi(-1);
-                lower_bound(u.str.mk_length(v), lo);
-                upper_bound(u.str.mk_length(v), hi);
+                lower_bound(v, lo);
+                upper_bound(v, hi);
                 maxInt = std::max(maxInt, lo.get_int32());
                 maxInt = std::max(maxInt, hi.get_int32());
             }
         }
 
         connectingSize = maxInt + allStrExprs.size() + sumConst;
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
     void theory_str::initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         std::set<expr*> allStrExprs;
         lenMap.clear();
@@ -3362,48 +3366,32 @@ namespace smt {
                 }
             }
         }
-        initConnectingSize(importantVars, false);
-        initConnectingSize(importantVars);
+        initConnectingSize(eq_combination, importantVars, false);
+        initConnectingSize(eq_combination, importantVars);
     }
 
 
     /*
      *
      */
-    void theory_str::initConnectingSize(std::map<expr*, int> importantVars, bool prep){
-        if (!prep){
-            connectingSize = std::max(maxInt + 10, CONNECTINGSIZE);
-            for (const auto& v : varLength) {
-                connectingSize = std::max(connectingSize, v.second + 1);
-            }
-        }
+    void theory_str::initConnectingSize(
+            std::map<expr*, std::set<expr*>> eq_combination,
+            std::map<expr*, int> importantVars, bool prep){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         int oldConnectingSize = connectingSize;
-        if (prep) {
-            int varCount = 0;
-            for (const auto& var : allVariables)
-                if (var.find("$$_") != 0)
-                    varCount++;
-
-            sumConstLength = std::max(sumConstLength, (long) 2);
-            maxInt = std::max(maxInt, 1);
-
-            long tmp = maxInt + sumConstLength + varCount;
-            if (tmp < connectingSize) {
-                connectingSize = tmp;
-            }
-
+        staticIntegerAnalysis(eq_combination);
+        if (!prep){
+            connectingSize = std::max(CONNECTINGSIZE, connectingSize);
         }
-
-        if (prep){
-            for (auto& v : importantVars)
-                if (v.second == oldConnectingSize)
-                    v.second = connectingSize;
-        }
+        for (auto &v : importantVars)
+            if (v.second == -1 || v.second == oldConnectingSize)
+                v.second = connectingSize;
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
     void theory_str::convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                        std::map<expr*, int> importantVars){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         clock_t t = clock();
         for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
 
@@ -3446,7 +3434,7 @@ namespace smt {
             }
             else if (maxLocal > maxPConsidered) {
                 /* add an eq = flat . flat . flat, then other equalities will compare with it */
-                std::vector<expr*> genericFlat = createSetOfFlatVariables(flatP);
+                std::vector<expr*> genericFlat = createSetOfFlatVariables(flatP, importantVars);
                 std::vector<std::pair<expr*, int>> lhs_elements = createEquality(genericFlat);
                 /* compare with others */
                 for (const auto& element: it->second) {
@@ -8717,6 +8705,7 @@ namespace smt {
     }
 
     bool theory_str::lower_bound(expr* _e, rational& lo) const {
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         context& ctx = get_context();
         ast_manager & m = get_manager();
         expr_ref e(u.str.mk_length(_e), m);

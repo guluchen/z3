@@ -501,7 +501,7 @@ namespace smt {
                 /*
                 *
                 */
-                void  initConnectingSize(std::map<expr*, int> importantVars, bool prep = true);
+                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars, bool prep = true);
                     void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
             void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars);
@@ -1205,7 +1205,7 @@ namespace smt {
 
 
         // under approximation vars
-        static const int CONNECTINGSIZE = 300;
+        const int CONNECTINGSIZE = 300;
         static const int QCONSTMAX = 2;
         static const int QMAX = 2;
         static const int PMAX = 2;
