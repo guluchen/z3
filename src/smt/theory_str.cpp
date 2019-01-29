@@ -496,7 +496,6 @@ namespace smt {
         zaut::ptr zaut::remove_prefix(const element& e) {
         }
 
-        //WIP
         std::list<zaut::ptr_pair> zaut::split() {
             std::set<state> states = reachable_states(m_imp->init());
             unsigned_vector fin = m_imp->final_states();
@@ -519,10 +518,8 @@ namespace smt {
             return ret;
         }
 
-        // WIP
         std::set<zaut::state> zaut::reachable_states(state st) const {
             std::vector<state> todo;
-            moves mvs;
             std::set<state> ret({st});
             unsigned act;
 
@@ -530,13 +527,14 @@ namespace smt {
             while (!todo.empty()) {
                 act = todo.back();
                 todo.pop_back();
-                m_imp->get_moves_from(act, mvs, false);
-                // assume that we have automaton without eps transitions
+                moves const& mvs = m_imp->get_moves_from(act);
                 for (unsigned i = 0; i < mvs.size(); i++) {
-                    symbol_ref con(mvs[i].t(), m_sym_man);
-                    lbool is_sat = m_sym_ba.is_sat(con);
-                    if (is_sat == l_undef || is_sat == l_false)
-                        continue;
+                    if(!mvs[i].is_epsilon()) {
+                        symbol_ref con(mvs[i].t(), m_sym_man);
+                        lbool is_sat = m_sym_ba.is_sat(con);
+                        if (is_sat == l_undef || is_sat == l_false)
+                            continue;
+                    }
                     if (ret.find(mvs[i].dst()) == ret.end()) {
                         ret.emplace(mvs[i].dst());
                         todo.push_back(mvs[i].dst());
