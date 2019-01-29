@@ -451,11 +451,11 @@ namespace smt {
                     STRACE("str", tout << msg << std::endl;);
 
                 for (unsigned int i = 0; i < left_arr.size(); ++i)
-                    STRACE("str", tout << left_arr[i] << " " << std::endl;);
+                    STRACE("str", tout << left_arr[i] << " ";);
 
                 STRACE("str", tout << std::endl;);
                 for (unsigned int i = 0; i < right_arr.size(); ++i)
-                    STRACE("str", tout << right_arr[i] << " " << std::endl;);
+                    STRACE("str", tout << right_arr[i] << " ";);
                 STRACE("str", tout <<  std::endl;);
             }
         };
@@ -497,11 +497,11 @@ namespace smt {
                 std::set<std::pair<expr*, int>> importantVars,
                 str::state root);
 
-            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars);
+            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 /*
                 *
                 */
-                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> importantVars, bool prep = true);
+                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
                     void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
             void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars);
@@ -951,6 +951,7 @@ namespace smt {
             std::vector<std::pair<expr*, int>> createEquality(expr* node);
             std::vector<std::pair<expr*, int>> createEquality(ptr_vector<expr> list);
             std::vector<std::pair<expr*, int>> createEquality(std::vector<expr*> list);
+                void createInternalVar(expr* v);
             std::vector<expr*> set2vector(std::set<expr*> s);
             unsigned findMaxP(std::vector<expr*> v);
             /*
