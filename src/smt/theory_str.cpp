@@ -334,6 +334,10 @@ namespace smt {
             return minimize_imp();
         }
 
+        automaton::ptr automaton::determinize() {
+            return determinize_imp();
+        }
+
         automaton::ptr automaton::complement() {
             return complement_imp();
         }
@@ -484,6 +488,11 @@ namespace smt {
             return mk_ptr(m_handler.mk_minimize(*m_imp));
         }
 
+        zaut::ptr zaut::determinize() {
+            //error in the invocation of mk_determinstic (compiler error)
+            return mk_ptr(m_handler.mk_minimize(*m_imp));
+        }
+
         zaut::ptr zaut::complement() {
             return mk_ptr(m_handler.mk_complement(*m_imp));
         }
@@ -567,6 +576,10 @@ namespace smt {
 
         automaton::ptr zaut::minimize_imp() {
             return minimize();
+        }
+
+        automaton::ptr zaut::determinize_imp() {
+            return determinize();
         }
 
         automaton::ptr zaut::complement_imp() {

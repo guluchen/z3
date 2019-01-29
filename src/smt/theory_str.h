@@ -135,6 +135,7 @@ namespace smt {
             virtual ~automaton() = 0;
             bool contains(automaton::sptr other);
             automaton::ptr minimize();
+            automaton::ptr determinize();
             automaton::ptr complement();
             automaton::ptr intersect(automaton::sptr other);
             automaton::ptr remove_prefix(const element& e);
@@ -147,6 +148,7 @@ namespace smt {
         private:
             virtual bool contains_imp(automaton::sptr other) = 0;
             virtual automaton::ptr minimize_imp() = 0;
+            virtual automaton::ptr determinize_imp() = 0;
             virtual automaton::ptr complement_imp() = 0;
             virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
             virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
@@ -208,6 +210,7 @@ namespace smt {
             std::set<len_constraint> length_constraints() const;
             std::ostream& display(std::ostream& out) const;
             zaut::ptr minimize();
+            zaut::ptr determinize();
             zaut::ptr complement();
             zaut::ptr intersect(automaton::sptr other);
             zaut::ptr remove_prefix(const element& e);
@@ -217,6 +220,7 @@ namespace smt {
             zaut::ptr mk_ptr(internal *a) const;
             bool contains_imp(automaton::sptr other) override;
             automaton::ptr minimize_imp() override;
+            automaton::ptr determinize_imp() override;
             automaton::ptr complement_imp() override;
             automaton::ptr intersect_imp(automaton::sptr other) override;
             automaton::ptr remove_prefix_imp(const element& e) override;
