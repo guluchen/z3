@@ -127,6 +127,10 @@ namespace smt {
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
             using ptr_pair = std::pair<ptr, ptr>;
+
+            using len_offset = unsigned;
+            using len_period = unsigned;
+            using len_constraint = std::pair<len_offset, len_period>;
         public:
             virtual ~automaton() = 0;
             bool contains(automaton::sptr other);
@@ -136,6 +140,7 @@ namespace smt {
             automaton::ptr remove_prefix(const element& e);
             std::list<automaton::ptr_pair> split();
             std::set<unsigned> reachable_states(unsigned st) const;
+            std::set<len_constraint> length_constraints() const;
             virtual bool operator==(automaton::sptr other) = 0;
             virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
         private:
@@ -146,6 +151,7 @@ namespace smt {
             virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
             virtual std::list<ptr_pair> split_imp() = 0;
             virtual std::set<unsigned> reachable_states_imp(unsigned st) const = 0;
+            virtual std::set<len_constraint> length_constraints_imp() const = 0;
         };
 
         class zaut : public automaton {
@@ -197,6 +203,7 @@ namespace smt {
             ~zaut() override { dealloc(m_imp); };
             bool contains(automaton::sptr other);
             std::set<state> reachable_states(state s) const;
+            std::set<len_constraint> length_constraints() const;
             zaut::ptr minimize();
             zaut::ptr complement();
             zaut::ptr intersect(automaton::sptr other);
@@ -212,6 +219,7 @@ namespace smt {
             automaton::ptr remove_prefix_imp(const element& e) override;
             std::list<automaton::ptr_pair> split_imp() override;
             std::set<unsigned> reachable_states_imp(unsigned st) const override;
+            std::set<len_constraint> length_constraints_imp() const override;
         };
 
         class zaut_adaptor {

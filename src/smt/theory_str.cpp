@@ -354,6 +354,10 @@ namespace smt {
             return reachable_states_imp(st);
         }
 
+        std::set<automaton::len_constraint> automaton::length_constraints() const {
+            return length_constraints_imp();
+        }
+
         zaut::symbol_boolean_algebra::symbol_boolean_algebra(ast_manager& m, expr_solver& s)
                 : m_ast_man{m}, m_solver{s} {}
 
@@ -542,6 +546,10 @@ namespace smt {
             return ret;
         }
 
+        std::set<automaton::len_constraint> zaut::length_constraints() const {
+            return std::set<automaton::len_constraint>();
+        }
+
         bool zaut::operator==(automaton::sptr other) {
             return contains(other) && other->contains(mk_ptr(m_imp));
         }
@@ -576,6 +584,10 @@ namespace smt {
                 result.emplace_back(std::make_pair(std::move(kv.first), std::move(kv.second)));
             }
             return result;
+        }
+
+        std::set<automaton::len_constraint> zaut::length_constraints_imp() const {
+            return length_constraints();
         }
 
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m} {
