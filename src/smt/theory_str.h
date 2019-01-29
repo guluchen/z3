@@ -141,6 +141,7 @@ namespace smt {
             std::list<automaton::ptr_pair> split();
             std::set<unsigned> reachable_states(unsigned st) const;
             std::set<len_constraint> length_constraints() const;
+            std::ostream& display(std::ostream& out) const { return display_imp(out); };
             virtual bool operator==(automaton::sptr other) = 0;
             virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
         private:
@@ -152,6 +153,7 @@ namespace smt {
             virtual std::list<ptr_pair> split_imp() = 0;
             virtual std::set<unsigned> reachable_states_imp(unsigned st) const = 0;
             virtual std::set<len_constraint> length_constraints_imp() const = 0;
+            virtual std::ostream& display_imp(std::ostream& out) const = 0;
         };
 
         class zaut : public automaton {
@@ -204,6 +206,7 @@ namespace smt {
             bool contains(automaton::sptr other);
             std::set<state> reachable_states(state s) const;
             std::set<len_constraint> length_constraints() const;
+            std::ostream& display(std::ostream& out) const;
             zaut::ptr minimize();
             zaut::ptr complement();
             zaut::ptr intersect(automaton::sptr other);
@@ -220,6 +223,7 @@ namespace smt {
             std::list<automaton::ptr_pair> split_imp() override;
             std::set<unsigned> reachable_states_imp(unsigned st) const override;
             std::set<len_constraint> length_constraints_imp() const override;
+            std::ostream& display_imp(std::ostream& out) const override;
         };
 
         class zaut_adaptor {

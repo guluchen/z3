@@ -469,8 +469,10 @@ namespace smt {
 
         zaut::zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h)
                 : m_imp{a}, m_sym_man{s}, m_sym_ba{ba}, m_handler{h} {
-            symbol_boolean_algebra::displayer d{}; // TODO: for temporary testing
-            a->display(std::cout, d);
+            /*symbol_boolean_algebra::displayer d{}; // TODO: for temporary testing
+            a->display(std::cout, d); */
+
+            display(std::cout);
         }
 
         bool zaut::contains(automaton::sptr other) {
@@ -512,9 +514,7 @@ namespace smt {
                     cl1->remove_from_final_states(f);
                 }
                 cl1->add_to_final_states(middle);
-                ptr ptr1 = mk_ptr(cl1);
-                ptr ptr2 = mk_ptr(cl2);
-                ret.emplace_back(std::make_pair(ptr1->minimize(), ptr2->minimize()));
+                ret.emplace_back(std::make_pair(mk_ptr(cl1), mk_ptr(cl2)));
             }
             return ret;
         }
@@ -537,7 +537,7 @@ namespace smt {
                     lbool is_sat = m_sym_ba.is_sat(con);
                     if (is_sat == l_undef || is_sat == l_false)
                         continue;
-                    if (ret.find(mvs[i].dst()) != ret.end()) {
+                    if (ret.find(mvs[i].dst()) == ret.end()) {
                         ret.emplace(mvs[i].dst());
                         todo.push_back(mvs[i].dst());
                     }
@@ -548,6 +548,11 @@ namespace smt {
 
         std::set<automaton::len_constraint> zaut::length_constraints() const {
             return std::set<automaton::len_constraint>();
+        }
+
+        std::ostream& zaut::display(std::ostream& out) const {
+            symbol_boolean_algebra::displayer d{};
+            return m_imp->display(out, d);
         }
 
         bool zaut::operator==(automaton::sptr other) {
@@ -588,6 +593,10 @@ namespace smt {
 
         std::set<automaton::len_constraint> zaut::length_constraints_imp() const {
             return length_constraints();
+        }
+
+        std::ostream& zaut::display_imp(std::ostream& out) const {
+            return display(out);
         }
 
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m} {
@@ -1433,7 +1442,7 @@ namespace smt {
         STRACE("str", tout << "membership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {
-            mk_language(m.second); // TODO: for temporary testing
+            auto tmp = mk_language(m.second); // TODO: for temporary testing
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;
