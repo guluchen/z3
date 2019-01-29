@@ -153,54 +153,58 @@ namespace smt {
             using ptr = std::unique_ptr<zaut>;
             using sptr = std::shared_ptr<zaut>;
             using ptr_pair = std::pair<ptr, ptr>;
-            using internal_t = ::automaton<sym_expr, sym_expr_manager>;
-            using maker = re2automaton;
-            using handler = symbolic_automata<sym_expr, sym_expr_manager>;
+            using internal = ::automaton<sym_expr, sym_expr_manager>;
+            using symbol = sym_expr;
+            using symbol_ref = obj_ref<sym_expr, sym_expr_manager>;
             using symbol_manager = sym_expr_manager;
-            using moves_t = internal_t::moves;
-            using ref_t = obj_ref<sym_expr, sym_expr_manager>;
-            class symbol_expr : public boolean_algebra<sym_expr *> {
+            class symbol_boolean_algebra : public boolean_algebra<sym_expr *> {
             public:
-                using expr_t = sym_expr *;
+                using expr = sym_expr *;
+                struct displayer {
+                    std::ostream& display(std::ostream& os, expr e) const { return e->display(os); }
+                };
             private:
                 ast_manager& m_ast_man;
                 expr_solver& m_solver;
             public:
-                symbol_expr(ast_manager& m, expr_solver& s) : m_ast_man{m}, m_solver{s} {}
-                expr_t mk_true() override;
-                expr_t mk_false() override;
-                expr_t mk_and(expr_t e1, expr_t e2) override;
-                expr_t mk_and(unsigned size, const expr_t *es) override;
-                expr_t mk_or(expr_t e1, expr_t e2) override;
-                expr_t mk_or(unsigned size, const expr_t *es) override;
-                expr_t mk_not(expr_t e) override;
-                lbool is_sat(expr_t e) override;
+                symbol_boolean_algebra(ast_manager& m, expr_solver& s);
+                expr mk_true() override;
+                expr mk_false() override;
+                expr mk_and(expr e1, expr e2) override;
+                expr mk_and(unsigned size, const expr *es) override;
+                expr mk_or(expr e1, expr e2) override;
+                expr mk_or(unsigned size, const expr *es) override;
+                expr mk_not(expr e) override;
+                lbool is_sat(expr e) override;
             };
-            class symbol_expr_solver : public expr_solver {
+            class symbol_solver : public expr_solver {
                 kernel m_kernel;
             public:
-                symbol_expr_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
+                symbol_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
                 lbool check_sat(expr *e) override;
             };
+            using state = unsigned;
+            using moves = internal::moves;
+            using maker = re2automaton;
+            using handler = symbolic_automata<sym_expr, sym_expr_manager>;
         private:
-            handler& m_handler;
-            internal_t *m_imp;
+            internal *m_imp;
             symbol_manager& m_sym_man;
-            symbol_expr& m_sym_boolean_algebra;
+            symbol_boolean_algebra& m_sym_ba;
+            handler& m_handler;
         public:
-            explicit zaut(handler& h, internal_t *a, symbol_manager& s, symbol_expr& ba) : m_handler{h}, m_imp{a},
-              m_sym_man{s}, m_sym_boolean_algebra{ba} {}
+            zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h);
             ~zaut() override { dealloc(m_imp); };
             bool contains(automaton::sptr other);
+            std::set<state> reachable_states(state s) const;
             zaut::ptr minimize();
             zaut::ptr complement();
             zaut::ptr intersect(automaton::sptr other);
             zaut::ptr remove_prefix(const element& e);
             std::list<zaut::ptr_pair> split();
             bool operator==(automaton::sptr other) override;
-            std::set<unsigned> reachable_states(unsigned st) const;
         private:
-            zaut::ptr mk_ptr(internal_t *a) const;
+            zaut::ptr mk_ptr(internal *a) const;
             bool contains_imp(automaton::sptr other) override;
             automaton::ptr minimize_imp() override;
             automaton::ptr complement_imp() override;
@@ -212,13 +216,14 @@ namespace smt {
 
         class zaut_adaptor {
             zaut::symbol_manager m_sym_man;
-            zaut::symbol_expr_solver m_sym_solver;
-            zaut::symbol_expr m_sym_boolean_algebra;
+            zaut::symbol_solver *m_sym_solver;
+            zaut::symbol_boolean_algebra *m_sym_ba;
+            zaut::handler *m_aut_man;
             zaut::maker m_aut_make;
-            zaut::handler m_aut_man;
             std::map<expr *, zaut::sptr> m_re_aut_cache;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
+            ~zaut_adaptor();
             automaton::sptr mk_from_re_expr(expr *re);
         };
 
@@ -376,6 +381,7 @@ namespace smt {
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
+        scoped_vector<str::expr_pair> m_membership_todo;
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
@@ -403,12 +409,15 @@ namespace smt {
     private:
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
-        expr_ref mk_sub(expr* a, expr* b);
-        expr_ref mk_skolem(symbol const& s, expr* e1, expr* e2 = nullptr, expr* e3 = nullptr, expr* e4 = nullptr, sort* range = nullptr);
+        bool is_regex_sort(expr *e) const;
+        expr_ref mk_sub(expr *a, expr *b);
+        expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
+                           expr *e4 = nullptr, sort *range = nullptr);
         literal mk_literal(expr *e);
+        bool_var mk_bool_var(expr *e);
         str::language mk_language(expr *e);
         str::word_term mk_word_term(expr *e) const;
-        str::state mk_state_from_todo() const;
+        str::state mk_state_from_todo();
         void add_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
