@@ -127,11 +127,11 @@ namespace smt {
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
             using ptr_pair = std::pair<ptr, ptr>;
+            using state = unsigned;
         public:
             virtual ~automaton() = 0;
             bool contains(automaton::sptr other);
-            automaton::ptr minimize();
-            automaton::ptr complement();
+            automaton::ptr determinize();
             automaton::ptr intersect(automaton::sptr other);
             automaton::ptr remove_prefix(const element& e);
             std::list<automaton::ptr_pair> split();
@@ -140,8 +140,7 @@ namespace smt {
             virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
         private:
             virtual bool contains_imp(automaton::sptr other) = 0;
-            virtual automaton::ptr minimize_imp() = 0;
-            virtual automaton::ptr complement_imp() = 0;
+            virtual automaton::ptr determinize_imp() = 0;
             virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
             virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
             virtual std::list<ptr_pair> split_imp() = 0;
@@ -194,11 +193,10 @@ namespace smt {
             handler& m_handler;
         public:
             zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h);
-            ~zaut() override { dealloc(m_imp); };
+            ~zaut() override { dealloc(m_imp); }
             bool contains(automaton::sptr other);
             std::set<state> reachable_states(state s) const;
-            zaut::ptr minimize();
-            zaut::ptr complement();
+            zaut::ptr determinize();
             zaut::ptr intersect(automaton::sptr other);
             zaut::ptr remove_prefix(const element& e);
             std::list<zaut::ptr_pair> split();
@@ -206,8 +204,7 @@ namespace smt {
         private:
             zaut::ptr mk_ptr(internal *a) const;
             bool contains_imp(automaton::sptr other) override;
-            automaton::ptr minimize_imp() override;
-            automaton::ptr complement_imp() override;
+            automaton::ptr determinize_imp() override;
             automaton::ptr intersect_imp(automaton::sptr other) override;
             automaton::ptr remove_prefix_imp(const element& e) override;
             std::list<automaton::ptr_pair> split_imp() override;
@@ -236,7 +233,7 @@ namespace smt {
             union v {
                 regex re;
                 automaton::sptr aut;
-                v() {}
+                v() : aut{} {}
                 ~v() {}
             };
             struct hash {
@@ -253,11 +250,8 @@ namespace smt {
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
-            language complement() const;
-            language concat(const language& other) const;
             language intersect(const language& other) const;
             language remove_prefix(const element& e) const;
-            std::list<language::pair> split() const;
             bool operator==(const language& other) const { return true; };
             bool operator!=(const language& other) const { return !(*this == other); }
         };

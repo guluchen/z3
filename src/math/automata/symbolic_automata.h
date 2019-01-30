@@ -96,7 +96,7 @@ class symbolic_automata {
 
 public:
     symbolic_automata(M& m, ba_t& ba): m(m), m_ba(ba) {}
-    automaton_t* mk_determinstic(automaton_t& a);
+    automaton_t* mk_deterministic(automaton_t& a);
     automaton_t* mk_complement(automaton_t& a);
     automaton_t* remove_epsilons(automaton_t& a);
     automaton_t* mk_total(automaton_t& a);
@@ -106,7 +106,7 @@ public:
     automaton_t* mk_product(automaton_t& a, automaton_t& b);
 
 private:
-    automaton_t* mk_determinstic_param(automaton_t& a, bool flip_acceptance);
+    automaton_t* mk_deterministic_param(automaton_t& a, bool flip_acceptance);
     
     vector<std::pair<vector<bool>, ref_t> > generate_min_terms(vector<ref_t> &constraints) {
         vector<std::pair<vector<bool>, ref_t> > min_terms;

@@ -330,12 +330,8 @@ namespace smt {
             return contains_imp(std::move(other));
         }
 
-        automaton::ptr automaton::minimize() {
-            return minimize_imp();
-        }
-
-        automaton::ptr automaton::complement() {
-            return complement_imp();
+        automaton::ptr automaton::determinize() {
+            return determinize_imp();
         }
 
         automaton::ptr automaton::intersect(automaton::sptr other) {
@@ -471,15 +467,11 @@ namespace smt {
 
         bool zaut::contains(automaton::sptr other) {
             zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
-            return m_handler.mk_product(*o->m_imp, *m_handler.mk_complement(*m_imp))->is_empty();
+            return m_handler.mk_difference(*o->m_imp, *m_imp)->is_empty();
         }
 
-        zaut::ptr zaut::minimize() {
-            return mk_ptr(m_handler.mk_minimize(*m_imp));
-        }
-
-        zaut::ptr zaut::complement() {
-            return mk_ptr(m_handler.mk_complement(*m_imp));
+        zaut::ptr zaut::determinize() {
+            return mk_ptr(m_handler.mk_deterministic(*m_imp));
         }
 
         zaut::ptr zaut::intersect(automaton::sptr other) {
@@ -510,7 +502,7 @@ namespace smt {
                 cl1->add_to_final_states(middle);
                 ptr ptr1 = mk_ptr(cl1);
                 ptr ptr2 = mk_ptr(cl2);
-                ret.emplace_back(std::make_pair(ptr1->minimize(), ptr2->minimize()));
+                ret.emplace_back(std::make_pair(ptr1->determinize(), ptr2->determinize()));
             }
             return ret;
         }
@@ -554,12 +546,8 @@ namespace smt {
             return contains(std::move(other));
         }
 
-        automaton::ptr zaut::minimize_imp() {
-            return minimize();
-        }
-
-        automaton::ptr zaut::complement_imp() {
-            return complement();
+        automaton::ptr zaut::determinize_imp() {
+            return determinize();
         }
 
         automaton::ptr zaut::intersect_imp(automaton::sptr other) {
@@ -593,7 +581,7 @@ namespace smt {
             return reachable_states(st);
         }
 
-        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *re) {
+        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re) {
             if (m_re_aut_cache.find(re) != m_re_aut_cache.end()) {
                 return m_re_aut_cache[re];
             }
@@ -615,6 +603,11 @@ namespace smt {
 
         language::~language() {
             if (typed(t::AUT)) m_value.aut.~shared_ptr();
+        }
+
+        language language::intersect(const language& other) const {
+            if (typed(t::AUT) && other.typed(t::AUT))
+                return language{m_value.aut->intersect(other.value().aut)};
         }
 
         std::size_t state::hash::operator()(const state& s) const {
@@ -1383,7 +1376,7 @@ namespace smt {
             m_aut_imp = std::unique_ptr<zaut_adaptor>(
                     new zaut_adaptor{get_manager(), get_context()});
         }
-        return language{m_aut_imp->mk_from_re_expr(e)};
+        return language{m_aut_imp->mk_from_re_expr(e)->determinize()};
     }
 
     str::word_term theory_str::mk_word_term(expr *const e) const {

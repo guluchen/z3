@@ -275,18 +275,18 @@ typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_minim
 }
 
 template<class T, class M>
-typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_determinstic(automaton_t& a) {
-    return mk_determinstic_param(a);
+typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_deterministic(automaton_t& a) {
+    return mk_deterministic_param(a, false);
 }
 
 template<class T, class M>
 typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_complement(automaton_t& a) {
-    return mk_determinstic_param(a, true);
+    return mk_deterministic_param(a, true);
 }
 
 template<class T, class M>
 typename symbolic_automata<T, M>::automaton_t* 
-symbolic_automata<T, M>::mk_determinstic_param(automaton_t& a, bool flip_acceptance) {
+symbolic_automata<T, M>::mk_deterministic_param(automaton_t& a, bool flip_acceptance) {
     vector<std::pair<vector<bool>, ref_t> > min_terms;
     vector<ref_t> predicates;
 
@@ -471,7 +471,7 @@ typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_produ
 
 template<class T, class M>
 typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_difference(automaton_t& a, automaton_t& b) {
-    return mk_product(a,mk_complement(b));
+    return mk_product(a, *mk_complement(b));
 }
 
 #endif 
