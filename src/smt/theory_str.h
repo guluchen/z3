@@ -640,7 +640,7 @@ namespace smt {
                  * Input: split a string
                  * Output: SMT
                  */
-                expr* toConstraint_NoConnectedVar(
+                expr_ref_vector toConstraint_NoConnectedVar(
                         std::pair<expr*, int> a, /* const || regex */
                         std::vector<std::pair<expr*, int> > elementNames, /* no connected var */
                         std::vector<int> split,
@@ -831,56 +831,56 @@ namespace smt {
             /*
              *
              */
-            expr* createEqualOperator(expr* x, expr* y);
+            app* createEqualOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createMultiplyOperator(expr* x, expr* y);
+            app* createMultiplyOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createModOperator(expr* x, expr* y);
+            app* createModOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createAddOperator(expr* x, expr* y);
+            app* createAddOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createAddOperator(expr_ref_vector adds);
+            app* createAddOperator(expr_ref_vector adds);
             /*
              *
              */
-            expr* createLessOperator(expr* x, expr* y);
+            app* createLessOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createLessEqOperator(expr* x, expr* y);
+            app* createLessEqOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createGreaterOperator(expr* x, expr* y);
+            app* createGreaterOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createGreaterEqOperator(expr* x, expr* y);
+            app* createGreaterEqOperator(expr* x, expr* y);
 
             /*
              *
              */
-            expr* createAndOperator(expr_ref_vector ands);
+            app* createAndOperator(expr_ref_vector ands);
 
             /*
              *
              */
-            expr* createOrOperator(expr_ref_vector ors);
+            app* createOrOperator(expr_ref_vector ors);
 
             /*
              *
@@ -895,7 +895,7 @@ namespace smt {
             /*
              *
              */
-            expr* createSelectOperator(expr* x, expr* y);
+            app* createSelectOperator(expr* x, expr* y);
 
             int canBeOptimized_LHS(
                     int i, int startPos, int j,
