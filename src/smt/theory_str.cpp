@@ -326,36 +326,10 @@ namespace smt {
         automaton::~automaton() {
         }
 
-        automaton::ptr automaton::determinize() {
-            return determinize_imp();
+        std::list<automaton::ptr> automaton::remove_prefix(const zstring& prefix) {
         }
 
-        automaton::ptr automaton::intersect(automaton::sptr other) {
-            return intersect_imp(std::move(other));
-        }
-
-        automaton::ptr automaton::remove_prefix(const zstring& prefix) {
-            return remove_prefix_imp(prefix);
-        }
-
-        std::list<automaton::ptr_pair> automaton::split() {
-            return split_imp();
-        }
-
-        automaton::sptr automaton::set_init(state s) {
-            return set_init_imp(s);
-        }
-
-        automaton::sptr automaton::add_accept(state s) {
-            return add_accept_imp(s);
-        }
-
-        automaton::sptr automaton::remove_accept(state s) {
-            return remove_accept_imp(s);
-        }
-
-        std::ostream& operator<<(std::ostream& os, automaton::sptr a) {
-            return a->display(os);
+        std::list<automaton::sptr_pair> automaton::split() {
         }
 
         zaut::symbol_boolean_algebra::symbol_boolean_algebra(ast_manager& m, expr_solver& s)
@@ -471,27 +445,35 @@ namespace smt {
                 : m_imp{a}, m_sym_man{s}, m_sym_ba{ba}, m_handler{h} {
         }
 
-        bool zaut::contains(automaton::sptr other) {
-            zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
-            return m_handler.mk_difference(*o->m_imp, *m_imp)->is_empty();
+        bool zaut::is_deterministic() {
         }
 
-        zaut::ptr zaut::determinize() {
+        std::set<automaton::state> zaut::get_finals() {
+        }
+
+        automaton::ptr zaut::clone() {
+            return mk_ptr(m_imp->clone());
+        }
+
+        automaton::sptr zaut::determinize() {
             return mk_ptr(m_handler.mk_deterministic(*m_imp));
         }
 
-        zaut::ptr zaut::intersect(automaton::sptr other) {
-            zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
+        automaton::ptr zaut::intersect_with(sptr other) {
+            zaut *const o = static_cast<zaut *>(other.get()); // only one implementation at a time
             return mk_ptr(m_handler.mk_product(*m_imp, *o->m_imp));
         }
 
-        zaut::ptr zaut::remove_prefix(const zstring& prefix) {
+        automaton::ptr zaut::union_with(sptr other) {
         }
 
-        std::list<zaut::ptr_pair> zaut::split() {
+        std::list<automaton::ptr> zaut::remove_prefix(const zstring& prefix) {
+        }
+
+        std::list<automaton::sptr_pair> zaut::split() {
             std::set<state> states = reachable_states(m_imp->init());
             unsigned_vector fin = m_imp->final_states();
-            std::list<zaut::ptr_pair> ret;
+            std::list<zaut::sptr_pair> ret;
             moves mvs; //assume that set of states consists of consecutive numbers (from 0).
 
             for (auto st : states) {
@@ -505,23 +487,23 @@ namespace smt {
                     cl1->remove_from_final_states(f);
                 }
                 cl1->add_to_final_states(middle);
-                ptr ptr1 = mk_ptr(cl1);
-                ptr ptr2 = mk_ptr(cl2);
+                ptr ptr1 = mk_ptr(std::move(cl1));
+                ptr ptr2 = mk_ptr(std::move(cl2));
                 ret.emplace_back(std::make_pair(ptr1->determinize(), ptr2->determinize()));
             }
             return ret;
         }
 
-        zaut::sptr zaut::set_init(state s) {
+        automaton::sptr zaut::set_init(state s) {
         }
 
-        zaut::sptr zaut::add_accept(state s) {
+        automaton::sptr zaut::add_final(state s) {
         }
 
-        zaut::sptr zaut::remove_accept(state s) {
+        automaton::sptr zaut::remove_final(state s) {
         }
 
-        std::set<zaut::state> zaut::reachable_states(state st) {
+        std::set<automaton::state> zaut::reachable_states(state st) {
             std::vector<state> todo;
             std::set<state> ret({st});
             unsigned act;
@@ -547,6 +529,9 @@ namespace smt {
             return ret;
         }
 
+        std::set<zaut::state> zaut::successors(state s) {
+        }
+
         std::set<zaut::state> zaut::successors(state s, const zstring& str) {
         }
 
@@ -558,21 +543,20 @@ namespace smt {
             unsigned off_counter = 0;
             moves mvs;
 
-            ptr clone = mk_ptr(alloc(internal, m_sym_man, m_imp->init(), m_imp->final_states(),
-                                     transitions_skeleton()));
-            ptr det = clone->determinize();
+            internal *clone = m_imp->clone();
+            internal *det = m_handler.mk_deterministic(*clone);
 
-            todo.push_back(det->m_imp->init());
+            todo.push_back(det->init());
             while (!todo.empty()) {
                 act = todo.back();
                 todo.pop_back();
 
-                if (det->m_imp->is_final_state(act)) {
+                if (det->is_final_state(act)) {
                     fin_offset.emplace(std::make_pair(act, off_counter));
                 }
 
                 mvs.reset();
-                det->m_imp->get_moves_from(act, mvs, false);
+                det->get_moves_from(act, mvs, false);
                 SASSERT(mvs.size() <= 1);
 
                 for (unsigned i = 0; i < mvs.size(); i++) {
@@ -612,10 +596,15 @@ namespace smt {
         }
 
         bool zaut::operator==(automaton::sptr other) {
-            return contains(other) && other->contains(mk_ptr(m_imp));
+            zaut *const o = static_cast<zaut *>(other.get()); // only one implementation at a time
+            return contains(*o) && o->contains(*this);
         }
 
-        zaut::ptr zaut::mk_ptr(zaut::internal *a) const {
+        bool zaut::contains(const zaut& other) const {
+            return m_handler.mk_difference(*other.m_imp, *m_imp)->is_empty();
+        }
+
+        automaton::ptr zaut::mk_ptr(internal *&& a) const {
             return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
         }
 
@@ -632,38 +621,6 @@ namespace smt {
                 }
             }
             return mvs;
-        }
-
-        automaton::ptr zaut::determinize_imp() {
-            return determinize();
-        }
-
-        automaton::ptr zaut::intersect_imp(automaton::sptr other) {
-            return intersect(std::move(other));
-        }
-
-        automaton::ptr zaut::remove_prefix_imp(const zstring& prefix) {
-            return remove_prefix(prefix);
-        }
-
-        std::list<automaton::ptr_pair> zaut::split_imp() {
-            std::list<automaton::ptr_pair> result;
-            for (auto& kv : split()) {
-                result.emplace_back(std::make_pair(std::move(kv.first), std::move(kv.second)));
-            }
-            return result;
-        }
-
-        automaton::sptr zaut::set_init_imp(state s) {
-            return set_init(s);
-        }
-
-        automaton::sptr zaut::add_accept_imp(state s) {
-            return add_accept(s);
-        }
-
-        automaton::sptr zaut::remove_accept_imp(state s) {
-            return remove_accept(s);
         }
 
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m} {
@@ -703,7 +660,7 @@ namespace smt {
 
         language language::intersect(const language& other) const {
             if (typed(t::AUT) && other.typed(t::AUT))
-                return language{m_value.aut->intersect(other.value().aut)};
+                return language{m_value.aut->intersect_with(other.value().aut)};
         }
 
         std::size_t state::hash::operator()(const state& s) const {
@@ -1180,6 +1137,10 @@ namespace smt {
             return mk_move{s, s.smallest_eq()}();
         }
 
+    }
+
+    std::ostream& operator<<(std::ostream& os, str::automaton::sptr a) {
+        return a->display(os);
     }
 
     theory_str::theory_str(ast_manager& m, const theory_str_params& params)

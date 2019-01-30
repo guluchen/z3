@@ -126,44 +126,40 @@ namespace smt {
         public:
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
-            using ptr_pair = std::pair<ptr, ptr>;
+            using sptr_pair = std::pair<sptr, sptr>;
             using state = unsigned;
             using len_offset = unsigned;
             using len_period = unsigned;
             using len_constraint = std::pair<len_offset, len_period>;
         public:
             virtual ~automaton() = 0;
-            virtual bool contains(automaton::sptr other) = 0;
-            automaton::ptr determinize();
-            automaton::ptr intersect(automaton::sptr other);
-            automaton::ptr remove_prefix(const zstring& prefix);
-            std::list<automaton::ptr_pair> split();
-            automaton::sptr set_init(state s);
-            automaton::sptr add_accept(state s);
-            automaton::sptr remove_accept(state s);
+            virtual bool is_empty() = 0;
+            virtual bool is_deterministic() = 0;
+            virtual bool is_final(state s) { return get_finals().find(s) != get_finals().end(); };
+            virtual state get_init() = 0;
+            virtual std::set<state> get_finals() = 0;
+            virtual ptr clone() = 0;
+            virtual sptr simplify() = 0;
+            virtual sptr determinize() = 0;
+            virtual ptr intersect_with(sptr other) = 0;
+            virtual ptr union_with(sptr other) = 0;
+            virtual std::list<ptr> remove_prefix(const zstring& prefix);
+            virtual std::list<sptr_pair> split();
+            virtual sptr set_init(state s) = 0;
+            virtual sptr add_final(state s) = 0;
+            virtual sptr remove_final(state s) = 0;
+            virtual std::set<state> reachable_states() { return reachable_states(get_init()); };
             virtual std::set<state> reachable_states(state s) = 0;
+            virtual std::set<state> successors(state s) = 0;
             virtual std::set<state> successors(state s, const zstring& str) = 0;
             virtual std::set<len_constraint> length_constraints() = 0;
             virtual std::ostream& display(std::ostream& os) = 0;
-            virtual bool operator==(automaton::sptr other) = 0;
-            virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
-        private:
-            virtual automaton::ptr determinize_imp() = 0;
-            virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
-            virtual automaton::ptr remove_prefix_imp(const zstring& prefix) = 0;
-            virtual std::list<automaton::ptr_pair> split_imp() = 0;
-            virtual automaton::sptr set_init_imp(state s) = 0;
-            virtual automaton::sptr add_accept_imp(state s) = 0;
-            virtual automaton::sptr remove_accept_imp(state s) = 0;
+            virtual bool operator==(sptr other) = 0;
+            virtual bool operator!=(sptr other) { return !(*this == std::move(other)); }
         };
-
-        std::ostream& operator<<(std::ostream& os, automaton::sptr a);
 
         class zaut : public automaton {
         public:
-            using ptr = std::unique_ptr<zaut>;
-            using sptr = std::shared_ptr<zaut>;
-            using ptr_pair = std::pair<ptr, ptr>;
             using internal = ::automaton<sym_expr, sym_expr_manager>;
             using symbol = sym_expr;
             using symbol_ref = obj_ref<sym_expr, sym_expr_manager>;
@@ -194,7 +190,6 @@ namespace smt {
                 symbol_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
                 lbool check_sat(expr *e) override;
             };
-            using state = unsigned;
             using moves = internal::moves;
             using maker = re2automaton;
             using handler = symbolic_automata<sym_expr, sym_expr_manager>;
@@ -206,29 +201,30 @@ namespace smt {
         public:
             zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h);
             ~zaut() override { dealloc(m_imp); };
-            bool contains(automaton::sptr other) override;
-            zaut::ptr determinize();
-            zaut::ptr intersect(automaton::sptr other);
-            zaut::ptr remove_prefix(const zstring& prefix);
-            std::list<zaut::ptr_pair> split();
-            zaut::sptr set_init(state s);
-            zaut::sptr add_accept(state s);
-            zaut::sptr remove_accept(state s);
+            bool is_empty() override { return m_imp->is_empty(); }
+            bool is_deterministic() override;
+            state get_init() override { return m_imp->init(); }
+            std::set<state> get_finals() override;
+            ptr clone() override;
+            sptr simplify() override { return std::shared_ptr<zaut>(this); }
+            sptr determinize() override;
+            ptr intersect_with(sptr other) override;
+            ptr union_with(sptr other) override;
+            std::list<ptr> remove_prefix(const zstring& prefix) override;
+            std::list<sptr_pair> split() override;
+            sptr set_init(state s) override;
+            sptr add_final(state s) override;
+            sptr remove_final(state s) override;
             std::set<state> reachable_states(state s) override;
+            std::set<state> successors(state s) override;
             std::set<state> successors(state s, const zstring& str) override;
             std::set<len_constraint> length_constraints() override;
             std::ostream& display(std::ostream& out) override;
-            bool operator==(automaton::sptr other) override;
+            bool operator==(sptr other) override;
         private:
-            zaut::ptr mk_ptr(internal *a) const;
+            bool contains(const zaut& other) const;
+            ptr mk_ptr(internal *&& a) const;
             moves transitions_skeleton();
-            automaton::ptr determinize_imp() override;
-            automaton::ptr intersect_imp(automaton::sptr other) override;
-            automaton::ptr remove_prefix_imp(const zstring& prefix) override;
-            std::list<automaton::ptr_pair> split_imp() override;
-            automaton::sptr set_init_imp(state s) override;
-            automaton::sptr add_accept_imp(state s) override;
-            automaton::sptr remove_accept_imp(state s) override;
         };
 
         class zaut_adaptor {
@@ -384,6 +380,8 @@ namespace smt {
         using expr_pair = std::pair<expr_ref, expr_ref>;
 
     }
+
+    std::ostream& operator<<(std::ostream& os, str::automaton::sptr a);
 
     class theory_str : public theory {
         int m_scope_level = 0;
