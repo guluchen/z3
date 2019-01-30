@@ -473,11 +473,11 @@ namespace smt {
 
         bool zaut::contains(automaton::sptr other) {
             zaut *const o = static_cast<zaut *>(other.get()); // only have zaut implementation
-            return m_handler.mk_product(*o->m_imp, *m_handler.mk_complement(*m_imp))->is_empty();
+            return m_handler.mk_difference(*o->m_imp, *m_imp)->is_empty();
         }
 
         zaut::ptr zaut::determinize() {
-            return mk_ptr(m_handler.mk_determinstic(*m_imp));
+            return mk_ptr(m_handler.mk_deterministic(*m_imp));
         }
 
         zaut::ptr zaut::intersect(automaton::sptr other) {
@@ -505,7 +505,9 @@ namespace smt {
                     cl1->remove_from_final_states(f);
                 }
                 cl1->add_to_final_states(middle);
-                ret.emplace_back(std::make_pair(mk_ptr(cl1), mk_ptr(cl2)));
+                ptr ptr1 = mk_ptr(cl1);
+                ptr ptr2 = mk_ptr(cl2);
+                ret.emplace_back(std::make_pair(ptr1->determinize(), ptr2->determinize()));
             }
             return ret;
         }
@@ -546,21 +548,6 @@ namespace smt {
         }
 
         std::set<zaut::state> zaut::successors(state s, const zstring& str) {
-        }
-
-        zaut::moves zaut::transitions_skeleton() {
-            std::set<state> states = reachable_states(m_imp->init());
-            moves mvs;
-            for (auto st : states) {
-                for (auto tr : m_imp->get_moves_from(st)) {
-                    if (tr.is_epsilon())
-                        mvs.push_back(internal::move(m_sym_man, tr.src(), tr.dst()));
-                    else
-                        mvs.push_back(
-                                internal::move(m_sym_man, tr.src(), tr.dst(), m_sym_ba.mk_true()));
-                }
-            }
-            return mvs;
         }
 
         std::set<automaton::len_constraint> zaut::length_constraints() {
@@ -632,6 +619,21 @@ namespace smt {
             return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
         }
 
+        zaut::moves zaut::transitions_skeleton() {
+            std::set<state> states = reachable_states(m_imp->init());
+            moves mvs;
+            for (auto st : states) {
+                for (auto tr : m_imp->get_moves_from(st)) {
+                    if (tr.is_epsilon())
+                        mvs.push_back(internal::move(m_sym_man, tr.src(), tr.dst()));
+                    else
+                        mvs.push_back(
+                                internal::move(m_sym_man, tr.src(), tr.dst(), m_sym_ba.mk_true()));
+                }
+            }
+            return mvs;
+        }
+
         automaton::ptr zaut::determinize_imp() {
             return determinize();
         }
@@ -675,7 +677,7 @@ namespace smt {
             dealloc(m_sym_ba);
         }
 
-        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *re) {
+        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re) {
             if (m_re_aut_cache.find(re) != m_re_aut_cache.end()) {
                 return m_re_aut_cache[re];
             }
@@ -697,6 +699,11 @@ namespace smt {
 
         language::~language() {
             if (typed(t::AUT)) m_value.aut.~shared_ptr();
+        }
+
+        language language::intersect(const language& other) const {
+            if (typed(t::AUT) && other.typed(t::AUT))
+                return language{m_value.aut->intersect(other.value().aut)};
         }
 
         std::size_t state::hash::operator()(const state& s) const {
@@ -1465,7 +1472,7 @@ namespace smt {
             m_aut_imp = std::unique_ptr<zaut_adaptor>(
                     new zaut_adaptor{get_manager(), get_context()});
         }
-        return language{m_aut_imp->mk_from_re_expr(e)};
+        return language{m_aut_imp->mk_from_re_expr(e)->determinize()};
     }
 
     str::word_term theory_str::mk_word_term(expr *const e) const {

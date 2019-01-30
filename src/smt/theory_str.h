@@ -253,7 +253,7 @@ namespace smt {
             union v {
                 regex re;
                 automaton::sptr aut;
-                v() {}
+                v() : aut{} {}
                 ~v() {}
             };
             struct hash {
@@ -270,11 +270,8 @@ namespace smt {
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
-            language complement() const;
-            language concat(const language& other) const;
             language intersect(const language& other) const;
             language remove_prefix(const element& e) const;
-            std::list<language::pair> split() const;
             bool operator==(const language& other) const { return true; };
             bool operator!=(const language& other) const { return !(*this == other); }
         };
