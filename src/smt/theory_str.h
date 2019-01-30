@@ -128,24 +128,36 @@ namespace smt {
             using sptr = std::shared_ptr<automaton>;
             using ptr_pair = std::pair<ptr, ptr>;
             using state = unsigned;
+            using len_offset = unsigned;
+            using len_period = unsigned;
+            using len_constraint = std::pair<len_offset, len_period>;
         public:
             virtual ~automaton() = 0;
-            bool contains(automaton::sptr other);
+            virtual bool contains(automaton::sptr other) = 0;
             automaton::ptr determinize();
             automaton::ptr intersect(automaton::sptr other);
-            automaton::ptr remove_prefix(const element& e);
+            automaton::ptr remove_prefix(const zstring& prefix);
             std::list<automaton::ptr_pair> split();
-            std::set<unsigned> reachable_states(unsigned st) const;
+            automaton::sptr set_init(state s);
+            automaton::sptr add_accept(state s);
+            automaton::sptr remove_accept(state s);
+            virtual std::set<state> reachable_states(state s) = 0;
+            virtual std::set<state> successors(state s, const zstring& str) = 0;
+            virtual std::set<len_constraint> length_constraints() = 0;
+            virtual std::ostream& display(std::ostream& os) = 0;
             virtual bool operator==(automaton::sptr other) = 0;
             virtual bool operator!=(automaton::sptr other) { return !(*this == std::move(other)); }
         private:
-            virtual bool contains_imp(automaton::sptr other) = 0;
             virtual automaton::ptr determinize_imp() = 0;
             virtual automaton::ptr intersect_imp(automaton::sptr other) = 0;
-            virtual automaton::ptr remove_prefix_imp(const element& e) = 0;
-            virtual std::list<ptr_pair> split_imp() = 0;
-            virtual std::set<unsigned> reachable_states_imp(unsigned st) const = 0;
+            virtual automaton::ptr remove_prefix_imp(const zstring& prefix) = 0;
+            virtual std::list<automaton::ptr_pair> split_imp() = 0;
+            virtual automaton::sptr set_init_imp(state s) = 0;
+            virtual automaton::sptr add_accept_imp(state s) = 0;
+            virtual automaton::sptr remove_accept_imp(state s) = 0;
         };
+
+        std::ostream& operator<<(std::ostream& os, automaton::sptr a);
 
         class zaut : public automaton {
         public:
@@ -193,22 +205,30 @@ namespace smt {
             handler& m_handler;
         public:
             zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h);
-            ~zaut() override { dealloc(m_imp); }
-            bool contains(automaton::sptr other);
-            std::set<state> reachable_states(state s) const;
+            ~zaut() override { dealloc(m_imp); };
+            bool contains(automaton::sptr other) override;
             zaut::ptr determinize();
             zaut::ptr intersect(automaton::sptr other);
-            zaut::ptr remove_prefix(const element& e);
+            zaut::ptr remove_prefix(const zstring& prefix);
             std::list<zaut::ptr_pair> split();
+            zaut::sptr set_init(state s);
+            zaut::sptr add_accept(state s);
+            zaut::sptr remove_accept(state s);
+            std::set<state> reachable_states(state s) override;
+            std::set<state> successors(state s, const zstring& str) override;
+            std::set<len_constraint> length_constraints() override;
+            std::ostream& display(std::ostream& out) override;
             bool operator==(automaton::sptr other) override;
         private:
             zaut::ptr mk_ptr(internal *a) const;
-            bool contains_imp(automaton::sptr other) override;
+            moves transitions_skeleton();
             automaton::ptr determinize_imp() override;
             automaton::ptr intersect_imp(automaton::sptr other) override;
-            automaton::ptr remove_prefix_imp(const element& e) override;
+            automaton::ptr remove_prefix_imp(const zstring& prefix) override;
             std::list<automaton::ptr_pair> split_imp() override;
-            std::set<unsigned> reachable_states_imp(unsigned st) const override;
+            automaton::sptr set_init_imp(state s) override;
+            automaton::sptr add_accept_imp(state s) override;
+            automaton::sptr remove_accept_imp(state s) override;
         };
 
         class zaut_adaptor {
