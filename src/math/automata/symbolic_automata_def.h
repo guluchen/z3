@@ -276,7 +276,7 @@ typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_minim
 
 template<class T, class M>
 typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_determinstic(automaton_t& a) {
-    return mk_determinstic_param(a);
+    return mk_determinstic_param(a, false);
 }
 
 template<class T, class M>

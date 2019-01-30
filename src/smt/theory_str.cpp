@@ -476,7 +476,7 @@ namespace smt {
             /*symbol_boolean_algebra::displayer d{}; // TODO: for temporary testing
             a->display(std::cout, d); */
 
-            display(std::cout);
+            //display(std::cout);
         }
 
         bool zaut::contains(automaton::sptr other) {
@@ -490,7 +490,7 @@ namespace smt {
 
         zaut::ptr zaut::determinize() {
             //error in the invocation of mk_determinstic (compiler error)
-            return mk_ptr(m_handler.mk_minimize(*m_imp));
+            return mk_ptr(m_handler.mk_determinstic(*m_imp));
         }
 
         zaut::ptr zaut::complement() {
@@ -553,8 +553,74 @@ namespace smt {
             return ret;
         }
 
+        zaut::moves zaut::transitions_skeleton() const {
+            std::set<state> states = reachable_states(m_imp->init());
+            moves mvs;
+            for (auto st : states) {
+                for (auto tr : m_imp->get_moves_from(st)) {
+                    if (tr.is_epsilon())
+                        mvs.push_back(internal::move(m_sym_man, tr.src(), tr.dst()));
+                    else
+                        mvs.push_back(internal::move(m_sym_man, tr.src(), tr.dst(), m_sym_ba.mk_true()));
+                }
+            }
+            return mvs;
+        }
+
         std::set<automaton::len_constraint> zaut::length_constraints() const {
-            return std::set<automaton::len_constraint>();
+            std::vector<state> lasso;
+            std::vector<state> todo;
+            unsigned act;
+            std::set<std::pair<state, len_offset> > fin_offset;
+            unsigned off_counter = 0;
+            moves mvs;
+
+            ptr clone = mk_ptr(alloc(internal, m_sym_man, m_imp->init(), m_imp->final_states(), transitions_skeleton()));
+            ptr det = clone->determinize();
+
+            todo.push_back(det->m_imp->init());
+            while(!todo.empty()) {
+                act = todo.back();
+                todo.pop_back();
+
+                if(det->m_imp->is_final_state(act)) {
+                    fin_offset.emplace(std::make_pair(act, off_counter));
+                }
+
+                mvs.reset();
+                det->m_imp->get_moves_from(act, mvs, false);
+                SASSERT(mvs.size() <= 1);
+
+                for (unsigned i = 0; i < mvs.size(); i++) {
+                    symbol_ref con(mvs[i].t(), m_sym_man);
+                    lbool is_sat = m_sym_ba.is_sat(con);
+                    SASSERT(is_sat == l_true);
+
+                    auto res = std::find(lasso.begin(), lasso.end(), mvs[i].dst());
+                    if (res == lasso.end()) {
+                        lasso.push_back(mvs[i].dst());
+                        todo.push_back(mvs[i].dst());
+                    }
+                    else{ //lasso found
+                        SASSERT(todo.empty());
+                        lasso.erase(lasso.begin(),res);
+                        break;
+                    }
+                }
+                off_counter++;
+            }
+
+            unsigned period = lasso.size();
+            std::set<automaton::len_constraint> ret;
+            std::set<unsigned> lasso_set(lasso.begin(), lasso.end());
+            for (auto pair : fin_offset) {
+                if (lasso_set.find(pair.first) != lasso_set.end())
+                    ret.emplace(std::make_pair(pair.second, period));
+                else
+                    ret.emplace(std::make_pair(pair.second, 0));
+            }
+
+            return ret;
         }
 
         std::ostream& zaut::display(std::ostream& out) const {

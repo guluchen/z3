@@ -228,6 +228,7 @@ namespace smt {
             std::set<unsigned> reachable_states_imp(unsigned st) const override;
             std::set<len_constraint> length_constraints_imp() const override;
             std::ostream& display_imp(std::ostream& out) const override;
+            moves transitions_skeleton() const;
         };
 
         class zaut_adaptor {
