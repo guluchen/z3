@@ -327,6 +327,25 @@ namespace smt {
         }
 
         std::list<automaton::ptr> automaton::remove_prefix(const zstring& prefix) {
+            std::set<state> act({get_init()});
+            std::set<state> next, succ;
+            std::list<automaton::ptr> ret;
+
+            for(std::size_t i = 0; i < prefix.length(); i++) {
+                next.clear();
+                for(auto st : act) {
+                    succ = successors(st, prefix[i]);
+                    next.insert(succ.begin(), succ.end());
+                }
+                act = next;
+            }
+
+            for(auto st : act) {
+                ptr cl = clone();
+                cl->set_init(st);
+                ret.emplace_back(std::move(cl));
+            }
+            return ret;
         }
 
         std::list<automaton::sptr_pair> automaton::split() {
@@ -473,7 +492,7 @@ namespace smt {
             return mk_ptr(m_imp->clone());
         }
 
-        automaton::sptr zaut::determinize() {
+        automaton::ptr zaut::determinize() {
             return mk_ptr(m_handler.mk_deterministic(*m_imp));
         }
 
@@ -541,6 +560,12 @@ namespace smt {
         }
 
         std::set<zaut::state> zaut::successors(state s) {
+            moves mvs = m_imp->get_moves_from(s);
+            std::set<state> succ;
+            for (auto mv : mvs) {
+                succ.insert(mv.dst());
+            }
+            return succ;
         }
 
         std::set<zaut::state> zaut::successors(state s, const zstring& str) {
@@ -1488,10 +1513,10 @@ namespace smt {
         for (const auto& m : m_membership_todo) {
             auto aut = mk_language(m.second); // TODO: for temporary testing
 
-            for(auto div : aut.value().aut->split()) {
+            /*for(auto div : aut.value().aut->split()) {
                 div.first->display(std::cout);
                 div.second->display(std::cout);
-            }
+            }*/
 
 
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
