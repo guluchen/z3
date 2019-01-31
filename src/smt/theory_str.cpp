@@ -331,16 +331,16 @@ namespace smt {
             std::set<state> next, succ;
             std::list<automaton::ptr> ret;
 
-            for(std::size_t i = 0; i < prefix.length(); i++) {
+            for (std::size_t i = 0; i < prefix.length(); i++) {
                 next.clear();
-                for(auto st : act) {
+                for (auto st : act) {
                     succ = successors(st, prefix[i]);
                     next.insert(succ.begin(), succ.end());
                 }
                 act = next;
             }
 
-            for(auto st : act) {
+            for (auto st : act) {
                 ptr cl = clone();
                 cl->set_init(st);
                 ret.emplace_back(std::move(cl));
@@ -365,6 +365,10 @@ namespace smt {
                 ret.emplace_back(std::make_pair(std::move(cl1), std::move(cl2)));
             }
             return ret;
+        }
+
+        std::ostream& operator<<(std::ostream& os, automaton::sptr a) {
+            return a->display(os);
         }
 
         zaut::symbol_boolean_algebra::symbol_boolean_algebra(ast_manager& m, expr_solver& s)
@@ -484,7 +488,7 @@ namespace smt {
         }
 
         std::set<automaton::state> zaut::get_finals() {
-            unsigned_vector fin =  m_imp->final_states();
+            unsigned_vector fin = m_imp->final_states();
             return std::set<state>(fin.begin(), fin.end());
         }
 
@@ -518,19 +522,19 @@ namespace smt {
         }
 
         void zaut::add_final(state s) {
-          m_imp->add_to_final_states(s);
+            m_imp->add_to_final_states(s);
         }
 
         void zaut::remove_final(state s) {
-          m_imp->remove_from_final_states(s);
+            m_imp->remove_from_final_states(s);
         }
 
         zaut::moves zaut::transitions() {
-          moves mvs;
-          for (auto st : automaton::reachable_states()) {
-              mvs.append(m_imp->get_moves_from(st));
-          }
-          return mvs;
+            moves mvs;
+            for (auto st : automaton::reachable_states()) {
+                mvs.append(m_imp->get_moves_from(st));
+            }
+            return mvs;
         }
 
         std::set<automaton::state> zaut::reachable_states(state st) {
@@ -646,20 +650,21 @@ namespace smt {
             return m_imp->display(out, d);
         }
 
-        bool zaut::operator==(automaton::sptr other) {
-            zaut *const o = static_cast<zaut *>(other.get()); // only one implementation at a time
+        bool zaut::operator==(const automaton& other) {
+            const zaut *const o = static_cast<const zaut *>(&other);
             return contains(*o) && o->contains(*this);
         }
 
         bool zaut::contains(const zaut& other) const {
-            return m_handler.mk_difference(*other.m_imp, *m_imp)->is_empty();
+            scoped_ptr<internal> difference{m_handler.mk_difference(*other.m_imp, *m_imp)};
+            return difference->is_empty();
         }
 
         automaton::ptr zaut::mk_ptr(internal *&& a) const {
             return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
         }
 
-        automaton::sptr zaut::mk_sptr(internal * a) const {
+        automaton::sptr zaut::mk_sptr(internal *a) const {
             return sptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
         }
 
@@ -713,9 +718,45 @@ namespace smt {
             if (typed(t::AUT)) m_value.aut.~shared_ptr();
         }
 
+        bool language::is_empty() const {
+            if (typed(t::AUT)) return m_value.aut->is_empty();
+            return true;
+        }
+
         language language::intersect(const language& other) const {
-            if (typed(t::AUT) && other.typed(t::AUT))
+            if (typed(t::AUT) && other.typed(t::AUT)) {
                 return language{m_value.aut->intersect_with(other.value().aut)};
+            }
+        }
+
+        language language::remove_prefix(const element& e) const {
+            SASSERT(e.typed(element::t::CONST));
+
+            if (typed(t::AUT)) {
+                m_value.aut->remove_prefix(e.value());
+                // TODO: ...
+            }
+        }
+
+        language& language::operator=(language&& other) noexcept {
+            if (other.typed(t::AUT)) {
+                m_type = language::t::AUT;
+                m_value.aut = std::move(other.m_value.aut);
+            }
+        }
+
+        bool language::operator==(const language& other) const {
+            if (typed(t::AUT) && other.typed(t::AUT)) {
+                return *m_value.aut.get() == *other.m_value.aut.get();
+            }
+            return true;
+        }
+
+        std::ostream& operator<<(std::ostream& os, const language& l) {
+            if (l.typed(language::t::AUT)) {
+                return os << l.m_value.aut;
+            }
+            return os;
         }
 
         std::size_t state::hash::operator()(const state& s) const {
@@ -747,6 +788,9 @@ namespace smt {
                 for (const auto& v : we.variables()) {
                     result.insert(v);
                 }
+            }
+            for (const auto& var_lang : m_lang_to_satisfy) {
+                result.insert(var_lang.first);
             }
             return result;
         }
@@ -852,6 +896,21 @@ namespace smt {
             m_wes_to_fail.insert(std::move(trimmed));
         }
 
+        void state::set_var_lang(const element& var, language&& lang) {
+            SASSERT(var.typed(element::t::VAR));
+
+            if (lang.is_empty()) {
+                m_lang_to_satisfy.erase(var);
+                return;
+            }
+            auto fit = m_lang_to_satisfy.find(var);
+            if (fit != m_lang_to_satisfy.end()) {
+                fit->second = std::move(lang);
+                return;
+            }
+            m_lang_to_satisfy.emplace(std::make_pair(var, std::move(lang)));
+        }
+
         state state::replace(const element& tgt, const word_term& subst) const {
             state result{m_allow_empty_var};
             for (const auto& we : m_wes_to_satisfy) {
@@ -904,6 +963,10 @@ namespace smt {
             }
             for (const auto& we : s.m_wes_to_fail) {
                 os << "not (" << we << ")\n";
+            }
+            for (const auto& var_lang : s.m_lang_to_satisfy) {
+                os << var_lang.first << " in {\n";
+                os << var_lang.second << "}\n";
             }
             return os << std::flush;
         }
@@ -1087,8 +1150,7 @@ namespace smt {
                     m_pending.push(s);
                 }
             }
-            m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
-            return m_status;
+            return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
         }
 
         bool neilsen_transforms::finish_after_found(const state& s) {
@@ -1099,6 +1161,22 @@ namespace smt {
                 return true;
             }
             return false;
+        }
+
+        const state& neilsen_transforms::add_sibling_more_removed(const state& s, state&& sib,
+                                                                  const element& v) {
+            const state& added = m_records.add_state(std::move(sib));
+            for (const auto& m : m_records.incoming_moves(s)) {
+                m_records.add_move(m.add_record(v), added);
+            }
+            return added;
+        }
+
+        const state& neilsen_transforms::add_child_var_removed(const state& s, state&& c,
+                                                               const element& v) {
+            const state& added = m_records.add_state(std::move(c));
+            m_records.add_move({s, move::t::TO_EMPTY, {v}}, added);
+            return added;
         }
 
         result neilsen_transforms::split_var_empty_cases() {
@@ -1121,33 +1199,23 @@ namespace smt {
                     }
                     next_s.allow_empty_var(true);
                     if (next_s.in_solved_form()) {
-                        const state& s = m_records.add_state(std::move(next_s));
-                        for (const auto& m : m_records.incoming_moves(curr_s)) {
-                            m_records.add_move(m.add_record(var), s);
-                        }
+                        const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
                         if (finish_after_found(s)) return m_status;
                         continue;
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
-                        const state& s = m_records.add_state(std::move(next_s));
-                        for (const auto& m : m_records.incoming_moves(curr_s)) {
-                            m_records.add_move(m.add_record(var), s);
-                        }
-                        STRACE("str", tout << "failed:\n" << curr_s << '\n';);
+                        const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
+                        STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
                     next_s.allow_empty_var(false);
-                    const state& s = m_records.add_state(std::move(next_s));
-                    for (const auto& m : m_records.incoming_moves(curr_s)) {
-                        m_records.add_move(m.add_record(var), s);
-                    }
+                    const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
                     pending.push(s);
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
             }
-            m_status = m_rec_success_leaves.empty() ? result::UNKNOWN : result::SAT;
-            return m_status;
+            return m_status = m_rec_success_leaves.empty() ? result::UNKNOWN : result::SAT;
         }
 
         std::queue<state::cref> neilsen_transforms::split_first_level_var_empty() {
@@ -1164,21 +1232,18 @@ namespace smt {
                     }
                     next_s.allow_empty_var(true);
                     if (next_s.in_solved_form()) {
-                        const state& s = m_records.add_state(std::move(next_s));
-                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
+                        const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
                         if (finish_after_found(s)) return {};
                         continue;
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
-                        const state& s = m_records.add_state(std::move(next_s));
-                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
-                        STRACE("str", tout << "failed:\n" << curr_s << '\n';);
+                        const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
+                        STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
                     next_s.allow_empty_var(false);
-                    const state& s = m_records.add_state(std::move(next_s));
-                    m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, s);
+                    const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
                     result.push(s);
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
@@ -1192,10 +1257,6 @@ namespace smt {
             return mk_move{s, s.smallest_eq()}();
         }
 
-    }
-
-    std::ostream& operator<<(std::ostream& os, str::automaton::sptr a) {
-        return a->display(os);
     }
 
     theory_str::theory_str(ast_manager& m, const theory_str_params& params)
@@ -1436,6 +1497,10 @@ namespace smt {
         return m_util_s.is_re(e);
     }
 
+    bool theory_str::is_const_fun(expr *const e) const {
+        return is_app(e) && to_app(e)->get_decl()->get_arity() == 0;
+    }
+
     expr_ref theory_str::mk_sub(expr *a, expr *b) {
         ast_manager& m = get_manager();
         expr_ref result(m_util_a.mk_sub(a, b), m);
@@ -1482,6 +1547,12 @@ namespace smt {
         return bv;
     }
 
+    str::element theory_str::mk_var_element(expr *const e) {
+        SASSERT(is_string_sort(e) && is_const_fun(e));
+
+        return {str::element::t::VAR, {to_app(e)->get_decl()->get_name().bare_str()}};
+    }
+
     str::language theory_str::mk_language(expr *const e) {
         using namespace str;
         if (!m_aut_imp) {
@@ -1526,7 +1597,7 @@ namespace smt {
         STRACE("str", tout << "membership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {
-            auto aut = mk_language(m.second); // TODO: for temporary testing
+            result.set_var_lang(mk_var_element(m.first), mk_language(m.second));
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;

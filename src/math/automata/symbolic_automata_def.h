@@ -471,7 +471,8 @@ typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_produ
 
 template<class T, class M>
 typename symbolic_automata<T, M>::automaton_t* symbolic_automata<T, M>::mk_difference(automaton_t& a, automaton_t& b) {
-    return mk_product(a, *mk_complement(b));
+    scoped_ptr<automaton_t> remains = mk_complement(b);
+    return mk_product(a, *remains);
 }
 
 #endif 

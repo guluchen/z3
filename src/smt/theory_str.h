@@ -135,7 +135,7 @@ namespace smt {
             virtual ~automaton() = 0;
             virtual bool is_empty() = 0;
             virtual bool is_deterministic() = 0;
-            virtual bool is_final(state s) { return get_finals().find(s) != get_finals().end(); };
+            virtual bool is_final(state s) { return get_finals().find(s) != get_finals().end(); }
             virtual state get_init() = 0;
             virtual std::set<state> get_finals() = 0;
             virtual ptr clone() = 0;
@@ -148,14 +148,15 @@ namespace smt {
             virtual void set_init(state s) = 0;
             virtual void add_final(state s) = 0;
             virtual void remove_final(state s) = 0;
-            virtual std::set<state> reachable_states() { return reachable_states(get_init()); };
+            virtual std::set<state> reachable_states() { return reachable_states(get_init()); }
             virtual std::set<state> reachable_states(state s) = 0;
             virtual std::set<state> successors(state s) = 0;
             virtual std::set<state> successors(state s, const zstring& str) = 0;
             virtual std::set<len_constraint> length_constraints() = 0;
             virtual std::ostream& display(std::ostream& os) = 0;
-            virtual bool operator==(sptr other) = 0;
-            virtual bool operator!=(sptr other) { return !(*this == std::move(other)); }
+            virtual bool operator==(const automaton& other) = 0;
+            virtual bool operator!=(const automaton& other) { return !(*this == other); }
+            friend std::ostream& operator<<(std::ostream& os, automaton::sptr a);
         };
 
         class zaut : public automaton {
@@ -222,7 +223,7 @@ namespace smt {
             std::set<state> successors(state s, const zstring& str) override;
             std::set<len_constraint> length_constraints() override;
             std::ostream& display(std::ostream& out) override;
-            bool operator==(sptr other) override;
+            bool operator==(const automaton& other) override;
         private:
             moves transitions();
             bool contains(const zaut& other) const;
@@ -258,7 +259,7 @@ namespace smt {
                 ~v() {}
             };
             struct hash {
-                std::size_t operator()(const language& l) const { return 0; };
+                std::size_t operator()(const language& l) const { return 0; }
             };
         private:
             language::t m_type;
@@ -271,10 +272,13 @@ namespace smt {
             const language::t& type() const { return m_type; }
             const language::v& value() const { return m_value; }
             bool typed(const language::t& t) const { return m_type == t; }
+            bool is_empty() const;
             language intersect(const language& other) const;
             language remove_prefix(const element& e) const;
-            bool operator==(const language& other) const { return true; };
+            language& operator=(language&& other) noexcept;
+            bool operator==(const language& other) const;
             bool operator!=(const language& other) const { return !(*this == other); }
+            friend std::ostream& operator<<(std::ostream& os, const language& l);
         };
 
         class state {
@@ -309,6 +313,7 @@ namespace smt {
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
+            void set_var_lang(const element& var, language&& lang);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
             state remove_all(const std::set<element>& tgt) const;
@@ -372,11 +377,13 @@ namespace smt {
             std::stack<state::cref> m_pending;
         public:
             explicit neilsen_transforms(state&& root);
-            bool in_status(const result& t) const { return m_status == t; };
+            bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
             result check(bool split_var_empty_ahead = false);
         private:
             bool finish_after_found(const state& s);
+            const state& add_sibling_more_removed(const state& s, state&& sib, const element& v);
+            const state& add_child_var_removed(const state& s, state&& c, const element& v);
             result split_var_empty_cases();
             std::queue<state::cref> split_first_level_var_empty();
             std::list<action> transform(const state& s) const;
@@ -385,8 +392,6 @@ namespace smt {
         using expr_pair = std::pair<expr_ref, expr_ref>;
 
     }
-
-    std::ostream& operator<<(std::ostream& os, str::automaton::sptr a);
 
     class theory_str : public theory {
         int m_scope_level = 0;
@@ -427,11 +432,13 @@ namespace smt {
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         bool is_regex_sort(expr *e) const;
+        bool is_const_fun(expr *e) const;
         expr_ref mk_sub(expr *a, expr *b);
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
                            expr *e4 = nullptr, sort *range = nullptr);
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
+        str::element mk_var_element(expr *e);
         str::language mk_language(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
