@@ -729,10 +729,10 @@ namespace smt {
                  * elementNames[pos] is a connected.
                  * how many parts of that connected variable are in the const | regex
                  */
-                int find_partsOfConnectedVariablesInAVector(
+                expr* find_partsOfConnectedVariablesInAVector(
                         int pos,
                         std::vector<std::pair<expr*, int>> elementNames,
-                        expr* &subLen);
+                        int &partCnt);
                 /*
                 * pre elements + pre fix of itself
                 */

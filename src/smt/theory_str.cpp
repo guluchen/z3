@@ -778,7 +778,6 @@ namespace smt {
         ast_manager& m = get_manager();
         context& ctx = get_context();
         SASSERT(term->get_family_id() == get_family_id());
-        STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(term, m) << std::endl;);
 
         const unsigned num_args = term->get_num_args();
         for (unsigned i = 0; i < num_args; i++) {
@@ -798,12 +797,10 @@ namespace smt {
             enode *arg = e->get_arg(i);
             const theory_var& v_arg = mk_var(arg);
             (void) v_arg;
-            STRACE("str", tout << "arg has theory var #" << v_arg << std::endl;);
         }
 
         const theory_var& v = mk_var(e);
         (void) v;
-        STRACE("str", tout << "term has theory var #" << v << std::endl;);
         return true;
     }
 
@@ -3355,7 +3352,6 @@ namespace smt {
 
         // create all tmp vars
         for(const auto& v : allStrExprs){
-            STRACE("str", tout << "init: " << mk_pp(v, m) << "; is string: " << u.str.is_string(v) << "; " << varPieces[v] << std::endl;);
 
             if (is_app(v)){
                 app *ap = to_app(v);
@@ -3364,6 +3360,13 @@ namespace smt {
                     expr_ref v1(mk_arr_var(flatArr), m);
                     arrMap[v] = v1;
                     STRACE("str", tout << "arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
+
+                    zstring val;
+                    if (u.str.is_string(v, val)){
+                        for (int i = 0; i < val.length(); ++i){
+                            assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
+                        }
+                    }
                 }
             }
         }
@@ -3410,11 +3413,19 @@ namespace smt {
                 continue;
 
             if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
-                std::vector<std::pair<expr*, int>> lhs_elements = createEquality(it->first);
+
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
                 /* compare with others */
                 for (const auto& element: it->second) {
-                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(element);
+                    if (element == it->first){
+                        continue;
+                    }
+                    ptr_vector<expr> lhs;
+                    ptr_vector<expr> rhs;
+                    optimizeEquality(it->first, element, lhs, rhs);
+                    std::vector<std::pair<expr*, int>> lhs_elements = createEquality(lhs);
+                    std::vector<std::pair<expr*, int>> rhs_elements = createEquality(rhs);
+
                     t = clock();
                     expr* result = equalityToSMT(sumStringVector(it->first),
                                                                     sumStringVector(element),
@@ -3618,6 +3629,14 @@ namespace smt {
 
                 if (tmp != NULL) {
                     cases.push_back(tmp);
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+                    for (unsigned i = 0; i < lhs_elements.size(); ++i)
+                    STRACE("str", tout << mk_pp(lhs_elements[i].first, m) << " ";);
+
+                    STRACE("str", tout << std::endl;);
+                    for (unsigned i = 0; i < rhs_elements.size(); ++i)
+                    STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
+                    STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
                     STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << std::endl;);
                 }
@@ -4278,7 +4297,6 @@ namespace smt {
                 // TODO: to be completed
             }
 
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             /* collect */
             /* only handle the case of splitting const string into two parts*/
             expr_ref_vector addElements(m);
@@ -4288,7 +4306,6 @@ namespace smt {
             }
 
             expr_ref adding(createAddOperator(addElements), m);
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(adding, m) << std::endl;);
 
             expr_ref len_lhs(m);
             if (optimizing != NONE)
@@ -4298,7 +4315,6 @@ namespace smt {
             result.push_back(createEqualOperator(len_lhs, adding));
 
             int splitType = findSplitType(elementNames, connectedVariables);
-            STRACE("str", tout << __LINE__ <<  " const = sum(flats), splitType = " << splitType << std::endl;);
 
             /*
              * 0: No const, No connected var
@@ -4326,13 +4342,8 @@ namespace smt {
                     for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
                         expr_ref_vector tmpp(m);
                         tmpp.append(toConstraint_NoConnectedVar(a, elementNames, allPossibleSplits[i], lhs_str, rhs_str, optimizing != NONE));
-                        STRACE("str", tout << __LINE__ <<  std::endl;);
-                        STRACE("str", tout << __LINE__ <<  " " << mk_pp(createAndOperator(tmpp), m) << std::endl;);
                         strSplits.push_back(createAndOperator(tmpp));
                     }
-                    STRACE("str", tout << __LINE__ <<  " " << strSplits.size() << std::endl;);
-                    for (int i = 0; i < strSplits.size(); ++i)
-                        STRACE("str", tout << __LINE__ <<  " " << mk_pp(strSplits.get(i), m) << std::endl;);
                     if (strSplits.size() > 0)
                         result.push_back(createOrOperator(strSplits));
                     else
@@ -4368,7 +4379,6 @@ namespace smt {
         else {
             /* do not need AND */
             /* result = sum (length) */
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             expr_ref_vector adds(m);
             for (unsigned i = 0; i < elementNames.size(); ++i) {
                 expr_ref tmp(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
@@ -4377,18 +4387,10 @@ namespace smt {
             }
             expr_ref addexpr(createAddOperator(adds), m);
 
-            if (addexpr != nullptr) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << optimizing << std::endl;);
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " "
-                                   << mk_ismt2_pp(addexpr, m) << " " << optimizing << std::endl;);
-            }
-            else
-                STRACE("str", tout << __LINE__ <<  " *** NULL ***" << std::endl;);
             if (optimizing)
                 result.push_back(createEqualOperator(getExprVarSize(a), addexpr));
             else
                 result.push_back(createEqualOperator(getExprVarFlatSize(a), addexpr));
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             /* DO NOT care about empty flats or not*/
 
             /* handle const for connected variables*/
@@ -4397,6 +4399,7 @@ namespace smt {
                         a, elementNames,
                         lhs_str, rhs_str,
                         connectedVariables, optimizing));
+            
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             /* case 2 */
             expr_ref_vector ands(m);
@@ -4635,8 +4638,8 @@ namespace smt {
 
         /* how many parts of that connected variable are in the const | regex */
         /* sublen = part_1 + part2 + .. */
-        expr* subLen = NULL;
-        find_partsOfConnectedVariablesInAVector(connectedVarPos, elementNames, subLen);
+        int partCnt = 1;
+        expr_ref subLen(find_partsOfConnectedVariablesInAVector(connectedVarPos, elementNames, partCnt), m);
 
         expr* prefix_rhs = leng_prefix_rhs(elementNames[connectedVarPos], rhs, unrollMode);
         expr* prefix_lhs = leng_prefix_lhs(a, elementNames, lhs, rhs, connectedVarPos, optimizing, false);
@@ -5335,11 +5338,11 @@ namespace smt {
             locationConstraint.push_back(extraConstraint);
 
         /* find the start position --> */
-        expr* startPos = leng_prefix_lhs(a, elementNames, lhs_str, rhs_str, constPos, optimizing, unrollMode);
+        expr_ref startPos(leng_prefix_lhs(a, elementNames, lhs_str, rhs_str, constPos, optimizing, unrollMode), m);
 
         /* optimize length of generated string */
-        expr* tmp01 = getExprVarFlatArray(a);
-        expr* tmp02 = getExprVarFlatArray(elementNames[constPos]);
+        expr_ref tmp01(getExprVarFlatArray(a), m);
+        expr_ref tmp02(getExprVarFlatArray(elementNames[constPos]), m);
 
         std::vector<zstring> components = {value};
         if (isUnionStr(value))
@@ -5422,7 +5425,7 @@ namespace smt {
             int pMax){
         ast_manager &m = get_manager();
         STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
-        expr* arrayLhs = getExprVarFlatArray(a);
+        expr_ref arrayLhs(getExprVarFlatArray(a), m);
         expr_ref_vector resultParts(m);
 
         zstring content;
@@ -5438,12 +5441,13 @@ namespace smt {
 
                 /* connected variable */
                 if (connectedVariables.find(elementNames[i].first) != connectedVariables.end()) {
-
+                    STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                     /* sublen = part_1 + part2 + .. */
-                    expr* subLen = NULL;
-                    int partCnt = find_partsOfConnectedVariablesInAVector(i, elementNames, subLen);
-                    expr* prefix_rhs = leng_prefix_rhs(elementNames[i], rhs, unrollMode);
-                    expr* prefix_lhs = leng_prefix_lhs(a, elementNames, lhs, rhs, i, optimizing, false);
+                    int partCnt = 1;
+                    expr_ref subLen(find_partsOfConnectedVariablesInAVector(i, elementNames, partCnt), m);
+
+                    expr_ref prefix_rhs(leng_prefix_rhs(elementNames[i], rhs, unrollMode), m);
+                    expr_ref prefix_lhs(leng_prefix_lhs(a, elementNames, lhs, rhs, i, optimizing, false), m);
 
                     if (a.second == REGEX_CODE) {
                         expr_ref_vector conditions(m);
@@ -5460,8 +5464,8 @@ namespace smt {
 								subcase.emplace_back(createEqualConstraint(createSelectConstraint(partArray, std::to_string(j)), std::to_string(content[j])));
 
 #else
-                            expr* arrName = getExprVarFlatArray(elementNames[i]);
-                            expr* prefix = leng_prefix_rhs(elementNames[i], rhs, unrollMode);
+                            expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
+                            expr_ref prefix(leng_prefix_rhs(elementNames[i], rhs, unrollMode), m);
 
                             expr_ref_vector cases(m);
                             for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
@@ -5487,7 +5491,7 @@ namespace smt {
                             conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(prefix_rhs, m_autil.mk_int(content.length()))));
                             conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(subLen, m_autil.mk_int(content.length()))));
 
-                            expr* arrName = getExprVarFlatArray(elementNames[i]);
+                            expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
                             for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
                                 for (unsigned j = 0; j < content.length(); ++j)
                                     conditions.push_back(createEqualOperator(createSelectOperator(arrName, m_autil.mk_int(j + iter * content.length())), m_autil.mk_int(content[j])));
@@ -5496,7 +5500,7 @@ namespace smt {
                         }
                     }
                     else {
-                        expr* arrayRhs = getExprVarFlatArray(elementNames[i]);
+                        expr_ref arrayRhs(getExprVarFlatArray(elementNames[i]), m);
 
                         if (QCONSTMAX == 1) {
                             resultParts.push_back(createEqualOperator(subLen, m_autil.mk_int(content.length())));
@@ -5520,9 +5524,11 @@ namespace smt {
 									arrayRhs.c_str());
 							__debugPrint(logFile, "%d %s\n", __LINE__, strTmp);
 #endif
+                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ...: " << mk_pp(subLen, m) << std::endl;);
                             int localSplit = connectedVariables[elementNames[i].first];
                             expr_ref_vector possibleCases(m); /* sublen = 0 || sublen = 1 || .. */
                             if (!unrollMode) {
+                                STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                                 for (int j = 0; j <= std::min(localSplit, (int)content.length()); j++){
                                     expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
                                     subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
@@ -5545,15 +5551,18 @@ namespace smt {
                                     }
                                     possibleCases.push_back(createAndOperator(subpossibleCases));
                                 }
+                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                             possibleCases.push_back(createLessOperator(m_autil.mk_int(std::min(localSplit, (int)content.length())), subLen));
+                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ...: " << possibleCases.size() << std::endl;);
                             resultParts.push_back(createOrOperator(possibleCases));
+                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                         }
                     }
                     i += (partCnt - 1);
                 }
             }
         }
-
+        STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
         return createAndOperator(resultParts);
     }
 
@@ -5561,14 +5570,14 @@ namespace smt {
      * elementNames[pos] is a connected.
      * how many parts of that connected variable are in the const | regex
      */
-    int theory_str::find_partsOfConnectedVariablesInAVector(
+    expr* theory_str::find_partsOfConnectedVariablesInAVector(
             int pos,
             std::vector<std::pair<expr*, int>> elementNames,
-            expr* &subLen){
-        int partCnt = 1;
+            int &partCnt){
+        partCnt = 1;
         ast_manager &m = get_manager();
         expr_ref_vector addElements(m);
-        addElements.push_back(getExprVarFlatSize(elementNames[pos]));
+        addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[pos]), getExprVarFlatIter(elementNames[pos])));
         unsigned int j = pos + 1;
         for (j = pos + 1; j < elementNames.size(); ++j)
             if (elementNames[j].second > elementNames[j - 1].second &&
@@ -5584,8 +5593,7 @@ namespace smt {
                 break;
 
         /* sublen = part_1 + part2 + .. */
-        subLen = createAddOperator(addElements);
-        return partCnt;
+        return createAddOperator(addElements);
     }
 
     /*
@@ -6075,7 +6083,19 @@ namespace smt {
     }
 
     expr* theory_str::getExprVarSize(std::pair<expr*, int> a){
-        return mk_strlen(a.first);
+        zstring val;
+        if (u.str.is_string(a.first, val)){
+            return m_autil.mk_int(val.length());
+        }
+        else {
+            rational vLen;
+            bool vLen_exists = get_len_value(a.first, vLen);
+            if (vLen_exists){
+                return  m_autil.mk_int(vLen.get_int32());
+            }
+            else
+                return mk_strlen(a.first);
+        }
     }
 
     /*
@@ -6135,15 +6155,13 @@ namespace smt {
     }
 
     expr* theory_str::getExprVarFlatSize(std::pair<expr*, int> a){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, get_manager()) << "," << a.second << std::endl;);
+//        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, get_manager()) << "," << a.second << std::endl;);
         if (!u.str.is_string(a.first)) {
-            STRACE("str",
-                   tout << __LINE__ << " " << mk_pp(lenMap[a.first][std::abs(a.second)], get_manager()) << std::endl;);
+//            STRACE("str", tout << __LINE__ << " " << mk_pp(lenMap[a.first][std::abs(a.second)], get_manager()) << std::endl;);
             return lenMap[a.first][std::abs(a.second)];
         }
         else {
-            STRACE("str",
-                   tout << __LINE__ << " " << mk_pp(lenMap[a.first][std::abs(a.second) - 1], get_manager()) << std::endl;);
+//            STRACE("str", tout << __LINE__ << " " << mk_pp(lenMap[a.first][std::abs(a.second) - 1], get_manager()) << std::endl;);
             return lenMap[a.first][std::abs(a.second) - 1];
         }
     }
@@ -6177,22 +6195,50 @@ namespace smt {
      *
      */
     app* theory_str::createEqualOperator(expr* x, expr* y){
-        context & ctx = get_context();
-        return ctx.mk_eq_atom(x, y);
+//        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << std::endl;);
+        context & ctx   = get_context();
+        app* tmp = ctx.mk_eq_atom(x, y);
+        ctx.internalize(tmp, false);
+        return tmp;
     }
 
     /*
      *
      */
     app* theory_str::createMultiplyOperator(expr* x, expr* y){
-        return m_autil.mk_mul(x, y);
+//        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << std::endl;);
+        if (m_autil.is_numeral(y)){
+            rational val;
+            if (get_arith_value(y, val)){
+                int value = val.get_int32();
+                if (value == 1)
+                    return to_app(x);
+                else if (value == 0)
+                    return m_autil.mk_int(0);
+            }
+        }
+        else if (m_autil.is_numeral(x)) {
+            rational val;
+            if (get_arith_value(x, val)){
+                int value = val.get_int32();
+                if (value == 1)
+                    return to_app(y);
+                else if (value == 0)
+                    return m_autil.mk_int(0);
+            }
+        }
+
+        app* tmp = m_autil.mk_mul(x, y);
+        return tmp;
     }
 
     /*
      *
      */
     app* theory_str::createModOperator(expr* x, expr* y){
-        return m_autil.mk_mod(x, y);
+        context & ctx   = get_context();
+        app* tmp = m_autil.mk_mod(x, y);
+        return tmp;
     }
 
 
@@ -6200,44 +6246,62 @@ namespace smt {
      *
      */
     app* theory_str::createAddOperator(expr* x, expr* y){
-        return m_autil.mk_add(x, y);
+//        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << std::endl;);
+        context & ctx   = get_context();
+        app* tmp = m_autil.mk_add(x, y);
+        return tmp;
     }
 
     /*
      *
      */
     app* theory_str::createAddOperator(expr_ref_vector adds){
+//        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << std::endl;);
         if (adds.size() == 0)
             return m_autil.mk_int(0);
-        return m_autil.mk_add(adds.size(), adds.c_ptr());
+        context & ctx   = get_context();
+        app* tmp = m_autil.mk_add(adds.size(), adds.c_ptr());
+        return tmp;
     }
 
     /*
      *
      */
     app* theory_str::createLessOperator(expr* x, expr* y){
-        return m_autil.mk_lt(x, y);
+        if (!m_autil.is_numeral(y))
+            return m_autil.mk_gt(y,  x);
+        else
+            return m_autil.mk_lt(x, y);
     }
 
     /*
      *
      */
     app* theory_str::createLessEqOperator(expr* x, expr* y){
-        return m_autil.mk_le(x, y);
+        if (!m_autil.is_numeral(y))
+            return m_autil.mk_ge(y, x);
+        else
+            return m_autil.mk_le(x, y);
     }
 
     /*
      *
      */
     app* theory_str::createGreaterOperator(expr* x, expr* y){
-        return m_autil.mk_gt(x, y);
+        if (!m_autil.is_numeral(y))
+            return m_autil.mk_lt(y, x);
+        else
+            return m_autil.mk_gt(x, y);
     }
 
     /*
      *
      */
     app* theory_str::createGreaterEqOperator(expr* x, expr* y){
-        return m_autil.mk_ge(x, y);
+        if (!m_autil.is_numeral(y))
+            return m_autil.mk_le(y, x);
+        else
+            return m_autil.mk_ge(x, y);
     }
 
     /*
@@ -6245,12 +6309,14 @@ namespace smt {
      */
     app* theory_str::createAndOperator(expr_ref_vector ands){
         ast_manager &m = get_manager();
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ands.size() << std::endl;);
+//        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ands.size() << std::endl;);
 
         if (ands.size() == 0)
             return m.mk_true();
-
-        return m.mk_and(ands.size(), ands.c_ptr());
+        context & ctx   = get_context();
+        app* tmp = m.mk_and(ands.size(), ands.c_ptr());
+        ctx.internalize(tmp, false);
+        return tmp;
     }
 
     /*
@@ -6262,9 +6328,13 @@ namespace smt {
 
         if (ors.size() == 0)
             return m.mk_false();
+        context & ctx   = get_context();
+        app* tmp = m.mk_or(ors.size(), ors.c_ptr());
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ors.size() << std::endl;);
+        ctx.internalize(tmp, false);
 
-        expr_ref tmp(::mk_or(ors), m);
-        return m.mk_and(ors.size(), ors.c_ptr());
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ors.size() << std::endl;);
+        return tmp;
     }
 
     /*
@@ -6295,7 +6365,10 @@ namespace smt {
         ast_manager &m = get_manager();
         sel_args.push_back(x);
         sel_args.push_back(y);
-        return m_arrayUtil.mk_select(sel_args.size(), sel_args.c_ptr());
+        context & ctx   = get_context();
+        app* tmp = m_arrayUtil.mk_select(sel_args.size(), sel_args.c_ptr());
+        ctx.internalize(tmp, false);
+        return tmp;
     }
 
 
@@ -6690,7 +6763,6 @@ namespace smt {
     }
 
     std::vector<std::pair<expr*, int>> theory_str::createEquality(expr* node){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         if (is_app(node)) {
             app *ap = to_app(node);
             if (u.str.is_concat(ap)){
@@ -6705,7 +6777,6 @@ namespace smt {
     }
 
     std::vector<std::pair<expr*, int>> theory_str::createEquality(ptr_vector<expr> list){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         std::vector<expr*> l;
         for (unsigned i = 0; i < list.size(); ++i)
             l.push_back(list[i]);
@@ -6717,7 +6788,6 @@ namespace smt {
      * Output: flat . flat . flat . flat . flat . flat
      */
     std::vector<std::pair<expr*, int>> theory_str::createEquality(std::vector<expr*> list){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         std::vector<std::pair<expr*, int>> elements;
 
         for (unsigned k = 0; k < list.size(); ++k) {
@@ -6757,7 +6827,6 @@ namespace smt {
                 }
             }
         }
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << elements.size() << std::endl;);
         return elements;
     }
 
@@ -6769,16 +6838,35 @@ namespace smt {
             start ++;
             end ++;
         }
+
+        expr_ref_vector adds(m);
         for (int i = start; i < end; ++i) {
             std::string flatSize = generateFlatSize(std::make_pair(v, i), "");
             std::string flatIter = generateFlatIter(std::make_pair(v, i));
 
             expr_ref v1(mk_int_var(flatSize), m);
+
+            assert_axiom(createGreaterEqOperator(v1, m_autil.mk_int(0)));
             lenMap[v].push_back(v1);
 
-            expr_ref v2(mk_int_var(flatIter), m);
-            iterMap[v].push_back(v2);
+            expr_ref v2(m);
+            if (u.str.is_string(v))
+                v2 = mk_int(1);
+            else {
+                v2 = mk_int_var(flatIter);
+                assert_axiom(createGreaterEqOperator(v2, m_autil.mk_int(0)));
+                iterMap[v].push_back(v2);
+            }
+
+            adds.push_back(createMultiplyOperator(v1, v2));
         }
+
+        zstring val;
+        if (u.str.is_string(v, val)){
+            assert_axiom(createEqualOperator(createAddOperator(adds), mk_int(val.length())));
+        }
+        else
+            assert_axiom(createEqualOperator(createAddOperator(adds), u.str.mk_length(v)));
     }
 
     std::vector<expr*> theory_str::set2vector(std::set<expr*> s){
@@ -6838,13 +6926,13 @@ namespace smt {
             expr* rhs,
             ptr_vector<expr> &new_lhs,
             ptr_vector<expr> &new_rhs){
+        ast_manager &m = get_manager();
         /* cut prefix */
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
 
         ptr_vector<expr> rhsVec;
         get_nodes_in_concat(rhs, rhsVec);
-
         /* cut prefix */
         int prefix = -1;
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
@@ -6866,7 +6954,7 @@ namespace smt {
             new_lhs.push_back(lhsVec[i]);
 
         for (unsigned i = prefix + 1; i < rhsVec.size() - suffix - 1; ++i)
-            new_lhs.push_back(rhsVec[i]);
+            new_rhs.push_back(rhsVec[i]);
     }
 
     std::set<std::pair<expr*, int>> theory_str::collect_important_vars(std::set<expr*> eqc_roots){
@@ -8386,8 +8474,6 @@ namespace smt {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
-        STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
-
         sort * int_sort = m.mk_sort(m_autil.get_family_id(), INT_SORT);
         app * a = mk_fresh_const(name.c_str(), int_sort);
 
@@ -8931,6 +9017,7 @@ namespace smt {
         ast_manager& m = get_manager();
         context& ctx = get_context();
         expr_ref ex{e, m};
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e, m) << std::endl;);
         if (!ctx.b_internalized(ex)) {
             ctx.internalize(ex, false);
         }

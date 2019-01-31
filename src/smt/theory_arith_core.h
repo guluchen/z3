@@ -307,7 +307,6 @@ namespace smt {
             return internalize_term_core(m);
         for (unsigned i = 0; i < m->get_num_args(); i++) {
             app * arg = to_app(m->get_arg(i));
-            SASSERT(!m_util.is_numeral(arg));
             theory_var v = internalize_term_core(arg);
             if (v == null_theory_var) {
                 mk_var(mk_enode(arg));
@@ -1213,7 +1212,7 @@ namespace smt {
     bool theory_arith<Ext>::internalize_atom(app * n, bool gate_ctx) {
         TRACE("arith_internalize", tout << "internalizing atom:\n" << mk_pp(n, this->get_manager()) << "\n";);
         context & ctx = get_context();
-        SASSERT(m_util.is_le(n) || m_util.is_ge(n) || m_util.is_is_int(n));
+        SASSERT(m_util.is_le(n) || m_util.is_ge(n) || m_util.is_is_int(n) || m_util.is_lt(n) || m_util.is_gt(n));
         SASSERT(!ctx.b_internalized(n));
         atom_kind kind;
 
