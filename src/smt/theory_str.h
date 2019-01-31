@@ -198,8 +198,10 @@ namespace smt {
             symbol_manager& m_sym_man;
             symbol_boolean_algebra& m_sym_ba;
             handler& m_handler;
+            ast_manager &m_ast_man;
+            seq_util m_seq_util;
         public:
-            zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h);
+            zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h, ast_manager& m);
             ~zaut() override { dealloc(m_imp); };
             bool is_empty() override { return m_imp->is_empty(); }
             bool is_deterministic() override;
@@ -236,6 +238,7 @@ namespace smt {
             zaut::handler *m_aut_man;
             zaut::maker m_aut_make;
             std::map<expr *, zaut::sptr> m_re_aut_cache;
+            ast_manager &m_ast_man;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
             ~zaut_adaptor();

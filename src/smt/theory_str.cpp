@@ -476,8 +476,8 @@ namespace smt {
             return r;
         }
 
-        zaut::zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h)
-                : m_imp{a}, m_sym_man{s}, m_sym_ba{ba}, m_handler{h} {
+        zaut::zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h, ast_manager& m)
+                : m_imp{a}, m_sym_man{s}, m_sym_ba{ba}, m_handler{h}, m_ast_man{m}, m_seq_util{m} {
         }
 
         bool zaut::is_deterministic() {
@@ -565,10 +565,25 @@ namespace smt {
             for (auto mv : mvs) {
                 succ.insert(mv.dst());
             }
+
             return succ;
         }
 
         std::set<zaut::state> zaut::successors(state s, const zstring& str) {
+            SASSERT(str.length() >= 1);
+            moves mvs = m_imp->get_moves_from(s);
+
+            std::set<state> succ;
+            for (auto mv : mvs) {
+                symbol_boolean_algebra::expr c = sym_expr::mk_char(m_ast_man, m_seq_util.str.mk_char(str, 0));
+                symbol_boolean_algebra::expr tmp = m_sym_ba.mk_and(mv.t(), c);
+                if(m_sym_ba.is_sat(tmp) == l_true)
+                    succ.insert(mv.dst());
+                dealloc(tmp);
+                dealloc(c);
+            }
+
+            return succ;
         }
 
         std::set<automaton::len_constraint> zaut::length_constraints() {
@@ -641,11 +656,11 @@ namespace smt {
         }
 
         automaton::ptr zaut::mk_ptr(internal *&& a) const {
-            return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
+            return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
         }
 
         automaton::sptr zaut::mk_sptr(internal * a) const {
-            return sptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
+            return sptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
         }
 
         zaut::moves zaut::transitions_skeleton() {
@@ -663,7 +678,7 @@ namespace smt {
             return mvs;
         }
 
-        zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m} {
+        zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m}, m_ast_man{m} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
             m_sym_ba = alloc(zaut::symbol_boolean_algebra, m, *m_sym_solver);
             m_aut_man = alloc(zaut::handler, m_sym_man, *m_sym_ba);
@@ -681,7 +696,7 @@ namespace smt {
             if (!m_aut_make.has_solver()) {
                 m_aut_make.set_solver(m_sym_solver);
             }
-            auto&& aut = std::make_shared<zaut>(m_aut_make(re), m_sym_man, *m_sym_ba, *m_aut_man);
+            auto&& aut = std::make_shared<zaut>(m_aut_make(re), m_sym_man, *m_sym_ba, *m_aut_man, m_ast_man);
             auto&& pair = std::make_pair(re, std::move(aut));
             return m_re_aut_cache.emplace(std::move(pair)).first->second;
         }
@@ -1512,13 +1527,6 @@ namespace smt {
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {
             auto aut = mk_language(m.second); // TODO: for temporary testing
-
-            /*for(auto div : aut.value().aut->split()) {
-                div.first->display(std::cout);
-                div.second->display(std::cout);
-            }*/
-
-
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;
