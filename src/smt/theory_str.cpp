@@ -330,6 +330,22 @@ namespace smt {
         }
 
         std::list<automaton::sptr_pair> automaton::split() {
+            std::set<state> states = reachable_states();
+            std::set<state> fin = get_finals();
+            std::list<automaton::sptr_pair> ret;
+
+            for (auto middle : states) {
+                ptr cl1 = clone();
+                ptr cl2 = clone();
+
+                cl2->set_init(middle);
+                for (auto f : fin) {
+                    cl1->remove_final(f);
+                }
+                cl1->add_final(middle);
+                ret.emplace_back(std::make_pair(std::move(cl1), std::move(cl2)));
+            }
+            return ret;
         }
 
         zaut::symbol_boolean_algebra::symbol_boolean_algebra(ast_manager& m, expr_solver& s)
@@ -449,6 +465,8 @@ namespace smt {
         }
 
         std::set<automaton::state> zaut::get_finals() {
+            unsigned_vector fin =  m_imp->final_states();
+            return std::set<state>(fin.begin(), fin.end());
         }
 
         automaton::ptr zaut::clone() {
@@ -471,36 +489,29 @@ namespace smt {
         }
 
         std::list<automaton::sptr_pair> zaut::split() {
-            std::set<state> states = reachable_states(m_imp->init());
-            unsigned_vector fin = m_imp->final_states();
-            std::list<zaut::sptr_pair> ret;
-            moves mvs; //assume that set of states consists of consecutive numbers (from 0).
-
-            for (auto st : states) {
-                mvs.append(m_imp->get_moves_from(st));
-            }
-
-            for (auto middle : states) {
-                internal *cl1 = m_imp->clone();
-                internal *cl2 = alloc(internal, m_sym_man, middle, m_imp->final_states(), mvs);
-                for (auto f : fin) {
-                    cl1->remove_from_final_states(f);
-                }
-                cl1->add_to_final_states(middle);
-                ptr ptr1 = mk_ptr(std::move(cl1));
-                ptr ptr2 = mk_ptr(std::move(cl2));
-                ret.emplace_back(std::make_pair(ptr1->determinize(), ptr2->determinize()));
-            }
-            return ret;
+            return automaton::split();
         }
 
-        automaton::sptr zaut::set_init(state s) {
+        void zaut::set_init(state s) {
+            internal *tmp = m_imp;
+            m_imp = alloc(internal, m_sym_man, s, m_imp->final_states(), transitions());
+            dealloc(tmp);
         }
 
-        automaton::sptr zaut::add_final(state s) {
+        void zaut::add_final(state s) {
+          m_imp->add_to_final_states(s);
         }
 
-        automaton::sptr zaut::remove_final(state s) {
+        void zaut::remove_final(state s) {
+          m_imp->remove_from_final_states(s);
+        }
+
+        zaut::moves zaut::transitions() {
+          moves mvs;
+          for (auto st : automaton::reachable_states()) {
+              mvs.append(m_imp->get_moves_from(st));
+          }
+          return mvs;
         }
 
         std::set<automaton::state> zaut::reachable_states(state st) {
@@ -606,6 +617,10 @@ namespace smt {
 
         automaton::ptr zaut::mk_ptr(internal *&& a) const {
             return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
+        }
+
+        automaton::sptr zaut::mk_sptr(internal * a) const {
+            return sptr{new zaut{a, m_sym_man, m_sym_ba, m_handler}};
         }
 
         zaut::moves zaut::transitions_skeleton() {
@@ -1471,7 +1486,14 @@ namespace smt {
         STRACE("str", tout << "membership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {
-            mk_language(m.second); // TODO: for temporary testing
+            auto aut = mk_language(m.second); // TODO: for temporary testing
+
+            for(auto div : aut.value().aut->split()) {
+                div.first->display(std::cout);
+                div.second->display(std::cout);
+            }
+
+
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;

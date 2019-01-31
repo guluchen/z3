@@ -145,9 +145,9 @@ namespace smt {
             virtual ptr union_with(sptr other) = 0;
             virtual std::list<ptr> remove_prefix(const zstring& prefix);
             virtual std::list<sptr_pair> split();
-            virtual sptr set_init(state s) = 0;
-            virtual sptr add_final(state s) = 0;
-            virtual sptr remove_final(state s) = 0;
+            virtual void set_init(state s) = 0;
+            virtual void add_final(state s) = 0;
+            virtual void remove_final(state s) = 0;
             virtual std::set<state> reachable_states() { return reachable_states(get_init()); };
             virtual std::set<state> reachable_states(state s) = 0;
             virtual std::set<state> successors(state s) = 0;
@@ -212,9 +212,9 @@ namespace smt {
             ptr union_with(sptr other) override;
             std::list<ptr> remove_prefix(const zstring& prefix) override;
             std::list<sptr_pair> split() override;
-            sptr set_init(state s) override;
-            sptr add_final(state s) override;
-            sptr remove_final(state s) override;
+            void set_init(state s) override;
+            void add_final(state s) override;
+            void remove_final(state s) override;
             std::set<state> reachable_states(state s) override;
             std::set<state> successors(state s) override;
             std::set<state> successors(state s, const zstring& str) override;
@@ -222,8 +222,10 @@ namespace smt {
             std::ostream& display(std::ostream& out) override;
             bool operator==(sptr other) override;
         private:
+            moves transitions();
             bool contains(const zaut& other) const;
             ptr mk_ptr(internal *&& a) const;
+            sptr mk_sptr(internal * a) const;
             moves transitions_skeleton();
         };
 
