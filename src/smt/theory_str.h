@@ -139,8 +139,8 @@ namespace smt {
             virtual state get_init() = 0;
             virtual std::set<state> get_finals() = 0;
             virtual ptr clone() = 0;
-            virtual sptr simplify() = 0;
-            virtual sptr determinize() = 0;
+            virtual ptr simplify() = 0;
+            virtual ptr determinize() = 0;
             virtual ptr intersect_with(sptr other) = 0;
             virtual ptr union_with(sptr other) = 0;
             virtual std::list<ptr> remove_prefix(const zstring& prefix);
@@ -206,8 +206,8 @@ namespace smt {
             state get_init() override { return m_imp->init(); }
             std::set<state> get_finals() override;
             ptr clone() override;
-            sptr simplify() override { return std::shared_ptr<zaut>(this); }
-            sptr determinize() override;
+            ptr simplify() override { return clone(); }
+            ptr determinize() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
             std::list<ptr> remove_prefix(const zstring& prefix) override;
