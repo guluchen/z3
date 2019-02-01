@@ -485,6 +485,20 @@ namespace smt {
         }
 
         bool zaut::is_deterministic() {
+            std::set<state> states = automaton::reachable_states();
+            for(state st : states) {
+                moves mvs = m_imp->get_moves_from(st);
+                for(size_t i = 0; i < mvs.size(); i++) {
+                    for(size_t j = 0; j < mvs.size(); j++) {
+                        if(i == j) continue;
+                        symbol_ref e(m_sym_ba.mk_and(mvs[i].t(), mvs[j].t()), m_sym_man);
+                        if(m_sym_ba.is_sat(e) == l_true) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
         }
 
         std::set<automaton::state> zaut::get_finals() {
@@ -509,6 +523,7 @@ namespace smt {
         }
 
         std::list<automaton::ptr> zaut::remove_prefix(const zstring& prefix) {
+            return automaton::remove_prefix(prefix);
         }
 
         std::list<automaton::sptr_pair> zaut::split() {
@@ -579,12 +594,11 @@ namespace smt {
 
             std::set<state> succ;
             for (auto mv : mvs) {
-                symbol_boolean_algebra::expr c = sym_expr::mk_char(m_ast_man, m_seq_util.str.mk_char(str, 0));
-                symbol_boolean_algebra::expr tmp = m_sym_ba.mk_and(mv.t(), c);
-                if(m_sym_ba.is_sat(tmp) == l_true)
+                symbol_ref c(sym_expr::mk_char(m_ast_man, m_seq_util.str.mk_char(str, 0)), m_sym_man);
+                symbol_ref e(m_sym_ba.mk_and(mv.t(), c), m_sym_man);
+                if(m_sym_ba.is_sat(e) == l_true) {
                     succ.insert(mv.dst());
-                dealloc(tmp);
-                dealloc(c);
+                }
             }
 
             return succ;
