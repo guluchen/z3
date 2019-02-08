@@ -148,13 +148,12 @@ include(CheckCXXSourceCompiles)
 ################################################################################
 set(Z3_COMPONENT_CXX_DEFINES "")
 set(Z3_COMPONENT_CXX_FLAGS "")
-set(Z3_COMPONENT_EXTRA_INCLUDE_DIRS "")
-set(Z3_DEPENDENT_LIBS "")
+set(Z3_COMPONENT_EXTRA_INCLUDE_DIRS "/usr/local/include")
+set(Z3_DEPENDENT_LIBS "-lfst -ldl")
 set(Z3_DEPENDENT_EXTRA_CXX_LINK_FLAGS "")
 
 INCLUDE_DIRECTORIES(/usr/local/include)
-INCLUDE_DIRECTORIES(/usr/local/include/fst)
-LINK_DIRECTORIES( /usr/local/lib )
+LINK_DIRECTORIES(/usr/local/lib)
 
 ################################################################################
 # Build type

@@ -8,6 +8,11 @@
 
 #include "math/automata/symbolic_automata_def.h"
 
+template<typename TO, typename FROM>
+std::unique_ptr<TO> static_unique_pointer_cast (std::unique_ptr<FROM>&& old){
+    return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
+}
+
 namespace smt {
 
     namespace str {
@@ -520,6 +525,7 @@ namespace smt {
         }
 
         automaton::ptr zaut::union_with(sptr other) {
+            return nullptr;
         }
 
         std::list<automaton::ptr> zaut::remove_prefix(const zstring& prefix) {
@@ -665,8 +671,13 @@ namespace smt {
         }
 
         bool zaut::operator==(const automaton& other) {
-            const zaut *const o = static_cast<const zaut *>(&other);
-            return contains(*o) && o->contains(*this);
+            try {
+                const zaut &item = dynamic_cast<const zaut&>(other);
+                return contains(item) && item.contains(*this);
+            }
+            catch(const std::bad_cast& e) {
+                return false;
+            }
         }
 
         bool zaut::contains(const zaut& other) const {
@@ -720,6 +731,569 @@ namespace smt {
             return m_re_aut_cache.emplace(std::move(pair)).first->second;
         }
 
+        oaut::oaut(internal a): m_imp{a} {
+            m_imp = a;
+        }
+
+        void show_fst(fst::StdVectorFst m_imp, const string& description=""){
+            const float Zero = std::numeric_limits<float>::infinity();
+
+            std::cout<<description<<std::endl;
+            std::cout<<"Init: "<<m_imp.Start()<<std::endl;
+            fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);
+            std::set<int> final_states;
+            while(!st_itr.Done()){
+                int from = st_itr.Value();
+                fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,from);
+                while(!arc_it.Done()){
+                    int symbol = arc_it.Value().ilabel;
+                    int to = arc_it.Value().nextstate;
+                    std::cout<<from<<"("<<m_imp.Final(from)<<")"<<"--"<<(char)symbol<<"("<<arc_it.Value().weight<<")"<<"-->"<<to<<"("<<m_imp.Final(to)<<")"<<std::endl;
+                    arc_it.Next();
+                }
+                if(m_imp.Final(from)!=Zero)//is "from" a final state
+                    final_states.insert(from);
+                st_itr.Next();
+            }
+            std::cout<<"Finals: ";
+            for(auto& s:final_states){
+                std::cout<<s<<" ";
+            }
+
+            const auto props = m_imp.Properties(
+                    fst::kAcceptor | fst::kIDeterministic | fst::kNoIEpsilons | fst::kWeighted | fst::kUnweighted, true);
+
+            std::cout<<std::endl;
+            std::cout<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
+                     <<((props & fst::kAcceptor)!=0) << ","
+                     <<((props & fst::kIDeterministic) !=0) << ","
+                     <<((props & fst::kNoIEpsilons)!=0) << ","
+                     <<((props & fst::kWeighted)!=0) << ","
+                     <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
+        }
+
+        std::set<automaton::state> oaut::successors(automaton::state s) {
+            std::set<state> states;
+            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+                state to = arc_it.Value().nextstate;
+                states.insert(to);
+            }
+            return states;
+        }
+
+        std::set<automaton::state> oaut::successors(state s, const zstring& str) {
+            std::set<state> states;
+
+            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+                state to = arc_it.Value().nextstate;
+                Label symbol = arc_it.Value().ilabel;
+                if(symbol == str[0])
+                    states.insert(to);
+            }
+            return states;
+
+        };
+
+        std::set<automaton::state> oaut::reachable_states(state s) {
+            std::set<state> states;
+            std::set<state> waitlist;
+
+            waitlist.insert(m_imp.Start());
+            while(!waitlist.empty()){
+                state cur = *waitlist.begin();
+                waitlist.erase(waitlist.begin());
+                states.insert(cur);
+
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                    StateId to = arc_it.Value().nextstate;
+                    if(states.find(to) == states.end()){
+                        waitlist.insert(to);
+                    }
+                }
+            }
+            return states;
+        }
+
+        bool oaut::is_empty(){
+            if(m_imp.NumStates()==0)
+                return true;
+
+            std::set<state> processed;
+            std::set<state> waitlist;
+
+            waitlist.insert(m_imp.Start());
+            while(!waitlist.empty()){
+                state cur = *waitlist.begin();
+                waitlist.erase(waitlist.begin());
+                processed.insert(cur);
+
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                    StateId to = arc_it.Value().nextstate;
+                    if(m_imp.Final(to)!=Zero){//is "to" a final state
+                        return false;
+                    }
+                    if(processed.find(to) == processed.end()){
+                        processed.insert(cur);
+                    }
+                }
+            }
+            return true;
+        }
+
+        std::ostream& oaut::display(std::ostream& out, const string& description) {
+            out<<description<<std::endl;
+            return display(out);
+        }
+        std::ostream& oaut::display(std::ostream& out){
+            out<<"Init: "<<m_imp.Start()<<std::endl;
+            std::set<int> final_states;
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    if((symbol>=(int)'a' && symbol <= (int)'z')||
+                       (symbol>=(int)'A' && symbol <= (int)'Z'))
+                        out<<from<<"--"<<(char)symbol<<"-->"<<to<<std::endl;
+                    else
+                        out<<from<<"--"<<symbol<<"-->"<<to<<std::endl;
+                }
+                if(m_imp.Final(from)!=Zero)//is "from" a final state
+                    final_states.insert(from);
+            }
+            out<<"Finals: ";
+            for(auto& s:final_states){
+                out<<s<<" ";
+            }
+            out<<std::endl;
+            const auto props = m_imp.Properties(
+                    fst::kAcceptor | fst::kIDeterministic | fst::kNoIEpsilons | fst::kWeighted | fst::kUnweighted, true);
+
+            out<<std::endl;
+            out<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
+                     <<((props & fst::kAcceptor)!=0) << ","
+                     <<((props & fst::kIDeterministic) !=0) << ","
+                     <<((props & fst::kNoIEpsilons)!=0) << ","
+                     <<((props & fst::kWeighted)!=0) << ","
+                     <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
+            return out;
+        }
+
+
+        std::set<automaton::state> oaut::get_finals(){
+            std::set<state> result;
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                state state = st_itr.Value();
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    result.insert(state);
+            }
+            return result;
+        }
+        automaton::ptr oaut::complement(){
+            using namespace fst;
+            automaton::ptr result = clone();
+            auto cur = static_unique_pointer_cast<oaut>(std::move(result));
+            RmEpsilon(&cur->m_imp);
+            Determinize(cur->m_imp, &cur->m_imp);
+            Minimize(&cur->m_imp);
+            cur->totalize();
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(cur->m_imp);!st_itr.Done();st_itr.Next()){
+                StateId state = st_itr.Value();
+                cur->m_imp.SetFinal(state, (cur->m_imp.Final(state)==Zero)?One:Zero);
+            }
+            Minimize(&cur->m_imp);
+            return cur;
+        }
+
+        void oaut::totalize(){
+            StateId sink = m_imp.AddState();
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                std::set<Label> usedSymbols;
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    usedSymbols.insert(symbol);
+                }
+                for(Label i=1;i<=maximal_char;i++){
+                    if(usedSymbols.find(i)==usedSymbols.end()){
+                        m_imp.AddArc(from, makeArc(i, sink));
+                    }
+                }
+
+            }
+        }
+
+        bool oaut::operator==(const automaton& other) {
+            try {
+                oaut item = dynamic_cast<const oaut&>(other);
+                RmEpsilon(&m_imp);
+                RmEpsilon(&item.m_imp);
+                Determinize(m_imp,&m_imp);
+                Determinize(item.m_imp,&item.m_imp);
+                return fst::Equivalent(m_imp, item.m_imp);
+            }
+            catch(const std::bad_cast& e) {
+                return false;
+            }
+        }
+
+        void oaut::append(oaut& other){
+            using namespace fst;
+            std::map<state,state> state_map;
+            set<state> my_finals=get_finals();
+
+            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+                StateId s=add_state();
+                StateId from = st_itr.Value();
+                state_map[from]=s;
+                if(other.m_imp.Final(from)!=Zero) {//is "from" a final state
+                    add_final(state_map[from]);
+                }
+            }
+            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
+                }
+            }
+
+            for(auto& s:my_finals){
+                state other_init = other.m_imp.Start();
+                m_imp.AddArc(s, makeArc(0, state_map[other_init]));
+                remove_final(s);
+            }
+            RmEpsilon(&m_imp);
+        }
+
+
+        void oaut::cloneInternalStructure(internal& r_imp){
+            using namespace fst;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+            std::map<StateId,StateId> st_map;
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId s=r_imp.AddState();
+                st_map[st_itr.Value()] = s;
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    r_imp.SetFinal(s,One);
+            }
+            r_imp.SetStart(st_map[m_imp.Start()]);
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                }
+            }
+        }
+
+        automaton::ptr oaut::determinize(){
+            using namespace fst;
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Determinize(r_imp,&r_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+        automaton::ptr oaut::intersect_with(sptr other){
+            using namespace fst;
+            oaut item = dynamic_cast<const oaut&>(*other);
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Intersect(r_imp,item.m_imp,&r_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+        automaton::ptr oaut::union_with(sptr other){
+            using namespace fst;
+            oaut item = dynamic_cast<const oaut&>(*other);
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Union(&r_imp,item.m_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+
+        automaton::ptr oaut::clone(){
+            using namespace fst;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+            StdVectorFst r_imp;
+            std::map<StateId,StateId> st_map;
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId s=r_imp.AddState();
+                st_map[st_itr.Value()] = s;
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    r_imp.SetFinal(s,One);
+            }
+            r_imp.SetStart(st_map[m_imp.Start()]);
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                }
+            }
+            std::unique_ptr<oaut> result = std::unique_ptr<oaut>(new oaut(r_imp));
+            return result;
+        }
+
+        oaut_adaptor::oaut_adaptor(ast_manager& m) : m{m},m_util_s{m} {
+        }
+
+
+        // Convert a regular expression to an e-NFA using Thompson's construction
+        std::shared_ptr<oaut> oaut_adaptor::mk_oaut_from_re_expr(expr *const e) {
+            using namespace fst;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+
+            std::shared_ptr<oaut> result;
+            StdVectorFst result_fst;
+            if (m_util_s.re.is_to_re(e)) {
+                app *term_is_to_re = to_app(e);
+                expr *term_str = term_is_to_re->get_arg(0);
+                zstring str;
+                if (m_util_s.str.is_string(term_str, str)) {
+                    if (str.length() == 0) {
+                        StateId init = result_fst.AddState();
+                        result_fst.SetStart(init);
+                        result_fst.SetFinal(init, One);
+                    } else {
+                        TRACE("str", tout << "build NFA for '" << str << "'" << "\n";);
+                        /*
+                         * For an n-character string, we make (n+1) states,
+                         */
+                        StateId last = result_fst.AddState();
+                        result_fst.SetStart(last);
+                        for (unsigned i = 0; i < str.length(); i++) {
+                            StateId cur = result_fst.AddState();
+                            result_fst.AddArc(last, makeArc(str[i], cur));
+                            TRACE("str", tout << "string transition " << last << "--" << str[i] << "--> " << cur
+                                              << "\n";);
+                            last = cur;
+                        }
+                        result_fst.SetFinal(last, One);
+                    }
+                    result=std::make_shared<smt::str::oaut>(result_fst);
+                } else { // ! u.str.is_string(arg_str, str)
+                    TRACE("str", tout << "WARNING: invalid string constant in str.to.re." << std::endl;);
+                    m.raise_exception(
+                            "invalid term in str.to.re, argument must be a string constant");
+                }
+            } else if (m_util_s.re.is_concat(e)) {
+                app *term_concat = to_app(e);
+                expr *re1 = term_concat->get_arg(0);
+                expr *re2 = term_concat->get_arg(1);
+                std::shared_ptr<oaut> prefix=mk_oaut_from_re_expr(re1);
+                std::shared_ptr<oaut> suffix=mk_oaut_from_re_expr(re2);
+
+                prefix->append(*suffix);
+                result = prefix;
+                TRACE("str", tout << "concat NFAs " <<mk_pp(re1,m)<<" and " <<mk_pp(re2,m)<<std::endl;);
+            } else if (m_util_s.re.is_union(e)) {
+                app *term_union = to_app(e);
+                expr *re1 = term_union->get_arg(0);
+                expr *re2 = term_union->get_arg(1);
+                result = mk_oaut_from_re_expr(re1);
+                std::shared_ptr<oaut> other = mk_oaut_from_re_expr(re2);
+                fst::Union(&result->m_imp, other->m_imp);
+                fst::RmEpsilon(&result->m_imp);
+
+                TRACE("str", tout << "union NFAs " <<mk_pp(re1,m)<<" and " <<mk_pp(re2,m)<<std::endl;);
+            } else if (m_util_s.re.is_star(e)) {
+                app *term_star = to_app(e);
+                expr *inner_re = term_star->get_arg(0);
+                result=mk_oaut_from_re_expr(inner_re);
+                StateId init =result->get_init();
+
+                for(StateIterator<fst::StdVectorFst> st_itr(result->m_imp);!st_itr.Done();st_itr.Next()){
+                    StateId cur = st_itr.Value();
+                    if(result->m_imp.Final(cur) != Zero ){
+                        result->m_imp.AddArc(cur, makeArc(0, init));// 0 is epsilon in OpenFst
+                    }
+                }
+
+                fst::RmEpsilon(&result->m_imp);
+                fst::Determinize(result->m_imp, &result->m_imp);
+                fst::Minimize(&result->m_imp);
+                TRACE("str", tout << "star NFA " <<mk_pp(inner_re,m)<<std::endl;);
+            } else if (m_util_s.re.is_range(e)) {
+                // range('a', 'z')
+                // start --'a'--> end
+                // start --'b'--> end
+                // ...
+                // start --'z'--> end
+                app *term_range = to_app(e);
+                expr *bound_expr1 = term_range->get_arg(0);
+                expr *bound_expr2 = term_range->get_arg(1);
+                StateId init = result_fst.AddState();
+                result_fst.SetStart(init);
+                StateId final = result_fst.AddState();
+                result_fst.SetFinal(final, One);
+
+                unsigned lower = exprToUnsigned(bound_expr1);
+                unsigned upper = exprToUnsigned(bound_expr2);
+                if(lower>upper) std::swap(lower,upper);
+                for (unsigned label = lower; label <= upper; label++) {
+                    result_fst.AddArc(init, makeArc(label, final));
+                }
+                result=std::make_shared<smt::str::oaut>(result_fst);
+                TRACE("str", tout << "range NFA: " <<mk_pp(e,m)<<std::endl;);
+            } else if (m_util_s.re.is_full_seq(e)) {
+                // effectively the same as .* where . can be any single character
+                // start --e--> tmp
+                // tmp --e--> end
+                // tmp --C--> tmp for every character C
+
+                StateId init = result_fst.AddState();
+                result_fst.SetStart(init);
+                result_fst.SetFinal(init, One);
+
+                for (unsigned label = 0; label < 256; label++) {
+                    result_fst.AddArc(init, makeArc(label, init));
+                }
+                result=std::make_shared<smt::str::oaut>(result_fst);
+                TRACE("str", tout << "re.all NFA: " <<mk_pp(e,m)<<std::endl;);
+            } else if (m_util_s.re.is_full_char(e)) {
+                // effectively . (match any one character)
+                StateId init = result_fst.AddState();
+                result_fst.SetStart(init);
+                StateId final = result_fst.AddState();
+                result_fst.SetFinal(final, One);
+
+                for (unsigned label = 0; label < 256; label++) {
+                    result_fst.AddArc(init, makeArc(label, final));
+                }
+                result=std::make_shared<smt::str::oaut>(result_fst);
+                TRACE("str", tout << "re.allchar NFA: " <<mk_pp(e,m)<<std::endl;);
+            } else if (m_util_s.re.is_complement(e)) {
+                app *term_comp = to_app(e);
+                expr *inner_expr = term_comp->get_arg(0);
+                result = mk_oaut_from_re_expr(inner_expr);
+                result = static_unique_pointer_cast<oaut>(result->complement());
+
+                TRACE("str", tout << "re.complement NFA: " <<mk_pp(e,m)<<std::endl;);
+            } else {
+                TRACE("str", tout << "WARNING: invalid regular expression terms" << std::endl;);
+                m.raise_exception(
+                        "invalid regular expression terms");
+            }
+
+//            std::cout<<mk_pp(e,m)<<std::endl;
+//            result->display(std::cout);
+
+            return result;
+        }
+
+
+        unsigned oaut_adaptor::exprToUnsigned(expr * e){
+            zstring str_form;
+            m_util_s.str.is_string(e, str_form);
+            return str_form[0];
+        }
+
+        void oaut::unit_test(){
+            const float One = 0;
+            fst::StdVectorFst f;
+            f.AddState();   // 1st state will be state 0 (returned by AddState)
+            f.AddState();
+            f.AddState();
+            f.AddState();
+            f.AddState();
+            f.SetStart(0);
+            f.AddArc(0, fst::StdArc('a', 'a', One, 1));
+            f.AddArc(0, fst::StdArc('b', 'b', One, 2));
+            f.AddArc(1, fst::StdArc('b', 'b', One, 3));
+            f.AddArc(2, fst::StdArc('a', 'a', One, 4));
+            f.AddArc(3, fst::StdArc('a', 'a', One, 1));
+            f.AddArc(4, fst::StdArc('b', 'b', One, 2));
+            f.SetFinal(3, One);
+            f.SetFinal(4, One);
+
+            std::shared_ptr<oaut> result = std::make_shared<smt::str::oaut>(f);
+
+            fst::StdVectorFst g;
+            g.AddState();
+            g.AddState();
+            g.AddState();
+            g.AddState();
+            g.AddState();
+            g.AddState();
+            g.AddState();
+            g.SetStart(0);
+            g.AddArc(0, fst::StdArc('a', 'a', One, 1));
+            g.AddArc(0, fst::StdArc('b', 'b', One, 2));
+            g.AddArc(1, fst::StdArc('b', 'b', One, 3));
+            g.AddArc(2, fst::StdArc('a', 'a', One, 4));
+            g.AddArc(3, fst::StdArc('a', 'a', One, 5));
+            g.AddArc(4, fst::StdArc('b', 'b', One, 6));
+            g.AddArc(5, fst::StdArc('b', 'b', One, 3));
+            g.AddArc(6, fst::StdArc('a', 'a', One, 4));
+
+            g.SetFinal(3, One);
+            g.SetFinal(4, One);
+
+
+            std::shared_ptr<oaut> result2 = std::make_shared<smt::str::oaut>(g);
+
+            std::cout<<"Equalivalent function test: "<<((*result == *result2)==true)<<std::endl;
+            g.AddArc(1, fst::StdArc('c', 'c', One, 3));
+            result2 = std::make_shared<smt::str::oaut>(g);
+            std::cout<<"Equalivalent function test: "<<((*result == *result2)==false)<<std::endl;
+
+            std::cout<<"Is_deterministic function test: "<<((result->is_deterministic())==true)<<std::endl;
+            g.AddArc(1, fst::StdArc('c', 'c', One, 2));
+            result2 = std::make_shared<smt::str::oaut>(g);
+            std::cout<<"Is_deterministic function test: "<<((result2->is_deterministic())==false)<<std::endl;
+            std::shared_ptr<automaton> result3=result2->determinize();
+
+            std::cout<<"Clone and determinize functions test: "<<((*result3 == *result2)==true)<<std::endl;
+            std::shared_ptr<automaton> result4 = result3->complement();
+            std::shared_ptr<automaton> result5 = result4->intersect_with(result3);
+            std::cout<<"Complement, intersection, and is_empty functions test: "<<(result5->is_empty()==true)<<std::endl;
+
+            std::shared_ptr<automaton> result6 = result4->union_with(result3);
+            std::shared_ptr<automaton> result7 = result6->complement();
+
+            std::cout<<"Complement, union, and is_empty functions test: "<<(result7->is_empty()==true)<<std::endl;
+
+            std::set<automaton::state> reachable = (result2->reachable_states(result2->get_init()));
+            std::set<automaton::state> onestep_reachable = (result2->successors(result2->get_init()));
+            std::set<automaton::state> onestep_a_reachable = (result2->successors(result2->get_init(), "a"));
+
+            std::set<automaton::state> out;
+            std::set<automaton::state> out2;
+
+            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
+                                reachable.begin(), reachable.end(),
+                                std::inserter(out, out.begin()));
+
+            std::set_difference(reachable.begin(), reachable.end(),
+                                onestep_reachable.begin(), onestep_reachable.end(),
+                                std::inserter(out2, out2.begin()));
+
+            std::cout<<"Reachable_states and successors functions test1: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
+            std::set_difference(onestep_a_reachable.begin(), onestep_a_reachable.end(),
+                                onestep_reachable.begin(), onestep_reachable.end(),
+                                std::inserter(out, out.begin()));
+            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
+                                onestep_a_reachable.begin(), onestep_a_reachable.end(),
+                                std::inserter(out2, out2.begin()));
+
+
+            std::cout<<"Reachable_states and successors functions test2: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
+
+        }
+        automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
+            //oaut::unit_test();
+
+            return mk_oaut_from_re_expr(re);
+        }
+
+
+
         language::language(const language& other) : m_type{other.m_type} {
             if (typed(t::AUT)) m_value.aut = other.m_value.aut;
         }
@@ -741,6 +1315,9 @@ namespace smt {
             if (typed(t::AUT) && other.typed(t::AUT)) {
                 return language{m_value.aut->intersect_with(other.value().aut)};
             }
+            else{
+                return *this;
+            }
         }
 
         language language::remove_prefix(const element& e) const {
@@ -750,6 +1327,7 @@ namespace smt {
                 m_value.aut->remove_prefix(e.value());
                 // TODO: ...
             }
+            return *this;
         }
 
         language& language::operator=(language&& other) noexcept {
@@ -757,6 +1335,7 @@ namespace smt {
                 m_type = language::t::AUT;
                 m_value.aut = std::move(other.m_value.aut);
             }
+            return *this;
         }
 
         bool language::operator==(const language& other) const {
@@ -973,7 +1552,7 @@ namespace smt {
                 return os << "(no word equation left)" << std::endl;
             }
             for (const auto& we : s.m_wes_to_satisfy) {
-                os << we << '\n';
+                os << we<< '\n';
             }
             for (const auto& we : s.m_wes_to_fail) {
                 os << "not (" << we << ")\n";
@@ -1573,6 +2152,11 @@ namespace smt {
             m_aut_imp = std::unique_ptr<zaut_adaptor>(
                     new zaut_adaptor{get_manager(), get_context()});
         }
+
+        oaut_adaptor m_oaut_imp(get_manager());
+        automaton::sptr aut = m_oaut_imp.mk_from_re_expr(e);
+
+
         return language{m_aut_imp->mk_from_re_expr(e)->determinize()};
     }
 

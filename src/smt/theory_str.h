@@ -19,11 +19,13 @@
 #include "util/scoped_vector.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
+#include <fst/fstlib.h>
+#include <fst/script/print.h>
 
 namespace smt {
 
     namespace str {
-
+        const unsigned maximal_symbol=256; //symbols ranging from 1 to maximal_symbol
         class element {
         public:
             using pair = std::pair<element, element>;
@@ -124,6 +126,7 @@ namespace smt {
 
         class automaton {
         public:
+            const unsigned maximal_char=256;
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
             using sptr_pair = std::pair<sptr, sptr>;
@@ -141,6 +144,7 @@ namespace smt {
             virtual ptr clone() = 0;
             virtual ptr simplify() = 0;
             virtual ptr determinize() = 0;
+            virtual ptr complement() = 0;
             virtual ptr intersect_with(sptr other) = 0;
             virtual ptr union_with(sptr other) = 0;
             virtual std::list<ptr> remove_prefix(const zstring& prefix);
@@ -210,6 +214,7 @@ namespace smt {
             std::set<state> get_finals() override;
             ptr clone() override;
             ptr simplify() override { return clone(); }
+            ptr complement() override { return clone(); }
             ptr determinize() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
@@ -232,6 +237,54 @@ namespace smt {
             moves transitions_skeleton();
         };
 
+
+
+        class oaut : public automaton {
+        public:
+            using internal = fst::StdVectorFst;
+            using symbol = fst::StdArc::Label;
+            using moves = fst::StdArc;
+            using StateId = int;
+            using Label = int;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+        private:
+            internal m_imp;
+        public:
+            oaut(internal a);
+            ~oaut() override {};
+            bool is_empty() override;
+            bool is_deterministic() override { return 1-!m_imp.Properties(fst::kIDeterministic, true);};
+            state get_init() override { return m_imp.Start(); }
+            std::set<state> get_finals() override;
+            ptr clone() override;
+            ptr simplify() override { return std::unique_ptr<smt::str::oaut>(this); }
+            ptr determinize() override;
+            ptr intersect_with(sptr other) override;
+            ptr union_with(sptr other) override;
+            state add_state(){return m_imp.AddState();};
+            std::list<ptr> remove_prefix(const zstring& prefix) override {};
+            std::list<sptr_pair> split() override{};
+            void set_init(state s) override {m_imp.SetStart(s);};
+            void add_final(state s) override {m_imp.SetFinal(s, One);};
+            void remove_final(state s) override {m_imp.SetFinal(s, Zero);};
+            std::set<state> reachable_states(state s) override;
+            std::set<state> successors(state s) override;
+            std::set<state> successors(state s, const zstring& str) override;
+            std::set<len_constraint> length_constraints() override {return std::set<len_constraint>();};
+            std::ostream& display(std::ostream& out) override;
+            std::ostream& display(std::ostream& out, const string& description);
+            ptr complement() override;
+            bool operator==(const automaton& other) override;
+            friend class oaut_adaptor;
+        private:
+            fst::StdArc makeArc(Label symbol, StateId to){return fst::StdArc(symbol, symbol, 0, to);};
+            void cloneInternalStructure(internal& out);
+            void append(oaut& other);
+            void totalize();
+            static void unit_test();
+        };
+
         class zaut_adaptor {
             zaut::symbol_manager m_sym_man;
             zaut::symbol_solver *m_sym_solver;
@@ -244,6 +297,24 @@ namespace smt {
             zaut_adaptor(ast_manager& m, context& ctx);
             ~zaut_adaptor();
             automaton::sptr mk_from_re_expr(expr *re);
+        };
+
+        class oaut_adaptor {
+            using StateId = int;
+            using Label = int;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+
+            ast_manager m;
+        public:
+            oaut_adaptor(ast_manager& m);
+            ~oaut_adaptor(){};
+            automaton::sptr mk_from_re_expr(expr *re);
+        private:
+            seq_util m_util_s;
+            std::shared_ptr<oaut> mk_oaut_from_re_expr(expr *re);
+            unsigned exprToUnsigned(expr *);
+            fst::StdArc makeArc(Label symbol, StateId to){return fst::StdArc(symbol, symbol, One, to);};
         };
 
         class language {
