@@ -328,53 +328,49 @@ namespace smt {
             }
         }
 
-        automaton::~automaton() {
-        }
+        automaton::~automaton() = default;
 
         std::list<automaton::ptr> automaton::remove_prefix(const zstring& prefix) {
-            std::set<state> act({get_init()});
-            std::set<state> next, succ;
-            std::list<automaton::ptr> ret;
-
+            std::set<state> curr_heads{get_init()};
+            std::set<state> next_heads;
+            std::list<ptr> result;
             for (std::size_t i = 0; i < prefix.length(); i++) {
-                next.clear();
-                for (auto st : act) {
-                    succ = successors(st, prefix[i]);
-                    next.insert(succ.begin(), succ.end());
+                next_heads.clear();
+                for (auto s : curr_heads) {
+                    const std::set<state>& avail = successors(s, prefix[i]);
+                    next_heads.insert(avail.begin(), avail.end());
                 }
-                act = next;
+                curr_heads = next_heads;
             }
-
-            for (auto st : act) {
-                ptr cl = clone();
-                cl->set_init(st);
-                ret.emplace_back(std::move(cl));
+            for (auto st : curr_heads) {
+                ptr a{clone()};
+                a->set_init(st);
+                result.emplace_back(std::move(a));
             }
-            return ret;
+            return result;
         }
 
-        std::list<automaton::sptr_pair> automaton::split() {
-            std::set<state> states = reachable_states();
-            std::set<state> fin = get_finals();
-            std::list<automaton::sptr_pair> ret;
-
-            for (auto middle : states) {
-                ptr cl1 = clone();
-                ptr cl2 = clone();
-
-                cl2->set_init(middle);
-                for (auto f : fin) {
-                    cl1->remove_final(f);
+        std::list<automaton::ptr_pair> automaton::split() {
+            const std::set<state>& finals = get_finals();
+            std::list<ptr_pair> result;
+            for (const auto middle : reachable_states()) {
+                ptr a1{clone()};
+                ptr a2{clone()};
+                a2->set_init(middle);
+                for (const auto f : finals) {
+                    a1->remove_final(f);
                 }
-                cl1->add_final(middle);
-                ret.emplace_back(std::make_pair(std::move(cl1), std::move(cl2)));
+                a1->add_final(middle);
+                result.emplace_back(std::make_pair(std::move(a1), std::move(a2)));
             }
-            return ret;
+            return result;
         }
 
         std::ostream& operator<<(std::ostream& os, automaton::sptr a) {
             return a->display(os);
         }
+
+        automaton_factory::~automaton_factory() = default;
 
         zaut::symbol_boolean_algebra::symbol_boolean_algebra(ast_manager& m, expr_solver& s)
                 : m_ast_man{m}, m_solver{s} {}
@@ -383,12 +379,12 @@ namespace smt {
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_true() {
             expr_ref e{m_ast_man.mk_true(), m_ast_man};
-            return sym_expr::mk_pred(e, m_ast_man.mk_bool_sort());
+            return symbol::mk_pred(e, m_ast_man.mk_bool_sort());
         }
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_false() {
             expr_ref e{m_ast_man.mk_false(), m_ast_man};
-            return sym_expr::mk_pred(e, m_ast_man.mk_bool_sort());
+            return symbol::mk_pred(e, m_ast_man.mk_bool_sort());
         }
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_and(zaut_sym_t e1, zaut_sym_t e2) {
@@ -396,22 +392,22 @@ namespace smt {
                 if (e1->get_char() == e2->get_char()) return e1;
                 if (m_ast_man.are_distinct(e1->get_char(), e2->get_char())) {
                     expr_ref e{m_ast_man.mk_false(), m_ast_man};
-                    return sym_expr::mk_pred(e, e1->get_sort());
+                    return symbol::mk_pred(e, e1->get_sort());
                 }
             }
             sort *s = e1->get_sort();
             if (m_ast_man.is_bool(s)) {
                 s = e2->get_sort();
             }
-            var_ref v{m_ast_man.mk_var(0, s), m_ast_man};
-            expr_ref fml1 = e1->accept(v);
-            expr_ref fml2 = e2->accept(v);
+            const var_ref v{m_ast_man.mk_var(0, s), m_ast_man};
+            const expr_ref fml1 = e1->accept(v);
+            const expr_ref fml2 = e2->accept(v);
             if (m_ast_man.is_true(fml1)) return e2;
             if (m_ast_man.is_true(fml2)) return e1;
             if (fml1 == fml2) return e1;
             expr_ref e{m_ast_man};
             bool_rewriter{m_ast_man}.mk_and(fml1, fml2, e);
-            return sym_expr::mk_pred(e, e1->get_sort());
+            return symbol::mk_pred(e, e1->get_sort());
         }
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_and(unsigned size, const zaut_sym_t *es) {
@@ -433,14 +429,14 @@ namespace smt {
         zaut_sym_t zaut::symbol_boolean_algebra::mk_or(zaut_sym_t e1, zaut_sym_t e2) {
             if (e1->is_char() && e2->is_char() && e1->get_char() == e2->get_char()) return e1;
             if (e1 == e2) return e1;
-            var_ref v(m_ast_man.mk_var(0, e1->get_sort()), m_ast_man);
-            expr_ref fml1 = e1->accept(v);
-            expr_ref fml2 = e2->accept(v);
+            const var_ref v{m_ast_man.mk_var(0, e1->get_sort()), m_ast_man};
+            const expr_ref fml1 = e1->accept(v);
+            const expr_ref fml2 = e2->accept(v);
             if (m_ast_man.is_false(fml1)) return e2;
             if (m_ast_man.is_false(fml2)) return e1;
             expr_ref e{m_ast_man};
             bool_rewriter{m_ast_man}.mk_or(fml1, fml2, e);
-            return sym_expr::mk_pred(e, e1->get_sort());
+            return symbol::mk_pred(e, e1->get_sort());
         }
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_or(unsigned size, const zaut_sym_t *es) {
@@ -460,9 +456,9 @@ namespace smt {
         }
 
         zaut_sym_t zaut::symbol_boolean_algebra::mk_not(zaut_sym_t e) {
-            var_ref v{m_ast_man.mk_var(0, e->get_sort()), m_ast_man};
+            const var_ref v{m_ast_man.mk_var(0, e->get_sort()), m_ast_man};
             expr_ref fml{m_ast_man.mk_not(e->accept(v)), m_ast_man};
-            return sym_expr::mk_pred(fml, e->get_sort());
+            return symbol::mk_pred(fml, e->get_sort());
         }
 
         lbool zaut::symbol_boolean_algebra::is_sat(zaut_sym_t e) {
@@ -470,8 +466,8 @@ namespace smt {
             if (e->is_range()) {
                 // TODO: check lower is below upper
             }
-            expr_ref v{m_ast_man.mk_fresh_const("x", e->get_sort()), m_ast_man};
-            expr_ref fml = e->accept(v);
+            const expr_ref v{m_ast_man.mk_fresh_const("x", e->get_sort()), m_ast_man};
+            const expr_ref fml = e->accept(v);
             if (m_ast_man.is_true(fml)) return l_true;
             if (m_ast_man.is_false(fml)) return l_false;
             return m_solver.check_sat(fml);
@@ -480,26 +476,22 @@ namespace smt {
         lbool zaut::symbol_solver::check_sat(expr *const e) {
             m_kernel.push();
             m_kernel.assert_expr(e);
-            lbool r = m_kernel.check();
+            const lbool r = m_kernel.check();
             m_kernel.pop(1);
             return r;
         }
 
-        zaut::zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h, ast_manager& m)
-                : m_imp{a}, m_sym_man{s}, m_sym_ba{ba}, m_handler{h}, m_ast_man{m}, m_seq_util{m} {
-        }
+        zaut::dependency_ref::dependency_ref(am& m, seq_util& su, sm& sm, sba& sba, h& h)
+                : ast_man{m}, util_s{su}, sym_man{sm}, sym_ba{sba}, han{h} {}
 
         bool zaut::is_deterministic() {
-            std::set<state> states = automaton::reachable_states();
-            for(state st : states) {
-                moves mvs = m_imp->get_moves_from(st);
-                for(size_t i = 0; i < mvs.size(); i++) {
-                    for(size_t j = 0; j < mvs.size(); j++) {
-                        if(i == j) continue;
-                        symbol_ref e(m_sym_ba.mk_and(mvs[i].t(), mvs[j].t()), m_sym_man);
-                        if(m_sym_ba.is_sat(e) == l_true) {
-                            return false;
-                        }
+            for (const auto s : automaton::reachable_states()) {
+                const moves& m = m_imp->get_moves_from(s);
+                for (std::size_t i = 0; i < m.size(); i++) {
+                    for (std::size_t j = 0; j < m.size(); j++) {
+                        if (i == j) continue;
+                        const symbol_ref e{m_dep.sym_ba.mk_and(m[i].t(), m[j].t()), m_dep.sym_man};
+                        if (symbol_check_sat(e) == l_true) return false;
                     }
                 }
             }
@@ -507,8 +499,8 @@ namespace smt {
         }
 
         std::set<automaton::state> zaut::get_finals() {
-            unsigned_vector fin = m_imp->final_states();
-            return std::set<state>(fin.begin(), fin.end());
+            const unsigned_vector& finals = m_imp->final_states();
+            return std::set<state>(finals.begin(), finals.end());
         }
 
         automaton::ptr zaut::clone() {
@@ -516,30 +508,24 @@ namespace smt {
         }
 
         automaton::ptr zaut::determinize() {
-            return mk_ptr(m_handler.mk_deterministic(*m_imp));
+            return mk_ptr(m_dep.han.mk_deterministic(*m_imp));
+        }
+
+        automaton::ptr zaut::complement() {
+            return mk_ptr(m_dep.han.mk_complement(*m_imp));
         }
 
         automaton::ptr zaut::intersect_with(sptr other) {
-            zaut *const o = static_cast<zaut *>(other.get()); // only one implementation at a time
-            return mk_ptr(m_handler.mk_product(*m_imp, *o->m_imp));
+            zaut *const o = static_cast<zaut *>(other.get()); // one imp at a time
+            return mk_ptr(m_dep.han.mk_product(*m_imp, *o->m_imp));
         }
 
         automaton::ptr zaut::union_with(sptr other) {
-            return nullptr;
-        }
-
-        std::list<automaton::ptr> zaut::remove_prefix(const zstring& prefix) {
-            return automaton::remove_prefix(prefix);
-        }
-
-        std::list<automaton::sptr_pair> zaut::split() {
-            return automaton::split();
         }
 
         void zaut::set_init(state s) {
-            internal *tmp = m_imp;
-            m_imp = alloc(internal, m_sym_man, s, m_imp->final_states(), transitions());
-            dealloc(tmp);
+            const scoped_ptr<internal> old{m_imp};
+            m_imp = alloc(internal, m_dep.sym_man, s, m_imp->final_states(), transitions());
         }
 
         void zaut::add_final(state s) {
@@ -550,106 +536,77 @@ namespace smt {
             m_imp->remove_from_final_states(s);
         }
 
-        zaut::moves zaut::transitions() {
-            moves mvs;
-            for (auto st : automaton::reachable_states()) {
-                mvs.append(m_imp->get_moves_from(st));
-            }
-            return mvs;
-        }
-
-        std::set<automaton::state> zaut::reachable_states(state st) {
-            std::vector<state> todo;
-            std::set<state> ret({st});
-            unsigned act;
-
-            todo.push_back(st);
-            while (!todo.empty()) {
-                act = todo.back();
-                todo.pop_back();
-                moves const& mvs = m_imp->get_moves_from(act);
-                for (unsigned i = 0; i < mvs.size(); i++) {
-                    if (!mvs[i].is_epsilon()) {
-                        symbol_ref con(mvs[i].t(), m_sym_man);
-                        lbool is_sat = m_sym_ba.is_sat(con);
+        std::set<automaton::state> zaut::reachable_states(state s) {
+            std::queue<state> pending;
+            std::set<state> result{s};
+            pending.push(s);
+            while (!pending.empty()) {
+                const state curr_s = pending.front();
+                pending.pop();
+                for (const auto& move : m_imp->get_moves_from(curr_s)) {
+                    if (!move.is_epsilon()) {
+                        const lbool is_sat = symbol_check_sat(symbol_ref{move.t(), m_dep.sym_man});
                         if (is_sat == l_undef || is_sat == l_false)
                             continue;
                     }
-                    if (ret.find(mvs[i].dst()) == ret.end()) {
-                        ret.emplace(mvs[i].dst());
-                        todo.push_back(mvs[i].dst());
+                    if (result.find(move.dst()) == result.end()) {
+                        result.emplace(move.dst());
+                        pending.push(move.dst());
                     }
                 }
             }
-            return ret;
+            return result;
         }
 
         std::set<zaut::state> zaut::successors(state s) {
-            moves mvs = m_imp->get_moves_from(s);
-            std::set<state> succ;
-            for (auto mv : mvs) {
-                succ.insert(mv.dst());
+            std::set<state> result;
+            for (const auto& mv : m_imp->get_moves_from(s)) {
+                result.insert(mv.dst());
             }
-
-            return succ;
+            return result;
         }
 
-        std::set<zaut::state> zaut::successors(state s, const zstring& str) {
-            SASSERT(str.length() >= 1);
-            moves mvs = m_imp->get_moves_from(s);
-
-            std::set<state> succ;
-            for (auto mv : mvs) {
-                symbol_ref c(sym_expr::mk_char(m_ast_man, m_seq_util.str.mk_char(str, 0)), m_sym_man);
-                symbol_ref e(m_sym_ba.mk_and(mv.t(), c), m_sym_man);
-                if(m_sym_ba.is_sat(e) == l_true) {
-                    succ.insert(mv.dst());
+        std::set<zaut::state> zaut::successors(state s, const zstring& ch) {
+            SASSERT(ch.length() == 1);
+            std::set<state> result;
+            for (const auto& move : m_imp->get_moves_from(s)) {
+                const symbol_ref c{mk_char(ch), m_dep.sym_man};
+                const symbol_ref avail{m_dep.sym_ba.mk_and(move.t(), c), m_dep.sym_man};
+                if (symbol_check_sat(avail) == l_true) {
+                    result.insert(move.dst());
                 }
             }
-
-            return succ;
+            return result;
         }
 
+        // precondition: ...
         std::set<automaton::len_constraint> zaut::length_constraints() {
             std::vector<state> lasso;
-            std::vector<state> todo;
-            unsigned act;
-            std::set<std::pair<state, len_offset> > fin_offset;
-            unsigned off_counter = 0;
-            moves mvs;
+            std::queue<state> pending;
+            std::set<std::pair<state, len_offset>> fin_offset;
+            unsigned curr_offset = 0;
 
-            internal *clone = m_imp->clone();
-            internal *det = m_handler.mk_deterministic(*clone);
-
-            todo.push_back(det->init());
-            while (!todo.empty()) {
-                act = todo.back();
-                todo.pop_back();
-
-                if (det->is_final_state(act)) {
-                    fin_offset.emplace(std::make_pair(act, off_counter));
+            const scoped_ptr<internal> tgt{m_dep.han.mk_deterministic(*m_imp)};
+            pending.push(tgt->init());
+            while (!pending.empty()) {
+                const state curr_s = pending.front();
+                pending.pop();
+                if (tgt->is_final_state(curr_s)) {
+                    fin_offset.emplace(std::make_pair(curr_s, curr_offset));
                 }
-
-                mvs.reset();
-                det->get_moves_from(act, mvs, false);
-                SASSERT(mvs.size() <= 1);
-
-                for (unsigned i = 0; i < mvs.size(); i++) {
-                    symbol_ref con(mvs[i].t(), m_sym_man);
-                    lbool is_sat = m_sym_ba.is_sat(con);
-                    SASSERT(is_sat == l_true);
-
-                    auto res = std::find(lasso.begin(), lasso.end(), mvs[i].dst());
-                    if (res == lasso.end()) {
-                        lasso.push_back(mvs[i].dst());
-                        todo.push_back(mvs[i].dst());
-                    } else { //lasso found
-                        SASSERT(todo.empty());
-                        lasso.erase(lasso.begin(), res);
+                for (const auto& move : tgt->get_moves_from(curr_s)) {
+                    SASSERT(symbol_check_sat(symbol_ref{move.t(), m_dep.sym_man}) == l_true);
+                    auto fit = std::find(lasso.begin(), lasso.end(), move.dst());
+                    if (fit == lasso.end()) {
+                        lasso.push_back(move.dst());
+                        pending.push(move.dst());
+                    } else { // lasso found
+                        SASSERT(pending.empty());
+                        lasso.erase(lasso.begin(), fit);
                         break;
                     }
                 }
-                off_counter++;
+                curr_offset++;
             }
 
             unsigned period = lasso.size();
@@ -661,7 +618,6 @@ namespace smt {
                 else
                     ret.emplace(std::make_pair(pair.second, 0));
             }
-
             return ret;
         }
 
@@ -671,44 +627,38 @@ namespace smt {
         }
 
         bool zaut::operator==(const automaton& other) {
-            try {
-                const zaut &item = dynamic_cast<const zaut&>(other);
-                return contains(item) && item.contains(*this);
+            const zaut *const o = static_cast<const zaut *>(&other); // one imp at a time
+            return contains(*o) && o->contains(*this);
+        }
+
+        zaut::moves zaut::transitions() {
+            moves result;
+            for (const auto s : automaton::reachable_states()) {
+                result.append(m_imp->get_moves_from(s));
             }
-            catch(const std::bad_cast& e) {
-                return false;
-            }
+            return result;
+        }
+
+        zaut::symbol *zaut::mk_char(const zstring& ch) {
+            SASSERT(ch.length() == 1);
+            return symbol::mk_char(m_dep.ast_man, m_dep.util_s.str.mk_char(ch, 0));
+        }
+
+        lbool zaut::symbol_check_sat(const symbol_ref& s) {
+            return m_dep.sym_ba.is_sat(s);
         }
 
         bool zaut::contains(const zaut& other) const {
-            scoped_ptr<internal> difference{m_handler.mk_difference(*other.m_imp, *m_imp)};
+            const scoped_ptr<internal> difference{m_dep.han.mk_difference(*other.m_imp, *m_imp)};
             return difference->is_empty();
         }
 
         automaton::ptr zaut::mk_ptr(internal *&& a) const {
-            return ptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
+            return ptr{new zaut{a, {m_dep}}};
         }
 
-        automaton::sptr zaut::mk_sptr(internal *a) const {
-            return sptr{new zaut{a, m_sym_man, m_sym_ba, m_handler, m_ast_man}};
-        }
-
-        zaut::moves zaut::transitions_skeleton() {
-            std::set<state> states = reachable_states(m_imp->init());
-            moves mvs;
-            for (auto st : states) {
-                for (auto tr : m_imp->get_moves_from(st)) {
-                    if (tr.is_epsilon())
-                        mvs.push_back(internal::move(m_sym_man, tr.src(), tr.dst()));
-                    else
-                        mvs.push_back(
-                                internal::move(m_sym_man, tr.src(), tr.dst(), m_sym_ba.mk_true()));
-                }
-            }
-            return mvs;
-        }
-
-        zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx) : m_aut_make{m}, m_ast_man{m} {
+        zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
+                : m_ast_man{m}, m_util_s{m}, m_aut_make{m} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
             m_sym_ba = alloc(zaut::symbol_boolean_algebra, m, *m_sym_solver);
             m_aut_man = alloc(zaut::handler, m_sym_man, *m_sym_ba);
@@ -726,7 +676,8 @@ namespace smt {
             if (!m_aut_make.has_solver()) {
                 m_aut_make.set_solver(m_sym_solver);
             }
-            auto&& aut = std::make_shared<zaut>(m_aut_make(re), m_sym_man, *m_sym_ba, *m_aut_man, m_ast_man);
+            zaut::dependency_ref dep{m_ast_man, m_util_s, m_sym_man, *m_sym_ba, *m_aut_man};
+            auto&& aut = std::make_shared<zaut>(m_aut_make(re), dep);
             auto&& pair = std::make_pair(re, std::move(aut));
             return m_re_aut_cache.emplace(std::move(pair)).first->second;
         }
@@ -735,7 +686,160 @@ namespace smt {
             m_imp = a;
         }
 
-        void show_fst(fst::StdVectorFst m_imp, const string& description=""){
+        bool oaut::is_empty() {
+            if(m_imp.NumStates()==0)
+                return true;
+
+            std::set<state> processed;
+            std::set<state> waitlist;
+
+            waitlist.insert(m_imp.Start());
+            while(!waitlist.empty()){
+                state cur = *waitlist.begin();
+                waitlist.erase(waitlist.begin());
+                processed.insert(cur);
+
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                    StateId to = arc_it.Value().nextstate;
+                    if(m_imp.Final(to)!=Zero){//is "to" a final state
+                        return false;
+                    }
+                    if(processed.find(to) == processed.end()){
+                        processed.insert(cur);
+                    }
+                }
+            }
+            return true;
+        }
+
+        bool oaut::is_deterministic() {
+            return 1 - !m_imp.Properties(fst::kIDeterministic, true);
+        }
+
+        std::set<automaton::state> oaut::get_finals(){
+            std::set<state> result;
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId state = st_itr.Value();
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    result.insert(state);
+            }
+            return result;
+        }
+
+        automaton::ptr oaut::determinize() {
+            using namespace fst;
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Determinize(r_imp, &r_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+
+        automaton::ptr oaut::complement(){
+            using namespace fst;
+            automaton::ptr result = clone();
+            auto cur = static_unique_pointer_cast<oaut>(std::move(result));
+            RmEpsilon(&cur->m_imp);
+            Determinize(cur->m_imp, &cur->m_imp);
+            Minimize(&cur->m_imp);
+            cur->totalize();
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(cur->m_imp);!st_itr.Done();st_itr.Next()){
+                StateId state = st_itr.Value();
+                cur->m_imp.SetFinal(state, (cur->m_imp.Final(state)==Zero)?One:Zero);
+            }
+            Minimize(&cur->m_imp);
+            return cur;
+        }
+
+        automaton::ptr oaut::clone() {
+            using namespace fst;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+            StdVectorFst r_imp;
+            std::map<StateId,StateId> st_map;
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId s=r_imp.AddState();
+                st_map[st_itr.Value()] = s;
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    r_imp.SetFinal(s,One);
+            }
+            r_imp.SetStart(st_map[m_imp.Start()]);
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                }
+            }
+            std::unique_ptr<oaut> result = std::unique_ptr<oaut>(new oaut(r_imp));
+            return result;
+        }
+
+        automaton::ptr oaut::intersect_with(sptr other) {
+            using namespace fst;
+            oaut item = dynamic_cast<const oaut&>(*other);
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Intersect(r_imp,item.m_imp,&r_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+
+        automaton::ptr oaut::union_with(sptr other) {
+            using namespace fst;
+            oaut item = dynamic_cast<const oaut&>(*other);
+            StdVectorFst r_imp;
+            cloneInternalStructure(r_imp);
+            Union(&r_imp,item.m_imp);
+            return std::unique_ptr<oaut>(new oaut(r_imp));
+        };
+
+        std::set<automaton::state> oaut::reachable_states(state s) {
+            std::set<state> states;
+            std::set<state> waitlist;
+
+            waitlist.insert(m_imp.Start());
+            while(!waitlist.empty()){
+                state cur = *waitlist.begin();
+                waitlist.erase(waitlist.begin());
+                states.insert(cur);
+
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                    StateId to = arc_it.Value().nextstate;
+                    if(states.find(to) == states.end()){
+                        waitlist.insert(to);
+                    }
+                }
+            }
+            return states;
+        }
+
+        std::set<automaton::state> oaut::successors(state s) {
+            std::set<state> states;
+            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+                state to = arc_it.Value().nextstate;
+                states.insert(to);
+            }
+            return states;
+        }
+
+        std::set<automaton::state> oaut::successors(state s, const zstring& ch) {
+            SASSERT(ch.length() == 1);
+            std::set<state> states;
+
+            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+                state to = arc_it.Value().nextstate;
+                Label symbol = arc_it.Value().ilabel;
+                if(symbol == ch[0])
+                    states.insert(to);
+            }
+            return states;
+
+        };
+
+        std::set<automaton::len_constraint> oaut::length_constraints() {
+        }
+
+        void show_fst(fst::StdVectorFst m_imp, const string& description="") {
             const float Zero = std::numeric_limits<float>::infinity();
 
             std::cout<<description<<std::endl;
@@ -772,80 +876,8 @@ namespace smt {
                      <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
         }
 
-        std::set<automaton::state> oaut::successors(automaton::state s) {
-            std::set<state> states;
-            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
-                state to = arc_it.Value().nextstate;
-                states.insert(to);
-            }
-            return states;
-        }
-
-        std::set<automaton::state> oaut::successors(state s, const zstring& str) {
-            std::set<state> states;
-
-            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
-                state to = arc_it.Value().nextstate;
-                Label symbol = arc_it.Value().ilabel;
-                if(symbol == str[0])
-                    states.insert(to);
-            }
-            return states;
-
-        };
-
-        std::set<automaton::state> oaut::reachable_states(state s) {
-            std::set<state> states;
-            std::set<state> waitlist;
-
-            waitlist.insert(m_imp.Start());
-            while(!waitlist.empty()){
-                state cur = *waitlist.begin();
-                waitlist.erase(waitlist.begin());
-                states.insert(cur);
-
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
-                    StateId to = arc_it.Value().nextstate;
-                    if(states.find(to) == states.end()){
-                        waitlist.insert(to);
-                    }
-                }
-            }
-            return states;
-        }
-
-        bool oaut::is_empty(){
-            if(m_imp.NumStates()==0)
-                return true;
-
-            std::set<state> processed;
-            std::set<state> waitlist;
-
-            waitlist.insert(m_imp.Start());
-            while(!waitlist.empty()){
-                state cur = *waitlist.begin();
-                waitlist.erase(waitlist.begin());
-                processed.insert(cur);
-
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
-                    StateId to = arc_it.Value().nextstate;
-                    if(m_imp.Final(to)!=Zero){//is "to" a final state
-                        return false;
-                    }
-                    if(processed.find(to) == processed.end()){
-                        processed.insert(cur);
-                    }
-                }
-            }
-            return true;
-        }
-
-        std::ostream& oaut::display(std::ostream& out, const string& description) {
-            out<<description<<std::endl;
-            return display(out);
-        }
-        std::ostream& oaut::display(std::ostream& out){
-            out<<"Init: "<<m_imp.Start()<<std::endl;
+        std::ostream& oaut::display(std::ostream& os) {
+            os<<"Init: "<<m_imp.Start()<<std::endl;
             std::set<int> final_states;
             for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
                 StateId from = st_itr.Value();
@@ -854,73 +886,34 @@ namespace smt {
                     StateId to = arc_it.Value().nextstate;
                     if((symbol>=(int)'a' && symbol <= (int)'z')||
                        (symbol>=(int)'A' && symbol <= (int)'Z'))
-                        out<<from<<"--"<<(char)symbol<<"-->"<<to<<std::endl;
+                        os<<from<<"--"<<(char)symbol<<"-->"<<to<<std::endl;
                     else
-                        out<<from<<"--"<<symbol<<"-->"<<to<<std::endl;
+                        os<<from<<"--"<<symbol<<"-->"<<to<<std::endl;
                 }
                 if(m_imp.Final(from)!=Zero)//is "from" a final state
                     final_states.insert(from);
             }
-            out<<"Finals: ";
+            os<<"Finals: ";
             for(auto& s:final_states){
-                out<<s<<" ";
+                os<<s<<" ";
             }
-            out<<std::endl;
+            os<<std::endl;
             const auto props = m_imp.Properties(
                     fst::kAcceptor | fst::kIDeterministic | fst::kNoIEpsilons | fst::kWeighted | fst::kUnweighted, true);
 
-            out<<std::endl;
-            out<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
+            os<<std::endl;
+            os<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
                      <<((props & fst::kAcceptor)!=0) << ","
                      <<((props & fst::kIDeterministic) !=0) << ","
                      <<((props & fst::kNoIEpsilons)!=0) << ","
                      <<((props & fst::kWeighted)!=0) << ","
                      <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
-            return out;
+            return os;
         }
 
-
-        std::set<automaton::state> oaut::get_finals(){
-            std::set<state> result;
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
-                state state = st_itr.Value();
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
-                    result.insert(state);
-            }
-            return result;
-        }
-        automaton::ptr oaut::complement(){
-            using namespace fst;
-            automaton::ptr result = clone();
-            auto cur = static_unique_pointer_cast<oaut>(std::move(result));
-            RmEpsilon(&cur->m_imp);
-            Determinize(cur->m_imp, &cur->m_imp);
-            Minimize(&cur->m_imp);
-            cur->totalize();
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(cur->m_imp);!st_itr.Done();st_itr.Next()){
-                StateId state = st_itr.Value();
-                cur->m_imp.SetFinal(state, (cur->m_imp.Final(state)==Zero)?One:Zero);
-            }
-            Minimize(&cur->m_imp);
-            return cur;
-        }
-
-        void oaut::totalize(){
-            StateId sink = m_imp.AddState();
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
-                StateId from = st_itr.Value();
-                std::set<Label> usedSymbols;
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
-                    Label symbol = arc_it.Value().ilabel;
-                    usedSymbols.insert(symbol);
-                }
-                for(Label i=1;i<=maximal_char;i++){
-                    if(usedSymbols.find(i)==usedSymbols.end()){
-                        m_imp.AddArc(from, makeArc(i, sink));
-                    }
-                }
-
-            }
+        std::ostream& oaut::display(std::ostream& os, const string& description) {
+            os << description << std::endl;
+            return display(os);
         }
 
         bool oaut::operator==(const automaton& other) {
@@ -937,7 +930,29 @@ namespace smt {
             }
         }
 
-        void oaut::append(oaut& other){
+        void oaut::cloneInternalStructure(internal& r_imp) {
+            using namespace fst;
+            const float Zero = std::numeric_limits<float>::infinity();
+            const float One = 0;
+            std::map<StateId,StateId> st_map;
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId s=r_imp.AddState();
+                st_map[st_itr.Value()] = s;
+                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                    r_imp.SetFinal(s,One);
+            }
+            r_imp.SetStart(st_map[m_imp.Start()]);
+            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                }
+            }
+        }
+
+        void oaut::append(oaut& other) {
             using namespace fst;
             std::map<state,state> state_map;
             set<state> my_finals=get_finals();
@@ -967,81 +982,28 @@ namespace smt {
             RmEpsilon(&m_imp);
         }
 
-
-        void oaut::cloneInternalStructure(internal& r_imp){
-            using namespace fst;
-            const float Zero = std::numeric_limits<float>::infinity();
-            const float One = 0;
-            std::map<StateId,StateId> st_map;
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
-                StateId s=r_imp.AddState();
-                st_map[st_itr.Value()] = s;
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
-                    r_imp.SetFinal(s,One);
-            }
-            r_imp.SetStart(st_map[m_imp.Start()]);
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+        void oaut::totalize() {
+            StateId sink = m_imp.AddState();
+            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
                 StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                std::set<Label> usedSymbols;
+                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
                     Label symbol = arc_it.Value().ilabel;
-                    StateId to = arc_it.Value().nextstate;
-                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                    usedSymbols.insert(symbol);
                 }
-            }
-        }
-
-        automaton::ptr oaut::determinize(){
-            using namespace fst;
-            StdVectorFst r_imp;
-            cloneInternalStructure(r_imp);
-            Determinize(r_imp,&r_imp);
-            return std::unique_ptr<oaut>(new oaut(r_imp));
-        };
-        automaton::ptr oaut::intersect_with(sptr other){
-            using namespace fst;
-            oaut item = dynamic_cast<const oaut&>(*other);
-            StdVectorFst r_imp;
-            cloneInternalStructure(r_imp);
-            Intersect(r_imp,item.m_imp,&r_imp);
-            return std::unique_ptr<oaut>(new oaut(r_imp));
-        };
-        automaton::ptr oaut::union_with(sptr other){
-            using namespace fst;
-            oaut item = dynamic_cast<const oaut&>(*other);
-            StdVectorFst r_imp;
-            cloneInternalStructure(r_imp);
-            Union(&r_imp,item.m_imp);
-            return std::unique_ptr<oaut>(new oaut(r_imp));
-        };
-
-        automaton::ptr oaut::clone(){
-            using namespace fst;
-            const float Zero = std::numeric_limits<float>::infinity();
-            const float One = 0;
-            StdVectorFst r_imp;
-            std::map<StateId,StateId> st_map;
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
-                StateId s=r_imp.AddState();
-                st_map[st_itr.Value()] = s;
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
-                    r_imp.SetFinal(s,One);
-            }
-            r_imp.SetStart(st_map[m_imp.Start()]);
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
-                StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
-                    Label symbol = arc_it.Value().ilabel;
-                    StateId to = arc_it.Value().nextstate;
-                    r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
+                for(Label i=1;i<=MAX_CHAR_NUM;i++){
+                    if(usedSymbols.find(i)==usedSymbols.end()){
+                        m_imp.AddArc(from, makeArc(i, sink));
+                    }
                 }
+
             }
-            std::unique_ptr<oaut> result = std::unique_ptr<oaut>(new oaut(r_imp));
-            return result;
         }
 
-        oaut_adaptor::oaut_adaptor(ast_manager& m) : m{m},m_util_s{m} {
+        automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
+//            oaut::unit_test();
+            return mk_oaut_from_re_expr(re);
         }
-
 
         // Convert a regular expression to an e-NFA using Thompson's construction
         std::shared_ptr<oaut> oaut_adaptor::mk_oaut_from_re_expr(expr *const e) {
@@ -1187,8 +1149,7 @@ namespace smt {
             return result;
         }
 
-
-        unsigned oaut_adaptor::exprToUnsigned(expr * e){
+        unsigned oaut_adaptor::exprToUnsigned(expr * e) {
             zstring str_form;
             m_util_s.str.is_string(e, str_form);
             return str_form[0];
@@ -1286,13 +1247,6 @@ namespace smt {
             std::cout<<"Reachable_states and successors functions test2: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
 
         }
-        automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
-            //oaut::unit_test();
-
-            return mk_oaut_from_re_expr(re);
-        }
-
-
 
         language::language(const language& other) : m_type{other.m_type} {
             if (typed(t::AUT)) m_value.aut = other.m_value.aut;
@@ -1315,9 +1269,6 @@ namespace smt {
             if (typed(t::AUT) && other.typed(t::AUT)) {
                 return language{m_value.aut->intersect_with(other.value().aut)};
             }
-            else{
-                return *this;
-            }
         }
 
         language language::remove_prefix(const element& e) const {
@@ -1327,7 +1278,6 @@ namespace smt {
                 m_value.aut->remove_prefix(e.value());
                 // TODO: ...
             }
-            return *this;
         }
 
         language& language::operator=(language&& other) noexcept {
@@ -1335,7 +1285,6 @@ namespace smt {
                 m_type = language::t::AUT;
                 m_value.aut = std::move(other.m_value.aut);
             }
-            return *this;
         }
 
         bool language::operator==(const language& other) const {
@@ -1552,7 +1501,7 @@ namespace smt {
                 return os << "(no word equation left)" << std::endl;
             }
             for (const auto& we : s.m_wes_to_satisfy) {
-                os << we<< '\n';
+                os << we << '\n';
             }
             for (const auto& we : s.m_wes_to_fail) {
                 os << "not (" << we << ")\n";
@@ -2155,7 +2104,6 @@ namespace smt {
 
         oaut_adaptor m_oaut_imp(get_manager());
         automaton::sptr aut = m_oaut_imp.mk_from_re_expr(e);
-
 
         return language{m_aut_imp->mk_from_re_expr(e)->determinize()};
     }
