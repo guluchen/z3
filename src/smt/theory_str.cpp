@@ -9,7 +9,7 @@
 #include "math/automata/symbolic_automata_def.h"
 
 template<typename TO, typename FROM>
-std::unique_ptr<TO> static_unique_pointer_cast (std::unique_ptr<FROM>&& old){
+std::unique_ptr<TO> static_unique_pointer_cast (std::unique_ptr<FROM>&& old) {
     return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
 }
 
@@ -657,6 +657,50 @@ namespace smt {
             return ptr{new zaut{a, {m_dep}}};
         }
 
+        bool zaut::is_empty() {
+            std::vector<state> todo;
+            std::set<state> reach({get_init()});
+            unsigned act;
+
+            expr_ref lower(m_dep.util_s.str.mk_char(0), m_dep.ast_man);
+            expr_ref upper(m_dep.util_s.str.mk_char(MAX_CHAR_NUM), m_dep.ast_man);
+            symbol_ref range(sym_expr::mk_range(lower,upper), m_dep.sym_man);
+
+            todo.push_back(get_init());
+            while (!todo.empty()) {
+                act = todo.back();
+
+                if(is_final(act)) {
+                    return false;
+                }
+
+                todo.pop_back();
+                moves const& mvs = m_imp->get_moves_from(act);
+                for (unsigned i = 0; i < mvs.size(); i++) {
+                    if (!mvs[i].is_epsilon()) {
+                        symbol_ref con(mvs[i].t(), m_dep.sym_man);
+
+                        symbol_ref e(m_dep.sym_ba.mk_and(mvs[i].t(), range), m_dep.sym_man);
+
+                        /*std::cout << std::endl << "after..." << std::endl;
+                        symbol_ref e(m_sym_ba.mk_and(mvs[i].t(), range), m_sym_man);
+                        e->display(std::cout);
+                        std::cout << std::endl << "before..." << std::endl;
+                        con->display(std::cout);*/
+
+                        lbool is_sat = m_dep.sym_ba.is_sat(e);
+                        if (is_sat == l_undef || is_sat == l_false)
+                            continue;
+                    }
+                    if (reach.find(mvs[i].dst()) == reach.end()) {
+                        reach.emplace(mvs[i].dst());
+                        todo.push_back(mvs[i].dst());
+                    }
+                }
+            }
+            return false;
+        }
+
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
                 : m_ast_man{m}, m_util_s{m}, m_aut_make{m} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
@@ -1149,7 +1193,7 @@ namespace smt {
             return result;
         }
 
-        unsigned oaut_adaptor::exprToUnsigned(expr * e) {
+         unsigned oaut_adaptor::exprToUnsigned(expr * e) {
             zstring str_form;
             m_util_s.str.is_string(e, str_form);
             return str_form[0];

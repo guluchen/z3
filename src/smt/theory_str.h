@@ -138,7 +138,7 @@ namespace smt {
             virtual ~automaton() = 0;
             virtual bool is_empty() = 0;
             virtual bool is_deterministic() = 0;
-            virtual bool is_final(state s) { return get_finals().find(s) != get_finals().end(); }
+            virtual bool is_final(state s) { std::set<state> finals = get_finals(); return finals.find(s) != finals.end(); }
             virtual state get_init() = 0;
             virtual std::set<state> get_finals() = 0;
             virtual ptr clone() = 0;
@@ -222,8 +222,8 @@ namespace smt {
             dependency_ref m_dep;
         public:
             zaut(internal *a, dependency_ref dep) : m_imp{a}, m_dep{dep} {}
-            ~zaut() override { dealloc(m_imp); }
-            bool is_empty() override { return m_imp->is_empty(); }
+            ~zaut() override { dealloc(m_imp); };
+            bool is_empty() override;
             bool is_deterministic() override;
             bool is_final(state s) override { return m_imp->is_final_state(s); }
             state get_init() override { return m_imp->init(); }
