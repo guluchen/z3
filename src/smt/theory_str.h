@@ -222,7 +222,7 @@ namespace smt {
             dependency_ref m_dep;
         public:
             zaut(internal *a, dependency_ref dep) : m_imp{a}, m_dep{dep} {}
-            ~zaut() override { dealloc(m_imp); };
+            ~zaut() override { dealloc(m_imp); }
             bool is_empty() override;
             bool is_deterministic() override;
             bool is_final(state s) override { return m_imp->is_final_state(s); }
@@ -292,7 +292,6 @@ namespace smt {
             void cloneInternalStructure(internal& out);
             void append(oaut& other);
             void totalize();
-            static void unit_test();
         };
 
         class zaut_adaptor : public automaton_factory {

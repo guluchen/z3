@@ -1,9 +1,7 @@
 #include "smt/theory_str.h"
 #include "util/debug.h"
 
-
-
-static void oaut_tst(){
+static void tst_oaut() {
     using namespace smt::str;
     const float One = 0;
     fst::StdVectorFst f;
@@ -122,6 +120,6 @@ static void oaut_tst(){
 
 }
 
-void tst_theory_string() {
-    oaut_tst();
+void tst_theory_str() {
+    tst_oaut();
 }

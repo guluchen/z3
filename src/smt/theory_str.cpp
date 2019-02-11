@@ -1193,103 +1193,10 @@ namespace smt {
             return result;
         }
 
-         unsigned oaut_adaptor::exprToUnsigned(expr * e) {
+        unsigned oaut_adaptor::exprToUnsigned(expr * e) {
             zstring str_form;
             m_util_s.str.is_string(e, str_form);
             return str_form[0];
-        }
-
-        void oaut::unit_test(){
-            const float One = 0;
-            fst::StdVectorFst f;
-            f.AddState();   // 1st state will be state 0 (returned by AddState)
-            f.AddState();
-            f.AddState();
-            f.AddState();
-            f.AddState();
-            f.SetStart(0);
-            f.AddArc(0, fst::StdArc('a', 'a', One, 1));
-            f.AddArc(0, fst::StdArc('b', 'b', One, 2));
-            f.AddArc(1, fst::StdArc('b', 'b', One, 3));
-            f.AddArc(2, fst::StdArc('a', 'a', One, 4));
-            f.AddArc(3, fst::StdArc('a', 'a', One, 1));
-            f.AddArc(4, fst::StdArc('b', 'b', One, 2));
-            f.SetFinal(3, One);
-            f.SetFinal(4, One);
-
-            std::shared_ptr<oaut> result = std::make_shared<smt::str::oaut>(f);
-
-            fst::StdVectorFst g;
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.SetStart(0);
-            g.AddArc(0, fst::StdArc('a', 'a', One, 1));
-            g.AddArc(0, fst::StdArc('b', 'b', One, 2));
-            g.AddArc(1, fst::StdArc('b', 'b', One, 3));
-            g.AddArc(2, fst::StdArc('a', 'a', One, 4));
-            g.AddArc(3, fst::StdArc('a', 'a', One, 5));
-            g.AddArc(4, fst::StdArc('b', 'b', One, 6));
-            g.AddArc(5, fst::StdArc('b', 'b', One, 3));
-            g.AddArc(6, fst::StdArc('a', 'a', One, 4));
-
-            g.SetFinal(3, One);
-            g.SetFinal(4, One);
-
-
-            std::shared_ptr<oaut> result2 = std::make_shared<smt::str::oaut>(g);
-
-            std::cout<<"Equalivalent function test: "<<((*result == *result2)==true)<<std::endl;
-            g.AddArc(1, fst::StdArc('c', 'c', One, 3));
-            result2 = std::make_shared<smt::str::oaut>(g);
-            std::cout<<"Equalivalent function test: "<<((*result == *result2)==false)<<std::endl;
-
-            std::cout<<"Is_deterministic function test: "<<((result->is_deterministic())==true)<<std::endl;
-            g.AddArc(1, fst::StdArc('c', 'c', One, 2));
-            result2 = std::make_shared<smt::str::oaut>(g);
-            std::cout<<"Is_deterministic function test: "<<((result2->is_deterministic())==false)<<std::endl;
-            std::shared_ptr<automaton> result3=result2->determinize();
-
-            std::cout<<"Clone and determinize functions test: "<<((*result3 == *result2)==true)<<std::endl;
-            std::shared_ptr<automaton> result4 = result3->complement();
-            std::shared_ptr<automaton> result5 = result4->intersect_with(result3);
-            std::cout<<"Complement, intersection, and is_empty functions test: "<<(result5->is_empty()==true)<<std::endl;
-
-            std::shared_ptr<automaton> result6 = result4->union_with(result3);
-            std::shared_ptr<automaton> result7 = result6->complement();
-
-            std::cout<<"Complement, union, and is_empty functions test: "<<(result7->is_empty()==true)<<std::endl;
-
-            std::set<automaton::state> reachable = (result2->reachable_states(result2->get_init()));
-            std::set<automaton::state> onestep_reachable = (result2->successors(result2->get_init()));
-            std::set<automaton::state> onestep_a_reachable = (result2->successors(result2->get_init(), "a"));
-
-            std::set<automaton::state> out;
-            std::set<automaton::state> out2;
-
-            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
-                                reachable.begin(), reachable.end(),
-                                std::inserter(out, out.begin()));
-
-            std::set_difference(reachable.begin(), reachable.end(),
-                                onestep_reachable.begin(), onestep_reachable.end(),
-                                std::inserter(out2, out2.begin()));
-
-            std::cout<<"Reachable_states and successors functions test1: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
-            std::set_difference(onestep_a_reachable.begin(), onestep_a_reachable.end(),
-                                onestep_reachable.begin(), onestep_reachable.end(),
-                                std::inserter(out, out.begin()));
-            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
-                                onestep_a_reachable.begin(), onestep_a_reachable.end(),
-                                std::inserter(out2, out2.begin()));
-
-
-            std::cout<<"Reachable_states and successors functions test2: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
-
         }
 
         language::language(const language& other) : m_type{other.m_type} {
