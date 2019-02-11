@@ -113,6 +113,7 @@ add_executable(test-z3
   tbv.cpp
   theory_dl.cpp
   theory_pb.cpp
+  theory_string.cpp
   timeout.cpp
   total_order.cpp
   trigo.cpp
