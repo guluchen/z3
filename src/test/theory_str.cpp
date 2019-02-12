@@ -217,7 +217,7 @@ static void oaut_adaptor_test(){
 }
 
 
-static void oaut_tst(){
+static void tst_oaut(){
     using namespace smt::str;
     const float One = 0;
     fst::StdVectorFst f;
@@ -336,9 +336,10 @@ static void oaut_tst(){
 
 }
 
-void tst_theory_string() {
+void tst_theory_str() {
     zaut_oaut_crosscheck_test();
 //    oaut_tst();
 //    oaut_adaptor_test();
 //    zaut_adaptor_test();
+    tst_oaut();
 }

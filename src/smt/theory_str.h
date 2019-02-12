@@ -25,7 +25,7 @@
 namespace smt {
 
     namespace str {
-        const unsigned maximal_symbol=256; //symbols ranging from 1 to maximal_symbol
+
         class element {
         public:
             using pair = std::pair<element, element>;
@@ -129,34 +129,35 @@ namespace smt {
             const static unsigned maximal_char=255;
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
-            using sptr_pair = std::pair<sptr, sptr>;
+            using ptr_pair = std::pair<ptr, ptr>;
             using state = unsigned;
             using len_offset = unsigned;
             using len_period = unsigned;
             using len_constraint = std::pair<len_offset, len_period>;
+            static const unsigned MAX_CHAR_NUM = 256;
         public:
             virtual ~automaton() = 0;
             virtual bool is_empty() = 0;
             virtual bool is_deterministic() = 0;
-            virtual bool is_final(state s) { return get_finals().find(s) != get_finals().end(); }
+            virtual bool is_final(state s) { std::set<state> finals = get_finals(); return finals.find(s) != finals.end(); }
             virtual state get_init() = 0;
             virtual std::set<state> get_finals() = 0;
             virtual ptr clone() = 0;
-            virtual ptr simplify() = 0;
+            virtual ptr simplify() { return clone(); }
             virtual ptr determinize() = 0;
             virtual ptr complement() = 0;
             virtual ptr append(sptr other) = 0;
             virtual ptr intersect_with(sptr other) = 0;
             virtual ptr union_with(sptr other) = 0;
             virtual std::list<ptr> remove_prefix(const zstring& prefix);
-            virtual std::list<sptr_pair> split();
+            virtual std::list<ptr_pair> split();
             virtual void set_init(state s) = 0;
             virtual void add_final(state s) = 0;
             virtual void remove_final(state s) = 0;
             virtual std::set<state> reachable_states() { return reachable_states(get_init()); }
             virtual std::set<state> reachable_states(state s) = 0;
             virtual std::set<state> successors(state s) = 0;
-            virtual std::set<state> successors(state s, const zstring& str) = 0;
+            virtual std::set<state> successors(state s, const zstring& ch) = 0;
             virtual std::set<len_constraint> length_constraints() = 0;
             virtual std::ostream& display(std::ostream& os) = 0;
             virtual bool operator==(const automaton& other) = 0;
@@ -164,17 +165,27 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, automaton::sptr a);
         };
 
+        class automaton_factory {
+        public:
+            virtual ~automaton_factory() = 0;
+            virtual automaton::sptr mk_from_re_expr(expr *re) = 0;
+        };
+
         class zaut : public automaton {
         public:
             using internal = ::automaton<sym_expr, sym_expr_manager>;
+            using move = internal::move;
+            using moves = internal::moves;
+            using maker = re2automaton;
+            using handler = symbolic_automata<sym_expr, sym_expr_manager>;
             using symbol = sym_expr;
             using symbol_ref = obj_ref<sym_expr, sym_expr_manager>;
             using symbol_manager = sym_expr_manager;
             class symbol_boolean_algebra : public boolean_algebra<sym_expr *> {
             public:
-                using expr = sym_expr *;
+                using expr = symbol *;
                 struct displayer {
-                    std::ostream& display(std::ostream& os, expr e) const { return e->display(os); }
+                    std::ostream& display(std::ostream& os, expr e) { return e->display(os); }
                 };
             private:
                 ast_manager& m_ast_man;
@@ -196,50 +207,52 @@ namespace smt {
                 symbol_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
                 lbool check_sat(expr *e) override;
             };
-            using moves = internal::moves;
-            using maker = re2automaton;
-            using handler = symbolic_automata<sym_expr, sym_expr_manager>;
+            struct dependency_ref {
+                ast_manager& ast_man;
+                seq_util& util_s;
+                symbol_manager& sym_man;
+                symbol_boolean_algebra& sym_ba;
+                handler& han;
+                using am = ast_manager;
+                using sm = symbol_manager;
+                using sba = symbol_boolean_algebra;
+                using h = handler;
+                dependency_ref(am& m, seq_util& su, sm& sm, sba& sba, h& h);
+            };
         private:
             internal *m_imp;
-            symbol_manager& m_sym_man;
-            symbol_boolean_algebra& m_sym_ba;
-            handler& m_handler;
-            ast_manager &m_ast_man;
-            seq_util m_seq_util;
+            dependency_ref m_dep;
         public:
-            zaut(internal *a, symbol_manager& s, symbol_boolean_algebra& ba, handler& h, ast_manager& m);
-            ~zaut() override { dealloc(m_imp); };
-            bool is_empty() override { return m_imp->is_empty(); }
+            zaut(internal *a, dependency_ref dep) : m_imp{a}, m_dep{dep} {}
+            ~zaut() override { dealloc(m_imp); }
+            bool is_empty() override;
             bool is_deterministic() override;
+            bool is_final(state s) override { return m_imp->is_final_state(s); }
             state get_init() override { return m_imp->init(); }
             std::set<state> get_finals() override;
             ptr clone() override;
-            ptr simplify() override { return clone(); }
-            ptr complement() override { return clone(); }
             ptr determinize() override;
+            ptr complement() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
             ptr append(sptr other) override {};
-            std::list<ptr> remove_prefix(const zstring& prefix) override;
-            std::list<sptr_pair> split() override;
             void set_init(state s) override;
             void add_final(state s) override;
             void remove_final(state s) override;
             std::set<state> reachable_states(state s) override;
             std::set<state> successors(state s) override;
-            std::set<state> successors(state s, const zstring& str) override;
+            std::set<state> successors(state s, const zstring& ch) override;
             std::set<len_constraint> length_constraints() override;
             std::ostream& display(std::ostream& out) override;
             bool operator==(const automaton& other) override;
         private:
             moves transitions();
+            moves transform_transitions(std::function<move(move)> transformer);
+            symbol *mk_char(const zstring& ch);
+            lbool symbol_check_sat(const symbol_ref& s);
             bool contains(const zaut& other) const;
             ptr mk_ptr(internal *&& a) const;
-            sptr mk_sptr(internal * a) const;
-            moves transitions_skeleton();
         };
-
-
 
         class oaut : public automaton {
         public:
@@ -253,15 +266,15 @@ namespace smt {
         private:
             internal m_imp;
         public:
-            oaut(internal a);
-            ~oaut() override {};
+            explicit oaut(internal a);
+            ~oaut() override = default;
             bool is_empty() override;
-            bool is_deterministic() override { return 1-!m_imp.Properties(fst::kIDeterministic, true);};
+            bool is_deterministic() override;
             state get_init() override { return m_imp.Start(); }
             std::set<state> get_finals() override;
             ptr clone() override;
-            ptr simplify() override { return std::unique_ptr<smt::str::oaut>(this); }
             ptr determinize() override;
+            ptr complement() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
             state add_state(){return m_imp.AddState();};
@@ -271,50 +284,52 @@ namespace smt {
             ptr append(sptr other) override {};
             std::set<state> reachable_states(state s) override;
             std::set<state> successors(state s) override;
-            std::set<state> successors(state s, const zstring& str) override;
-            std::set<len_constraint> length_constraints() override {return std::set<len_constraint>();};
-            std::ostream& display(std::ostream& out) override;
-            std::ostream& display(std::ostream& out, const string& description);
-            ptr complement() override;
+            std::set<state> successors(state s, const zstring& ch) override;
+            std::set<len_constraint> length_constraints() override;
+            std::ostream& display(std::ostream& os) override;
+            std::ostream& display(std::ostream& os, const string& description);
             bool operator==(const automaton& other) override;
             friend class oaut_adaptor;
         private:
-            fst::StdArc makeArc(Label symbol, StateId to){return fst::StdArc(symbol, symbol, 0, to);};
+            fst::StdArc makeArc(Label symbol, StateId to) {
+                return fst::StdArc(symbol, symbol, 0, to);
+            };
             void cloneInternalStructure(internal& out);
             void totalize();
-            static void unit_test();
         };
 
-        class zaut_adaptor {
+        class zaut_adaptor : public automaton_factory {
+            ast_manager& m_ast_man;
+            seq_util m_util_s;
             zaut::symbol_manager m_sym_man;
             zaut::symbol_solver *m_sym_solver;
             zaut::symbol_boolean_algebra *m_sym_ba;
             zaut::handler *m_aut_man;
             zaut::maker m_aut_make;
             std::map<expr *, zaut::sptr> m_re_aut_cache;
-            ast_manager &m_ast_man;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
-            ~zaut_adaptor();
-            automaton::sptr mk_from_re_expr(expr *re);
+            ~zaut_adaptor() override;
+            automaton::sptr mk_from_re_expr(expr *re) override;
         };
 
-        class oaut_adaptor {
+        class oaut_adaptor : public automaton_factory {
             using StateId = int;
             using Label = int;
             const float Zero = std::numeric_limits<float>::infinity();
             const float One = 0;
 
-            ast_manager m;
-        public:
-            oaut_adaptor(ast_manager& m);
-            ~oaut_adaptor(){};
-            automaton::sptr mk_from_re_expr(expr *re);
-        private:
+            ast_manager& m;
             seq_util m_util_s;
+        public:
+            explicit oaut_adaptor(ast_manager& m) : m{m}, m_util_s{m} {}
+            automaton::sptr mk_from_re_expr(expr *re) override;
+        private:
             std::shared_ptr<oaut> mk_oaut_from_re_expr(expr *re);
             unsigned exprToUnsigned(expr *);
-            fst::StdArc makeArc(Label symbol, StateId to){return fst::StdArc(symbol, symbol, One, to);};
+            fst::StdArc makeArc(Label symbol, StateId to) {
+                return fst::StdArc(symbol, symbol, One, to);
+            };
         };
 
         class language {
@@ -352,6 +367,11 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const language& l);
         };
 
+        class membership_constraints {
+        public:
+            virtual void add() = 0;
+        };
+
         class state {
         public:
             using cref = std::reference_wrapper<const state>;
@@ -385,6 +405,7 @@ namespace smt {
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
             void set_var_lang(const element& var, language&& lang);
+            void remove_var_lang(const element& var);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
             state remove_all(const std::set<element>& tgt) const;
