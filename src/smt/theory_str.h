@@ -235,7 +235,7 @@ namespace smt {
             ptr complement() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
-            ptr append(sptr other) override {};
+            ptr append(sptr other) override;
             void set_init(state s) override;
             void add_final(state s) override;
             void remove_final(state s) override;

@@ -725,6 +725,27 @@ namespace smt {
             return false;
         }
 
+        automaton::ptr zaut::append(sptr other) {
+            unsigned num_states = m_imp->num_states();
+            moves new_trans = transitions();
+            unsigned_vector new_fin;
+            zaut *const o = static_cast<zaut *>(other.get());
+
+            moves trans = o->transitions();
+            for(auto tr : trans) {
+                new_trans.push_back(internal::move(m_dep.sym_man, tr.src()+num_states,
+                  tr.dst()+num_states, tr.t()));
+            }
+            for(state fin : get_finals()) {
+                new_trans.push_back(internal::move(m_dep.sym_man, fin, num_states));
+            }
+            for(state fot : o->get_finals()) {
+                new_fin.push_back(fot + num_states);
+            }
+
+            return mk_ptr(alloc(internal, m_dep.sym_man, get_init(), new_fin, new_trans));
+        }
+
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
                 : m_ast_man{m}, m_util_s{m}, m_aut_make{m} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
