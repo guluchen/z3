@@ -5,6 +5,8 @@
 #include "ast/reg_decl_plugins.h"
 #include "ast/ast_pp.h"
 #include <sstream>
+#include <iostream>
+#include <fstream>
 class string_fuzzer {
     ast_manager& m;
     smt_params params;
@@ -13,7 +15,7 @@ class string_fuzzer {
 
 public:
     string_fuzzer(ast_manager& m, smt::context& ctx): m{m}, ctx{ctx}, m_util_s{m} {
-        srand (time(NULL));
+        srand (0);
     }
 
 
@@ -30,7 +32,7 @@ public:
 
     }
 
-    void crosscheck(){
+    void crosscheck(int i){
         expr_ref string_exp= genRandomExpr(2);
         std::cout<<mk_pp(string_exp,m)<<std::endl;
         smt::str::zaut_adaptor m_zaut_imp(m,ctx);
@@ -38,28 +40,36 @@ public:
         smt::str::oaut_adaptor m_oaut_imp(m);
         smt::str::automaton::sptr oaut = m_oaut_imp.mk_from_re_expr(string_exp);
 
-        std::shared_ptr<smt::str::oaut>(static_cast<smt::str::oaut*>(oaut.get()))->display_timbuk(std::cout);
+        std::ofstream oaut_file;
+        oaut_file.open ("oaut"+std::to_string(i)+".txt");
+        static_cast<smt::str::oaut*>(oaut.get())->display_timbuk(oaut_file);
+        oaut_file.close();
 
-        for(auto& prefix:  getTestStrings( 2, 2)){
-            std::cout<<prefix<<std::endl;
-            std::list<smt::str::automaton::ptr> prefix_automata_oaut = oaut->remove_prefix(prefix);
-            std::cout<<"remove_prefix: Done"<<std::endl;
-            bool oaut_has_the_word =false;
-            for(auto& oa : prefix_automata_oaut){
-                if(!oa->is_empty()){
-                    oaut_has_the_word=true;
-                }
-            }
-            std::cout<<"oaut_has_this_word:"<<oaut_has_the_word<<std::endl;
 
-//            bool oaut_has_this_word=!oaut->remove_prefix(prefix).empty();
-//            std::cout<<"oaut_has_this_word:"<<oaut_has_this_word<<std::endl;
-
-//            if(zaut_has_this_word != oaut_has_this_word){
-//                std::cout<<prefix<<std::endl;
-//
+        std::ofstream zaut_file;
+        zaut_file.open ("zaut"+std::to_string(i)+".txt");
+        static_cast<smt::str::zaut*>(zaut.get())->display_timbuk(zaut_file);
+        zaut_file.close();
+//        for(auto& prefix:  getTestStrings( 2, 2)){
+//            std::cout<<prefix<<std::endl;
+//            std::list<smt::str::automaton::ptr> prefix_automata_oaut = oaut->remove_prefix(prefix);
+//            std::cout<<"remove_prefix: Done"<<std::endl;
+//            bool oaut_has_the_word =false;
+//            for(auto& oa : prefix_automata_oaut){
+//                if(!oa->is_empty()){
+//                    oaut_has_the_word=true;
+//                }
 //            }
-        }
+//            std::cout<<"oaut_has_this_word:"<<oaut_has_the_word<<std::endl;
+//
+////            bool oaut_has_this_word=!oaut->remove_prefix(prefix).empty();
+////            std::cout<<"oaut_has_this_word:"<<oaut_has_this_word<<std::endl;
+//
+////            if(zaut_has_this_word != oaut_has_this_word){
+////                std::cout<<prefix<<std::endl;
+////
+////            }
+//        }
 
     }
 private:
@@ -204,7 +214,7 @@ static void tst_zaut_oaut_crosscheck(){
     string_fuzzer str(m,ctx);
 
     for(int i=0;i<100;i++){
-        str.crosscheck();
+        str.crosscheck(i);
     }
     std::cout<<"zaut and oaut crosscheck test: 1"<<std::endl;
 }

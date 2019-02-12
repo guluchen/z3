@@ -651,7 +651,7 @@ namespace smt {
             for(state st : automaton::reachable_states()) {
                 out << st << " ";
             }
-            out << std::endl << "Final States ";
+            out << std::endl <<"Final States ";
             for(state st : get_finals()) {
                 out << st << " ";
             }
