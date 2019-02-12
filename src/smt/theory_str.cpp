@@ -9,7 +9,7 @@
 #include "math/automata/symbolic_automata_def.h"
 
 template<typename TO, typename FROM>
-std::unique_ptr<TO> static_unique_pointer_cast (std::unique_ptr<FROM>&& old) {
+std::unique_ptr<TO> static_unique_pointer_cast(std::unique_ptr<FROM>&& old) {
     return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
 }
 
@@ -593,9 +593,8 @@ namespace smt {
                     return move{m_dep.sym_man, m.src(), m.dst(), m_dep.sym_ba.mk_true()};
                 }
             };
-            moves&& trans_skeleton = transform_transitions(to_true);
             scoped_ptr<internal> tmp{alloc(internal, m_dep.sym_man, m_imp->init(),
-                                           m_imp->final_states(), std::move(trans_skeleton))};
+                                           m_imp->final_states(), transform_transitions(to_true))};
             const scoped_ptr<internal> tgt{m_dep.han.mk_deterministic(*tmp)};
 
             pending.push(tgt->init());
@@ -691,7 +690,7 @@ namespace smt {
             while (!todo.empty()) {
                 act = todo.back();
 
-                if(is_final(act)) {
+                if (is_final(act)) {
                     return false;
                 }
 
@@ -752,24 +751,24 @@ namespace smt {
         }
 
         bool oaut::is_empty() {
-            if(m_imp.NumStates()==0)
+            if (m_imp.NumStates()==0)
                 return true;
 
             std::set<state> processed;
             std::set<state> waitlist;
 
             waitlist.insert(m_imp.Start());
-            while(!waitlist.empty()){
+            while (!waitlist.empty()) {
                 state cur = *waitlist.begin();
                 waitlist.erase(waitlist.begin());
                 processed.insert(cur);
 
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()) {
                     StateId to = arc_it.Value().nextstate;
-                    if(m_imp.Final(to)!=Zero){//is "to" a final state
+                    if (m_imp.Final(to)!=Zero) { // is "to" a final state
                         return false;
                     }
-                    if(processed.find(to) == processed.end()){
+                    if (processed.find(to) == processed.end()) {
                         processed.insert(cur);
                     }
                 }
@@ -781,11 +780,11 @@ namespace smt {
             return 1 - !m_imp.Properties(fst::kIDeterministic, true);
         }
 
-        std::set<automaton::state> oaut::get_finals(){
+        std::set<automaton::state> oaut::get_finals() {
             std::set<state> result;
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId state = st_itr.Value();
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                if (m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
                     result.insert(state);
             }
             return result;
@@ -799,7 +798,7 @@ namespace smt {
             return std::unique_ptr<oaut>(new oaut(r_imp));
         };
 
-        automaton::ptr oaut::complement(){
+        automaton::ptr oaut::complement() {
             using namespace fst;
             automaton::ptr result = clone();
             auto cur = static_unique_pointer_cast<oaut>(std::move(result));
@@ -807,7 +806,7 @@ namespace smt {
             Determinize(cur->m_imp, &cur->m_imp);
             Minimize(&cur->m_imp);
             cur->totalize();
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(cur->m_imp);!st_itr.Done();st_itr.Next()){
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(cur->m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId state = st_itr.Value();
                 cur->m_imp.SetFinal(state, (cur->m_imp.Final(state)==Zero)?One:Zero);
             }
@@ -821,16 +820,16 @@ namespace smt {
             const float One = 0;
             StdVectorFst r_imp;
             std::map<StateId,StateId> st_map;
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId s=r_imp.AddState();
                 st_map[st_itr.Value()] = s;
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                if (m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
                     r_imp.SetFinal(s,One);
             }
             r_imp.SetStart(st_map[m_imp.Start()]);
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                for (ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
                     Label symbol = arc_it.Value().ilabel;
                     StateId to = arc_it.Value().nextstate;
                     r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
@@ -863,14 +862,14 @@ namespace smt {
             std::set<state> waitlist;
 
             waitlist.insert(m_imp.Start());
-            while(!waitlist.empty()){
+            while (!waitlist.empty()) {
                 state cur = *waitlist.begin();
                 waitlist.erase(waitlist.begin());
                 states.insert(cur);
 
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()){
+                for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,cur);!arc_it.Done();arc_it.Next()) {
                     StateId to = arc_it.Value().nextstate;
-                    if(states.find(to) == states.end()){
+                    if (states.find(to) == states.end()) {
                         waitlist.insert(to);
                     }
                 }
@@ -880,7 +879,7 @@ namespace smt {
 
         std::set<automaton::state> oaut::successors(state s) {
             std::set<state> states;
-            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+            for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()) {
                 state to = arc_it.Value().nextstate;
                 states.insert(to);
             }
@@ -891,10 +890,10 @@ namespace smt {
             SASSERT(ch.length() == 1);
             std::set<state> states;
 
-            for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()){
+            for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,s);!arc_it.Done();arc_it.Next()) {
                 state to = arc_it.Value().nextstate;
                 Label symbol = arc_it.Value().ilabel;
-                if(symbol == ch[0])
+                if (symbol == ch[0])
                     states.insert(to);
             }
             return states;
@@ -911,21 +910,21 @@ namespace smt {
             std::cout<<"Init: "<<m_imp.Start()<<std::endl;
             fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);
             std::set<int> final_states;
-            while(!st_itr.Done()){
+            while (!st_itr.Done()) {
                 int from = st_itr.Value();
                 fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,from);
-                while(!arc_it.Done()){
+                while (!arc_it.Done()) {
                     int symbol = arc_it.Value().ilabel;
                     int to = arc_it.Value().nextstate;
                     std::cout<<from<<"("<<m_imp.Final(from)<<")"<<"--"<<(char)symbol<<"("<<arc_it.Value().weight<<")"<<"-->"<<to<<"("<<m_imp.Final(to)<<")"<<std::endl;
                     arc_it.Next();
                 }
-                if(m_imp.Final(from)!=Zero)//is "from" a final state
+                if (m_imp.Final(from)!=Zero)//is "from" a final state
                     final_states.insert(from);
                 st_itr.Next();
             }
             std::cout<<"Finals: ";
-            for(auto& s:final_states){
+            for (auto& s:final_states) {
                 std::cout<<s<<" ";
             }
 
@@ -944,22 +943,22 @@ namespace smt {
         std::ostream& oaut::display(std::ostream& os) {
             os<<"Init: "<<m_imp.Start()<<std::endl;
             std::set<int> final_states;
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId from = st_itr.Value();
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
                     Label symbol = arc_it.Value().ilabel;
                     StateId to = arc_it.Value().nextstate;
-                    if((symbol>=(int)'a' && symbol <= (int)'z')||
+                    if ((symbol>=(int)'a' && symbol <= (int)'z')||
                        (symbol>=(int)'A' && symbol <= (int)'Z'))
                         os<<from<<"--"<<(char)symbol<<"-->"<<to<<std::endl;
                     else
                         os<<from<<"--"<<symbol<<"-->"<<to<<std::endl;
                 }
-                if(m_imp.Final(from)!=Zero)//is "from" a final state
+                if (m_imp.Final(from)!=Zero)//is "from" a final state
                     final_states.insert(from);
             }
             os<<"Finals: ";
-            for(auto& s:final_states){
+            for (auto& s:final_states) {
                 os<<s<<" ";
             }
             os<<std::endl;
@@ -1000,16 +999,16 @@ namespace smt {
             const float Zero = std::numeric_limits<float>::infinity();
             const float One = 0;
             std::map<StateId,StateId> st_map;
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId s=r_imp.AddState();
                 st_map[st_itr.Value()] = s;
-                if(m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
+                if (m_imp.Final(st_itr.Value())!=Zero)//is "from" a final state
                     r_imp.SetFinal(s,One);
             }
             r_imp.SetStart(st_map[m_imp.Start()]);
-            for(StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                for (ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
                     Label symbol = arc_it.Value().ilabel;
                     StateId to = arc_it.Value().nextstate;
                     r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
@@ -1022,24 +1021,24 @@ namespace smt {
             std::map<state,state> state_map;
             set<state> my_finals=get_finals();
 
-            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+            for (StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()) {
                 StateId s=add_state();
                 StateId from = st_itr.Value();
                 state_map[from]=s;
-                if(other.m_imp.Final(from)!=Zero) {//is "from" a final state
+                if (other.m_imp.Final(from)!=Zero) {//is "from" a final state
                     add_final(state_map[from]);
                 }
             }
-            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+            for (StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()) {
                 StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                for (ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
                     Label symbol = arc_it.Value().ilabel;
                     StateId to = arc_it.Value().nextstate;
                     m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
                 }
             }
 
-            for(auto& s:my_finals){
+            for (auto& s:my_finals) {
                 state other_init = other.m_imp.Start();
                 m_imp.AddArc(s, makeArc(0, state_map[other_init]));
                 remove_final(s);
@@ -1049,15 +1048,15 @@ namespace smt {
 
         void oaut::totalize() {
             StateId sink = m_imp.AddState();
-            for(fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()){
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
                 StateId from = st_itr.Value();
                 std::set<Label> usedSymbols;
-                for(fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
                     Label symbol = arc_it.Value().ilabel;
                     usedSymbols.insert(symbol);
                 }
-                for(Label i=1;i<=MAX_CHAR_NUM;i++){
-                    if(usedSymbols.find(i)==usedSymbols.end()){
+                for (Label i=1;i<=MAX_CHAR_NUM;i++) {
+                    if (usedSymbols.find(i)==usedSymbols.end()) {
                         m_imp.AddArc(from, makeArc(i, sink));
                     }
                 }
@@ -1135,9 +1134,9 @@ namespace smt {
                 result=mk_oaut_from_re_expr(inner_re);
                 StateId init =result->get_init();
 
-                for(StateIterator<fst::StdVectorFst> st_itr(result->m_imp);!st_itr.Done();st_itr.Next()){
+                for (StateIterator<fst::StdVectorFst> st_itr(result->m_imp);!st_itr.Done();st_itr.Next()) {
                     StateId cur = st_itr.Value();
-                    if(result->m_imp.Final(cur) != Zero ){
+                    if (result->m_imp.Final(cur) != Zero ) {
                         result->m_imp.AddArc(cur, makeArc(0, init));// 0 is epsilon in OpenFst
                     }
                 }
@@ -1162,7 +1161,7 @@ namespace smt {
 
                 unsigned lower = exprToUnsigned(bound_expr1);
                 unsigned upper = exprToUnsigned(bound_expr2);
-                if(lower>upper) std::swap(lower,upper);
+                if (lower>upper) std::swap(lower,upper);
                 for (unsigned label = lower; label <= upper; label++) {
                     result_fst.AddArc(init, makeArc(label, final));
                 }
