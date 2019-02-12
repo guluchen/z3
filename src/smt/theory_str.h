@@ -126,7 +126,7 @@ namespace smt {
 
         class automaton {
         public:
-            const unsigned maximal_char=256;
+            const static unsigned maximal_char=255;
             using ptr = std::unique_ptr<automaton>;
             using sptr = std::shared_ptr<automaton>;
             using sptr_pair = std::pair<sptr, sptr>;
@@ -145,6 +145,7 @@ namespace smt {
             virtual ptr simplify() = 0;
             virtual ptr determinize() = 0;
             virtual ptr complement() = 0;
+            virtual ptr append(sptr other) = 0;
             virtual ptr intersect_with(sptr other) = 0;
             virtual ptr union_with(sptr other) = 0;
             virtual std::list<ptr> remove_prefix(const zstring& prefix);
@@ -218,6 +219,7 @@ namespace smt {
             ptr determinize() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
+            ptr append(sptr other) override {};
             std::list<ptr> remove_prefix(const zstring& prefix) override;
             std::list<sptr_pair> split() override;
             void set_init(state s) override;
@@ -263,11 +265,10 @@ namespace smt {
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
             state add_state(){return m_imp.AddState();};
-            std::list<ptr> remove_prefix(const zstring& prefix) override {};
-            std::list<sptr_pair> split() override{};
             void set_init(state s) override {m_imp.SetStart(s);};
             void add_final(state s) override {m_imp.SetFinal(s, One);};
             void remove_final(state s) override {m_imp.SetFinal(s, Zero);};
+            ptr append(sptr other) override {};
             std::set<state> reachable_states(state s) override;
             std::set<state> successors(state s) override;
             std::set<state> successors(state s, const zstring& str) override;
@@ -280,7 +281,6 @@ namespace smt {
         private:
             fst::StdArc makeArc(Label symbol, StateId to){return fst::StdArc(symbol, symbol, 0, to);};
             void cloneInternalStructure(internal& out);
-            void append(oaut& other);
             void totalize();
             static void unit_test();
         };

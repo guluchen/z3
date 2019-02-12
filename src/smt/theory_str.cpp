@@ -12,6 +12,10 @@ template<typename TO, typename FROM>
 std::unique_ptr<TO> static_unique_pointer_cast (std::unique_ptr<FROM>&& old){
     return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
 }
+template<typename TO, typename FROM>
+std::shared_ptr<TO> static_shared_pointer_cast (std::unique_ptr<FROM>&& old){
+    return std::shared_ptr<TO>{static_cast<TO*>(old.release())};
+}
 
 namespace smt {
 
@@ -854,9 +858,9 @@ namespace smt {
                     StateId to = arc_it.Value().nextstate;
                     if((symbol>=(int)'a' && symbol <= (int)'z')||
                        (symbol>=(int)'A' && symbol <= (int)'Z'))
-                        out<<from<<"--"<<(char)symbol<<"-->"<<to<<std::endl;
+                        out<<from<<"--"<<(char)(symbol-1)<<"-->"<<to<<std::endl;
                     else
-                        out<<from<<"--"<<symbol<<"-->"<<to<<std::endl;
+                        out<<from<<"--"<<(symbol-1)<<"-->"<<to<<std::endl;
                 }
                 if(m_imp.Final(from)!=Zero)//is "from" a final state
                     final_states.insert(from);
@@ -914,7 +918,7 @@ namespace smt {
                     Label symbol = arc_it.Value().ilabel;
                     usedSymbols.insert(symbol);
                 }
-                for(Label i=1;i<=maximal_char;i++){
+                for(Label i=1;i<=(maximal_char+1);i++){
                     if(usedSymbols.find(i)==usedSymbols.end()){
                         m_imp.AddArc(from, makeArc(i, sink));
                     }
@@ -937,35 +941,35 @@ namespace smt {
             }
         }
 
-        void oaut::append(oaut& other){
-            using namespace fst;
-            std::map<state,state> state_map;
-            set<state> my_finals=get_finals();
-
-            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
-                StateId s=add_state();
-                StateId from = st_itr.Value();
-                state_map[from]=s;
-                if(other.m_imp.Final(from)!=Zero) {//is "from" a final state
-                    add_final(state_map[from]);
-                }
-            }
-            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
-                StateId from = st_itr.Value();
-                for(ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
-                    Label symbol = arc_it.Value().ilabel;
-                    StateId to = arc_it.Value().nextstate;
-                    m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
-                }
-            }
-
-            for(auto& s:my_finals){
-                state other_init = other.m_imp.Start();
-                m_imp.AddArc(s, makeArc(0, state_map[other_init]));
-                remove_final(s);
-            }
-            RmEpsilon(&m_imp);
-        }
+//        void append(oaut& other){
+//            using namespace fst;
+//            std::map<state,state> state_map;
+//            set<state> my_finals=get_finals();
+//
+//            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+//                StateId s=add_state();
+//                StateId from = st_itr.Value();
+//                state_map[from]=s;
+//                if(other.m_imp.Final(from)!=Zero) {//is "from" a final state
+//                    add_final(state_map[from]);
+//                }
+//            }
+//            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
+//                StateId from = st_itr.Value();
+//                for(ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+//                    Label symbol = arc_it.Value().ilabel;
+//                    StateId to = arc_it.Value().nextstate;
+//                    m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
+//                }
+//            }
+//
+//            for(auto& s:my_finals){
+//                state other_init = other.m_imp.Start();
+//                m_imp.AddArc(s, makeArc(0, state_map[other_init]));
+//                remove_final(s);
+//            }
+//            RmEpsilon(&m_imp);
+//        }
 
 
         void oaut::cloneInternalStructure(internal& r_imp){
@@ -1069,7 +1073,7 @@ namespace smt {
                         result_fst.SetStart(last);
                         for (unsigned i = 0; i < str.length(); i++) {
                             StateId cur = result_fst.AddState();
-                            result_fst.AddArc(last, makeArc(str[i], cur));
+                            result_fst.AddArc(last, makeArc(str[i]+1, cur));
                             TRACE("str", tout << "string transition " << last << "--" << str[i] << "--> " << cur
                                               << "\n";);
                             last = cur;
@@ -1089,8 +1093,7 @@ namespace smt {
                 std::shared_ptr<oaut> prefix=mk_oaut_from_re_expr(re1);
                 std::shared_ptr<oaut> suffix=mk_oaut_from_re_expr(re2);
 
-                prefix->append(*suffix);
-                result = prefix;
+                result = static_shared_pointer_cast<oaut>(prefix->append(suffix));
                 TRACE("str", tout << "concat NFAs " <<mk_pp(re1,m)<<" and " <<mk_pp(re2,m)<<std::endl;);
             } else if (m_util_s.re.is_union(e)) {
                 app *term_union = to_app(e);
@@ -1151,7 +1154,7 @@ namespace smt {
                 result_fst.SetStart(init);
                 result_fst.SetFinal(init, One);
 
-                for (unsigned label = 0; label < 256; label++) {
+                for (unsigned label = 1; label <= (automaton::maximal_char+1); label++) {
                     result_fst.AddArc(init, makeArc(label, init));
                 }
                 result=std::make_shared<smt::str::oaut>(result_fst);
@@ -1163,7 +1166,7 @@ namespace smt {
                 StateId final = result_fst.AddState();
                 result_fst.SetFinal(final, One);
 
-                for (unsigned label = 0; label < 256; label++) {
+                for (unsigned label = 1; label <= (automaton::maximal_char+1); label++) {
                     result_fst.AddArc(init, makeArc(label, final));
                 }
                 result=std::make_shared<smt::str::oaut>(result_fst);
@@ -1181,8 +1184,6 @@ namespace smt {
                         "invalid regular expression terms");
             }
 
-//            std::cout<<mk_pp(e,m)<<std::endl;
-//            result->display(std::cout);
 
             return result;
         }
@@ -1194,101 +1195,7 @@ namespace smt {
             return str_form[0];
         }
 
-        void oaut::unit_test(){
-            const float One = 0;
-            fst::StdVectorFst f;
-            f.AddState();   // 1st state will be state 0 (returned by AddState)
-            f.AddState();
-            f.AddState();
-            f.AddState();
-            f.AddState();
-            f.SetStart(0);
-            f.AddArc(0, fst::StdArc('a', 'a', One, 1));
-            f.AddArc(0, fst::StdArc('b', 'b', One, 2));
-            f.AddArc(1, fst::StdArc('b', 'b', One, 3));
-            f.AddArc(2, fst::StdArc('a', 'a', One, 4));
-            f.AddArc(3, fst::StdArc('a', 'a', One, 1));
-            f.AddArc(4, fst::StdArc('b', 'b', One, 2));
-            f.SetFinal(3, One);
-            f.SetFinal(4, One);
-
-            std::shared_ptr<oaut> result = std::make_shared<smt::str::oaut>(f);
-
-            fst::StdVectorFst g;
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.AddState();
-            g.SetStart(0);
-            g.AddArc(0, fst::StdArc('a', 'a', One, 1));
-            g.AddArc(0, fst::StdArc('b', 'b', One, 2));
-            g.AddArc(1, fst::StdArc('b', 'b', One, 3));
-            g.AddArc(2, fst::StdArc('a', 'a', One, 4));
-            g.AddArc(3, fst::StdArc('a', 'a', One, 5));
-            g.AddArc(4, fst::StdArc('b', 'b', One, 6));
-            g.AddArc(5, fst::StdArc('b', 'b', One, 3));
-            g.AddArc(6, fst::StdArc('a', 'a', One, 4));
-
-            g.SetFinal(3, One);
-            g.SetFinal(4, One);
-
-
-            std::shared_ptr<oaut> result2 = std::make_shared<smt::str::oaut>(g);
-
-            std::cout<<"Equalivalent function test: "<<((*result == *result2)==true)<<std::endl;
-            g.AddArc(1, fst::StdArc('c', 'c', One, 3));
-            result2 = std::make_shared<smt::str::oaut>(g);
-            std::cout<<"Equalivalent function test: "<<((*result == *result2)==false)<<std::endl;
-
-            std::cout<<"Is_deterministic function test: "<<((result->is_deterministic())==true)<<std::endl;
-            g.AddArc(1, fst::StdArc('c', 'c', One, 2));
-            result2 = std::make_shared<smt::str::oaut>(g);
-            std::cout<<"Is_deterministic function test: "<<((result2->is_deterministic())==false)<<std::endl;
-            std::shared_ptr<automaton> result3=result2->determinize();
-
-            std::cout<<"Clone and determinize functions test: "<<((*result3 == *result2)==true)<<std::endl;
-            std::shared_ptr<automaton> result4 = result3->complement();
-            std::shared_ptr<automaton> result5 = result4->intersect_with(result3);
-            std::cout<<"Complement, intersection, and is_empty functions test: "<<(result5->is_empty()==true)<<std::endl;
-
-            std::shared_ptr<automaton> result6 = result4->union_with(result3);
-            std::shared_ptr<automaton> result7 = result6->complement();
-
-            std::cout<<"Complement, union, and is_empty functions test: "<<(result7->is_empty()==true)<<std::endl;
-
-            std::set<automaton::state> reachable = (result2->reachable_states(result2->get_init()));
-            std::set<automaton::state> onestep_reachable = (result2->successors(result2->get_init()));
-            std::set<automaton::state> onestep_a_reachable = (result2->successors(result2->get_init(), "a"));
-
-            std::set<automaton::state> out;
-            std::set<automaton::state> out2;
-
-            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
-                                reachable.begin(), reachable.end(),
-                                std::inserter(out, out.begin()));
-
-            std::set_difference(reachable.begin(), reachable.end(),
-                                onestep_reachable.begin(), onestep_reachable.end(),
-                                std::inserter(out2, out2.begin()));
-
-            std::cout<<"Reachable_states and successors functions test1: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
-            std::set_difference(onestep_a_reachable.begin(), onestep_a_reachable.end(),
-                                onestep_reachable.begin(), onestep_reachable.end(),
-                                std::inserter(out, out.begin()));
-            std::set_difference(onestep_reachable.begin(), onestep_reachable.end(),
-                                onestep_a_reachable.begin(), onestep_a_reachable.end(),
-                                std::inserter(out2, out2.begin()));
-
-
-            std::cout<<"Reachable_states and successors functions test2: "<<((out.empty()==true) && (out2.empty()==false))<<std::endl;
-
-        }
         automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
-            //oaut::unit_test();
-
             return mk_oaut_from_re_expr(re);
         }
 
