@@ -15,7 +15,7 @@ class string_fuzzer {
 
 public:
     string_fuzzer(ast_manager& m, smt::context& ctx): m{m}, ctx{ctx}, m_util_s{m} {
-        srand (0);
+        srand(time(NULL));
     }
 
 
@@ -34,24 +34,74 @@ public:
 
     void crosscheck(int i){
         expr_ref string_exp= genRandomExpr(2);
-        std::cout<<mk_pp(string_exp,m)<<std::endl;
         smt::str::zaut_adaptor m_zaut_imp(m,ctx);
-        smt::str::automaton::sptr zaut = m_zaut_imp.mk_from_re_expr(string_exp);
         smt::str::oaut_adaptor m_oaut_imp(m);
+
+        smt::str::automaton::sptr zaut = m_zaut_imp.mk_from_re_expr(string_exp)->determinize();
         smt::str::automaton::sptr oaut = m_oaut_imp.mk_from_re_expr(string_exp);
 
-        std::ofstream oaut_file;
-        oaut_file.open ("oaut"+std::to_string(i)+".txt");
+        expr_ref string_exp2= genRandomExpr(2);
+        smt::str::automaton::sptr zaut2 = m_zaut_imp.mk_from_re_expr(string_exp2)->determinize();
+        smt::str::automaton::sptr oaut2 = m_oaut_imp.mk_from_re_expr(string_exp2);
+
+
+        std::ofstream oaut_file, zaut_file, re_file;
+
+        re_file.open ("re"+std::to_string(4*i)+".txt");
+        re_file<<mk_pp(string_exp,m)<<std::endl;
+        re_file<<mk_pp(string_exp2,m)<<std::endl;
+        re_file.close();
+
+        oaut_file.open ("oaut"+std::to_string(4*i)+".txt");
+        std::cout<<"oaut re-to-automaton"<<std::endl;
         static_cast<smt::str::oaut*>(oaut.get())->display_timbuk(oaut_file);
-//        static_cast<smt::str::oaut*>(oaut.get())->display(std::cout);
         oaut_file.close();
 
-
-        std::ofstream zaut_file;
-        zaut_file.open ("zaut"+std::to_string(i)+".txt");
+        zaut_file.open ("zaut"+std::to_string(4*i)+".txt");
+        std::cout<<"zaut re-to-automaton"<<std::endl;
         static_cast<smt::str::zaut*>(zaut.get())->display_timbuk(zaut_file);
-//        static_cast<smt::str::zaut*>(zaut.get())->display(std::cout);
         zaut_file.close();
+
+        oaut_file.open ("oaut"+std::to_string(4*i+1)+".txt");
+        std::cout<<"oaut complement"<<std::endl;
+        static_cast<smt::str::oaut*>(oaut->complement().get())->display_timbuk(oaut_file);
+        oaut_file.close();
+
+        zaut_file.open ("zaut"+std::to_string(4*i+1)+".txt");
+        std::cout<<"zaut complement"<<std::endl;
+        static_cast<smt::str::zaut*>(zaut->complement().get())->display_timbuk(zaut_file);
+        zaut_file.close();
+
+        oaut_file.open ("oaut"+std::to_string(4*i+2)+".txt");
+        std::cout<<"oaut determinize"<<std::endl;
+        static_cast<smt::str::oaut*>(oaut->determinize().get())->display_timbuk(oaut_file);
+        oaut_file.close();
+
+        zaut_file.open ("zaut"+std::to_string(4*i+2)+".txt");
+        std::cout<<"zaut determinize"<<std::endl;
+        static_cast<smt::str::zaut*>(zaut->determinize().get())->display_timbuk(zaut_file);
+        zaut_file.close();
+
+        oaut_file.open ("oaut"+std::to_string(4*i+3)+".txt");
+        std::cout<<"oaut intersection"<<std::endl;
+        static_cast<smt::str::oaut*>(oaut->intersect_with(oaut2).get())->display_timbuk(oaut_file);
+        oaut_file.close();
+
+        zaut_file.open ("zaut"+std::to_string(4*i+3)+".txt");
+        std::cout<<"zaut intersection"<<std::endl;
+        static_cast<smt::str::zaut*>(zaut->intersect_with(zaut2).get())->display_timbuk(zaut_file);
+        zaut_file.close();
+
+//        oaut_file.open ("oaut"+std::to_string(5*i+4)+".txt");
+//        std::cout<<"oaut append"<<std::endl;
+//        static_cast<smt::str::oaut*>(oaut->append(oaut2).get())->display_timbuk(oaut_file);
+//        oaut_file.close();
+//
+//        zaut_file.open ("zaut"+std::to_string(5*i+4)+".txt");
+//        std::cout<<"zaut append"<<std::endl;
+//        static_cast<smt::str::zaut*>(zaut->append(zaut2).get())->display_timbuk(zaut_file);
+//        zaut_file.close();
+
 //        for(auto& prefix:  getTestStrings( 2, 2)){
 //            std::cout<<prefix<<std::endl;
 //            std::list<smt::str::automaton::ptr> prefix_automata_oaut = oaut->remove_prefix(prefix);
@@ -215,7 +265,7 @@ static void tst_zaut_oaut_crosscheck(){
     smt::context ctx(m, params);
     string_fuzzer str(m,ctx);
 
-    for(int i=0;i<100;i++){
+    for(int i=0;true;i++){
         str.crosscheck(i);
     }
     std::cout<<"zaut and oaut crosscheck test: 1"<<std::endl;

@@ -17,6 +17,44 @@ std::shared_ptr<TO> static_shared_pointer_cast (std::unique_ptr<FROM>&& old){
     return std::shared_ptr<TO>{static_cast<TO*>(old.release())};
 }
 
+void show_fst(fst::StdVectorFst m_imp, const string& description="") {//YFC:I will remove this function later
+    const float Zero = std::numeric_limits<float>::infinity();
+
+    std::cout<<description<<std::endl;
+    std::cout<<"Init: "<<m_imp.Start()<<std::endl;
+    fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);
+    std::set<int> final_states;
+    while (!st_itr.Done()) {
+        int from = st_itr.Value();
+        fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,from);
+        while (!arc_it.Done()) {
+            int symbol = arc_it.Value().ilabel;
+            int symbol2 = arc_it.Value().olabel;
+            int to = arc_it.Value().nextstate;
+            std::cout<<from<<"("<<m_imp.Final(from)<<")"<<"--"<<(symbol-1)<<"/"<<(symbol2-1)<<"("<<arc_it.Value().weight<<")"<<"-->"<<to<<"("<<m_imp.Final(to)<<")"<<std::endl;
+            arc_it.Next();
+        }
+        if (m_imp.Final(from)!=Zero)//is "from" a final state
+            final_states.insert(from);
+        st_itr.Next();
+    }
+    std::cout<<"Finals: ";
+    for (auto& s:final_states) {
+        std::cout<<s<<" ";
+    }
+
+    const auto props = m_imp.Properties(
+            fst::kAcceptor | fst::kIDeterministic | fst::kNoIEpsilons | fst::kWeighted | fst::kUnweighted, true);
+
+    std::cout<<std::endl;
+    std::cout<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
+             <<((props & fst::kAcceptor)!=0) << ","
+             <<((props & fst::kIDeterministic) !=0) << ","
+             <<((props & fst::kNoIEpsilons)!=0) << ","
+             <<((props & fst::kWeighted)!=0) << ","
+             <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
+}
+
 namespace smt {
 
     namespace str {
@@ -898,6 +936,9 @@ namespace smt {
             oaut item = dynamic_cast<const oaut&>(*other);
             StdVectorFst r_imp;
             cloneInternalStructure(r_imp);
+            ArcSort(&r_imp, OLabelCompare<StdArc>());
+            ArcSort(&item.m_imp, ILabelCompare<StdArc>());
+
             Intersect(r_imp,item.m_imp,&r_imp);
             return std::unique_ptr<oaut>(new oaut(r_imp));
         };
@@ -957,42 +998,7 @@ namespace smt {
         std::set<automaton::len_constraint> oaut::length_constraints() {
         }
 
-        void show_fst(fst::StdVectorFst m_imp, const string& description="") {
-            const float Zero = std::numeric_limits<float>::infinity();
 
-            std::cout<<description<<std::endl;
-            std::cout<<"Init: "<<m_imp.Start()<<std::endl;
-            fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);
-            std::set<int> final_states;
-            while (!st_itr.Done()) {
-                int from = st_itr.Value();
-                fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,from);
-                while (!arc_it.Done()) {
-                    int symbol = arc_it.Value().ilabel;
-                    int to = arc_it.Value().nextstate;
-                    std::cout<<from<<"("<<m_imp.Final(from)<<")"<<"--"<<(char)symbol<<"("<<arc_it.Value().weight<<")"<<"-->"<<to<<"("<<m_imp.Final(to)<<")"<<std::endl;
-                    arc_it.Next();
-                }
-                if (m_imp.Final(from)!=Zero)//is "from" a final state
-                    final_states.insert(from);
-                st_itr.Next();
-            }
-            std::cout<<"Finals: ";
-            for (auto& s:final_states) {
-                std::cout<<s<<" ";
-            }
-
-            const auto props = m_imp.Properties(
-                    fst::kAcceptor | fst::kIDeterministic | fst::kNoIEpsilons | fst::kWeighted | fst::kUnweighted, true);
-
-            std::cout<<std::endl;
-            std::cout<<"(kAcceptor,kIDeterministic,kNoIEpsilons, kWeighted, kUnweighted): ("
-                     <<((props & fst::kAcceptor)!=0) << ","
-                     <<((props & fst::kIDeterministic) !=0) << ","
-                     <<((props & fst::kNoIEpsilons)!=0) << ","
-                     <<((props & fst::kWeighted)!=0) << ","
-                     <<((props & fst::kUnweighted)!=0 ) << ")"<<std::endl;
-        }
 
         std::ostream& oaut::display(std::ostream& os) {
             os<<"Init: "<<m_imp.Start()<<std::endl;
@@ -1274,7 +1280,7 @@ namespace smt {
                         result->m_imp.AddArc(cur, makeArc(0, init));// 0 is epsilon in OpenFst
                     }
                 }
-
+                result->add_final(result->get_init());
                 fst::RmEpsilon(&result->m_imp);
                 fst::Determinize(result->m_imp, &result->m_imp);
                 fst::Minimize(&result->m_imp);
