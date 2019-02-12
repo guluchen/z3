@@ -244,6 +244,7 @@ namespace smt {
             bool operator==(const automaton& other) override;
         private:
             moves transitions();
+            moves transform_transitions(std::function<move(move)> transformer);
             symbol *mk_char(const zstring& ch);
             lbool symbol_check_sat(const symbol_ref& s);
             bool contains(const zaut& other) const;
@@ -363,6 +364,11 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const language& l);
         };
 
+        class membership_constraints {
+        public:
+            virtual void add() = 0;
+        };
+
         class state {
         public:
             using cref = std::reference_wrapper<const state>;
@@ -396,6 +402,7 @@ namespace smt {
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
             void set_var_lang(const element& var, language&& lang);
+            void remove_var_lang(const element& var);
             state replace(const element& tgt, const word_term& subst) const;
             state remove(const element& tgt) const;
             state remove_all(const std::set<element>& tgt) const;

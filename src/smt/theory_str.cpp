@@ -586,7 +586,18 @@ namespace smt {
             std::set<std::pair<state, len_offset>> fin_offset;
             unsigned curr_offset = 0;
 
-            const scoped_ptr<internal> tgt{m_dep.han.mk_deterministic(*m_imp)};
+            const auto to_true = [&](const move& m) {
+                if (m.is_epsilon()) {
+                    return move{m};
+                } else {
+                    return move{m_dep.sym_man, m.src(), m.dst(), m_dep.sym_ba.mk_true()};
+                }
+            };
+            moves&& trans_skeleton = transform_transitions(to_true);
+            scoped_ptr<internal> tmp{alloc(internal, m_dep.sym_man, m_imp->init(),
+                                           m_imp->final_states(), std::move(trans_skeleton))};
+            const scoped_ptr<internal> tgt{m_dep.han.mk_deterministic(*tmp)};
+
             pending.push(tgt->init());
             while (!pending.empty()) {
                 const state curr_s = pending.front();
@@ -635,6 +646,16 @@ namespace smt {
             moves result;
             for (const auto s : automaton::reachable_states()) {
                 result.append(m_imp->get_moves_from(s));
+            }
+            return result;
+        }
+
+        zaut::moves zaut::transform_transitions(std::function<move(move)> transformer) {
+            moves result;
+            for (const auto s : automaton::reachable_states()) {
+                for (const auto& m : m_imp->get_moves_from(s)) {
+                    result.push_back(transformer(m));
+                }
             }
             return result;
         }
