@@ -1,4 +1,4 @@
-#include "smt/theory_str.h"
+#include "smt/theory_str/theory_str.h"
 #include "util/debug.h"
 #include "smt/smt_context.h"
 #include "ast/seq_decl_plugin.h"

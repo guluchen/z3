@@ -34,7 +34,7 @@ Revision History:
 #include "smt/theory_seq.h"
 #include "smt/theory_pb.h"
 #include "smt/theory_fpa.h"
-#include "smt/theory_str.h"
+#include "smt/theory_str/theory_str.h"
 
 namespace smt {
 
