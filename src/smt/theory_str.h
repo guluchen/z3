@@ -364,9 +364,22 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, const language& l);
         };
 
-        class membership_constraints {
+        class memberships {
         public:
-            virtual void add() = 0;
+            using ptr = std::unique_ptr<memberships>;
+            using len_constraints = std::list<std::pair<element, automaton::len_constraint>>;
+        public:
+            virtual ~memberships() = 0;
+            virtual bool is_empty() = 0;
+            virtual bool is_inconsistent() = 0;
+            virtual void add(const element& var, expr * re) = 0;
+            virtual ptr remove(const element& tgt) = 0;
+            virtual ptr remove_all(const std::set<element>& tgt) = 0;
+            virtual std::list<ptr> replace(const element& tgt, const word_term& subst) = 0;
+            virtual len_constraints length_constraints() = 0;
+            virtual len_constraints length_constraints(const element& l, const word_term& r) = 0;
+            virtual bool operator==(const memberships& other) = 0;
+            virtual bool operator!=(const memberships& other) { return !(*this == other); }
         };
 
         class state {
