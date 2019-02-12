@@ -1122,7 +1122,7 @@ namespace smt {
             for(auto& s:my_finals){
                 state other_init = other->m_imp.Start();
                 result->m_imp.AddArc(s, makeArc(0, state_map[other_init]));
-                remove_final(s);
+                result->remove_final(s);
             }
             RmEpsilon(&result->m_imp);
 
@@ -1208,6 +1208,7 @@ namespace smt {
             using namespace fst;
             const float Zero = std::numeric_limits<float>::infinity();
             const float One = 0;
+//            std::cout<<mk_pp(e,m)<<std::endl;
 
             std::shared_ptr<oaut> result;
             StdVectorFst result_fst;
@@ -1248,8 +1249,8 @@ namespace smt {
                 expr *re2 = term_concat->get_arg(1);
                 std::shared_ptr<oaut> prefix=mk_oaut_from_re_expr(re1);
                 std::shared_ptr<oaut> suffix=mk_oaut_from_re_expr(re2);
-
                 result = static_shared_pointer_cast<oaut>(prefix->append(suffix));
+
                 TRACE("str", tout << "concat NFAs " <<mk_pp(re1,m)<<" and " <<mk_pp(re2,m)<<std::endl;);
             } else if (m_util_s.re.is_union(e)) {
                 app *term_union = to_app(e);
@@ -1340,7 +1341,7 @@ namespace smt {
                         "invalid regular expression terms");
             }
 
-
+//            result->display(std::cout);
             return result;
         }
 

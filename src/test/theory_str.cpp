@@ -43,12 +43,14 @@ public:
         std::ofstream oaut_file;
         oaut_file.open ("oaut"+std::to_string(i)+".txt");
         static_cast<smt::str::oaut*>(oaut.get())->display_timbuk(oaut_file);
+//        static_cast<smt::str::oaut*>(oaut.get())->display(std::cout);
         oaut_file.close();
 
 
         std::ofstream zaut_file;
         zaut_file.open ("zaut"+std::to_string(i)+".txt");
         static_cast<smt::str::zaut*>(zaut.get())->display_timbuk(zaut_file);
+//        static_cast<smt::str::zaut*>(zaut.get())->display(std::cout);
         zaut_file.close();
 //        for(auto& prefix:  getTestStrings( 2, 2)){
 //            std::cout<<prefix<<std::endl;
