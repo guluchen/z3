@@ -245,6 +245,7 @@ namespace smt {
             std::set<state> successors(state s, const zstring& ch) override;
             std::set<len_constraint> length_constraints() override;
             std::ostream& display(std::ostream& out) override;
+            std::ostream& display_timbuk(std::ostream& out);
             bool operator==(const automaton& other) override;
         private:
             moves transitions();

@@ -640,6 +640,35 @@ namespace smt {
             return m_imp->display(out, d);
         }
 
+        std::ostream& zaut::display_timbuk(std::ostream& out) {
+            out << "Ops ";
+            for(unsigned alp = 0; alp <= maximal_char; alp++) {
+                out << "a" << alp << ":1 ";
+            }
+            out << "start:0" << std::endl << std::endl;
+            out << "Automaton A" << std::endl;
+            out << "States ";
+            for(state st : automaton::reachable_states()) {
+                out << st << " ";
+            }
+            out << std::endl << "Final States ";
+            for(state st : get_finals()) {
+                out << st << " ";
+            }
+            out << std::endl << "Transitions" << std::endl;
+            out << "start() -> " << get_init() << std::endl;
+
+            for(state from : automaton::reachable_states()) {
+                for(unsigned alp = 0; alp <= maximal_char; alp++) {
+                    zstring symbol(alp);
+                    for(state to : successors(from, symbol)) {
+                        out << "a" << alp << "(" << from << ") -> " << to << std::endl;
+                    }
+                }
+            }
+            return out;
+        }
+
         bool zaut::operator==(const automaton& other) {
             const zaut *const o = static_cast<const zaut *>(&other); // one imp at a time
             return contains(*o) && o->contains(*this);
@@ -687,7 +716,7 @@ namespace smt {
             unsigned act;
 
             expr_ref lower(m_dep.util_s.str.mk_char(0), m_dep.ast_man);
-            expr_ref upper(m_dep.util_s.str.mk_char(MAX_CHAR_NUM), m_dep.ast_man);
+            expr_ref upper(m_dep.util_s.str.mk_char(maximal_char), m_dep.ast_man);
             symbol_ref range(sym_expr::mk_range(lower,upper), m_dep.sym_man);
 
             todo.push_back(get_init());
