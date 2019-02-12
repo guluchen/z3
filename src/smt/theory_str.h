@@ -19,6 +19,7 @@
 #include "util/scoped_vector.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
+#pragma GCC diagnostic ignored "-Wunused-local-typedef"
 #include <fst/fstlib.h>
 #include <fst/script/print.h>
 
@@ -281,11 +282,12 @@ namespace smt {
             void set_init(state s) override {m_imp.SetStart(s);};
             void add_final(state s) override {m_imp.SetFinal(s, One);};
             void remove_final(state s) override {m_imp.SetFinal(s, Zero);};
-            ptr append(sptr other) override {};
+            ptr append(sptr other) override;
             std::set<state> reachable_states(state s) override;
             std::set<state> successors(state s) override;
             std::set<state> successors(state s, const zstring& ch) override;
             std::set<len_constraint> length_constraints() override;
+            std::ostream& display_timbuk(std::ostream& os);
             std::ostream& display(std::ostream& os) override;
             std::ostream& display(std::ostream& os, const string& description);
             bool operator==(const automaton& other) override;

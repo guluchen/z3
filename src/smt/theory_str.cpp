@@ -1000,6 +1000,49 @@ namespace smt {
             return os;
         }
 
+        std::ostream& oaut::display_timbuk(std::ostream& os) {
+            os<<"Ops  start:0 ";
+            for(int i=0;i<=automaton::maximal_char;i++){
+                os<<"a"<<i<<":1 ";
+
+            }
+            os<<std::endl;
+
+            os<<"Automaton OFST"<<std::endl;
+
+            os<<"States ";
+            std::set<int> final_states;
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
+                StateId cur = st_itr.Value();
+                os<<"q"<<cur<<" ";
+                if (m_imp.Final(cur)!=Zero)//is "cur" a final state
+                    final_states.insert(cur);
+            }
+            os<<std::endl;
+
+            os<<"Final States ";
+            for (std::set<int>::iterator st_itr = final_states.begin();
+                 st_itr!=final_states.end();++st_itr) {
+                StateId cur = *st_itr;
+                os<<"q"<<cur<<" ";
+            }
+            os<<std::endl;
+
+            os<<"Transitions "<<std::endl;
+            os<<"start() -> q"<<m_imp.Start()<<std::endl;
+
+            for (fst::StateIterator<fst::StdVectorFst> st_itr(m_imp);!st_itr.Done();st_itr.Next()) {
+                StateId from = st_itr.Value();
+                for (fst::ArcIterator<fst::StdVectorFst> arc_it(m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()) {
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    os<<"a"<<(symbol-1)<<"(q"<<from<<") -> q"<<to<<std::endl;
+                }
+
+            }
+            os<<std::endl;
+            return os;
+        }
 
         std::ostream& oaut::display(std::ostream& os, const string& description) {
             os << description << std::endl;
@@ -1020,35 +1063,45 @@ namespace smt {
             }
         }
 
-//        void append(oaut& other){
-//            using namespace fst;
-//            std::map<state,state> state_map;
-//            set<state> my_finals=get_finals();
-//
-//            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
-//                StateId s=add_state();
-//                StateId from = st_itr.Value();
-//                state_map[from]=s;
-//                if(other.m_imp.Final(from)!=Zero) {//is "from" a final state
-//                    add_final(state_map[from]);
-//                }
-//            }
-//            for(StateIterator<StdVectorFst> st_itr(other.m_imp);!st_itr.Done(); st_itr.Next()){
-//                StateId from = st_itr.Value();
-//                for(ArcIterator<fst::StdVectorFst> arc_it(other.m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
-//                    Label symbol = arc_it.Value().ilabel;
-//                    StateId to = arc_it.Value().nextstate;
-//                    m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
-//                }
-//            }
-//
-//            for(auto& s:my_finals){
-//                state other_init = other.m_imp.Start();
-//                m_imp.AddArc(s, makeArc(0, state_map[other_init]));
-//                remove_final(s);
-//            }
-//            RmEpsilon(&m_imp);
-//        }
+        automaton::ptr oaut::append(sptr o){
+            using namespace fst;
+
+
+            oaut *result = static_cast<oaut *>(clone().release());
+            oaut *const other = static_cast<oaut *>(o.get());
+
+            std::map<state,state> state_map;
+            set<state> my_finals=get_finals();
+
+            for(StateIterator<StdVectorFst> st_itr(other->m_imp);!st_itr.Done(); st_itr.Next()){
+                StateId s=result->add_state();
+                StateId from = st_itr.Value();
+                state_map[from]=s;
+                if(other->m_imp.Final(from)!=Zero) {//is "from" a final state
+                    result->add_final(state_map[from]);
+                }
+            }
+            for(StateIterator<StdVectorFst> st_itr(other->m_imp);!st_itr.Done(); st_itr.Next()){
+                StateId from = st_itr.Value();
+                for(ArcIterator<fst::StdVectorFst> arc_it(other->m_imp,st_itr.Value());!arc_it.Done();arc_it.Next()){
+                    Label symbol = arc_it.Value().ilabel;
+                    StateId to = arc_it.Value().nextstate;
+                    result->m_imp.AddArc(state_map[from], makeArc(symbol, state_map[to]));
+                }
+            }
+
+            for(auto& s:my_finals){
+                state other_init = other->m_imp.Start();
+                result->m_imp.AddArc(s, makeArc(0, state_map[other_init]));
+                remove_final(s);
+            }
+            RmEpsilon(&result->m_imp);
+
+            return std::unique_ptr<automaton>(result);
+        }
+
+
+
         void oaut::cloneInternalStructure(internal& r_imp) {
             using namespace fst;
             const float Zero = std::numeric_limits<float>::infinity();
