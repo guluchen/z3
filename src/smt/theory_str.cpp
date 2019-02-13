@@ -1137,6 +1137,481 @@ namespace smt {
             return mk_move{s, s.smallest_eq()}();
         }
 
+        bool counter_system::cs_assign::operator<(const counter_system::cs_assign& other) const {
+            if (type < other.type) return true;
+            if (num < other.num) return true;
+            if (vars.size() < other.vars.size()) return true;
+            return false;
+        }
+
+        bool counter_system::add_transition(const smt::str::counter_system::cs_state s,
+                                            const smt::str::counter_system::cs_assign& assign,
+                                            const smt::str::counter_system::cs_state s_to) {
+            if (relation.count(s)==0) {
+                const std::set<cs_transition> tr = {{assign, s_to}};
+                relation.insert({s,tr});
+                return true;
+            }
+            else {
+                relation[s].insert({assign, s_to});
+                return false;
+            }
+        }
+
+        const std::string counter_system::cs_assign::type2str() const {
+            switch (type) {
+                case counter_system::assign_type::CONST:
+                    return "CONST";
+                case counter_system::assign_type::VAR:
+                    return "VAR";
+                case counter_system::assign_type::PLUS_ONE:
+                    return "PLUS_ONE";
+                case counter_system::assign_type::PLUS_VAR:
+                    return "PLUS_VAR";
+                default:
+                    return "";  // not reachable
+            }
+        }
+
+        counter_system::counter_system(const smt::str::neilsen_transforms& solver) {
+            cs_state counter=1;
+            std::unordered_map<state::cref,cs_state,state::hash,std::equal_to<state>> mapped_states;
+            std::queue<state::cref> process_queue;
+            std::unordered_set<state::cref,state::hash,std::equal_to<state>> processed_states;
+            // set initial states
+            for (const auto& s : solver.get_success_leaves()) {  // assume all succ_states are different (set of states)
+                add_init_state(counter);
+                SASSERT(mapped_states.count(s)==0);
+                mapped_states.insert({s,counter});
+                process_queue.push(s);
+                counter++;
+            }
+            // for the case of no initial states (no success states), add all states to queue and map
+            if (solver.get_success_leaves().empty()) {
+                for (const auto& s : solver.get_graph().access_map()) {
+                    SASSERT(mapped_states.count(s.first)==0);
+                    mapped_states.insert({s.first,counter});
+                    process_queue.push(s.first);
+                    counter++;
+                }
+            }
+            // processing relations
+            cs_state cs_curr, cs_tgt;
+            std::list<neilsen_transforms::move> moves;
+            cs_assign assign;
+            while (!process_queue.empty()) {
+                const state& curr = process_queue.front();
+                SASSERT(mapped_states.count(curr)!=0);
+                cs_curr = mapped_states[curr];
+                process_queue.pop();
+                if (processed_states.count(curr)!=0) {
+                    continue;  // already processed, skip
+                }
+                else {
+                    processed_states.insert(curr);
+                }
+                for (auto const& m : solver.get_graph().incoming_moves(curr)) {
+                    const state& tgt = m.m_from;
+                    if (mapped_states.count(tgt)==0) {  // if tgt is new, add to mapping
+                        mapped_states.insert({tgt,counter});
+                        cs_tgt = counter;
+                        counter++;
+                    }
+                    else {
+                        cs_tgt = mapped_states[tgt];
+                    }
+                    // set transition according to transform type
+                    switch (m.m_type) {
+                        case neilsen_transforms::move::t::TO_EMPTY:
+                            assign.type = counter_system::assign_type::CONST;
+                            assign.num = 0;  // assign to zero
+                            for (auto const& e : m.m_record) {
+                                assign.vars.push_back(e.value().encode());
+                                add_var_name(e.value().encode());
+                            }
+                            break;
+                        case neilsen_transforms::move::t::TO_CONST:
+                            assign.type = counter_system::assign_type::CONST;
+                            assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
+                            SASSERT(assign.num>=1);
+                            assign.vars.push_back(m.m_record[0].value().encode());
+                            add_var_name(m.m_record[0].value().encode());
+                            break;
+                        case neilsen_transforms::move::t::TO_VAR:
+                            assign.type = counter_system::assign_type::VAR;
+                            for (auto const& e : m.m_record) {
+                                assign.vars.push_back(e.value().encode());
+                                add_var_name(e.value().encode());
+                            }
+                            break;
+                        case neilsen_transforms::move::t::TO_VAR_VAR:
+                            assign.type = counter_system::assign_type::PLUS_VAR;
+                            for (auto const& e : m.m_record) {
+                                assign.vars.push_back(e.value().encode());
+                                add_var_name(e.value().encode());
+                            }
+                            break;
+                        case neilsen_transforms::move::t::TO_CHAR_VAR:
+                            assign.type = counter_system::assign_type::PLUS_ONE;
+                            assign.vars.push_back(m.m_record[0].value().encode());
+                            add_var_name(m.m_record[0].value().encode());
+                            break;
+                        default:
+                        SASSERT(false);
+                    }
+                    add_transition(cs_curr, assign, cs_tgt);
+                    assign.vars.clear();
+                    if (processed_states.count(tgt)==0)  // if tgt is not processed yet, add to queue
+                        process_queue.push(tgt);
+                }
+            }
+            set_final_state(mapped_states[solver.get_root()]);  // at last, set final state
+            std::cout << "mapped_states final..." << std::endl;
+            std::cout << "mapped_states size = " << mapped_states.size() << std::endl;
+            num_states = mapped_states.size();
+//            for (const auto& e : mapped_states) {
+//                std::cout << e.first  << "    " << e.second << std::endl;
+//            }
+        }
+
+        void counter_system::print_transition(const smt::str::counter_system::cs_state s,
+                                              const smt::str::counter_system::cs_assign &assign,
+                                              const smt::str::counter_system::cs_state s_to) const {
+            std::string sep_str;
+            std::cout << "(" << s << "," << s_to << ")[";
+            switch (assign.type) {
+                case counter_system::assign_type::CONST:
+                    sep_str = "";
+                    for (const auto& v : assign.vars) {
+                        std::cout << sep_str << v << "=" << assign.num;
+                        sep_str = ",";
+                    }
+                    break;
+                case counter_system::assign_type::VAR:
+                    std::cout << *(assign.vars.begin()) << "=" << *(std::next(assign.vars.begin()));
+                    break;
+                case counter_system::assign_type::PLUS_ONE:
+                    std::cout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+1";
+                    break;
+                case counter_system::assign_type::PLUS_VAR:
+                    std::cout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+"
+                              << *(std::next(assign.vars.begin()));
+                    break;
+                default:
+                    break;
+            }
+            std::cout << "]";
+
+        }
+
+        void counter_system::print_counter_system() const {
+            std::string sep_str;
+            std::cout << "counter system pretty print..." << std::endl;
+            std::cout << "init={";
+            sep_str = "";
+            for (auto i : init) {
+                std::cout << sep_str << i;
+                sep_str = ", ";
+            }
+            std::cout << "}" << std::endl;
+            std::cout << "final=" << final << ", " << "#var=" << var_names.size() << std::endl;
+            std::cout << "vars={";
+            sep_str = "";
+            for (auto const v : var_names) {
+                std::cout << sep_str << v;
+                sep_str = ", ";
+            }
+            std::cout << "}" << std::endl;
+            std::cout << "relations(" << relation.size() << "): {" << std::endl;
+            char tab[] = "    ";
+            for (auto const& r : relation) {
+                for (auto const& tran: r.second) {
+                    std::cout << tab;
+                    print_transition(r.first, tran.first, tran.second);
+                    std::cout << std::endl;
+                }
+            }
+            std::cout << "}" << std::endl;
+        }
+
+
+        bool apron_counter_system::node::operator<(node &other) {
+            return ap_abstract1_size(m,&abs) < ap_abstract1_size(m,&other.get_abs());
+        }
+
+        apron_counter_system::node::node(ap_manager_t* man, ap_abstract1_t &base_abs) {
+            m = man;
+            std::cout << "0.";
+            abs = ap_abstract1_copy(man,&base_abs);
+            std::cout << "1.";
+            abs_pre = ap_abstract1_copy(man,&base_abs);
+            std::cout << "2.";
+//            abs_pre = abs;
+        }
+
+        void apron_counter_system::node::widening(ap_manager_t* man) {
+            std::cout << "perform widening..." << std::endl;
+            ap_abstract1_t abs_tmp = abs;
+            abs = ap_abstract1_widening (man,&abs_pre,&abs);
+            ap_abstract1_clear(man,&abs_tmp);
+            ap_abstract1_clear(man,&abs_pre);
+            abs_pre = ap_abstract1_copy(man,&abs);
+        }
+
+        bool apron_counter_system::node::join_and_update_abs(ap_manager_t* man, ap_abstract1_t& from_abs) {
+//            std::cout << "before abstraction join_and_update..." << std::endl;
+//            std::cout << "from_abs -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&from_abs);
+//            std::cout << "abs_pre -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&abs_pre);
+//            std::cout << "abs -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&abs);
+
+            ap_abstract1_clear(man,&abs_pre);
+            abs_pre = abs;
+            abs = ap_abstract1_join(man,false,&abs,&from_abs);
+
+//            std::cout << "after abstraction join_and_update..." << std::endl;
+//            std::cout << "from_abs -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&from_abs);
+//            std::cout << "abs_pre -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&abs_pre);
+//            std::cout << "abs -->" << std::endl;
+//            ap_abstract1_fprint(stdout,man,&abs);
+        }
+
+        void apron_counter_system::ap_assign::abstraction_propagate(ap_manager_t* man, node &s, node &s_to) {
+            ap_abstract1_t s_abs = ap_abstract1_copy(man,&s.get_abs());
+//            std::cout << "before abstraction propagate..." << std::endl;
+//            ap_abstract1_fprint(stdout,man,&s_abs);
+            SASSERT(!var_exp_pairs.empty());
+            for (auto& var_exp : var_exp_pairs) {
+//                s_abs = ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
+                ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
+//                std::cout << "assignment: ";
+//                printf("%s=", var_exp.first);
+//                ap_linexpr1_fprint(stdout,&var_exp.second);
+//                std::cout << std::endl;
+            }
+//            std::cout << "after abstraction propagate..." << std::endl;
+//            ap_abstract1_fprint(stdout,man,&s_abs);
+            s_to.join_and_update_abs(man, s_abs);
+            ap_abstract1_clear(man,&s_abs);
+        }
+
+        apron_counter_system::ap_assign::ap_assign(ap_environment_t* env, const counter_system::cs_assign &assign) {
+            using cs_assign_type = counter_system::assign_type;
+            char *var, *var_to;
+            ap_linexpr1_t expr;
+            switch (assign.type) {
+                case cs_assign_type::CONST:
+                    for (const auto& v : assign.vars) {
+                        var = strdup(v.c_str());
+                        expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+                        ap_linexpr1_set_list(&expr,
+                                             AP_CST_S_INT,assign.num,
+                                             AP_END);
+                        var_exp_pairs.emplace_back(std::make_pair(var,expr));
+                    }
+                    break;
+                case cs_assign_type::VAR:
+                    var = strdup(assign.vars.front().c_str());
+                    var_to = strdup(assign.vars.back().c_str());
+                    expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+                    ap_linexpr1_set_list(&expr,
+                                         AP_COEFF_S_INT,1,var_to,
+                                         AP_END);
+                    var_exp_pairs.emplace_back(std::make_pair(var,expr));
+                    break;
+                case cs_assign_type::PLUS_ONE:
+                    var = strdup(assign.vars.front().c_str());
+                    var_to = strdup(assign.vars.back().c_str());
+                    expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+                    ap_linexpr1_set_list(&expr,
+                                         AP_COEFF_S_INT,1,var_to,
+                                         AP_CST_S_INT,1,
+                                         AP_END);
+                    var_exp_pairs.emplace_back(std::make_pair(var,expr));
+                    break;
+                case cs_assign_type::PLUS_VAR:
+                    var = strdup(assign.vars.front().c_str());
+                    var_to = strdup(assign.vars.back().c_str());
+                    expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+                    ap_linexpr1_set_list(&expr,
+                                         AP_COEFF_S_INT,1,var,
+                                         AP_COEFF_S_INT,1,var_to,
+                                         AP_END);
+                    var_exp_pairs.emplace_back(std::make_pair(var,expr));
+                    break;
+                default:
+                    SASSERT(false);
+            }
+            SASSERT(!var_exp_pairs.empty());
+        }
+
+        apron_counter_system::apron_counter_system(const smt::str::counter_system &cs) {
+            // set variables names to C-style
+            std::set<std::string> var_names = cs.get_var_names();
+            num_vars = var_names.size();
+            variables = (ap_var_t*)malloc(sizeof(ap_var_t)*var_names.size());
+            int count=0;
+            for (auto& name : var_names) {
+                variables[count] = strdup(name.c_str());  // best way to copy c_str() to char*
+                count++;
+            }
+            std::cout << "apron_counter_system: step1..." << std::endl;
+            // set state-related attributes
+            init = cs.init_states();
+            final = cs.final_state();
+            num_states = cs.get_num_states();
+            // set apron environment
+            man = ap_ppl_poly_manager_alloc(true);
+            env = ap_environment_alloc(variables,var_names.size(),NULL,0);
+            // A. empty abstraction
+            array = ap_lincons1_array_make(env,1);
+            expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+            cons = ap_lincons1_make(AP_CONS_EQ,&expr,NULL);
+            ap_linexpr1_set_list(&expr,AP_END);
+            ap_lincons1_array_set(&array,0,&cons);
+            empty_abs = ap_abstract1_of_lincons_array(man,env,&array);
+            // B. full abstraction
+            array = ap_lincons1_array_make(env,1);
+            expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
+            cons = ap_lincons1_make(AP_CONS_EQ,&expr,NULL);
+            ap_lincons1_set_list(&cons,
+                                 AP_CST_S_INT,1,
+                                 AP_END);
+            ap_lincons1_array_set(&array,0,&cons);
+            full_abs = ap_abstract1_of_lincons_array(man,env,&array);
+            std::cout << "apron_counter_system: step2..." << std::endl;
+            // initialize nodes
+            for (ap_state i=1; i<=num_states; i++) {
+                std::cout << i << ",";
+                if (init.count(i)>0) {
+                    nodes.emplace(i,node(man,empty_abs));
+                }
+                else {
+                    nodes.emplace(i,node(man,full_abs));
+                }
+            }
+            std::cout << "apron_counter_system: step3..." << std::endl;
+            // set relations
+            for (const auto& rel : cs.get_relations()) {
+                ap_state src_state = rel.first;
+                for (const auto& tr : rel.second) {
+                    ap_assign assign = ap_assign(env,tr.first);
+                    if (relations.count(src_state)==0) {
+                        relations[src_state] = {{assign,tr.second}};
+                    }
+                    else {
+                        relations[src_state].push_back({assign,tr.second});
+                    }
+                }
+            }
+        }
+
+        void apron_counter_system::print_apron_counter_system() {
+            std::string sep_str;
+            std::cout << "apron counter system pretty print..." << std::endl;
+            std::cout << "init={";
+            sep_str = "";
+            for (auto i : init) {
+                std::cout << sep_str << i;
+                sep_str = ", ";
+            }
+            std::cout << "}" << std::endl;
+            std::cout << "final=" << final << ", " << "#var=" << num_vars << std::endl;
+            std::cout << "variables : { ";
+            sep_str = "";
+            for (int i=0; i< (int)num_vars; i++) {
+                printf("%s%s", sep_str.c_str(), (char*)variables[i]);
+                sep_str = ", ";
+            }
+            std::cout << " }" << std::endl;
+            char tab[] = "    ";
+            std::cout << "nodes(" << nodes.size() << "): {" << std::endl;
+            for (auto& n : nodes) {
+                std::cout << "state " << n.first << "-->" << std::endl;
+                n.second.print_abs(man);
+            }
+            std::cout << "}" << std::endl;
+            std::cout << "relations(" << relations.size() << "): {" << std::endl;
+            for (auto const& r : relations) {
+                for (auto const& tran: r.second) {
+                    std::cout << tab;
+                    std::cout << "(" << r.first << "," << tran.second << ")[";
+                    sep_str = "";
+                    for (auto a : tran.first.get_var_exp_pairs()) {
+                        printf("%s%s=", sep_str.c_str(), a.first);
+                        ap_linexpr1_fprint(stdout,&a.second);
+                        sep_str = ", ";
+                    }
+                    std::cout << "]" << std::endl;
+                }
+            }
+            std::cout << "}" << std::endl;
+        }
+
+        bool apron_counter_system::fixpoint_check(bool widen_flg) {
+            bool ret = true;
+            for (auto& p : nodes) {
+                if (!p.second.equal_to_pre(man)) {
+                    ret = false;
+                    if (widen_flg) p.second.widening(man);
+                }
+            }
+            return ret;
+        }
+
+        void apron_counter_system::abstraction() {
+            ap_state curr_s;
+            std::queue<ap_state> process_queue;
+            std::set<ap_state> visited;
+            // processing
+            for (const auto s : init) process_queue.push(s);
+            while (!process_queue.empty()) {
+                curr_s = process_queue.front();
+                process_queue.pop();
+                if (visited.count(curr_s)>0) continue;
+                SASSERT(nodes.count(curr_s)!=0);
+                visited.insert(curr_s);
+                for (auto &tr : relations[curr_s]) {
+                    SASSERT(nodes.count(tr.second)!=0);
+//                    std::cout << "abstraction propagate from node " << curr_s << " to " << tr.second << std::endl;
+                    tr.first.abstraction_propagate(man, nodes[curr_s], nodes[tr.second]);
+                    if (visited.count(tr.second)==0) process_queue.push(tr.second);
+                }
+            }
+//            for (const auto i : visited) {
+//                std::cout << i << ", ";
+//            }
+            std::cout << std::endl;
+            // Note: assume final is in nodes
+            SASSERT(nodes.count(final)!=0);
+            std::cout << "root state abs:" << std::endl;
+            nodes[final].print_abs(man);
+            std::cout << "root state abs_pre:" << std::endl;
+            nodes[final].print_abs_pre(man);
+        }
+
+        void apron_counter_system::run_abstraction() {
+            unsigned int loops = 1;
+            do {
+                abstraction();
+                std::cout << "end of abstraction loops: " << loops << std::endl;
+//                std::cout << "current abstractions: " << std::endl;
+//                print_apron_counter_system();
+//                std::cout << std::endl;
+                loops++;
+                bool widen = loops >= widening_threshold;
+                std::cout << "widening: " << widen << std::endl;
+                if (loops >= 10) {
+                    if (fixpoint_check(widen)) break;
+                }
+                getchar();
+            } while (loops <= 10);
+        }
+
     }
 
     std::ostream& operator<<(std::ostream& os, str::automaton::sptr a) {
@@ -1339,7 +1814,17 @@ namespace smt {
             return FC_CONTINUE;
         }
         neilsen_transforms solver{std::move(root)};
-        if (solver.check() == result::SAT) {
+        result res = solver.check();
+        counter_system cs = counter_system(solver);
+        std::cout << "counter_system extracted!" << std::endl;
+//        cs.print_counter_system();
+        apron_counter_system ap_cs = apron_counter_system(cs);
+        std::cout << "apron_counter_system constructed!" << std::endl;
+//        ap_cs.print_apron_counter_system();
+        std::cout << "apron_counter_system abstraction starting!" << std::endl;
+        ap_cs.run_abstraction();
+        std::cout << "apron_counter_system abstraction finished!" << std::endl;
+        if (res == result::SAT) {
             TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
         }

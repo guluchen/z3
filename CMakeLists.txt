@@ -148,8 +148,8 @@ include(CheckCXXSourceCompiles)
 ################################################################################
 set(Z3_COMPONENT_CXX_DEFINES "")
 set(Z3_COMPONENT_CXX_FLAGS "")
-set(Z3_COMPONENT_EXTRA_INCLUDE_DIRS "")
-set(Z3_DEPENDENT_LIBS "")
+set(Z3_COMPONENT_EXTRA_INCLUDE_DIRS "/usr/local/include")
+set(Z3_DEPENDENT_LIBS "ap_ppl -lppl -lgmpxx -lpolkaMPQ -loctMPQ -lboxMPQ -lapron -litvMPQ -litvD -lmpfr -lgmp")
 set(Z3_DEPENDENT_EXTRA_CXX_LINK_FLAGS "")
 
 ################################################################################
