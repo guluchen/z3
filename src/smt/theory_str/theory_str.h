@@ -25,7 +25,30 @@ namespace smt {
 
     namespace str {
 
-
+        class element {
+        public:
+            using pair = std::pair<element, element>;
+            enum class t {
+                CONST, VAR, NONE
+            };
+            struct hash {
+                std::size_t operator()(const element& e) const;
+            };
+            static const element& null();
+        private:
+            element::t m_type;
+            zstring m_value;
+        public:
+            element(const element::t& t, const zstring& v) : m_type{t}, m_value{v} {}
+            const element::t& type() const { return m_type; }
+            const zstring& value() const { return m_value; }
+            bool typed(const element::t& t) const { return m_type == t; }
+            bool operator==(const element& other) const;
+            bool operator!=(const element& other) const { return !(*this == other); }
+            bool operator<(const element& other) const;
+            explicit operator bool() const { return *this != null(); }
+            friend std::ostream& operator<<(std::ostream& os, const element& e);
+        };
 
         class word_term {
         public:
@@ -97,23 +120,58 @@ namespace smt {
             void sort();
         };
 
-
         class memberships {
         public:
             using ptr = std::unique_ptr<memberships>;
+            using sptr = std::shared_ptr<memberships>;
             using len_constraints = std::list<std::pair<element, automaton::len_constraint>>;
         public:
             virtual ~memberships() = 0;
             virtual bool is_empty() = 0;
             virtual bool is_inconsistent() = 0;
+            virtual std::size_t hash() = 0;
+            virtual std::set<element> variables() = 0;
             virtual void add(const element& var, expr * re) = 0;
-            virtual ptr remove(const element& tgt) = 0;
-            virtual ptr remove_all(const std::set<element>& tgt) = 0;
-            virtual std::list<ptr> replace(const element& tgt, const word_term& subst) = 0;
+            virtual ptr assign_empty(const element& var) = 0;
+            virtual ptr assign_empty_all(const std::set<element>& vars) = 0;
+            virtual ptr assign_const(const element& var, const word_term& tgt) = 0;
+            virtual ptr assign_as(const element& var, const element& as_var) = 0;
+            virtual std::list<ptr> assign_prefix(const element& var, const element& ch) = 0;
+            virtual std::list<ptr> assign_prefix_var(const element& var, const element& prefix) = 0;
             virtual len_constraints length_constraints() = 0;
             virtual len_constraints length_constraints(const element& l, const word_term& r) = 0;
+            virtual std::ostream& display(std::ostream& os) = 0;
             virtual bool operator==(const memberships& other) = 0;
             virtual bool operator!=(const memberships& other) { return !(*this == other); }
+            friend std::ostream& operator<<(std::ostream& os, memberships::sptr m);
+        };
+
+        class dummy_memberships : public memberships {
+        public:
+            ~dummy_memberships() override = default;
+            bool is_empty() override { return true; }
+            bool is_inconsistent() override { return false; }
+            std::size_t hash() override { return 0; }
+            std::set<element> variables() override { return {}; }
+            void add(const element& var, expr * re) override {}
+            ptr assign_empty(const element& var) override { return ptr{new dummy_memberships()}; }
+            ptr assign_empty_all(const std::set<element>& vars) override {
+                return ptr{new dummy_memberships()}; }
+            ptr assign_const(const element& var, const word_term& tgt) override {
+                return ptr{new dummy_memberships()}; }
+            ptr assign_as(const element& var, const element& as_var) override {
+                return ptr{new dummy_memberships()}; }
+            std::list<ptr> assign_prefix(const element& var, const element& ch) override {
+                std::list<ptr> r; r.emplace_back(ptr{new dummy_memberships()}); return r; }
+            std::list<ptr> assign_prefix_var(const element& var, const element& prefix) override {
+                std::list<ptr> r; r.emplace_back(ptr{new dummy_memberships()}); return r; }
+            len_constraints length_constraints() override { return {}; }
+            len_constraints length_constraints(const element& l, const word_term& r) override {
+                return {}; }
+            std::ostream& display(std::ostream& os) override { return os; }
+            bool operator==(const memberships& other) override { return true; }
+            bool operator!=(const memberships& other) override { return !(*this == other); }
+            friend std::ostream& operator<<(std::ostream& os, memberships::sptr m);
         };
 
         class state {
@@ -127,13 +185,12 @@ namespace smt {
             using def_nodes = std::set<def_node>;
             using def_graph = std::map<def_node, def_nodes>;
             bool m_allow_empty_var = true;
-            std::set<word_equation> m_wes_to_satisfy;
-            std::set<word_equation> m_wes_to_fail;
-            std::unordered_map<element, language, element::hash> m_lang_to_satisfy;
+            std::set<word_equation> m_eq_wes;
+            std::set<word_equation> m_diseq_wes;
+            memberships::sptr m_memberships;
         public:
-            state() = default;
-            explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
-            std::size_t word_eq_num() const { return m_wes_to_satisfy.size(); }
+            explicit state(memberships::sptr m) : m_memberships{std::move(m)} {}
+            std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
             const word_equation& smallest_eq() const;
@@ -148,14 +205,14 @@ namespace smt {
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
-            void set_var_lang(const element& var, language&& lang);
-            void remove_var_lang(const element& var);
-            state replace(const element& tgt, const word_term& subst) const;
-            state remove(const element& tgt) const;
-            state remove_all(const std::set<element>& tgt) const;
+            state assign_empty(const element& var) const;
+            state assign_empty_all(const std::set<element>& vars) const;
+            state assign_const(const element& var, const word_term& tgt) const;
+            state assign_as(const element& var, const element& as_var) const;
+            std::list<state> assign_prefix(const element& var, const element& ch) const;
+            std::list<state> assign_prefix_var(const element& var, const element& prefix) const;
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
-            bool operator<(const state& other) const;
             friend std::ostream& operator<<(std::ostream& os, const state& s);
         private:
             static bool dag_def_check_node(const def_graph& graph, const def_node& node,
@@ -167,7 +224,7 @@ namespace smt {
             SAT, UNSAT, UNKNOWN
         };
 
-        class neilsen_transforms {
+        class solver {
         public:
             struct move {
                 enum class t {
@@ -212,7 +269,7 @@ namespace smt {
             std::list<state::cref> m_rec_success_leaves;
             std::stack<state::cref> m_pending;
         public:
-            explicit neilsen_transforms(state&& root);
+            explicit solver(state&& root);
             bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
             result check(bool split_var_empty_ahead = false);
@@ -275,7 +332,6 @@ namespace smt {
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
         str::element mk_var_element(expr *e);
-        str::language mk_language(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
         void add_axiom(expr *e);

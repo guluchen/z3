@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numeric>
 #include <sstream>
 #include "ast/ast_pp.h"
 #include "ast/rewriter/bool_rewriter.h"
@@ -12,6 +13,34 @@ namespace smt {
     namespace str {
 
         using namespace std::placeholders;
+
+        std::size_t element::hash::operator()(const element& e) const {
+            using enum_t = std::underlying_type<t>::type;
+            static const auto string_hash{std::hash<std::string>{}};
+            static const auto enum_t_hash{std::hash<enum_t>{}};
+            const auto n = static_cast<enum_t>(e.type());
+            return string_hash(e.value().encode()) ^ enum_t_hash(n);
+        }
+
+        const element& element::null() {
+            static const element e{element::t::NONE, ""};
+            return e;
+        }
+
+        bool element::operator==(const element& other) const {
+            return other.m_type == m_type && other.m_value == m_value;
+        }
+
+        bool element::operator<(const element& other) const {
+            if (m_type < other.m_type) return true;
+            if (m_type > other.m_type) return false;
+            return m_value < other.m_value;
+        }
+
+        std::ostream& operator<<(std::ostream& os, const element& s) {
+            os << s.value();
+            return os;
+        }
 
         std::size_t word_term::hash::operator()(const word_term& w) const {
             static const auto element_hash{element::hash{}};
@@ -294,39 +323,34 @@ namespace smt {
             }
         }
 
-
         std::size_t state::hash::operator()(const state& s) const {
-            static const auto element_hash{element::hash{}};
             static const auto word_equation_hash{word_equation::hash{}};
-            static const auto language_hash{language::hash{}};
             std::size_t result{22447};
             result += s.m_allow_empty_var ? 10093 : 0;
-            for (const auto& we : s.m_wes_to_satisfy) {
+            for (const auto& we : s.m_eq_wes) {
                 result += word_equation_hash(we);
             }
-            for (const auto& we : s.m_wes_to_fail) {
+            for (const auto& we : s.m_diseq_wes) {
                 result += word_equation_hash(we);
             }
-            for (const auto& kv : s.m_lang_to_satisfy) {
-                result += element_hash(kv.first) + language_hash(kv.second);
-            }
+            result += s.m_memberships->hash();
             return result;
         }
 
         std::set<element> state::variables() const {
             std::set<element> result;
-            for (const auto& we : m_wes_to_satisfy) {
+            for (const auto& we : m_eq_wes) {
                 for (const auto& v : we.variables()) {
                     result.insert(v);
                 }
             }
-            for (const auto& we : m_wes_to_fail) {
+            for (const auto& we : m_diseq_wes) {
                 for (const auto& v : we.variables()) {
                     result.insert(v);
                 }
             }
-            for (const auto& var_lang : m_lang_to_satisfy) {
-                result.insert(var_lang.first);
+            for (const auto& v : m_memberships->variables()) {
+                result.insert(v);
             }
             return result;
         }
@@ -334,7 +358,7 @@ namespace smt {
         std::vector<std::vector<word_term>> state::eq_classes() const {
             std::map<word_term, std::size_t> word_class_tbl;
             std::vector<std::vector<word_term>> classes;
-            for (const auto& we : m_wes_to_satisfy) {
+            for (const auto& we : m_eq_wes) {
                 const word_term& w1 = we.lhs();
                 const word_term& w2 = we.rhs();
                 const auto& fit1 = word_class_tbl.find(w1);
@@ -361,20 +385,26 @@ namespace smt {
         }
 
         const word_equation& state::smallest_eq() const {
-            return m_wes_to_satisfy.empty() ? word_equation::null() : *m_wes_to_satisfy.begin();
+            return m_eq_wes.empty() ? word_equation::null() : *m_eq_wes.begin();
         }
 
         const word_equation& state::only_one_eq_left() const {
-            return m_wes_to_satisfy.size() == 1 ? *m_wes_to_satisfy.begin() : word_equation::null();
+            return m_eq_wes.size() == 1 ? *m_eq_wes.begin() : word_equation::null();
+        }
+
+        memberships::~memberships() = default;
+
+        std::ostream& operator<<(std::ostream& os, const memberships::sptr m) {
+            return m->display(os);
         }
 
         bool state::in_definition_form() const {
             static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
-            return std::all_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), in_def_form);
+            return std::all_of(m_eq_wes.begin(), m_eq_wes.end(), in_def_form);
         }
 
         bool state::in_solved_form() const {
-            return (in_definition_form() && definition_acyclic()) || m_wes_to_satisfy.empty();
+            return (in_definition_form() && definition_acyclic()) || m_eq_wes.empty();
         }
 
         bool state::eq_classes_inconsistent() const {
@@ -402,17 +432,18 @@ namespace smt {
         }
 
         bool state::diseq_inconsistent() const {
-            return !m_wes_to_fail.empty() && m_wes_to_fail.begin()->empty();
+            return !m_diseq_wes.empty() && m_diseq_wes.begin()->empty();
         }
 
         bool state::unsolvable_by_check() const {
             const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_allow_empty_var);
-            return std::any_of(m_wes_to_satisfy.begin(), m_wes_to_satisfy.end(), unsolvable) ||
-                   diseq_inconsistent();
+            return std::any_of(m_eq_wes.begin(), m_eq_wes.end(), unsolvable) ||
+                   diseq_inconsistent() || m_memberships->is_inconsistent();
         }
 
         bool state::unsolvable_by_inference() const {
-            return diseq_inconsistent() || eq_classes_inconsistent();
+            return diseq_inconsistent() || eq_classes_inconsistent() ||
+                   m_memberships->is_inconsistent();
         }
 
         void state::add_word_eq(const word_equation& we) {
@@ -421,7 +452,7 @@ namespace smt {
             if (we.empty()) return;
             word_equation&& trimmed = we.trim_prefix();
             if (trimmed.empty()) return;
-            m_wes_to_satisfy.insert(std::move(trimmed));
+            m_eq_wes.insert(std::move(trimmed));
         }
 
         void state::add_word_diseq(const word_equation& we) {
@@ -429,81 +460,138 @@ namespace smt {
 
             word_equation&& trimmed = we.trim_prefix();
             if (trimmed.unsolvable(m_allow_empty_var)) return;
-            m_wes_to_fail.insert(std::move(trimmed));
+            m_diseq_wes.insert(std::move(trimmed));
         }
 
-        void state::set_var_lang(const element& var, language&& lang) {
+        state state::assign_empty(const element& var) const {
             SASSERT(var.typed(element::t::VAR));
 
-            if (lang.is_empty()) {
-                m_lang_to_satisfy.erase(var);
-                return;
+            state result{m_memberships->assign_empty(var)};
+            result.allow_empty_var(m_allow_empty_var);
+            for (const auto& we : m_eq_wes) {
+                result.add_word_eq(we.remove(var));
             }
-            auto fit = m_lang_to_satisfy.find(var);
-            if (fit != m_lang_to_satisfy.end()) {
-                fit->second = std::move(lang);
-                return;
-            }
-            m_lang_to_satisfy.emplace(std::make_pair(var, std::move(lang)));
-        }
-
-        state state::replace(const element& tgt, const word_term& subst) const {
-            state result{m_allow_empty_var};
-            for (const auto& we : m_wes_to_satisfy) {
-                result.add_word_eq(we.replace(tgt, subst));
-            }
-            for (const auto& we : m_wes_to_fail) {
-                result.add_word_diseq(we.replace(tgt, subst));
+            for (const auto& we : m_diseq_wes) {
+                result.add_word_diseq(we.remove(var));
             }
             return result;
         }
 
-        state state::remove(const element& tgt) const {
-            return replace(tgt, {});
+        state state::assign_empty_all(const std::set<element>& vars) const {
+            static const auto& is_var = std::bind(&element::typed, _1, element::t::VAR);
+            SASSERT(std::all_of(vars.begin(), vars.end(), is_var));
+
+            state result{m_memberships->assign_empty_all(vars)};
+            result.allow_empty_var(m_allow_empty_var);
+            for (const auto& we : m_eq_wes) {
+                result.add_word_eq(we.remove_all(vars));
+            }
+            for (const auto& we : m_diseq_wes) {
+                result.add_word_diseq(we.remove_all(vars));
+            }
+            return result;
         }
 
-        state state::remove_all(const std::set<element>& tgt) const {
-            state result{m_allow_empty_var};
-            for (const auto& we : m_wes_to_satisfy) {
-                result.add_word_eq(we.remove_all(tgt));
+        state state::assign_const(const element& var, const word_term& tgt) const {
+            static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
+            SASSERT(var.typed(element::t::VAR));
+            SASSERT(std::all_of(tgt.content().begin(), tgt.content().end(), is_const));
+
+            state result{m_memberships->assign_const(var, tgt)};
+            result.allow_empty_var(m_allow_empty_var);
+            for (const auto& we : m_eq_wes) {
+                result.add_word_eq(we.replace(var, tgt));
             }
-            for (const auto& we : m_wes_to_fail) {
-                result.add_word_diseq(we.remove_all(tgt));
+            for (const auto& we : m_diseq_wes) {
+                result.add_word_diseq(we.replace(var, tgt));
+            }
+            return result;
+        }
+
+        state state::assign_as(const element& var, const element& as_var) const {
+            SASSERT(var.typed(element::t::VAR) && as_var.typed(element::t::VAR));
+
+            state result{m_memberships->assign_as(var, as_var)};
+            result.allow_empty_var(m_allow_empty_var);
+            for (const auto& we : m_eq_wes) {
+                result.add_word_eq(we.replace(var, {as_var}));
+            }
+            for (const auto& we : m_diseq_wes) {
+                result.add_word_diseq(we.replace(var, {as_var}));
+            }
+            return result;
+        }
+
+        std::list<state> state::assign_prefix(const element& var, const element& ch) const {
+            SASSERT(var.typed(element::t::VAR) && ch.typed(element::t::CONST));
+
+            std::list<word_equation> wes;
+            for (const auto& we : m_eq_wes) {
+                wes.emplace_back(we.replace(var, {ch, var}));
+            }
+            std::list<word_equation> wines;
+            for (const auto& wine : m_diseq_wes) {
+                wines.emplace_back(wine.replace(var, {ch, var}));
+            }
+            std::list<state> result;
+            for (auto& m : m_memberships->assign_prefix(var, ch)) {
+                state s{std::move(m)};
+                s.allow_empty_var(m_allow_empty_var);
+                for (const auto& we : wes) {
+                    s.add_word_eq(we);
+                }
+                for (const auto& wine : wines) {
+                    s.add_word_diseq(wine);
+                }
+                result.emplace_back(std::move(s));
+            }
+            return result;
+        }
+
+        std::list<state> state::assign_prefix_var(const element& var, const element& prefix) const {
+            SASSERT(var.typed(element::t::VAR) && prefix.typed(element::t::VAR));
+
+            std::list<word_equation> wes;
+            for (const auto& we : m_eq_wes) {
+                wes.emplace_back(we.replace(var, {prefix, var}));
+            }
+            std::list<word_equation> wines;
+            for (const auto& wine : m_diseq_wes) {
+                wines.emplace_back(wine.replace(var, {prefix, var}));
+            }
+            std::list<state> result;
+            for (auto& m : m_memberships->assign_prefix_var(var, prefix)) {
+                state s{std::move(m)};
+                s.allow_empty_var(m_allow_empty_var);
+                for (const auto& we : wes) {
+                    s.add_word_eq(we);
+                }
+                for (const auto& wine : wines) {
+                    s.add_word_diseq(wine);
+                }
+                result.emplace_back(std::move(s));
             }
             return result;
         }
 
         bool state::operator==(const state& other) const {
             return m_allow_empty_var == other.m_allow_empty_var &&
-                   m_wes_to_satisfy == other.m_wes_to_satisfy &&
-                   m_wes_to_fail == other.m_wes_to_fail &&
-                   m_lang_to_satisfy == other.m_lang_to_satisfy;
-        }
-
-        bool state::operator<(const state& other) const {
-            if (m_allow_empty_var != other.m_allow_empty_var) return false;
-            if (m_wes_to_satisfy.size() < other.m_wes_to_satisfy.size()) return true;
-            if (m_wes_to_satisfy.size() > other.m_wes_to_satisfy.size()) return false;
-            if (m_wes_to_fail.size() < other.m_wes_to_fail.size()) return true;
-            if (m_wes_to_fail.size() > other.m_wes_to_fail.size()) return false;
-            // when having same length, do lexicographical compare
-            return m_wes_to_satisfy < other.m_wes_to_satisfy || m_wes_to_fail < other.m_wes_to_fail;
+                   m_eq_wes == other.m_eq_wes &&
+                   m_diseq_wes == other.m_diseq_wes &&
+                   *m_memberships == *other.m_memberships;
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
-            if (s.m_wes_to_satisfy.empty()) {
+            if (s.m_eq_wes.empty()) {
                 return os << "(no word equation left)" << std::endl;
             }
-            for (const auto& we : s.m_wes_to_satisfy) {
+            for (const auto& we : s.m_eq_wes) {
                 os << we << '\n';
             }
-            for (const auto& we : s.m_wes_to_fail) {
+            for (const auto& we : s.m_diseq_wes) {
                 os << "not (" << we << ")\n";
             }
-            for (const auto& var_lang : s.m_lang_to_satisfy) {
-                os << var_lang.first << " in {\n";
-                os << var_lang.second << "}\n";
-            }
+            os << s.m_memberships;
             return os << std::flush;
         }
 
@@ -529,7 +617,7 @@ namespace smt {
             def_graph graph;
             def_nodes marked;
             def_nodes checked;
-            for (const auto& we : m_wes_to_satisfy) {
+            for (const auto& we : m_eq_wes) {
                 const def_node& node = we.definition_var();
                 if (graph.find(node) != graph.end()) return false; // definition not unique
                 graph[node] = we.definition_body().variables();
@@ -540,16 +628,16 @@ namespace smt {
             return true;
         }
 
-        neilsen_transforms::move neilsen_transforms::move::add_record(const element& e) const {
+        solver::move solver::move::add_record(const element& e) const {
             std::vector<element> r{m_record};
             r.push_back(e);
             return {m_from, m_type, std::move(r)};
         };
 
-        neilsen_transforms::mk_move::mk_move(const state& s, const word_equation& src)
+        solver::mk_move::mk_move(const state& s, const word_equation& src)
                 : m_state{s}, m_src{src} {}
 
-        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::operator()() {
+        std::list<solver::action> solver::mk_move::operator()() {
             if (src_vars_empty()) {
                 SASSERT(!m_src.rhs().has_constant());
                 return {prop_empty()};
@@ -563,91 +651,107 @@ namespace smt {
             return handle_one_var();
         }
 
-        bool neilsen_transforms::mk_move::src_vars_empty() {
+        bool solver::mk_move::src_vars_empty() {
             return m_state.allows_empty_var() && m_src.lhs().empty();
         }
 
-        bool neilsen_transforms::mk_move::src_var_is_const() {
+        bool solver::mk_move::src_var_is_const() {
             const word_term& def_body = m_src.definition_body();
-            return def_body && (def_body.length() == 1 || !def_body.has_variable());
+            return def_body && !def_body.has_variable();
         }
 
-        neilsen_transforms::action neilsen_transforms::mk_move::prop_empty() {
+        solver::action solver::mk_move::prop_empty() {
             const std::set<element> empty_vars{m_src.rhs().variables()};
             const std::vector<element> record{empty_vars.begin(), empty_vars.end()};
-            return {{m_state, move::t::TO_EMPTY, record}, m_state.remove_all(empty_vars)};
+            move m{m_state, move::t::TO_EMPTY, record};
+            return std::make_pair(std::move(m), m_state.assign_empty_all(empty_vars));
         }
 
-        neilsen_transforms::action neilsen_transforms::mk_move::prop_const() {
+        solver::action solver::mk_move::prop_const() {
             const element& var = m_src.definition_var();
             const word_term& def = m_src.definition_body();
             std::vector<element> record{var};
             record.insert(record.end(), def.content().begin(), def.content().end());
-            return {{m_state, move::t::TO_CONST, record}, m_state.replace(var, def)};
+            move m{m_state, move::t::TO_CONST, record};
+            return std::make_pair(std::move(m), m_state.assign_const(var, def));
         }
 
-        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_two_var() {
+        std::list<solver::action> solver::mk_move::handle_two_var() {
             const element::pair& hh = m_src.heads();
             const element& x = hh.first;
             const element& y = hh.second;
             std::list<action> result;
-            result.push_back({{m_state, move::t::TO_VAR_VAR, {x, y}}, m_state.replace(x, {y, x})});
-            result.push_back({{m_state, move::t::TO_VAR_VAR, {y, x}}, m_state.replace(y, {x, y})});
+            for (auto& s : m_state.assign_prefix_var(x, y)) {
+                move m{m_state, move::t::TO_VAR_VAR, {x, y}};
+                result.emplace_back(std::make_pair(std::move(m), std::move(s)));
+            }
+            for (auto& s : m_state.assign_prefix_var(y, x)) {
+                move m{m_state, move::t::TO_VAR_VAR, {y, x}};
+                result.emplace_back(std::make_pair(std::move(m), std::move(s)));
+            }
             if (m_state.allows_empty_var()) {
-                result.push_back({{m_state, move::t::TO_EMPTY, {x}}, m_state.remove(x)});
-                result.push_back({{m_state, move::t::TO_EMPTY, {y}}, m_state.remove(y)});
+                move mx{m_state, move::t::TO_EMPTY, {x}};
+                result.emplace_back(std::make_pair(std::move(mx), m_state.assign_empty(x)));
+                move my{m_state, move::t::TO_EMPTY, {y}};
+                result.emplace_back(std::make_pair(std::move(my), m_state.assign_empty(y)));
             } else {
-                result.push_back({{m_state, move::t::TO_VAR, {x, y}}, m_state.replace(x, {y})});
+                move m{m_state, move::t::TO_VAR, {x, y}};
+                result.emplace_back(std::make_pair(std::move(m), m_state.assign_as(x, y)));
             }
             return result;
         }
 
-        std::list<neilsen_transforms::action> neilsen_transforms::mk_move::handle_one_var() {
+        std::list<solver::action> solver::mk_move::handle_one_var() {
             const element::pair& hh = m_src.heads();
             const bool var_const_headed = hh.first.typed(element::t::VAR);
             const element& v = var_const_headed ? hh.first : hh.second;
             const element& c = var_const_headed ? hh.second : hh.first;
             std::list<action> result;
-            result.push_back({{m_state, move::t::TO_CHAR_VAR, {v, c}}, m_state.replace(v, {c, v})});
+            for (auto&& s : m_state.assign_prefix(v, c)) {
+                move m{m_state, move::t::TO_CHAR_VAR, {v, c}};
+                result.emplace_back(std::make_pair(std::move(m), std::move(s)));
+            }
             if (m_state.allows_empty_var()) {
-                result.push_back({{m_state, move::t::TO_EMPTY, {v}}, m_state.remove(v)});
+                move m{m_state, move::t::TO_EMPTY, {v}};
+                result.emplace_back(std::make_pair(std::move(m), m_state.assign_empty(v)));
             } else {
-                result.push_back({{m_state, move::t::TO_CONST, {c}}, m_state.replace(v, {c})});
+                move m{m_state, move::t::TO_CONST, {c}};
+                result.emplace_back(std::make_pair(std::move(m), m_state.assign_const(v, {c})));
             }
             return result;
         }
 
-        bool neilsen_transforms::record_graph::contains(const state& s) const {
+        bool solver::record_graph::contains(const state& s) const {
             return m_backward_def.find(s) != m_backward_def.end();
         }
 
-        const std::list<neilsen_transforms::move>&
-        neilsen_transforms::record_graph::incoming_moves(const state& s) const {
+        const std::list<solver::move>&
+        solver::record_graph::incoming_moves(const state& s) const {
             SASSERT(contains(s));
             return m_backward_def.find(s)->second;
         }
 
-        void neilsen_transforms::record_graph::add_move(move&& m, const state& s) {
+        void solver::record_graph::add_move(move&& m, const state& s) {
             SASSERT(contains(m.m_from) && contains(s));
             m_backward_def[s].push_back(std::move(m));
         }
 
-        const state& neilsen_transforms::record_graph::add_state(state&& s) {
+        const state& solver::record_graph::add_state(state&& s) {
             SASSERT(!contains(s));
             auto&& pair = std::make_pair(std::move(s), std::list<move>{});
             return m_backward_def.emplace(std::move(pair)).first->first;
         }
 
-        neilsen_transforms::neilsen_transforms(state&& root)
+        solver::solver(state&& root)
                 : m_rec_root{m_records.add_state(std::move(root))} {
             m_pending.push(m_rec_root);
         }
 
-        bool neilsen_transforms::should_explore_all() const {
+        bool solver::should_explore_all() const {
             return true;
         }
 
-        result neilsen_transforms::check(const bool split_var_empty_ahead) {
+        result solver::check(const bool split_var_empty_ahead) {
             if (in_status(result::SAT)) return m_status;
             if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) return m_status;
             STRACE("str", tout << "[Check SAT]\n";);
@@ -689,7 +793,7 @@ namespace smt {
             return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
         }
 
-        bool neilsen_transforms::finish_after_found(const state& s) {
+        bool solver::finish_after_found(const state& s) {
             STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
             m_rec_success_leaves.emplace_back(s);
             if (!should_explore_all()) {
@@ -699,7 +803,7 @@ namespace smt {
             return false;
         }
 
-        const state& neilsen_transforms::add_sibling_more_removed(const state& s, state&& sib,
+        const state& solver::add_sibling_more_removed(const state& s, state&& sib,
                                                                   const element& v) {
             const state& added = m_records.add_state(std::move(sib));
             for (const auto& m : m_records.incoming_moves(s)) {
@@ -708,14 +812,14 @@ namespace smt {
             return added;
         }
 
-        const state& neilsen_transforms::add_child_var_removed(const state& s, state&& c,
+        const state& solver::add_child_var_removed(const state& s, state&& c,
                                                                const element& v) {
             const state& added = m_records.add_state(std::move(c));
             m_records.add_move({s, move::t::TO_EMPTY, {v}}, added);
             return added;
         }
 
-        result neilsen_transforms::split_var_empty_cases() {
+        result solver::split_var_empty_cases() {
             STRACE("str", tout << "[Split Empty Variable Cases]\n";);
             std::queue<state::cref> pending{split_first_level_var_empty()};
             SASSERT(m_pending.empty());
@@ -725,7 +829,7 @@ namespace smt {
                 pending.pop();
                 m_pending.push(curr_s);
                 for (const auto& var : curr_s.variables()) {
-                    state&& next_s = curr_s.remove(var);
+                    state&& next_s = curr_s.assign_empty(var);
                     next_s.allow_empty_var(false);
                     if (m_records.contains(next_s)) {
                         for (const auto& m : m_records.incoming_moves(curr_s)) {
@@ -754,13 +858,13 @@ namespace smt {
             return m_status = m_rec_success_leaves.empty() ? result::UNKNOWN : result::SAT;
         }
 
-        std::queue<state::cref> neilsen_transforms::split_first_level_var_empty() {
+        std::queue<state::cref> solver::split_first_level_var_empty() {
             std::queue<state::cref> result;
             while (!m_pending.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
                 for (const auto& var : curr_s.variables()) {
-                    state&& next_s = curr_s.remove(var);
+                    state&& next_s = curr_s.assign_empty(var);
                     next_s.allow_empty_var(false);
                     if (m_records.contains(next_s)) {
                         m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, next_s);
@@ -787,7 +891,7 @@ namespace smt {
             return result;
         }
 
-        std::list<neilsen_transforms::action> neilsen_transforms::transform(const state& s) const {
+        std::list<solver::action> solver::transform(const state& s) const {
             SASSERT(!s.unsolvable_by_check() && s.word_eq_num() != 0);
             // no diseq-only handling for now
             return mk_move{s, s.smallest_eq()}();
@@ -990,7 +1094,7 @@ namespace smt {
             block_curr_assignment();
             return FC_CONTINUE;
         }
-        neilsen_transforms solver{std::move(root)};
+        solver solver{std::move(root)};
         if (solver.check() == result::SAT) {
             TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
@@ -1089,19 +1193,6 @@ namespace smt {
         return {str::element::t::VAR, {to_app(e)->get_decl()->get_name().bare_str()}};
     }
 
-    str::language theory_str::mk_language(expr *const e) {
-        using namespace str;
-        if (!m_aut_imp) {
-            m_aut_imp = std::unique_ptr<zaut_adaptor>(
-                    new zaut_adaptor{get_manager(), get_context()});
-        }
-
-        oaut_adaptor m_oaut_imp(get_manager());
-        automaton::sptr aut = m_oaut_imp.mk_from_re_expr(e);
-
-        return language{m_aut_imp->mk_from_re_expr(e)->determinize()};
-    }
-
     str::word_term theory_str::mk_word_term(expr *const e) const {
         using namespace str;
         zstring s;
@@ -1121,7 +1212,7 @@ namespace smt {
     }
 
     str::state theory_str::mk_state_from_todo() {
-        str::state result;
+        str::state result{std::make_shared<str::dummy_memberships>()};
         STRACE("str", tout << "[Build State]\nword equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
@@ -1137,7 +1228,6 @@ namespace smt {
         STRACE("str", tout << "membership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {
-            result.set_var_lang(mk_var_element(m.first), mk_language(m.second));
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;
@@ -1373,6 +1463,7 @@ namespace smt {
         }
         m_membership_todo.push_back({{s, m}, r});
     }
+
     void theory_str::set_conflict(const literal_vector& lv) {
         context& ctx = get_context();
         const auto& js = ext_theory_conflict_justification{

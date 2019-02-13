@@ -16,41 +16,14 @@
 #include "util/scoped_vector.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
+
 #pragma GCC diagnostic ignored "-Wunused-local-typedef"
 #include <fst/fstlib.h>
 #include <fst/script/print.h>
 
-
 namespace smt {
 
     namespace str {
-        class element {
-        public:
-            using pair = std::pair<element, element>;
-            enum class t {
-                CONST, VAR, NONE
-            };
-            struct hash {
-                std::size_t operator()(const element& e) const;
-            };
-            static const element& null();
-        private:
-            element::t m_type;
-            zstring m_value;
-        public:
-            element(const element::t& t, const zstring& v) : m_type{t}, m_value{v} {}
-            const element::t& type() const { return m_type; }
-            const zstring& value() const { return m_value; }
-            bool typed(const element::t& t) const { return m_type == t; }
-            bool operator==(const element& other) const;
-            bool operator!=(const element& other) const { return !(*this == other); }
-            bool operator<(const element& other) const;
-            explicit operator bool() const { return *this != null(); }
-            friend std::ostream& operator<<(std::ostream& os, const element& e);
-        };
-
-        class regex {
-        };
 
         class automaton {
         public:
@@ -181,41 +154,6 @@ namespace smt {
             lbool symbol_check_sat(const symbol_ref& s);
             bool contains(const zaut& other) const;
             ptr mk_ptr(internal *&& a) const;
-        };
-
-        class language {
-        public:
-            using pair = std::pair<language, language>;
-            enum class t {
-                RE, AUT
-            };
-            union v {
-                regex re;
-                automaton::sptr aut;
-                v() : aut{} {}
-                ~v() {}
-            };
-            struct hash {
-                std::size_t operator()(const language& l) const { return 0; }
-            };
-        private:
-            language::t m_type;
-            language::v m_value;
-        public:
-            explicit language(automaton::sptr a) : m_type{t::AUT} { m_value.aut = std::move(a); }
-            language(const language& other);
-            language(language&& other) noexcept;
-            ~language();
-            const language::t& type() const { return m_type; }
-            const language::v& value() const { return m_value; }
-            bool typed(const language::t& t) const { return m_type == t; }
-            bool is_empty() const;
-            language intersect(const language& other) const;
-            language remove_prefix(const element& e) const;
-            language& operator=(language&& other) noexcept;
-            bool operator==(const language& other) const;
-            bool operator!=(const language& other) const { return !(*this == other); }
-            friend std::ostream& operator<<(std::ostream& os, const language& l);
         };
 
         class oaut : public automaton {

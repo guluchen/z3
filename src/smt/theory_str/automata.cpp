@@ -13,7 +13,7 @@ std::unique_ptr<TO> static_unique_pointer_cast(std::unique_ptr<FROM>&& old) {
     return std::unique_ptr<TO>{static_cast<TO*>(old.release())};
 }
 template<typename TO, typename FROM>
-std::shared_ptr<TO> static_shared_pointer_cast (std::unique_ptr<FROM>&& old){
+std::shared_ptr<TO> static_shared_pointer_cast(std::unique_ptr<FROM>&& old) {
     return std::shared_ptr<TO>{static_cast<TO*>(old.release())};
 }
 
@@ -58,36 +58,6 @@ void show_fst(fst::StdVectorFst m_imp, const string& description="") {//YFC:I wi
 namespace smt {
 
     namespace str {
-
-        using namespace std::placeholders;
-
-        std::size_t element::hash::operator()(const element& e) const {
-            using enum_t = std::underlying_type<t>::type;
-            static const auto string_hash{std::hash<std::string>{}};
-            static const auto enum_t_hash{std::hash<enum_t>{}};
-            const auto n = static_cast<enum_t>(e.type());
-            return string_hash(e.value().encode()) ^ enum_t_hash(n);
-        }
-
-        const element& element::null() {
-            static const element e{element::t::NONE, ""};
-            return e;
-        }
-
-        bool element::operator==(const element& other) const {
-            return other.m_type == m_type && other.m_value == m_value;
-        }
-
-        bool element::operator<(const element& other) const {
-            if (m_type < other.m_type) return true;
-            if (m_type > other.m_type) return false;
-            return m_value < other.m_value;
-        }
-
-        std::ostream& operator<<(std::ostream& os, const element& s) {
-            os << s.value();
-            return os;
-        }
 
         automaton::~automaton() = default;
 
@@ -1044,57 +1014,7 @@ namespace smt {
         automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
             return mk_oaut_from_re_expr(re);
         }
-        language::language(const language& other) : m_type{other.m_type} {
-            if (typed(t::AUT)) m_value.aut = other.m_value.aut;
-        }
 
-        language::language(language&& other) noexcept : m_type{other.m_type} {
-            if (typed(t::AUT)) m_value.aut = std::move(other.m_value.aut);
-        }
-
-        language::~language() {
-            if (typed(t::AUT)) m_value.aut.~shared_ptr();
-        }
-
-        bool language::is_empty() const {
-            if (typed(t::AUT)) return m_value.aut->is_empty();
-            return true;
-        }
-
-        language language::intersect(const language& other) const {
-            if (typed(t::AUT) && other.typed(t::AUT)) {
-                return language{m_value.aut->intersect_with(other.value().aut)};
-            }
-        }
-
-        language language::remove_prefix(const element& e) const {
-            SASSERT(e.typed(element::t::CONST));
-
-            if (typed(t::AUT)) {
-                m_value.aut->remove_prefix(e.value());
-                // TODO: ...
-            }
-        }
-
-        language& language::operator=(language&& other) noexcept {
-            if (other.typed(t::AUT)) {
-                m_type = language::t::AUT;
-                m_value.aut = std::move(other.m_value.aut);
-            }
-        }
-
-        bool language::operator==(const language& other) const {
-            if (typed(t::AUT) && other.typed(t::AUT)) {
-                return *m_value.aut.get() == *other.m_value.aut.get();
-            }
-            return true;
-        }
-
-        std::ostream& operator<<(std::ostream& os, const language& l) {
-            if (l.typed(language::t::AUT)) {
-                return os << l.m_value.aut;
-            }
-            return os;
-        }
     }
+
 }
