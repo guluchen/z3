@@ -1,3 +1,7 @@
+#ifndef THEORY_STR_AUTOMATA_H_
+#define THEORY_STR_AUTOMATA_H_
+
+
 #include <functional>
 #include <list>
 #include <set>
@@ -35,7 +39,7 @@ namespace smt {
             using len_offset = unsigned;
             using len_period = unsigned;
             using len_constraint = std::pair<len_offset, len_period>;
-            static const unsigned MAX_CHAR_NUM = 256;
+            static const unsigned MAX_CHAR_NUM = 255;
         public:
             virtual ~automaton() = 0;
             virtual bool is_empty() = 0;
@@ -237,3 +241,4 @@ namespace smt {
 
     }
 }
+#endif //THEORY_STR_AUTOMATA_H_

@@ -38,10 +38,12 @@ namespace smt {
         private:
             element::t m_type;
             zstring m_value;
+            expr* m_expr;
         public:
-            element(const element::t& t, const zstring& v) : m_type{t}, m_value{v} {}
+            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
+            const expr* expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -57,7 +59,7 @@ namespace smt {
             };
             static const word_term& null();
             static word_term from_string(const zstring& str);
-            static word_term from_variable(const zstring& name);
+            static word_term from_variable(const zstring& name, expr* e);
             static bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
@@ -331,7 +333,6 @@ namespace smt {
                            expr *e4 = nullptr, sort *range = nullptr);
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
-        str::element mk_var_element(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
         void add_axiom(expr *e);

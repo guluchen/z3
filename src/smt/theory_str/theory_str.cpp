@@ -23,7 +23,7 @@ namespace smt {
         }
 
         const element& element::null() {
-            static const element e{element::t::NONE, ""};
+            static const element e{element::t::NONE, "", nullptr};
             return e;
         }
 
@@ -59,13 +59,13 @@ namespace smt {
         word_term word_term::from_string(const zstring& str) {
             word_term result;
             for (std::size_t i = 0; i < str.length(); i++) {
-                result.m_elements.push_back({element::t::CONST, {str[i]}});
+                result.m_elements.push_back({element::t::CONST, {str[i]}, nullptr});
             }
             return result;
         }
 
-        word_term word_term::from_variable(const zstring& name) {
-            return {{element::t::VAR, name}};
+        word_term word_term::from_variable(const zstring& name, expr* e) {
+            return {{element::t::VAR, name,e}};
         }
 
         bool word_term::prefix_const_mismatched(const word_term& w1, const word_term& w2) {
@@ -1143,6 +1143,7 @@ namespace smt {
 
     expr_ref theory_str::mk_sub(expr *a, expr *b) {
         ast_manager& m = get_manager();
+
         expr_ref result(m_util_a.mk_sub(a, b), m);
         m_rewrite(result);
         return result;
@@ -1187,11 +1188,6 @@ namespace smt {
         return bv;
     }
 
-    str::element theory_str::mk_var_element(expr *const e) {
-        SASSERT(is_string_sort(e) && is_const_fun(e));
-
-        return {str::element::t::VAR, {to_app(e)->get_decl()->get_name().bare_str()}};
-    }
 
     str::word_term theory_str::mk_word_term(expr *const e) const {
         using namespace str;
@@ -1208,7 +1204,7 @@ namespace smt {
         }
         std::stringstream ss;
         ss << mk_pp(e, get_manager());
-        return word_term::from_variable({ss.str().data()});
+        return word_term::from_variable({ss.str().data()},e);
     }
 
     str::state theory_str::mk_state_from_todo() {
