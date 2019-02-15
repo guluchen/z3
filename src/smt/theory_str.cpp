@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <sstream>
+#include <ap_coeff.h>
 #include "ast/ast_pp.h"
 #include "ast/rewriter/bool_rewriter.h"
 #include "smt/theory_str.h"
@@ -1334,19 +1335,25 @@ namespace smt {
             std::cout << "}" << std::endl;
         }
 
-
-        bool apron_counter_system::node::operator<(node &other) {
-            return ap_abstract1_size(m,&abs) < ap_abstract1_size(m,&other.get_abs());
+        apron_counter_system::node::node(ap_manager_t* man, ap_abstract1_t &base_abs) {
+            abs = ap_abstract1_copy(man,&base_abs);
+            abs_pre = ap_abstract1_copy(man,&base_abs);
         }
 
-        apron_counter_system::node::node(ap_manager_t* man, ap_abstract1_t &base_abs) {
-            m = man;
-            std::cout << "0.";
-            abs = ap_abstract1_copy(man,&base_abs);
-            std::cout << "1.";
-            abs_pre = ap_abstract1_copy(man,&base_abs);
-            std::cout << "2.";
-//            abs_pre = abs;
+        apron_counter_system::node::node(ap_manager_t *man, ap_environment_t* env, bool top_flag) {
+            if (top_flag) {
+                abs = ap_abstract1_top(man,env);
+                abs_pre = ap_abstract1_top(man,env);
+            }
+            else {
+                abs = ap_abstract1_bottom(man,env);
+                abs_pre = ap_abstract1_bottom(man,env);
+            }
+        }
+
+        void apron_counter_system::node::print_abs_silent(ap_manager_t *man) {
+            FILE * fptr=fopen("/dev/null","w");
+            ap_abstract1_fprint(fptr,man,&abs);
         }
 
         void apron_counter_system::node::widening(ap_manager_t* man) {
@@ -1357,6 +1364,72 @@ namespace smt {
             ap_abstract1_clear(man,&abs_pre);
             abs_pre = ap_abstract1_copy(man,&abs);
         }
+
+        long int apron_counter_system::coeff2int(ap_coeff_t *c) {
+            SASSERT(mpz_get_si(&c->val.scalar->val.mpq->_mp_den)==1);  // make sure it is an integer
+            return mpz_get_si(&c->val.scalar->val.mpq->_mp_num);
+        }
+
+        void apron_counter_system::export_final_lincons(arith_util& ap_util_a, seq_util& ap_util_s) {
+            ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(man, &nodes[final].get_abs());
+            int len_cons_arr = ap_lincons1_array_size(&cons_arr);
+            std::cout << "export final linear constraints: " << std::endl;
+            std::cout << "---abs: " << std::endl;
+            nodes[final].print_abs(man);
+            std::cout << "---extracted linear constraints array: (" << len_cons_arr << ")" << std::endl;
+            ap_lincons1_array_fprint(stdout,&cons_arr);
+            std::cout << "---go through by index: (" << len_cons_arr << ")" << std::endl;
+
+            ap_lincons1_t ap_cons;
+            ap_constyp_t* ap_constyp;
+            ap_coeff_t *ap_cst, *ap_coeff;
+            ap_environment_name_of_dim_t *name_of_dim;
+            for (int i=0; i<len_cons_arr; i++) {
+                ap_cons = ap_lincons1_array_get(&cons_arr,i);
+                std::cout << "linear constraint " << i << " :" << std::endl;
+                ap_lincons1_fprint(stdout,&ap_cons);
+                std::cout << std::endl;
+
+                ap_constyp = ap_lincons1_constypref(&ap_cons);
+                std::cout << "constraint type: ";
+                switch (*ap_constyp) {
+                    case AP_CONS_EQ:
+                        std::cout << "AP_CONS_EQ" << std::endl;
+                        break;
+                    case AP_CONS_SUPEQ:
+                        std::cout << "AP_CONS_SUPEQ" << std::endl;
+                        break;
+                    case AP_CONS_SUP:
+                    case AP_CONS_EQMOD:
+                    case AP_CONS_DISEQ:
+                        std::cout << "Not supported type" << std::endl;
+                    default:
+                        SASSERT(false);
+                }
+
+                ap_cst = ap_lincons1_cstref(&ap_cons);
+                SASSERT(ap_cst->discr==AP_COEFF_SCALAR && ap_cst->val.scalar->discr==AP_SCALAR_MPQ);  // only support these
+                std::cout << "constant: ";
+                ap_coeff_fprint(stdout,ap_cst);
+                std::cout << std::endl;
+                ast_manager& m = ap_util_a.get_manager();
+                expr_ref ap_cst_expr_ref(ap_util_a.mk_int(coeff2int(ap_cst)), m);
+                expr_ref zero(ap_util_a.mk_int(0), m);
+//                literal ap_cst_literal = mk_literal(ap_util_a.mk_ge(ap_cst_expr_ref, zero));
+                name_of_dim = ap_environment_name_of_dim_alloc(ap_cons.env);
+                long int num_coeff;
+                for (int j=0; j<name_of_dim->size; j++) {
+                    ap_coeff = ap_lincons1_coeffref(&ap_cons, name_of_dim->p[j]);
+                    SASSERT(ap_coeff!=NULL);
+                    num_coeff = coeff2int(ap_coeff);
+                    if (num_coeff!=0) {
+                        fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j],num_coeff);
+                    }
+                }
+                ap_environment_name_of_dim_free(name_of_dim);
+            }
+        }
+
 
         bool apron_counter_system::node::join_and_update_abs(ap_manager_t* man, ap_abstract1_t& from_abs) {
 //            std::cout << "before abstraction join_and_update..." << std::endl;
@@ -1386,16 +1459,15 @@ namespace smt {
 //            ap_abstract1_fprint(stdout,man,&s_abs);
             SASSERT(!var_exp_pairs.empty());
             for (auto& var_exp : var_exp_pairs) {
-//                s_abs = ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
-                ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
+                s_abs = ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
+//                ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
 //                std::cout << "assignment: ";
 //                printf("%s=", var_exp.first);
 //                ap_linexpr1_fprint(stdout,&var_exp.second);
 //                std::cout << std::endl;
             }
-//            std::cout << "after abstraction propagate..." << std::endl;
-//            ap_abstract1_fprint(stdout,man,&s_abs);
             s_to.join_and_update_abs(man, s_abs);
+            ap_abstract1_minimize(man,&s_to.get_abs());  // necessary for efficiency
             ap_abstract1_clear(man,&s_abs);
         }
 
@@ -1459,7 +1531,6 @@ namespace smt {
                 variables[count] = strdup(name.c_str());  // best way to copy c_str() to char*
                 count++;
             }
-            std::cout << "apron_counter_system: step1..." << std::endl;
             // set state-related attributes
             init = cs.init_states();
             final = cs.final_state();
@@ -1467,34 +1538,16 @@ namespace smt {
             // set apron environment
             man = ap_ppl_poly_manager_alloc(true);
             env = ap_environment_alloc(variables,var_names.size(),NULL,0);
-            // A. empty abstraction
-            array = ap_lincons1_array_make(env,1);
-            expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
-            cons = ap_lincons1_make(AP_CONS_EQ,&expr,NULL);
-            ap_linexpr1_set_list(&expr,AP_END);
-            ap_lincons1_array_set(&array,0,&cons);
-            empty_abs = ap_abstract1_of_lincons_array(man,env,&array);
-            // B. full abstraction
-            array = ap_lincons1_array_make(env,1);
-            expr = ap_linexpr1_make(env,AP_LINEXPR_SPARSE,0);
-            cons = ap_lincons1_make(AP_CONS_EQ,&expr,NULL);
-            ap_lincons1_set_list(&cons,
-                                 AP_CST_S_INT,1,
-                                 AP_END);
-            ap_lincons1_array_set(&array,0,&cons);
-            full_abs = ap_abstract1_of_lincons_array(man,env,&array);
-            std::cout << "apron_counter_system: step2..." << std::endl;
             // initialize nodes
             for (ap_state i=1; i<=num_states; i++) {
-                std::cout << i << ",";
                 if (init.count(i)>0) {
-                    nodes.emplace(i,node(man,empty_abs));
+                    nodes.emplace(i,node(man,env,true));
                 }
                 else {
-                    nodes.emplace(i,node(man,full_abs));
+                    nodes.emplace(i,node(man,env,false));
                 }
+                ap_abstract1_minimize(man,&nodes[i].get_abs());  // necessary to avoid slow-down
             }
-            std::cout << "apron_counter_system: step3..." << std::endl;
             // set relations
             for (const auto& rel : cs.get_relations()) {
                 ap_state src_state = rel.first;
@@ -1577,14 +1630,11 @@ namespace smt {
                 visited.insert(curr_s);
                 for (auto &tr : relations[curr_s]) {
                     SASSERT(nodes.count(tr.second)!=0);
-//                    std::cout << "abstraction propagate from node " << curr_s << " to " << tr.second << std::endl;
+                    // std::cout << "abstraction propagate from node " << curr_s << " to " << tr.second << std::endl;
                     tr.first.abstraction_propagate(man, nodes[curr_s], nodes[tr.second]);
                     if (visited.count(tr.second)==0) process_queue.push(tr.second);
                 }
             }
-//            for (const auto i : visited) {
-//                std::cout << i << ", ";
-//            }
             std::cout << std::endl;
             // Note: assume final is in nodes
             SASSERT(nodes.count(final)!=0);
@@ -1608,8 +1658,7 @@ namespace smt {
                 if (loops >= 10) {
                     if (fixpoint_check(widen)) break;
                 }
-                getchar();
-            } while (loops <= 10);
+            } while (loops <= 12);
         }
 
     }
@@ -1820,10 +1869,11 @@ namespace smt {
 //        cs.print_counter_system();
         apron_counter_system ap_cs = apron_counter_system(cs);
         std::cout << "apron_counter_system constructed!" << std::endl;
-//        ap_cs.print_apron_counter_system();
+        ap_cs.print_apron_counter_system();
         std::cout << "apron_counter_system abstraction starting!" << std::endl;
         ap_cs.run_abstraction();
         std::cout << "apron_counter_system abstraction finished!" << std::endl;
+        ap_cs.export_final_lincons(m_util_a,m_util_s);
         if (res == result::SAT) {
             TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
