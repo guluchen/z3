@@ -20,6 +20,7 @@
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
+#include "affine_program.h"
 
 namespace smt {
 
@@ -263,6 +264,7 @@ namespace smt {
                 const std::list<move>& incoming_moves(const state& s) const;
                 void add_move(move&& m, const state& s);
                 const state& add_state(state&& s);
+                const std::unordered_map<state,std::list<move>,state::hash>& access_map() const {return m_backward_def;}
             };
         private:
             result m_status = result::UNKNOWN;
@@ -275,6 +277,9 @@ namespace smt {
             bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
             result check(bool split_var_empty_ahead = false);
+            const record_graph& get_graph() const { return m_records; };
+            const std::list<state::cref>& get_success_leaves() const { return m_rec_success_leaves; };
+            const state::cref get_root() const { return m_rec_root; };
         private:
             bool finish_after_found(const state& s);
             const state& add_sibling_more_removed(const state& s, state&& sib, const element& v);

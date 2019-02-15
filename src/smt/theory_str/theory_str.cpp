@@ -1095,7 +1095,19 @@ namespace smt {
             return FC_CONTINUE;
         }
         solver solver{std::move(root)};
-        if (solver.check() == result::SAT) {
+        result res = solver.check();
+        counter_system cs = counter_system(solver);
+        std::cout << "counter_system extracted!" << std::endl;
+//        cs.print_counter_system();
+        apron_counter_system ap_cs = apron_counter_system(cs);
+        std::cout << "apron_counter_system constructed!" << std::endl;
+        ap_cs.print_apron_counter_system();
+        std::cout << "apron_counter_system abstraction starting!" << std::endl;
+        ap_cs.run_abstraction();
+        std::cout << "apron_counter_system abstraction finished!" << std::endl;
+        ap_cs.export_final_lincons(m_util_a,m_util_s);
+        if (res == result::SAT) {
+//        if (solver.check() == result::SAT) {
             TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
         }
