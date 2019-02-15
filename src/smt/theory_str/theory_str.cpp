@@ -935,6 +935,7 @@ namespace smt {
         return v;
     }
 
+
     bool theory_str::internalize_atom(app *const atom, const bool gate_ctx) {
         (void) gate_ctx;
         STRACE("str", tout << "internalize_atom: gate_ctx is " << gate_ctx << ", "
@@ -951,33 +952,33 @@ namespace smt {
         ast_manager& m = get_manager();
         context& ctx = get_context();
         SASSERT(is_of_this_theory(term));
-        STRACE("str", tout << "internalize_term: " << mk_pp(term, m) << '\n';);
         if (ctx.e_internalized(term)) {
-            STRACE("str", tout << "done before\n";);
+            enode* e = ctx.get_enode(term);
+            mk_var(e);
             return true;
         }
-
-        const unsigned num_args = term->get_num_args();
-        for (unsigned i = 0; i < num_args; i++) {
-            ctx.internalize(term->get_arg(i), false);
-        }
-
-        enode *const n = ctx.mk_enode(term, false, m.is_bool(term), true);
-        for (unsigned i = 0; i < num_args; i++) {
-            enode *arg = n->get_arg(i);
-            const theory_var& v_arg = mk_var(arg);
-            (void) v_arg;
-            STRACE("str", tout << "arg has theory_var #" << v_arg << '\n';);
+        for (auto e : *term) {
+            if (!ctx.e_internalized(e)) {
+                ctx.internalize(e, false);
+            }
+            enode* n = ctx.get_enode(e);
+            ctx.mark_as_relevant(n);
+            mk_var(n);
         }
         if (m.is_bool(term)) {
-            const bool_var& bv = mk_bool_var(term);
-            (void) bv;
-            STRACE("str", tout << "term has bool_var #" << bv << '\n';);
-        } else {
-            const theory_var& v = mk_var(n);
-            (void) v;
-            STRACE("str", tout << "term has theory_var #" << v << '\n';);
+            bool_var bv = ctx.mk_bool_var(term);
+            ctx.set_var_theory(bv, get_id());
+            ctx.mark_as_relevant(bv);
         }
+
+        enode* e = nullptr;
+        if (ctx.e_internalized(term)) {
+            e = ctx.get_enode(term);
+        }
+        else {
+            e = ctx.mk_enode(term, false, m.is_bool(term), true);
+        }
+        mk_var(e);
         return true;
     }
 
