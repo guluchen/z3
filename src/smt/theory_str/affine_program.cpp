@@ -1,4 +1,5 @@
-#include "affine_program.h"
+#include <iostream>
+#include "smt/theory_str/theory_str.h"
 
 namespace smt {
 
@@ -39,13 +40,13 @@ namespace smt {
             }
         }
 
-        counter_system::counter_system(const smt::str::solver &solver) {
+        counter_system::counter_system(const smt::str::solver &solv) {
             cs_state counter = 1;
             std::unordered_map<state::cref, cs_state, state::hash, std::equal_to<state>> mapped_states;
             std::queue<state::cref> process_queue;
             std::unordered_set<state::cref, state::hash, std::equal_to<state>> processed_states;
             // set initial states
-            for (const auto &s : solver.get_success_leaves()) {  // assume all succ_states are different (set of states)
+            for (const auto &s : solv.get_success_leaves()) {  // assume all succ_states are different (set of states)
                 add_init_state(counter);
                 SASSERT(mapped_states.count(s) == 0);
                 mapped_states.insert({s, counter});
@@ -53,8 +54,8 @@ namespace smt {
                 counter++;
             }
             // for the case of no initial states (no success states), add all states to queue and map
-            if (solver.get_success_leaves().empty()) {
-                for (const auto &s : solver.get_graph().access_map()) {
+            if (solv.get_success_leaves().empty()) {
+                for (const auto &s : solv.get_graph().access_map()) {
                     SASSERT(mapped_states.count(s.first) == 0);
                     mapped_states.insert({s.first, counter});
                     process_queue.push(s.first);
@@ -63,7 +64,7 @@ namespace smt {
             }
             // processing relations
             cs_state cs_curr, cs_tgt;
-            std::list<neilsen_transforms::move> moves;
+            std::list<solver::move> moves;
             cs_assign assign;
             while (!process_queue.empty()) {
                 const state &curr = process_queue.front();
@@ -75,7 +76,7 @@ namespace smt {
                 } else {
                     processed_states.insert(curr);
                 }
-                for (auto const &m : solver.get_graph().incoming_moves(curr)) {
+                for (auto const &m : solv.get_graph().incoming_moves(curr)) {
                     const state &tgt = m.m_from;
                     if (mapped_states.count(tgt) == 0) {  // if tgt is new, add to mapping
                         mapped_states.insert({tgt, counter});
@@ -86,7 +87,7 @@ namespace smt {
                     }
                     // set transition according to transform type
                     switch (m.m_type) {
-                        case neilsen_transforms::move::t::TO_EMPTY:
+                        case solver::move::t::TO_EMPTY:
                             assign.type = counter_system::assign_type::CONST;
                             assign.num = 0;  // assign to zero
                             for (auto const &e : m.m_record) {
@@ -94,28 +95,28 @@ namespace smt {
                                 add_var_name(e.value().encode());
                             }
                             break;
-                        case neilsen_transforms::move::t::TO_CONST:
+                        case solver::move::t::TO_CONST:
                             assign.type = counter_system::assign_type::CONST;
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
                             SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
                             add_var_name(m.m_record[0].value().encode());
                             break;
-                        case neilsen_transforms::move::t::TO_VAR:
+                        case solver::move::t::TO_VAR:
                             assign.type = counter_system::assign_type::VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
                                 add_var_name(e.value().encode());
                             }
                             break;
-                        case neilsen_transforms::move::t::TO_VAR_VAR:
+                        case solver::move::t::TO_VAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
                                 add_var_name(e.value().encode());
                             }
                             break;
-                        case neilsen_transforms::move::t::TO_CHAR_VAR:
+                        case solver::move::t::TO_CHAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_ONE;
                             assign.vars.push_back(m.m_record[0].value().encode());
                             add_var_name(m.m_record[0].value().encode());
@@ -128,7 +129,7 @@ namespace smt {
                         process_queue.push(tgt);
                 }
             }
-            set_final_state(mapped_states[solver.get_root()]);  // at last, set final state
+            set_final_state(mapped_states[solv.get_root()]);  // at last, set final state
             std::cout << "mapped_states final..." << std::endl;
             std::cout << "mapped_states size = " << mapped_states.size() << std::endl;
             num_states = mapped_states.size();

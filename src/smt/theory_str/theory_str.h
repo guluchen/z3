@@ -20,7 +20,7 @@
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
-#include "affine_program.h"
+#include "smt/theory_str/affine_program.h"
 
 namespace smt {
 
@@ -44,7 +44,7 @@ namespace smt {
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
-            const expr* expr() const { return m_expr; }
+            const expr* oringin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }

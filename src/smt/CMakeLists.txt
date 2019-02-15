@@ -62,6 +62,7 @@ z3_add_component(smt
     theory_seq.cpp
     theory_str/automata.cpp
     theory_str/theory_str.cpp
+    theory_str/affine_program.cpp
     theory_utvpi.cpp
     theory_wmaxsat.cpp
     uses_theory.cpp

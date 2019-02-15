@@ -1,4 +1,14 @@
-#include "theory_str.h"
+#include <functional>
+#include <list>
+#include <set>
+//#include <stack>
+#include <map>
+//#include <memory>
+#include <queue>
+#include <unordered_map>
+#include <unordered_set>
+//#include <vector>
+//#include "theory_str.h"
 #include <gmp.h>
 extern "C" {
 #include "ap_global0.h"
@@ -14,10 +24,13 @@ namespace smt {
 
     namespace str {
 
+        class state;
+        class solver;
+
         class counter_system {
         public:
             // constructor
-            counter_system(const solver &solver);
+            counter_system(const solver &solv);
 
             // type defines
             enum class assign_type {

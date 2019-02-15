@@ -1085,6 +1085,8 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         using namespace str;
+//        using counter_system = smt::str::counter_system;
+//        using apron_counter_system = smt::str::apron_counter_system;
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
 
@@ -1101,7 +1103,7 @@ namespace smt {
 //        cs.print_counter_system();
         apron_counter_system ap_cs = apron_counter_system(cs);
         std::cout << "apron_counter_system constructed!" << std::endl;
-        ap_cs.print_apron_counter_system();
+//        ap_cs.print_apron_counter_system();
         std::cout << "apron_counter_system abstraction starting!" << std::endl;
         ap_cs.run_abstraction();
         std::cout << "apron_counter_system abstraction finished!" << std::endl;
