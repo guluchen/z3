@@ -252,6 +252,8 @@ namespace smt {
         }
 
         automaton::ptr zaut::union_with(sptr other) {
+            zaut *const o = static_cast<zaut *>(other.get()); // one imp at a time
+            return mk_ptr(internal::mk_union(*m_imp, *o->m_imp));
         }
 
         void zaut::set_init(state s) {
@@ -310,7 +312,6 @@ namespace smt {
             return result;
         }
 
-        // precondition: ...
         std::set<automaton::len_constraint> zaut::length_constraints() {
             std::vector<state> lasso;
             std::queue<state> pending;
@@ -512,6 +513,10 @@ namespace smt {
         zaut_adaptor::~zaut_adaptor() {
             dealloc(m_aut_man);
             dealloc(m_sym_ba);
+        }
+
+        automaton::sptr zaut_adaptor::mk_empty() {
+            return mk_from_re_expr(m_util_s.str.mk_empty(m_util_s.str.mk_string_sort()));
         }
 
         automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re) {

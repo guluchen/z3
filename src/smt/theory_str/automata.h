@@ -72,7 +72,10 @@ namespace smt {
 
         class automaton_factory {
         public:
+            using sptr = std::shared_ptr<automaton_factory>;
+        public:
             virtual ~automaton_factory() = 0;
+            virtual automaton::sptr mk_empty() = 0;
             virtual automaton::sptr mk_from_re_expr(expr *re) = 0;
         };
 
@@ -217,6 +220,7 @@ namespace smt {
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
             ~zaut_adaptor() override;
+            automaton::sptr mk_empty() override;
             automaton::sptr mk_from_re_expr(expr *re) override;
         };
 
