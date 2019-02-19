@@ -77,6 +77,8 @@ namespace smt {
             void print_transition(const cs_state s, const cs_assign &assign, const cs_state s_to) const;
         };
 
+        long int coeff2int(ap_coeff_t *c);
+
         class apron_counter_system {
         public: // types
             class node {
@@ -130,9 +132,37 @@ namespace smt {
             void abstraction();
             void run_abstraction();
             bool fixpoint_check(bool widen_flag);
+            ap_manager_t* get_ap_manager() { return man; };
             void print_apron_counter_system();
-            long int coeff2int(ap_coeff_t *c);
-            void export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s);
+            node& get_final_node() { return nodes[final]; };  // use it like a const method.
+            std::map<std::string,expr*>& get_var_expr() { return var_expr; };  // use it like a const method.
+//            void export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s);
+        };
+
+        class length_constraint {
+        public:
+            enum class lcons_type {
+                EQ = 0,    // =
+                SUPEQ = 1  // >=
+            };
+            class len_cons {
+                lcons_type m_type;
+                std::map<std::string,std::pair<expr*,long int>> m_var_expr_coeff;
+                long int m_cst;
+            public:
+                len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
+                        std::map<std::string,expr*>& var_expr);
+                void pretty_print(ast_manager& ast_man);
+                expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
+            };
+        private:
+            std::list<len_cons> m_cons;
+        public:
+            length_constraint(ap_manager_t *ap_man, ap_abstract1_t* ap_abs_ptr,
+                   std::map<std::string,expr*>& var_expr);
+            void pretty_print(ast_manager& ast_man);
+            expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
+            bool empty() { return m_cons.empty(); };
         };
 
     }
