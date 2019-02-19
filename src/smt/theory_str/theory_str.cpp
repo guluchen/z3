@@ -906,8 +906,7 @@ namespace smt {
             return m_backward_def.emplace(std::move(pair)).first->first;
         }
 
-        solver::solver(state&& root)
-                : m_rec_root{m_records.add_state(std::move(root))} {
+        solver::solver(state&& root) : m_rec_root{m_records.add_state(std::move(root))} {
             m_pending.push(m_rec_root);
         }
 
@@ -1363,7 +1362,6 @@ namespace smt {
         ctx.set_enode_flag(bv, true);
         return bv;
     }
-
 
     str::word_term theory_str::mk_word_term(expr *const e) const {
         using namespace str;

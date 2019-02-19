@@ -513,6 +513,7 @@ namespace smt {
         zaut_adaptor::~zaut_adaptor() {
             dealloc(m_aut_man);
             dealloc(m_sym_ba);
+            dealloc(m_sym_solver);
         }
 
         automaton::sptr zaut_adaptor::mk_empty() {
