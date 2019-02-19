@@ -1,4 +1,7 @@
 #include <iostream>
+#include <string>
+#include "ast/ast_pp.h"
+#include "smt/smt_theory.h"
 #include "smt/theory_str/theory_str.h"
 
 namespace smt {
@@ -9,6 +12,14 @@ namespace smt {
             if (type < other.type) return true;
             if (num < other.num) return true;
             if (vars.size() < other.vars.size()) return true;
+            return false;
+        }
+
+        bool counter_system::add_var_expr(const std::string &str, expr *var_exp) {
+            if (var_expr.count(str)==0) {
+                var_expr.insert({str,var_exp});
+                return true;
+            }
             return false;
         }
 
@@ -92,7 +103,7 @@ namespace smt {
                             assign.num = 0;  // assign to zero
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_CONST:
@@ -100,26 +111,26 @@ namespace smt {
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
                             SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_name(m.m_record[0].value().encode());
+                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
                             break;
                         case solver::move::t::TO_VAR:
                             assign.type = counter_system::assign_type::VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_VAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_CHAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_ONE;
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_name(m.m_record[0].value().encode());
+                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
                             break;
                         default: SASSERT(false);
                     }
@@ -136,6 +147,13 @@ namespace smt {
 //            for (const auto& e : mapped_states) {
 //                std::cout << e.first  << "    " << e.second << std::endl;
 //            }
+        }
+
+        void counter_system::print_var_expr(ast_manager &m) {
+            std::cout << "[var_name <--> expr] in counter system: " << std::endl;
+            for (const auto& e: var_expr) {
+                std::cout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second,m) << " ]" << std::endl;
+            }
         }
 
         void counter_system::print_transition(const smt::str::counter_system::cs_state s,
@@ -178,11 +196,11 @@ namespace smt {
                 sep_str = ", ";
             }
             std::cout << "}" << std::endl;
-            std::cout << "final=" << final << ", " << "#var=" << var_names.size() << std::endl;
+            std::cout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;
             std::cout << "vars={";
             sep_str = "";
-            for (auto const v : var_names) {
-                std::cout << sep_str << v;
+            for (auto const v : var_expr) {
+                std::cout << sep_str << v.first;
                 sep_str = ", ";
             }
             std::cout << "}" << std::endl;
@@ -234,7 +252,7 @@ namespace smt {
 
         void apron_counter_system::export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s) {
             ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(man, &nodes[final].get_abs());
-            int len_cons_arr = ap_lincons1_array_size(&cons_arr);
+            size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
             std::cout << "export final linear constraints: " << std::endl;
             std::cout << "---abs: " << std::endl;
             nodes[final].print_abs(man);
@@ -246,7 +264,7 @@ namespace smt {
             ap_constyp_t *ap_constyp;
             ap_coeff_t *ap_cst, *ap_coeff;
             ap_environment_name_of_dim_t *name_of_dim;
-            for (int i = 0; i < len_cons_arr; i++) {
+            for (size_t i = 0; i < len_cons_arr; i++) {
                 ap_cons = ap_lincons1_array_get(&cons_arr, i);
                 std::cout << "linear constraint " << i << " :" << std::endl;
                 ap_lincons1_fprint(stdout, &ap_cons);
@@ -383,13 +401,14 @@ namespace smt {
         }
 
         apron_counter_system::apron_counter_system(const smt::str::counter_system &cs) {
+            // copy var_expr from counter system by operator= (overloaded)
+            var_expr = cs.get_var_expr();
             // set variables names to C-style
-            std::set<std::string> var_names = cs.get_var_names();
-            num_vars = var_names.size();
-            variables = (ap_var_t *) malloc(sizeof(ap_var_t) * var_names.size());
+            num_vars = var_expr.size();
+            variables = (ap_var_t *) malloc(sizeof(ap_var_t) * var_expr.size());
             int count = 0;
-            for (auto &name : var_names) {
-                variables[count] = strdup(name.c_str());  // best way to copy c_str() to char*
+            for (auto &e : var_expr) {
+                variables[count] = strdup(e.first.c_str());  // best way to copy c_str() to char*
                 count++;
             }
             // set state-related attributes
@@ -398,7 +417,7 @@ namespace smt {
             num_states = cs.get_num_states();
             // set apron environment
             man = ap_ppl_poly_manager_alloc(true);
-            env = ap_environment_alloc(variables, var_names.size(), NULL, 0);
+            env = ap_environment_alloc(variables, var_expr.size(), NULL, 0);
             // initialize nodes
             for (ap_state i = 1; i <= num_states; i++) {
                 if (init.count(i) > 0) {
@@ -464,12 +483,12 @@ namespace smt {
             std::cout << "}" << std::endl;
         }
 
-        bool apron_counter_system::fixpoint_check(bool widen_flg) {
+        bool apron_counter_system::fixpoint_check(bool widen_flag) {
             bool ret = true;
             for (auto &p : nodes) {
                 if (!p.second.equal_to_pre(man)) {
                     ret = false;
-                    if (widen_flg) p.second.widening(man);
+                    if (widen_flag) p.second.widening(man);
                 }
             }
             return ret;

@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include <unordered_set>
 //#include <vector>
-//#include "theory_str.h"
 #include <gmp.h>
 extern "C" {
 #include "ap_global0.h"
@@ -44,9 +43,7 @@ namespace smt {
                 assign_type type = assign_type::CONST;
                 std::list<std::string> vars = std::list<std::string>();
                 unsigned long num = -1;
-
                 const std::string type2str() const;
-
                 bool operator<(const cs_assign &other) const;
             };
 
@@ -57,27 +54,20 @@ namespace smt {
             // public methods
             const std::set<cs_state> &init_states() const { return init; };  // return a copied reference
             const cs_state final_state() const { return final; };
-
             bool is_init(cs_state const &s) const { return init.count(s) > 0; };
-
             bool is_final(cs_state const &s) const { return s == final; };
-
             void add_init_state(const cs_state s) { init.insert(s); };
-
             void set_final_state(const cs_state s) { final = s; }  // Note: no check of number of states
             bool add_transition(const cs_state s, const cs_assign &assign, const cs_state s_to);  // add one transition
-            void add_var_name(const std::string &str) { var_names.insert(str); };
-
-            const std::set<std::string> &get_var_names() const { return var_names; };
-
+            bool add_var_expr(const std::string &str, expr* var_exp);
+            const std::map<std::string,expr*> &get_var_expr() const { return var_expr; };
             const unsigned long get_num_states() const { return num_states; };
-
             const cs_relation &get_relations() const { return relation; };
-
             void print_counter_system() const;  // printout
+            void print_var_expr(ast_manager & m);
         private:
             // private attributes
-            std::set<std::string> var_names;  // all var names appeared
+            std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
             unsigned long num_states;
             std::set<cs_state> init;  // initial (success) states
             cs_state final;           // final state (root of word equation)
@@ -94,21 +84,14 @@ namespace smt {
                 using ref = std::reference_wrapper<node>;
 
                 node() = default;
-
                 node(ap_manager_t *man, ap_abstract1_t &base_abs);  // initialize base attributes
                 node(ap_manager_t *man, ap_environment_t *env, bool top_flag);  // initialize with apron defaults
                 bool equal_to_pre(ap_manager_t *man) { return ap_abstract1_is_eq(man, &abs_pre, &abs); };
-
                 ap_abstract1_t &get_abs() { return abs; };
-
                 bool join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs);
-
                 void widening(ap_manager_t *man);
-
                 void print_abs(ap_manager_t *man) { ap_abstract1_fprint(stdout, man, &abs); };
-
                 void print_abs_silent(ap_manager_t *man);
-
                 void print_abs_pre(ap_manager_t *man) { ap_abstract1_fprint(stdout, man, &abs_pre); };
 //                bool operator<(const node& other) { return abs<other.get_abs()? true:false; };
             private:
@@ -119,9 +102,7 @@ namespace smt {
             class ap_assign {
             public:
                 ap_assign(ap_environment_t *env, const counter_system::cs_assign &assign);
-
                 const std::list<std::pair<char *, ap_linexpr1_t>> &get_var_exp_pairs() const { return var_exp_pairs; };
-
                 void abstraction_propagate(ap_manager_t *man, node &s, node &s_to);
 
             private:
@@ -135,6 +116,7 @@ namespace smt {
         private: // private attributes
             ap_manager_t *man;
             ap_var_t *variables;
+            std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
             ap_environment_t *env;
             unsigned long num_states;
             unsigned long num_vars;
@@ -145,19 +127,12 @@ namespace smt {
             ap_relation relations;
         public: // public methods
             apron_counter_system(const counter_system &cs);
-
             void abstraction();
-
             void run_abstraction();
-
             bool fixpoint_check(bool widen_flag);
-
             void print_apron_counter_system();
-
             long int coeff2int(ap_coeff_t *c);
-
             void export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s);
-//            node& get_final_node() { return nodes.find(final)->second; };  // note: should be used with const
         };
 
     }

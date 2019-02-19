@@ -44,7 +44,7 @@ namespace smt {
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
-            const expr* origin_expr() const { return m_expr; }
+            expr* oringin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
