@@ -88,6 +88,7 @@ public:
     re2automaton(ast_manager& m);
     ~re2automaton();
     eautomaton* operator()(expr* e);
+    sym_expr_manager * get_manager() { return &sm; }
     void set_solver(expr_solver* solver);
     bool has_solver() const { return m_solver; }
     eautomaton* mk_product(eautomaton *a1, eautomaton *a2);

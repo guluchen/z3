@@ -438,50 +438,6 @@ namespace smt {
             return ptr{new zaut{a, {m_dep}}};
         }
 
-        bool zaut::is_empty() {
-            std::vector<state> todo;
-            std::set<state> reach({get_init()});
-            unsigned act;
-
-            expr_ref lower(m_dep.util_s.str.mk_char(0), m_dep.ast_man);
-            expr_ref upper(m_dep.util_s.str.mk_char(maximal_char), m_dep.ast_man);
-            symbol_ref range(sym_expr::mk_range(lower,upper), m_dep.sym_man);
-
-            todo.push_back(get_init());
-            while (!todo.empty()) {
-                act = todo.back();
-
-                if (is_final(act)) {
-                    return false;
-                }
-
-                todo.pop_back();
-                moves const& mvs = m_imp->get_moves_from(act);
-                for (unsigned i = 0; i < mvs.size(); i++) {
-                    if (!mvs[i].is_epsilon()) {
-                        symbol_ref con(mvs[i].t(), m_dep.sym_man);
-
-                        symbol_ref e(m_dep.sym_ba.mk_and(mvs[i].t(), range), m_dep.sym_man);
-
-                        /*std::cout << std::endl << "after..." << std::endl;
-                        symbol_ref e(m_sym_ba.mk_and(mvs[i].t(), range), m_sym_man);
-                        e->display(std::cout);
-                        std::cout << std::endl << "before..." << std::endl;
-                        con->display(std::cout);*/
-
-                        lbool is_sat = m_dep.sym_ba.is_sat(e);
-                        if (is_sat == l_undef || is_sat == l_false)
-                            continue;
-                    }
-                    if (reach.find(mvs[i].dst()) == reach.end()) {
-                        reach.emplace(mvs[i].dst());
-                        todo.push_back(mvs[i].dst());
-                    }
-                }
-            }
-            return false;
-        }
-
         automaton::ptr zaut::append(sptr other) {
             unsigned num_states = m_imp->num_states();
             moves new_trans = transitions();
@@ -504,20 +460,27 @@ namespace smt {
         }
 
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
-                : m_ast_man{m}, m_util_s{m}, m_aut_make{m} {
+                : m_ast_man{m}, m_util_s{m}, m_aut_make{m}, m_sym_man{m_aut_make.get_manager()} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
             m_sym_ba = alloc(zaut::symbol_boolean_algebra, m, *m_sym_solver);
-            m_aut_man = alloc(zaut::handler, m_sym_man, *m_sym_ba);
+            m_aut_man = alloc(zaut::handler, *m_sym_man, *m_sym_ba);
         }
 
         zaut_adaptor::~zaut_adaptor() {
             dealloc(m_aut_man);
             dealloc(m_sym_ba);
-            dealloc(m_sym_solver);
+            if (!m_aut_make.has_solver()) {
+                // if the solver has been attached, when m_aut_make is destroyed,
+                // the solver will be destroyed as well; if not, we have to destroy it here
+                dealloc(m_sym_solver);
+            }
         }
 
         automaton::sptr zaut_adaptor::mk_empty() {
-            return mk_from_re_expr(m_util_s.str.mk_empty(m_util_s.str.mk_string_sort()));
+            expr_ref a{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"a"})), m_ast_man};
+            expr_ref b{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"b"})), m_ast_man};
+            expr_ref empty{m_util_s.re.mk_inter(a, b), m_ast_man};
+            return mk_from_re_expr(empty);
         }
 
         automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re) {
@@ -527,7 +490,7 @@ namespace smt {
             if (!m_aut_make.has_solver()) {
                 m_aut_make.set_solver(m_sym_solver);
             }
-            zaut::dependency_ref dep{m_ast_man, m_util_s, m_sym_man, *m_sym_ba, *m_aut_man};
+            zaut::dependency_ref dep{m_ast_man, m_util_s, *m_sym_man, *m_sym_ba, *m_aut_man};
             auto&& aut = std::make_shared<zaut>(m_aut_make(re), dep);
             auto&& pair = std::make_pair(re, std::move(aut));
             return m_re_aut_cache.emplace(std::move(pair)).first->second;

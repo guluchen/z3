@@ -350,7 +350,7 @@ namespace smt {
         void basic_memberships::set(const element& var, expr *re) {
             auto fit = m_record.find(var);
             if (fit != m_record.end()) {
-                fit->second = m_aut_maker->mk_from_re_expr(re);
+                fit->second.ref = m_aut_maker->mk_from_re_expr(re);
                 return;
             }
             m_record.emplace(std::make_pair(var, m_aut_maker->mk_from_re_expr(re)));
@@ -358,14 +358,31 @@ namespace smt {
 
         memberships::ptr basic_memberships::assign_empty(const element& var) {
             basic_memberships *result = shallow_copy();
-            result->m_record.erase(var);
+            auto fit = result->m_record.find(var);
+            if (fit == result->m_record.end()) {
+                return mk_ptr(result);
+            }
+
+            if (fit->second.ref->is_final(fit->second.ref->get_init())) {
+                result->m_record.erase(var);
+            } else {
+                result->m_inconsistent = true;
+            }
             return mk_ptr(result);
         }
 
         basic_memberships::ptr basic_memberships::assign_empty_all(const std::set<element>& vars) {
             basic_memberships *result = shallow_copy();
             for (const auto& var : vars) {
-                result->m_record.erase(var);
+                auto fit = result->m_record.find(var);
+                if (fit == result->m_record.end()) continue;
+
+                if (fit->second.ref->is_final(fit->second.ref->get_init())) {
+                    result->m_record.erase(var);
+                } else {
+                    result->m_inconsistent = true;
+                    break;
+                }
             }
             return mk_ptr(result);
         }
@@ -383,12 +400,11 @@ namespace smt {
                 return acc + e.value();
             };
             const zstring& str = std::accumulate(es.begin(), es.end(), zstring{}, concat);
-            const automaton::sptr aut = remove_prefix(fit->second, str);
+            const automaton::sptr aut = remove_prefix(fit->second.ref, str);
             if (aut->is_empty()) {
                 result->m_inconsistent = true;
-                return mk_ptr(result);
             }
-            fit->second = aut;
+            fit->second.ref = aut;
             return mk_ptr(result);
         }
 
@@ -405,12 +421,11 @@ namespace smt {
                 result->m_record.erase(fit_from);
                 return mk_ptr(result);
             }
-            automaton::sptr aut = fit_from->second->intersect_with(fit_to->second);
+            automaton::sptr aut = fit_from->second.ref->intersect_with(fit_to->second.ref);
             if (aut->is_empty()) {
                 result->m_inconsistent = true;
-                return mk_ptr(result);
             }
-            fit_to->second = aut;
+            fit_to->second.ref = aut;
             return mk_ptr(result);
         }
 
@@ -424,13 +439,11 @@ namespace smt {
                 return result;
             }
 
-            const automaton::sptr aut = remove_prefix(fit->second, ch.value());
+            const automaton::sptr aut = remove_prefix(fit->second.ref, ch.value());
             if (aut->is_empty()) {
                 a->m_inconsistent = true;
-                result.emplace_back(mk_ptr(a));
-                return result;
             }
-            fit->second = aut;
+            fit->second.ref = aut;
             result.emplace_back(mk_ptr(a));
             return result;
         }
@@ -445,24 +458,27 @@ namespace smt {
             }
             auto fit_prefix = m_record.find(prefix);
             const bool prefix_has_constraint = fit_prefix != m_record.end();
-            for (auto& prefix_suffix : fit_var->second->split()) {
+            for (auto& prefix_suffix : fit_var->second.ref->split()) {
                 automaton::sptr aut_prefix = std::move(prefix_suffix.first);
                 if (prefix_has_constraint) {
-                    aut_prefix = aut_prefix->intersect_with(fit_prefix->second);
+                    aut_prefix = aut_prefix->intersect_with(fit_prefix->second.ref);
                     if (aut_prefix->is_empty()) continue;
                 }
                 automaton::sptr aut_suffix = std::move(prefix_suffix.second);
                 basic_memberships *m = shallow_copy();
-                m->m_record[prefix] = aut_prefix;
-                m->m_record[var] = aut_suffix;
+                m->m_record[prefix].ref = aut_prefix;
+                m->m_record[var].ref = aut_suffix;
                 result.emplace_back(mk_ptr(m));
             }
             return result;
         }
 
         std::ostream& basic_memberships::display(std::ostream& os) {
+            if (m_inconsistent) {
+                os << "(membership inconsistent)\n";
+            }
             for (const auto& var_lang : m_record) {
-                os << var_lang.first << " {\n" << var_lang.second << "\n}\n";
+                os << var_lang.first << " {\n" << var_lang.second.ref << "}\n";
             }
             return os << std::flush;
         }
@@ -627,6 +643,10 @@ namespace smt {
             m_diseq_wes.insert(std::move(trimmed));
         }
 
+        void state::add_membership(const element& var, expr *re) {
+            m_memberships->set(var, re);
+        }
+
         state state::assign_empty(const element& var) const {
             SASSERT(var.typed(element::t::VAR));
 
@@ -747,7 +767,7 @@ namespace smt {
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
             if (s.m_eq_wes.empty()) {
-                return os << "(no word equation left)" << std::endl;
+                os << "(no word equation left)" << std::endl;
             }
             for (const auto& we : s.m_eq_wes) {
                 os << we << '\n';
@@ -1061,6 +1081,10 @@ namespace smt {
 
     }
 
+    namespace {
+        bool IN_CHECK_FINAL = false;
+    }
+
     theory_str::theory_str(ast_manager& m, const theory_str_params& params)
             : theory{m.mk_family_id("seq")}, m_params{params}, m_rewrite{m}, m_util_a{m},
               m_util_s{m} {}
@@ -1071,11 +1095,11 @@ namespace smt {
 
     void theory_str::init(context *ctx) {
         theory::init(ctx);
-        STRACE("str", tout << "init\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "init\n";);
     }
 
     void theory_str::add_theory_assumptions(expr_ref_vector& assumptions) {
-        STRACE("str", tout << "add_theory_assumptions\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "add_theory_assumptions\n";);
     }
 
     theory_var theory_str::mk_var(enode *const n) {
@@ -1144,7 +1168,7 @@ namespace smt {
     }
 
     void theory_str::init_search_eh() {
-        STRACE("str", tout << "init_search\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search\n";);
     }
 
     void theory_str::relevant_eh(app *const n) {
@@ -1220,7 +1244,7 @@ namespace smt {
     }
 
     void theory_str::propagate() {
-        STRACE("str", tout << "propagate" << '\n';);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "propagate" << '\n';);
     }
 
     void theory_str::push_scope_eh() {
@@ -1228,7 +1252,7 @@ namespace smt {
         m_word_eq_todo.push_scope();
         m_word_diseq_todo.push_scope();
         m_membership_todo.push_scope();
-        STRACE("str", tout << "push_scope: " << m_scope_level << '\n';);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "push_scope: " << m_scope_level << '\n';);
     }
 
     void theory_str::pop_scope_eh(const unsigned num_scopes) {
@@ -1237,8 +1261,8 @@ namespace smt {
         m_word_diseq_todo.pop_scope(num_scopes);
         m_membership_todo.pop_scope(num_scopes);
         m_rewrite.reset();
-        STRACE("str", tout << "pop_scope: " << num_scopes << " (back to level "
-                           << m_scope_level << ")\n";);
+        STRACE("str", if (!IN_CHECK_FINAL)
+            tout << "pop_scope: " << num_scopes << " (back to level " << m_scope_level << ")\n";);
     }
 
     void theory_str::reset_eh() {
@@ -1249,11 +1273,13 @@ namespace smt {
         using namespace str;
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
+        IN_CHECK_FINAL = true;
 
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
+            IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
         solver solver{std::move(root)};
@@ -1283,12 +1309,13 @@ namespace smt {
             }
 
             // counter system part ends here
-
             TRACE("str", tout << "final_check ends\n";);
+            IN_CHECK_FINAL = false;
             return FC_DONE;
         }
         block_curr_assignment();
         TRACE("str", tout << "final_check ends\n";);
+        IN_CHECK_FINAL = false;
         return FC_CONTINUE;
     }
 
@@ -1302,11 +1329,11 @@ namespace smt {
     }
 
     void theory_str::init_model(model_generator& mg) {
-        STRACE("str", tout << "init_model\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "init_model\n";);
     }
 
     void theory_str::finalize_model(model_generator& mg) {
-        STRACE("str", tout << "finalize_model\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "finalize_model\n";);
     }
 
     lbool theory_str::validate_unsat_core(expr_ref_vector& unsat_core) {
@@ -1398,7 +1425,15 @@ namespace smt {
         using namespace str;
         const auto af = std::make_shared<zaut_adaptor>(get_manager(), get_context());
         state result{std::make_shared<str::basic_memberships>(af)};
-        STRACE("str", tout << "[Build State]\nword equation todo:\n";);
+        STRACE("str", tout << "[Build State]\nmembership todo:\n";);
+        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
+        for (const auto& m : m_membership_todo) {
+            SASSERT(is_const_fun(m.first));
+            zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
+            result.add_membership({element::t::VAR, name, m.first}, m.second);
+            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
+        }
+        STRACE("str", tout << "word equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
             result.add_word_eq({mk_word_term(eq.first), mk_word_term(eq.second)});
@@ -1409,11 +1444,6 @@ namespace smt {
         for (const auto& diseq : m_word_diseq_todo) {
             result.add_word_diseq({mk_word_term(diseq.first), mk_word_term(diseq.second)});
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
-        }
-        STRACE("str", tout << "membership todo:\n";);
-        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
-        for (const auto& m : m_membership_todo) {
-            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         return result;
     }

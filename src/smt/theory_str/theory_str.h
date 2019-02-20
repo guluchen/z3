@@ -152,9 +152,16 @@ namespace smt {
         using expr_pair = std::pair<expr_ref, expr_ref>;
 
         class basic_memberships : public memberships {
+            struct automaton_ref {
+                automaton::sptr ref;
+                automaton_ref() = default;
+                explicit automaton_ref(automaton::sptr ref) : ref{std::move(ref)} {}
+                bool operator==(const automaton_ref& other) const { return *ref == *other.ref; }
+            };
+            using record = std::unordered_map<element, automaton_ref, element::hash>;
             bool m_inconsistent = false;
             automaton_factory::sptr m_aut_maker;
-            std::unordered_map<element, automaton::sptr, element::hash> m_record;
+            record m_record;
         public:
             explicit basic_memberships(automaton_factory::sptr af) : m_aut_maker{std::move(af)} {}
             ~basic_memberships() override = default;
@@ -210,6 +217,7 @@ namespace smt {
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
+            void add_membership(const element& var, expr * re);
             state assign_empty(const element& var) const;
             state assign_empty_all(const std::set<element>& vars) const;
             state assign_const(const element& var, const word_term& tgt) const;

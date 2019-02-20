@@ -133,7 +133,7 @@ namespace smt {
         public:
             zaut(internal *a, dependency_ref dep) : m_imp{a}, m_dep{dep} {}
             ~zaut() override { dealloc(m_imp); }
-            bool is_empty() override;
+            bool is_empty() override { return m_imp->is_empty(); }
             bool is_deterministic() override;
             bool is_final(state s) override { return m_imp->is_final_state(s); }
             state get_init() override { return m_imp->init(); }
@@ -211,11 +211,11 @@ namespace smt {
         class zaut_adaptor : public automaton_factory {
             ast_manager& m_ast_man;
             seq_util m_util_s;
-            zaut::symbol_manager m_sym_man;
+            zaut::maker m_aut_make;
+            zaut::symbol_manager *m_sym_man;
             zaut::symbol_solver *m_sym_solver;
             zaut::symbol_boolean_algebra *m_sym_ba;
             zaut::handler *m_aut_man;
-            zaut::maker m_aut_make;
             std::map<expr *, zaut::sptr> m_re_aut_cache;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
