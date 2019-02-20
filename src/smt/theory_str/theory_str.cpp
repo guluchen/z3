@@ -1262,23 +1262,23 @@ namespace smt {
         if (solver.check() == result::SAT) {
             // build counter system from transform graph and run abstraction interpretation
             counter_system cs = counter_system(solver);
-            std::cout << "counter_system extracted!" << std::endl;
+//            std::cout << "counter_system extracted!" << std::endl;
 //            cs.print_counter_system();
 //            cs.print_var_expr(get_manager());
             apron_counter_system ap_cs = apron_counter_system(cs);
-            std::cout << "apron_counter_system constructed..." << std::endl;
+//            std::cout << "apron_counter_system constructed..." << std::endl;
 //            ap_cs.print_apron_counter_system();
-            std::cout << "apron_counter_system abstraction starting..." << std::endl;
+//            std::cout << "apron_counter_system abstraction starting..." << std::endl;
             ap_cs.run_abstraction();
-            std::cout << "apron_counter_system abstraction finished..." << std::endl;
+//            std::cout << "apron_counter_system abstraction finished..." << std::endl;
             // make length constraints from the result of abstraction interpretation
-            std::cout << "generating length constraints..." << std::endl;
+//            std::cout << "generating length constraints..." << std::endl;
             length_constraint lenc =
                     length_constraint(ap_cs.get_ap_manager(),&ap_cs.get_final_node().get_abs(),ap_cs.get_var_expr());
-            lenc.pretty_print(get_manager());
+//            lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
+//                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
                 add_axiom(lenc_res);
             }
 

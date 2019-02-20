@@ -136,7 +136,6 @@ namespace smt {
             void print_apron_counter_system();
             node& get_final_node() { return nodes[final]; };  // use it like a const method.
             std::map<std::string,expr*>& get_var_expr() { return var_expr; };  // use it like a const method.
-//            void export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s);
         };
 
         class length_constraint {
