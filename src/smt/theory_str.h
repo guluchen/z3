@@ -555,6 +555,10 @@ namespace smt {
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements);
 
+            bool passSelfConflict(
+                Arrangment a,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements);
             /*
              * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
              */
@@ -1216,6 +1220,7 @@ namespace smt {
 
 
         std::map<expr*, int> varPieces;
+        std::map<expr*, int> currVarPieces;
         std::set<std::string> generatedEqualities;
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
