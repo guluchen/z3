@@ -44,7 +44,7 @@ namespace smt {
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
-            const expr* oringin_expr() const { return m_expr; }
+            expr* oringin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -130,11 +130,11 @@ namespace smt {
             using len_constraints = std::list<std::pair<element, automaton::len_constraint>>;
         public:
             virtual ~memberships() = 0;
-            virtual bool is_empty() = 0;
-            virtual bool is_inconsistent() = 0;
+            virtual bool empty() = 0;
+            virtual bool inconsistent() = 0;
             virtual std::size_t hash() = 0;
             virtual std::set<element> variables() = 0;
-            virtual void add(const element& var, expr * re) = 0;
+            virtual void set(const element& var, expr * re) = 0;
             virtual ptr assign_empty(const element& var) = 0;
             virtual ptr assign_empty_all(const std::set<element>& vars) = 0;
             virtual ptr assign_const(const element& var, const word_term& tgt) = 0;
@@ -149,32 +149,34 @@ namespace smt {
             friend std::ostream& operator<<(std::ostream& os, memberships::sptr m);
         };
 
-        class dummy_memberships : public memberships {
+        using expr_pair = std::pair<expr_ref, expr_ref>;
+
+        class basic_memberships : public memberships {
+            bool m_inconsistent = false;
+            automaton_factory::sptr m_aut_maker;
+            std::unordered_map<element, automaton::sptr, element::hash> m_record;
         public:
-            ~dummy_memberships() override = default;
-            bool is_empty() override { return true; }
-            bool is_inconsistent() override { return false; }
-            std::size_t hash() override { return 0; }
-            std::set<element> variables() override { return {}; }
-            void add(const element& var, expr * re) override {}
-            ptr assign_empty(const element& var) override { return ptr{new dummy_memberships()}; }
-            ptr assign_empty_all(const std::set<element>& vars) override {
-                return ptr{new dummy_memberships()}; }
-            ptr assign_const(const element& var, const word_term& tgt) override {
-                return ptr{new dummy_memberships()}; }
-            ptr assign_as(const element& var, const element& as_var) override {
-                return ptr{new dummy_memberships()}; }
-            std::list<ptr> assign_prefix(const element& var, const element& ch) override {
-                std::list<ptr> r; r.emplace_back(ptr{new dummy_memberships()}); return r; }
-            std::list<ptr> assign_prefix_var(const element& var, const element& prefix) override {
-                std::list<ptr> r; r.emplace_back(ptr{new dummy_memberships()}); return r; }
+            explicit basic_memberships(automaton_factory::sptr af) : m_aut_maker{std::move(af)} {}
+            ~basic_memberships() override = default;
+            bool empty() override { return m_record.empty(); }
+            bool inconsistent() override { return m_inconsistent; }
+            std::size_t hash() override;
+            std::set<element> variables() override;
+            void set(const element& var, expr * re) override;
+            ptr assign_empty(const element& var) override;
+            ptr assign_empty_all(const std::set<element>& vars) override;
+            ptr assign_const(const element& var, const word_term& tgt) override;
+            ptr assign_as(const element& var, const element& as_var) override;
+            std::list<ptr> assign_prefix(const element& var, const element& ch) override;
+            std::list<ptr> assign_prefix_var(const element& var, const element& prefix) override;
             len_constraints length_constraints() override { return {}; }
-            len_constraints length_constraints(const element& l, const word_term& r) override {
-                return {}; }
-            std::ostream& display(std::ostream& os) override { return os; }
-            bool operator==(const memberships& other) override { return true; }
-            bool operator!=(const memberships& other) override { return !(*this == other); }
-            friend std::ostream& operator<<(std::ostream& os, memberships::sptr m);
+            len_constraints length_constraints(const element& l, const word_term& r) override { return {}; }
+            std::ostream& display(std::ostream& os) override;
+            bool operator==(const memberships& other) override;
+        private:
+            basic_memberships* shallow_copy() const;
+            ptr mk_ptr(basic_memberships* m) const;
+            automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
 
         class state {
@@ -289,8 +291,6 @@ namespace smt {
             std::list<action> transform(const state& s) const;
         };
 
-        using expr_pair = std::pair<expr_ref, expr_ref>;
-
     }
 
     class theory_str : public theory {
@@ -299,7 +299,6 @@ namespace smt {
         th_rewriter m_rewrite;
         arith_util m_util_a;
         seq_util m_util_s;
-        std::unique_ptr<str::zaut_adaptor> m_aut_imp;
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;

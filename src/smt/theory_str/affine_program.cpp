@@ -1,4 +1,7 @@
 #include <iostream>
+#include <string>
+#include "ast/ast_pp.h"
+#include "smt/smt_theory.h"
 #include "smt/theory_str/theory_str.h"
 
 namespace smt {
@@ -9,6 +12,14 @@ namespace smt {
             if (type < other.type) return true;
             if (num < other.num) return true;
             if (vars.size() < other.vars.size()) return true;
+            return false;
+        }
+
+        bool counter_system::add_var_expr(const std::string &str, expr *var_exp) {
+            if (var_expr.count(str)==0) {
+                var_expr.insert({str,var_exp});
+                return true;
+            }
             return false;
         }
 
@@ -92,7 +103,7 @@ namespace smt {
                             assign.num = 0;  // assign to zero
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_CONST:
@@ -100,26 +111,26 @@ namespace smt {
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
                             SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_name(m.m_record[0].value().encode());
+                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
                             break;
                         case solver::move::t::TO_VAR:
                             assign.type = counter_system::assign_type::VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_VAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_name(e.value().encode());
+                                add_var_expr(e.value().encode(),e.oringin_expr());
                             }
                             break;
                         case solver::move::t::TO_CHAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_ONE;
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_name(m.m_record[0].value().encode());
+                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
                             break;
                         default: SASSERT(false);
                     }
@@ -136,6 +147,13 @@ namespace smt {
 //            for (const auto& e : mapped_states) {
 //                std::cout << e.first  << "    " << e.second << std::endl;
 //            }
+        }
+
+        void counter_system::print_var_expr(ast_manager &m) {
+            std::cout << "[var_name <--> expr] in counter system: " << std::endl;
+            for (const auto& e: var_expr) {
+                std::cout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second,m) << " ]" << std::endl;
+            }
         }
 
         void counter_system::print_transition(const smt::str::counter_system::cs_state s,
@@ -178,11 +196,11 @@ namespace smt {
                 sep_str = ", ";
             }
             std::cout << "}" << std::endl;
-            std::cout << "final=" << final << ", " << "#var=" << var_names.size() << std::endl;
+            std::cout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;
             std::cout << "vars={";
             sep_str = "";
-            for (auto const v : var_names) {
-                std::cout << sep_str << v;
+            for (auto const v : var_expr) {
+                std::cout << sep_str << v.first;
                 sep_str = ", ";
             }
             std::cout << "}" << std::endl;
@@ -227,70 +245,208 @@ namespace smt {
             abs_pre = ap_abstract1_copy(man, &abs);
         }
 
-        long int apron_counter_system::coeff2int(ap_coeff_t *c) {
+        long int ap_coeff2int(ap_coeff_t *c) {
             SASSERT(mpz_get_si(&c->val.scalar->val.mpq->_mp_den) == 1);  // make sure it is an integer
             return mpz_get_si(&c->val.scalar->val.mpq->_mp_num);
         }
 
-        void apron_counter_system::export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s) {
-            ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(man, &nodes[final].get_abs());
-            int len_cons_arr = ap_lincons1_array_size(&cons_arr);
-            std::cout << "export final linear constraints: " << std::endl;
-            std::cout << "---abs: " << std::endl;
-            nodes[final].print_abs(man);
-            std::cout << "---extracted linear constraints array: (" << len_cons_arr << ")" << std::endl;
-            ap_lincons1_array_fprint(stdout, &cons_arr);
-            std::cout << "---go through by index: (" << len_cons_arr << ")" << std::endl;
-
-            ap_lincons1_t ap_cons;
+        length_constraint::len_cons::len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
+                std::map<std::string,expr*>& var_expr) {
             ap_constyp_t *ap_constyp;
             ap_coeff_t *ap_cst, *ap_coeff;
             ap_environment_name_of_dim_t *name_of_dim;
-            for (int i = 0; i < len_cons_arr; i++) {
-                ap_cons = ap_lincons1_array_get(&cons_arr, i);
-                std::cout << "linear constraint " << i << " :" << std::endl;
-                ap_lincons1_fprint(stdout, &ap_cons);
-                std::cout << std::endl;
 
-                ap_constyp = ap_lincons1_constypref(&ap_cons);
-                std::cout << "constraint type: ";
-                switch (*ap_constyp) {
-                    case AP_CONS_EQ:
-                        std::cout << "AP_CONS_EQ" << std::endl;
-                        break;
-                    case AP_CONS_SUPEQ:
-                        std::cout << "AP_CONS_SUPEQ" << std::endl;
-                        break;
-                    case AP_CONS_SUP:
-                    case AP_CONS_EQMOD:
-                    case AP_CONS_DISEQ:
-                        std::cout << "Not supported type" << std::endl;
-                    default: SASSERT(false);
-                }
+            // set constraint type
+            ap_constyp = ap_lincons1_constypref(ap_cons_ptr);
+            std::cout << "constraint type: ";
+            switch (*ap_constyp) {
+                case AP_CONS_EQ:
+                    std::cout << "AP_CONS_EQ" << std::endl;
+                    m_type = lcons_type::EQ;
+                    break;
+                case AP_CONS_SUPEQ:
+                    std::cout << "AP_CONS_SUPEQ" << std::endl;
+                    m_type = lcons_type::SUPEQ;
+                    break;
+                case AP_CONS_SUP:
+                case AP_CONS_EQMOD:
+                case AP_CONS_DISEQ:
+                    std::cout << "Unsupported type" << std::endl;
+                default:
+                    SASSERT(false);
+            }
 
-                ap_cst = ap_lincons1_cstref(&ap_cons);
-                SASSERT(ap_cst->discr == AP_COEFF_SCALAR &&
-                        ap_cst->val.scalar->discr == AP_SCALAR_MPQ);  // only support these
-                std::cout << "constant: ";
-                ap_coeff_fprint(stdout, ap_cst);
-                std::cout << std::endl;
-                ast_manager &m = ap_util_a.get_manager();
-                expr_ref ap_cst_expr_ref(ap_util_a.mk_int(coeff2int(ap_cst)), m);
-                expr_ref zero(ap_util_a.mk_int(0), m);
-//                literal ap_cst_literal = mk_literal(ap_util_a.mk_ge(ap_cst_expr_ref, zero));
-                name_of_dim = ap_environment_name_of_dim_alloc(ap_cons.env);
-                long int num_coeff;
-                for (int j = 0; j < name_of_dim->size; j++) {
-                    ap_coeff = ap_lincons1_coeffref(&ap_cons, name_of_dim->p[j]);
-                    SASSERT(ap_coeff != NULL);
-                    num_coeff = coeff2int(ap_coeff);
-                    if (num_coeff != 0) {
-                        fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j], num_coeff);
-                    }
+            // set coefficients and constant
+            ap_cst = ap_lincons1_cstref(ap_cons_ptr);
+            SASSERT(ap_cst->discr == AP_COEFF_SCALAR &&
+                    ap_cst->val.scalar->discr == AP_SCALAR_MPQ);  // only support this case
+            std::cout << "constant: ";
+            ap_coeff_fprint(stdout, ap_cst);
+            std::cout << std::endl;
+            name_of_dim = ap_environment_name_of_dim_alloc(ap_cons_ptr->env);
+            m_cst = ap_coeff2int(ap_cst);
+            long int num_coeff;
+            for (int j = 0; j < name_of_dim->size; j++) {
+                ap_coeff = ap_lincons1_coeffref(ap_cons_ptr, name_of_dim->p[j]);
+                SASSERT(ap_coeff != NULL &&
+                        ap_coeff->discr == AP_COEFF_SCALAR &&
+                        ap_coeff->val.scalar->discr == AP_SCALAR_MPQ);  // only support this case
+                num_coeff = ap_coeff2int(ap_coeff);
+                if (num_coeff != 0) {
+                    fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j], num_coeff);
+                    std::string var_name(name_of_dim->p[j]);
+                    m_var_expr_coeff[var_name] = std::make_pair(var_expr[var_name],num_coeff);
                 }
-                ap_environment_name_of_dim_free(name_of_dim);
+            }
+            ap_environment_name_of_dim_free(name_of_dim);
+        }
+
+        void length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
+//            std::cout << "length constraint:" << std::endl;
+            for (const auto& e : m_var_expr_coeff) {
+                std::cout << "(" << e.second.second << ")*" << mk_pp(e.second.first,ast_man) << " + ";
+            }
+            std::cout << m_cst;
+            switch (m_type) {
+                case lcons_type::EQ:
+                    std::cout << " = 0";
+                    break;
+                case lcons_type::SUPEQ:
+                    std::cout << " >=0";
+                    break;
+                default:
+                    SASSERT(false);
+            }
+            std::cout << std::endl;
+        }
+
+        void length_constraint::pretty_print(ast_manager &ast_man) {
+            std::cout << "total linear constraints: " << m_cons.size() << std::endl;
+            for (auto& e : m_cons) {
+                e.pretty_print(ast_man);
             }
         }
+
+        expr* length_constraint::len_cons::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
+            expr* ret = ap_util_a.mk_int(m_cst);
+            for (const auto& e : m_var_expr_coeff) {
+                ret = ap_util_a.mk_add(ret,
+                        ap_util_a.mk_mul(ap_util_s.str.mk_length(e.second.first),ap_util_a.mk_int(e.second.second)));
+            }
+            switch (m_type) {
+                case lcons_type::EQ:
+                    ret = ap_util_a.mk_eq(ret,ap_util_a.mk_int(0));
+                    break;
+                case lcons_type::SUPEQ:
+                    ret = ap_util_a.mk_ge(ret,ap_util_a.mk_int(0));
+                    break;
+                default:
+                SASSERT(false);
+            }
+            return ret;
+        }
+
+        expr* length_constraint::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
+            if (empty()) {
+                std::cout << "ERROR: empty length constraint! export nothing..." << std::endl;
+                return nullptr;
+            }
+            std::cout << "number of linear constraints in z3expr: " << m_cons.size() << std::endl;
+            expr* ret;
+            bool flg = false;
+            for (auto& e : m_cons) {
+                if (flg) {
+                    ret = ap_util_a.get_manager().mk_and(ret,e.export_z3exp(ap_util_a,ap_util_s));
+                }
+                else {
+                    ret = e.export_z3exp(ap_util_a,ap_util_s);
+                    flg = true;
+                }
+//                std::cout << "~~~" << mk_pp(ret,ap_util_a.get_manager()) << std::endl;
+            }
+            return ret;
+        }
+
+        length_constraint::length_constraint(ap_manager_t *ap_man, ap_abstract1_t *ap_abs_ptr,
+                std::map<std::string,expr*>& var_expr) {
+            ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(ap_man, ap_abs_ptr);
+            size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
+            std::cout << "constructing linear constraint: " << std::endl;
+            std::cout << "---from abs: " << std::endl;
+            ap_abstract1_fprint(stdout, ap_man, ap_abs_ptr);
+            std::cout << "---extracted apron linear constraints array: (" << len_cons_arr << ")" << std::endl;
+            ap_lincons1_array_fprint(stdout, &cons_arr);
+
+            std::cout << "---process each linear constraint: (total " << len_cons_arr << ")" << std::endl;
+            ap_lincons1_t ap_cons;
+            for (size_t i = 0; i < len_cons_arr; i++) {
+                ap_cons = ap_lincons1_array_get(&cons_arr, i);
+                std::cout << "linear constraint " << i << "-th :" << std::endl;
+                ap_lincons1_fprint(stdout, &ap_cons);
+                std::cout << std::endl;
+                m_cons.emplace_back(len_cons(ap_man, &ap_cons, var_expr));
+            }
+        }
+
+//        void apron_counter_system::export_final_lincons(arith_util &ap_util_a, seq_util &ap_util_s) {
+//            ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(man, &nodes[final].get_abs());
+//            size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
+//            std::cout << "export final linear constraints: " << std::endl;
+//            std::cout << "---abs: " << std::endl;
+//            nodes[final].print_abs(man);
+//            std::cout << "---extracted linear constraints array: (" << len_cons_arr << ")" << std::endl;
+//            ap_lincons1_array_fprint(stdout, &cons_arr);
+//            std::cout << "---go through by index: (" << len_cons_arr << ")" << std::endl;
+//
+//            ap_lincons1_t ap_cons;
+//            ap_constyp_t *ap_constyp;
+//            ap_coeff_t *ap_cst, *ap_coeff;
+//            ap_environment_name_of_dim_t *name_of_dim;
+//            for (size_t i = 0; i < len_cons_arr; i++) {
+//                ap_cons = ap_lincons1_array_get(&cons_arr, i);
+//                std::cout << "linear constraint " << i << " :" << std::endl;
+//                ap_lincons1_fprint(stdout, &ap_cons);
+//                std::cout << std::endl;
+//
+//                ap_constyp = ap_lincons1_constypref(&ap_cons);
+//                std::cout << "constraint type: ";
+//                switch (*ap_constyp) {
+//                    case AP_CONS_EQ:
+//                        std::cout << "AP_CONS_EQ" << std::endl;
+//                        break;
+//                    case AP_CONS_SUPEQ:
+//                        std::cout << "AP_CONS_SUPEQ" << std::endl;
+//                        break;
+//                    case AP_CONS_SUP:
+//                    case AP_CONS_EQMOD:
+//                    case AP_CONS_DISEQ:
+//                        std::cout << "Not supported type" << std::endl;
+//                    default: SASSERT(false);
+//                }
+//
+//                ap_cst = ap_lincons1_cstref(&ap_cons);
+//                SASSERT(ap_cst->discr == AP_COEFF_SCALAR &&
+//                        ap_cst->val.scalar->discr == AP_SCALAR_MPQ);  // only support these
+//                std::cout << "constant: ";
+//                ap_coeff_fprint(stdout, ap_cst);
+//                std::cout << std::endl;
+//                ast_manager &m = ap_util_a.get_manager();
+//                expr_ref ap_cst_expr_ref(ap_util_a.mk_int(coeff2int(ap_cst)), m);
+//                expr_ref zero(ap_util_a.mk_int(0), m);
+////                literal ap_cst_literal = mk_literal(ap_util_a.mk_ge(ap_cst_expr_ref, zero));
+//                name_of_dim = ap_environment_name_of_dim_alloc(ap_cons.env);
+//                long int num_coeff;
+//                for (int j = 0; j < name_of_dim->size; j++) {
+//                    ap_coeff = ap_lincons1_coeffref(&ap_cons, name_of_dim->p[j]);
+//                    SASSERT(ap_coeff != NULL);
+//                    num_coeff = ap_coeff2int(ap_coeff);
+//                    if (num_coeff != 0) {
+//                        fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j], num_coeff);
+//                    }
+//                }
+//                ap_environment_name_of_dim_free(name_of_dim);
+//            }
+//        }
 
 
         bool apron_counter_system::node::join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs) {
@@ -383,13 +539,14 @@ namespace smt {
         }
 
         apron_counter_system::apron_counter_system(const smt::str::counter_system &cs) {
+            // copy var_expr from counter system by operator= (overloaded)
+            var_expr = cs.get_var_expr();
             // set variables names to C-style
-            std::set<std::string> var_names = cs.get_var_names();
-            num_vars = var_names.size();
-            variables = (ap_var_t *) malloc(sizeof(ap_var_t) * var_names.size());
+            num_vars = var_expr.size();
+            variables = (ap_var_t *) malloc(sizeof(ap_var_t) * var_expr.size());
             int count = 0;
-            for (auto &name : var_names) {
-                variables[count] = strdup(name.c_str());  // best way to copy c_str() to char*
+            for (auto &e : var_expr) {
+                variables[count] = strdup(e.first.c_str());  // best way to copy c_str() to char*
                 count++;
             }
             // set state-related attributes
@@ -398,7 +555,7 @@ namespace smt {
             num_states = cs.get_num_states();
             // set apron environment
             man = ap_ppl_poly_manager_alloc(true);
-            env = ap_environment_alloc(variables, var_names.size(), NULL, 0);
+            env = ap_environment_alloc(variables, var_expr.size(), NULL, 0);
             // initialize nodes
             for (ap_state i = 1; i <= num_states; i++) {
                 if (init.count(i) > 0) {
@@ -464,12 +621,12 @@ namespace smt {
             std::cout << "}" << std::endl;
         }
 
-        bool apron_counter_system::fixpoint_check(bool widen_flg) {
+        bool apron_counter_system::fixpoint_check(bool widen_flag) {
             bool ret = true;
             for (auto &p : nodes) {
                 if (!p.second.equal_to_pre(man)) {
                     ret = false;
-                    if (widen_flg) p.second.widening(man);
+                    if (widen_flag) p.second.widening(man);
                 }
             }
             return ret;

@@ -64,8 +64,8 @@ namespace smt {
             return result;
         }
 
-        word_term word_term::from_variable(const zstring& name, expr* e) {
-            return {{element::t::VAR, name,e}};
+        word_term word_term::from_variable(const zstring& name, expr *e) {
+            return {{element::t::VAR, name, e}};
         }
 
         bool word_term::prefix_const_mismatched(const word_term& w1, const word_term& w2) {
@@ -323,6 +323,176 @@ namespace smt {
             }
         }
 
+        memberships::~memberships() = default;
+
+        std::ostream& operator<<(std::ostream& os, const memberships::sptr m) {
+            return m->display(os);
+        }
+
+        std::size_t basic_memberships::hash() {
+            static const auto element_hash{element::hash{}};
+            std::size_t result{40099};
+            result += m_inconsistent ? 25939 : 0;
+            for (const auto& kv : m_record) {
+                result += element_hash(kv.first);
+            }
+            return result;
+        }
+
+        std::set<element> basic_memberships::variables() {
+            std::set<element> result;
+            for (const auto& kv : m_record) {
+                result.insert(kv.first);
+            }
+            return result;
+        }
+
+        void basic_memberships::set(const element& var, expr *re) {
+            auto fit = m_record.find(var);
+            if (fit != m_record.end()) {
+                fit->second = m_aut_maker->mk_from_re_expr(re);
+                return;
+            }
+            m_record.emplace(std::make_pair(var, m_aut_maker->mk_from_re_expr(re)));
+        }
+
+        memberships::ptr basic_memberships::assign_empty(const element& var) {
+            basic_memberships *result = shallow_copy();
+            result->m_record.erase(var);
+            return mk_ptr(result);
+        }
+
+        basic_memberships::ptr basic_memberships::assign_empty_all(const std::set<element>& vars) {
+            basic_memberships *result = shallow_copy();
+            for (const auto& var : vars) {
+                result->m_record.erase(var);
+            }
+            return mk_ptr(result);
+        }
+
+        basic_memberships::ptr
+        basic_memberships::assign_const(const element& var, const word_term& tgt) {
+            basic_memberships *result = shallow_copy();
+            auto fit = result->m_record.find(var);
+            if (fit == result->m_record.end()) {
+                return mk_ptr(result);
+            }
+
+            const std::list<element>& es = tgt.content();
+            static const auto concat = [](const zstring& acc, const element& e) {
+                return acc + e.value();
+            };
+            const zstring& str = std::accumulate(es.begin(), es.end(), zstring{}, concat);
+            const automaton::sptr aut = remove_prefix(fit->second, str);
+            if (aut->is_empty()) {
+                result->m_inconsistent = true;
+                return mk_ptr(result);
+            }
+            fit->second = aut;
+            return mk_ptr(result);
+        }
+
+        basic_memberships::ptr
+        basic_memberships::assign_as(const element& var, const element& as_var) {
+            basic_memberships *result = shallow_copy();
+            auto fit_from = result->m_record.find(var);
+            if (fit_from == result->m_record.end()) {
+                return mk_ptr(result);
+            }
+            auto fit_to = result->m_record.find(as_var);
+            if (fit_to == result->m_record.end()) {
+                result->m_record.emplace(std::make_pair(as_var, fit_from->second));
+                result->m_record.erase(fit_from);
+                return mk_ptr(result);
+            }
+            automaton::sptr aut = fit_from->second->intersect_with(fit_to->second);
+            if (aut->is_empty()) {
+                result->m_inconsistent = true;
+                return mk_ptr(result);
+            }
+            fit_to->second = aut;
+            return mk_ptr(result);
+        }
+
+        std::list<basic_memberships::ptr>
+        basic_memberships::assign_prefix(const element& var, const element& ch) {
+            std::list<ptr> result;
+            basic_memberships *a = shallow_copy();
+            auto fit = a->m_record.find(var);
+            if (fit == a->m_record.end()) {
+                result.emplace_back(mk_ptr(a));
+                return result;
+            }
+
+            const automaton::sptr aut = remove_prefix(fit->second, ch.value());
+            if (aut->is_empty()) {
+                a->m_inconsistent = true;
+                result.emplace_back(mk_ptr(a));
+                return result;
+            }
+            fit->second = aut;
+            result.emplace_back(mk_ptr(a));
+            return result;
+        }
+
+        std::list<basic_memberships::ptr>
+        basic_memberships::assign_prefix_var(const element& var, const element& prefix) {
+            std::list<ptr> result;
+            auto fit_var = m_record.find(var);
+            if (fit_var == m_record.end()) {
+                result.emplace_back(mk_ptr(shallow_copy()));
+                return result;
+            }
+            auto fit_prefix = m_record.find(prefix);
+            const bool prefix_has_constraint = fit_prefix != m_record.end();
+            for (auto& prefix_suffix : fit_var->second->split()) {
+                automaton::sptr aut_prefix = std::move(prefix_suffix.first);
+                if (prefix_has_constraint) {
+                    aut_prefix = aut_prefix->intersect_with(fit_prefix->second);
+                    if (aut_prefix->is_empty()) continue;
+                }
+                automaton::sptr aut_suffix = std::move(prefix_suffix.second);
+                basic_memberships *m = shallow_copy();
+                m->m_record[prefix] = aut_prefix;
+                m->m_record[var] = aut_suffix;
+                result.emplace_back(mk_ptr(m));
+            }
+            return result;
+        }
+
+        std::ostream& basic_memberships::display(std::ostream& os) {
+            for (const auto& var_lang : m_record) {
+                os << var_lang.first << " {\n" << var_lang.second << "\n}\n";
+            }
+            return os << std::flush;
+        }
+
+        bool basic_memberships::operator==(const memberships& other) {
+            const auto o = static_cast<const basic_memberships *>(&other);
+            return m_inconsistent == o->m_inconsistent && m_record == o->m_record;
+        }
+
+        basic_memberships *basic_memberships::shallow_copy() const {
+            basic_memberships *copy = new basic_memberships(m_aut_maker);
+            copy->m_inconsistent = m_inconsistent;
+            copy->m_record.insert(m_record.begin(), m_record.end());
+            return copy;
+        }
+
+        memberships::ptr basic_memberships::mk_ptr(basic_memberships *m) const {
+            return ptr{m};
+        }
+
+        automaton::sptr
+        basic_memberships::remove_prefix(automaton::sptr a, const zstring& prefix) const {
+            std::list<automaton::ptr> as = a->remove_prefix(prefix);
+            const automaton::sptr empty = m_aut_maker->mk_empty();
+            static const auto mk_union = [](automaton::sptr a1, automaton::ptr& a2) {
+                return a1->union_with(std::move(a2));
+            };
+            return std::accumulate(as.begin(), as.end(), empty, mk_union)->determinize();
+        }
+
         std::size_t state::hash::operator()(const state& s) const {
             static const auto word_equation_hash{word_equation::hash{}};
             std::size_t result{22447};
@@ -392,12 +562,6 @@ namespace smt {
             return m_eq_wes.size() == 1 ? *m_eq_wes.begin() : word_equation::null();
         }
 
-        memberships::~memberships() = default;
-
-        std::ostream& operator<<(std::ostream& os, const memberships::sptr m) {
-            return m->display(os);
-        }
-
         bool state::in_definition_form() const {
             static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
             return std::all_of(m_eq_wes.begin(), m_eq_wes.end(), in_def_form);
@@ -438,12 +602,12 @@ namespace smt {
         bool state::unsolvable_by_check() const {
             const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_allow_empty_var);
             return std::any_of(m_eq_wes.begin(), m_eq_wes.end(), unsolvable) ||
-                   diseq_inconsistent() || m_memberships->is_inconsistent();
+                   diseq_inconsistent() || m_memberships->inconsistent();
         }
 
         bool state::unsolvable_by_inference() const {
             return diseq_inconsistent() || eq_classes_inconsistent() ||
-                   m_memberships->is_inconsistent();
+                   m_memberships->inconsistent();
         }
 
         void state::add_word_eq(const word_equation& we) {
@@ -742,8 +906,7 @@ namespace smt {
             return m_backward_def.emplace(std::move(pair)).first->first;
         }
 
-        solver::solver(state&& root)
-                : m_rec_root{m_records.add_state(std::move(root))} {
+        solver::solver(state&& root) : m_rec_root{m_records.add_state(std::move(root))} {
             m_pending.push(m_rec_root);
         }
 
@@ -803,8 +966,8 @@ namespace smt {
             return false;
         }
 
-        const state& solver::add_sibling_more_removed(const state& s, state&& sib,
-                                                                  const element& v) {
+        const state&
+        solver::add_sibling_more_removed(const state& s, state&& sib, const element& v) {
             const state& added = m_records.add_state(std::move(sib));
             for (const auto& m : m_records.incoming_moves(s)) {
                 m_records.add_move(m.add_record(v), added);
@@ -812,8 +975,7 @@ namespace smt {
             return added;
         }
 
-        const state& solver::add_child_var_removed(const state& s, state&& c,
-                                                               const element& v) {
+        const state& solver::add_child_var_removed(const state& s, state&& c, const element& v) {
             const state& added = m_records.add_state(std::move(c));
             m_records.add_move({s, move::t::TO_EMPTY, {v}}, added);
             return added;
@@ -953,7 +1115,7 @@ namespace smt {
         context& ctx = get_context();
         SASSERT(is_of_this_theory(term));
         if (ctx.e_internalized(term)) {
-            enode* e = ctx.get_enode(term);
+            enode *e = ctx.get_enode(term);
             mk_var(e);
             return true;
         }
@@ -961,7 +1123,7 @@ namespace smt {
             if (!ctx.e_internalized(e)) {
                 ctx.internalize(e, false);
             }
-            enode* n = ctx.get_enode(e);
+            enode *n = ctx.get_enode(e);
             ctx.mark_as_relevant(n);
             mk_var(n);
         }
@@ -971,11 +1133,10 @@ namespace smt {
             ctx.mark_as_relevant(bv);
         }
 
-        enode* e = nullptr;
+        enode *e = nullptr;
         if (ctx.e_internalized(term)) {
             e = ctx.get_enode(term);
-        }
-        else {
+        } else {
             e = ctx.mk_enode(term, false, m.is_bool(term), true);
         }
         mk_var(e);
@@ -1086,8 +1247,6 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         using namespace str;
-//        using counter_system = smt::str::counter_system;
-//        using apron_counter_system = smt::str::apron_counter_system;
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
 
@@ -1098,19 +1257,33 @@ namespace smt {
             return FC_CONTINUE;
         }
         solver solver{std::move(root)};
-        result res = solver.check();
-        counter_system cs = counter_system(solver);
-        std::cout << "counter_system extracted!" << std::endl;
-//        cs.print_counter_system();
-        apron_counter_system ap_cs = apron_counter_system(cs);
-        std::cout << "apron_counter_system constructed!" << std::endl;
-//        ap_cs.print_apron_counter_system();
-        std::cout << "apron_counter_system abstraction starting!" << std::endl;
-        ap_cs.run_abstraction();
-        std::cout << "apron_counter_system abstraction finished!" << std::endl;
-        ap_cs.export_final_lincons(m_util_a,m_util_s);
-        if (res == result::SAT) {
-//        if (solver.check() == result::SAT) {
+//        result res = solver.check();
+//        if (res == result::SAT) {
+        if (solver.check() == result::SAT) {
+            // build counter system from transform graph and run abstraction interpretation
+            counter_system cs = counter_system(solver);
+            std::cout << "counter_system extracted!" << std::endl;
+//            cs.print_counter_system();
+//            cs.print_var_expr(get_manager());
+            apron_counter_system ap_cs = apron_counter_system(cs);
+            std::cout << "apron_counter_system constructed..." << std::endl;
+//            ap_cs.print_apron_counter_system();
+            std::cout << "apron_counter_system abstraction starting..." << std::endl;
+            ap_cs.run_abstraction();
+            std::cout << "apron_counter_system abstraction finished..." << std::endl;
+            // make length constraints from the result of abstraction interpretation
+            std::cout << "generating length constraints..." << std::endl;
+            length_constraint lenc =
+                    length_constraint(ap_cs.get_ap_manager(),&ap_cs.get_final_node().get_abs(),ap_cs.get_var_expr());
+            lenc.pretty_print(get_manager());
+            if (!lenc.empty()) {
+                expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
+                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
+                add_axiom(lenc_res);
+            }
+
+            // counter system part ends here
+
             TRACE("str", tout << "final_check ends\n";);
             return FC_DONE;
         }
@@ -1203,7 +1376,6 @@ namespace smt {
         return bv;
     }
 
-
     str::word_term theory_str::mk_word_term(expr *const e) const {
         using namespace str;
         zstring s;
@@ -1219,11 +1391,13 @@ namespace smt {
         }
         std::stringstream ss;
         ss << mk_pp(e, get_manager());
-        return word_term::from_variable({ss.str().data()},e);
+        return word_term::from_variable({ss.str().data()}, e);
     }
 
     str::state theory_str::mk_state_from_todo() {
-        str::state result{std::make_shared<str::dummy_memberships>()};
+        using namespace str;
+        const auto af = std::make_shared<zaut_adaptor>(get_manager(), get_context());
+        state result{std::make_shared<str::basic_memberships>(af)};
         STRACE("str", tout << "[Build State]\nword equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
