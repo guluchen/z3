@@ -474,6 +474,18 @@ namespace smt {
         bool internalize_term(app *term) override;
         theory_var mk_var(enode *n) override;
         theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
+
+        /*
+         * Helper function for mk_value().
+         * Attempts to resolve the expression 'n' to a string constant.
+         * Stronger than get_eqc_value() in that it will perform recursive descent
+         * through every subexpression and attempt to resolve those to concrete values as well.
+         * Returns the concrete value obtained from this process,
+         * guaranteed to satisfy m_strutil.is_string(),
+         * if one could be obtained,
+         * or else returns NULL if no concrete value was derived.
+         */
+        app * mk_value_helper(app * n);
         model_value_proc *mk_value(enode *n, model_generator& mg) override;
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
@@ -492,6 +504,10 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
+                void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
+                void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
+                bool propagate_length_within_eqc(expr * var);
             void underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::set<std::pair<expr*, int>> importantVars,
@@ -1105,6 +1121,8 @@ namespace smt {
         bool get_arith_value(expr* e, rational& val) const;
         bool lower_bound(expr* _e, rational& lo) const;
         bool upper_bound(expr* _e, rational& hi) const;
+        bool upper_num_bound(expr* e, rational& hi) const;
+        bool lower_num_bound(expr* e, rational& hi) const;
         void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
         /*
          * Collect constant strings (from left to right) in an AST node.

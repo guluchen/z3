@@ -822,6 +822,47 @@ namespace smt {
         }
     }
 
+    /*
+     * Helper function for mk_value().
+     * Attempts to resolve the expression 'n' to a string constant.
+     * Stronger than get_eqc_value() in that it will perform recursive descent
+     * through every subexpression and attempt to resolve those to concrete values as well.
+     * Returns the concrete value obtained from this process,
+     * guaranteed to satisfy m_strutil.is_string(),
+     * if one could be obtained,
+     * or else returns NULL if no concrete value was derived.
+     */
+    app * theory_str::mk_value_helper(app * n) {
+        if (u.str.is_string(n)) {
+            return n;
+        } else if (u.str.is_concat(n)) {
+            // recursively call this function on each argument
+            SASSERT(n->get_num_args() == 2);
+            expr * a0 = n->get_arg(0);
+            expr * a1 = n->get_arg(1);
+
+            app * a0_conststr = mk_value_helper(to_app(a0));
+            app * a1_conststr = mk_value_helper(to_app(a1));
+
+            if (a0_conststr != nullptr && a1_conststr != nullptr) {
+                zstring a0_s, a1_s;
+                u.str.is_string(a0_conststr, a0_s);
+                u.str.is_string(a1_conststr, a1_s);
+                zstring result = a0_s + a1_s;
+                return to_app(mk_string(result));
+            }
+        }
+        // fallback path
+        // try to find some constant string, anything, in the equivalence class of n
+        bool hasEqc = false;
+        expr * n_eqc = get_eqc_value(n, hasEqc);
+        if (hasEqc) {
+            return to_app(n_eqc);
+        } else {
+            return nullptr;
+        }
+    }
+
     model_value_proc *theory_str::mk_value(enode *const n, model_generator& mg) {
         ast_manager& m = get_manager();
         app_ref owner{m};
@@ -830,6 +871,19 @@ namespace smt {
         SASSERT(get_context().e_internalized(owner));
         STRACE("str", tout << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                            << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+        rational vLen;
+        if (get_len_value(n->get_owner(), vLen)) {
+            if (vLen.get_int32() == 0)
+                return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
+            else
+                STRACE("str", tout << " len = " << vLen << std::endl;);
+        }
+
+        app * val = mk_value_helper(owner);
+        if (val != nullptr) {
+            return alloc(expr_wrapper_proc, val);
+        } else {
+        }
         return alloc(expr_wrapper_proc, owner);
     }
 
@@ -3217,6 +3271,19 @@ namespace smt {
         (void) ctx;
         TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << std::endl;);
 
+        // enhancement: improved backpropagation of length information
+        {
+            std::set<expr*> varSet;
+            std::set<expr*> concatSet;
+            std::map<expr*, int> exprLenMap;
+
+            bool length_propagation_occurred = propagate_length(varSet, concatSet, exprLenMap);
+            if (length_propagation_occurred) {
+                TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
+                return FC_CONTINUE;
+            }
+        }
+
         std::set<expr*> eqc_roots;
         sort* string_sort = u.str.mk_string_sort();
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
@@ -3226,6 +3293,65 @@ namespace smt {
                 eqc_roots.insert(root->get_owner());
                 STRACE("str", tout << "Root equation: " << mk_pp(root->get_owner(), m) << std::endl;);
             }
+        }
+
+        for (const auto& n : variable_set){
+            STRACE("str", tout << "var " << mk_pp(n, m););
+            rational vLen;
+            if (get_len_value(n, vLen)) {
+                STRACE("str", tout << " len = " << vLen << std::endl;);
+            }
+            else {
+                rational v_l, v_h;
+                if (lower_bound(n, v_l))
+                STRACE("str", tout << "; low = " << v_l;);
+                if (upper_bound(n, v_h))
+                STRACE("str", tout << "; high = " << v_h;);
+            }
+            STRACE("str", tout << std::endl;);
+        }
+
+        for (const auto& n : arrMap){
+            STRACE("str", tout << "var " << mk_pp(n.second, m););
+            rational vLen;
+            if (get_len_value(n.first, vLen)){
+                for (int i = 0; i < vLen.get_int32(); ++i){
+                    expr* val_i = createSelectOperator(n.second, m_autil.mk_int(i));
+                    rational v_i;
+                    if (get_arith_value(val_i, v_i))
+                    STRACE("str", tout << " val_" << i << " = " << v_i << std::endl;);
+                }
+            }
+            STRACE("str", tout << std::endl;);
+        }
+
+        for (const auto& v : lenMap){
+            for (const auto& n : v.second){
+                rational v_i;
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m););
+                if (get_arith_value(n, v_i)) {
+                    STRACE("str", tout << " = " << v_i;);
+                }
+                else {
+                    rational v_l, v_h;
+                    if (lower_num_bound(n, v_l))
+                    STRACE("str", tout << "; low = " << v_l;);
+                    if (upper_num_bound(n, v_h))
+                    STRACE("str", tout << "; high = " << v_h;);
+                }
+                STRACE("str", tout << std::endl;);
+            }
+        }
+
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+        bool axiomAdded = false;
+        // collect all concats in context
+        for (expr_ref_vector::iterator it = assignments.begin(); it != assignments.end(); ++it) {
+            if (! ctx.is_relevant(*it)) {
+                continue;
+            }
+            STRACE("str", tout << __LINE__ << " " << mk_pp(*it, m) << std::endl;);
         }
 
         for (const auto& we: non_membership_memo) {
@@ -3257,6 +3383,175 @@ namespace smt {
 //            STRACE("str", dump_assignments(););
 //            return FC_DONE;
 //        }
+    }
+
+    bool theory_str::propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+        bool axiomAdded = false;
+        // collect all concats in context
+        for (expr_ref_vector::iterator it = assignments.begin(); it != assignments.end(); ++it) {
+            if (! ctx.is_relevant(*it)) {
+                continue;
+            }
+            if (m.is_eq(*it)) {
+                collect_var_concat(*it, varSet, concatSet);
+            }
+        }
+        // iterate each concat
+        // if a concat doesn't have length info, check if the length of all leaf nodes can be resolved
+        for (std::set<expr*>::iterator it = concatSet.begin(); it != concatSet.end(); it++) {
+            expr * concat = *it;
+            rational lenValue;
+            expr_ref concatlenExpr (mk_strlen(concat), m) ;
+            bool allLeafResolved = true;
+            if (! get_arith_value(concatlenExpr, lenValue)) {
+                // the length of concat is unresolved yet
+                if (get_len_value(concat, lenValue)) {
+                    // but all leaf nodes have length information
+                    TRACE("str", tout << "* length pop-up: " <<  mk_ismt2_pp(concat, m) << "| = " << lenValue << std::endl;);
+                    std::set<expr*> leafNodes;
+                    get_unique_non_concat_nodes(concat, leafNodes);
+                    expr_ref_vector l_items(m);
+                    for (std::set<expr*>::iterator leafIt = leafNodes.begin(); leafIt != leafNodes.end(); ++leafIt) {
+                        rational leafLenValue;
+                        if (get_len_value(*leafIt, leafLenValue)) {
+                            expr_ref leafItLenExpr (mk_strlen(*leafIt), m);
+                            expr_ref leafLenValueExpr (mk_int(leafLenValue), m);
+                            expr_ref lcExpr (ctx.mk_eq_atom(leafItLenExpr, leafLenValueExpr), m);
+                            l_items.push_back(lcExpr);
+                        } else {
+                            allLeafResolved = false;
+                            break;
+                        }
+                    }
+                    if (allLeafResolved) {
+                        expr_ref axl(m.mk_and(l_items.size(), l_items.c_ptr()), m);
+                        expr_ref lenValueExpr (mk_int(lenValue), m);
+                        expr_ref axr(ctx.mk_eq_atom(concatlenExpr, lenValueExpr), m);
+                        assert_implication(axl, axr);
+                        STRACE("str", tout <<  mk_ismt2_pp(axl, m) << std::endl << "  --->  " << std::endl <<  mk_ismt2_pp(axr, m)<< std::endl;);
+                        axiomAdded = true;
+                    }
+                }
+            }
+        }
+
+        // if no concat length is propagated, check the length of variables.
+        if (! axiomAdded) {
+            for (std::set<expr*>::iterator it = varSet.begin(); it != varSet.end(); it++) {
+                expr * var = *it;
+                rational lenValue;
+                expr_ref varlen (mk_strlen(var), m) ;
+                if (! get_arith_value(varlen, lenValue)) {
+                    if (propagate_length_within_eqc(var)) {
+                        axiomAdded = true;
+                    }
+                }
+//                else {
+//                    expr_ref_vector eqNodeSet(m);
+//                    expr* constValue = collect_eq_nodes(var, eqNodeSet);
+//                    rational lenConcat;
+//                    for (int i = 0; i < eqNodeSet.size(); ++i){
+//                        if (!get_len_value(eqNodeSet[i].get(), lenConcat)){
+//                            expr_ref_vector l_items(m);
+//                            expr_ref leafItLenExpr (mk_strlen(eqNodeSet[i].get()), m);
+//                            expr_ref leafLenValueExpr (mk_int(lenConcat), m);
+//                            expr_ref lcExpr (ctx.mk_eq_atom(leafItLenExpr, leafLenValueExpr), m);
+//                            l_items.push_back(lcExpr);
+//                            expr_ref axl(m.mk_and(l_items.size(), l_items.c_ptr()), m);
+//
+//                            expr_ref axr(ctx.mk_eq_atom(var, eqNodeSet[i].get()), m);
+//                            assert_implication(axr, axl);
+//                            STRACE("str", tout <<  mk_ismt2_pp(axr, m) << std::endl << "  --->  " << std::endl <<  mk_ismt2_pp(axl, m)<< std::endl;);
+//                            axiomAdded = true;
+//                        }
+//                    }
+//                }
+            }
+
+        }
+        return axiomAdded;
+    }
+
+    void theory_str::collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet) {
+        if (variable_set.find(node) != variable_set.end()) {
+            varSet.insert(node);
+        }
+        else if (is_app(node)) {
+            app * aNode = to_app(node);
+            if (u.str.is_length(aNode)) {
+                // Length
+                return;
+            }
+            if (u.str.is_concat(aNode)) {
+                if (concatSet.find(node) == concatSet.end()) {
+                    concatSet.insert(node);
+                }
+            }
+            // recursively visit all arguments
+            for (unsigned i = 0; i < aNode->get_num_args(); ++i) {
+                expr * arg = aNode->get_arg(i);
+                collect_var_concat(arg, varSet, concatSet);
+            }
+        }
+    }
+
+    void theory_str::get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet) {
+        app * a_node = to_app(node);
+        if (!u.str.is_concat(a_node)) {
+            argSet.insert(node);
+            return;
+        } else {
+            SASSERT(a_node->get_num_args() == 2);
+            expr * leftArg = a_node->get_arg(0);
+            expr * rightArg = a_node->get_arg(1);
+            get_unique_non_concat_nodes(leftArg, argSet);
+            get_unique_non_concat_nodes(rightArg, argSet);
+        }
+    }
+
+    bool theory_str::propagate_length_within_eqc(expr * var) {
+        bool res = false;
+        ast_manager & m = get_manager();
+        context & ctx = get_context();
+
+        TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(var, m) << std::endl ;);
+
+        rational varLen;
+        if (! get_len_value(var, varLen)) {
+            bool hasLen = false;
+            expr * nodeWithLen= var;
+            do {
+                if (get_len_value(nodeWithLen, varLen)) {
+                    hasLen = true;
+                    break;
+                }
+                nodeWithLen = get_eqc_next(nodeWithLen);
+            } while (nodeWithLen != var);
+
+            if (hasLen) {
+                // var = nodeWithLen --> |var| = |nodeWithLen|
+                expr_ref_vector l_items(m);
+                expr_ref varEqNode(ctx.mk_eq_atom(var, nodeWithLen), m);
+                l_items.push_back(varEqNode);
+
+                expr_ref nodeWithLenExpr (mk_strlen(nodeWithLen), m);
+                expr_ref varLenExpr (mk_int(varLen), m);
+                expr_ref lenEqNum(ctx.mk_eq_atom(nodeWithLenExpr, varLenExpr), m);
+                l_items.push_back(lenEqNum);
+
+                expr_ref axl(m.mk_and(l_items.size(), l_items.c_ptr()), m);
+                expr_ref varLen(mk_strlen(var), m);
+                expr_ref axr(ctx.mk_eq_atom(varLen, mk_int(varLen)), m);
+                assert_implication(axl, axr);
+                STRACE("str", tout <<  mk_ismt2_pp(axl, m) << std::endl << "  --->  " << std::endl <<  mk_ismt2_pp(axr, m););
+                res = true;
+            }
+        }
+        return res;
     }
 
     void theory_str::underapproximation(
@@ -3583,7 +3878,7 @@ namespace smt {
                     p);
             generatedEqualities.emplace(tmp01);
             if (cases.size() > 0)
-                return createAndOperator(cases);
+                return createOrOperator(cases);
             else {
                 return NULL;
             }
@@ -3651,7 +3946,6 @@ namespace smt {
         for (unsigned i = 0; i < possibleCases.size(); ++i) {
 
             if (passNotContainMapReview(possibleCases[i], lhs_elements, rhs_elements) && passSelfConflict(possibleCases[i], lhs_elements, rhs_elements)) {
-			    arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
                 expr* tmp = generateSMT(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_str, rhs_str, lhs_elements, rhs_elements, connectedVariables);
 
                 if (tmp != NULL) {
@@ -3666,7 +3960,6 @@ namespace smt {
                     STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
                     STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << std::endl;);
-                    break;
                 }
                 else {
                 }
@@ -3780,7 +4073,6 @@ namespace smt {
                             std::vector<std::pair<expr*, int>> lhs_elements,
                             std::vector<std::pair<expr*, int>> rhs_elements,
                             std::map<expr*, int> connectedVariables){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         ast_manager &m = get_manager();
 
         expr_ref_vector result_element(m);
@@ -4435,7 +4727,6 @@ namespace smt {
                         lhs_str, rhs_str,
                         connectedVariables, optimizing));
 
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             /* case 2 */
             expr_ref_vector ands(m);
             adds.reset();
@@ -4450,7 +4741,6 @@ namespace smt {
 
         expr* tmp = createAndOperator(result);
         STRACE("str", tout << __LINE__ <<  " *** " << result.size() << " " << mk_pp(tmp, m) << " *** " << std::endl;);
-        return m.mk_true();
         return tmp;
     }
 
@@ -5589,18 +5879,14 @@ namespace smt {
                                     }
                                     possibleCases.push_back(createAndOperator(subpossibleCases));
                                 }
-                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                             possibleCases.push_back(createLessOperator(m_autil.mk_int(std::min(localSplit, (int)content.length())), subLen));
-                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ...: " << possibleCases.size() << std::endl;);
                             resultParts.push_back(createOrOperator(possibleCases));
-                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
                         }
                     }
                     i += (partCnt - 1);
                 }
             }
         }
-        STRACE("str", tout << __LINE__ << " const|regex = connected var + ..." << std::endl;);
         return createAndOperator(resultParts);
     }
 
@@ -6362,16 +6648,12 @@ namespace smt {
      */
     app* theory_str::createOrOperator(expr_ref_vector ors){
         ast_manager &m = get_manager();
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ors.size() << std::endl;);
 
         if (ors.size() == 0)
             return m.mk_false();
         context & ctx   = get_context();
         app* tmp = m.mk_or(ors.size(), ors.c_ptr());
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ors.size() << std::endl;);
         ctx.internalize(tmp, false);
-
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << ors.size() << std::endl;);
         return tmp;
     }
 
@@ -7026,7 +7308,7 @@ namespace smt {
 
             if (imp)
                 for (expr_ref_vector::iterator itor = eqList.begin(); itor != eqList.end(); ++itor){
-                    STRACE("str", tout << "\t \t"<< mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << "\t \t"<< mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
                     result.insert(std::pair<expr*, int>(*itor, maxLen));
                 }
         }
@@ -7064,7 +7346,7 @@ namespace smt {
                 zstring value;
                 if (u.str.is_string(we.second.get(), value)) {
                     len = value.length();
-                    STRACE("str", tout << "\t " << mk_pp(we.first.get(), m) << " == \"" << value << "\"" << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\"" << std::endl;);
                 }
                 if (len != 0)
                     return true;
@@ -7073,7 +7355,7 @@ namespace smt {
                 zstring value;
                 if (u.str.is_string(we.first.get(), value)) {
                     len = value.length();
-                    STRACE("str", tout << "\t " << mk_pp(we.second.get(), m) << " == \"" << value << "\"" << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << std::endl;);
                 }
                 if (len != 0)
                     return true;
@@ -8944,6 +9226,42 @@ namespace smt {
         return m_autil.is_numeral(_lo, lo) && lo.is_int();
     }
 
+    bool theory_str::upper_num_bound(expr* e, rational& hi) const {
+        context& ctx = get_context();
+        ast_manager & m = get_manager();
+        family_id afid = m_autil.get_family_id();
+        expr_ref _hi(m);
+        do {
+            theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, e);
+            if (tha && tha->get_upper(ctx.get_enode(e), _hi)) break;
+            theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, e);
+            if (thi && thi->get_upper(ctx.get_enode(e), _hi)) break;
+            theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, e);
+            if (thr && thr->get_upper(ctx.get_enode(e), _hi)) break;
+            return false;
+        }
+        while (false);
+        return m_autil.is_numeral(_hi, hi) && hi.is_int();
+    }
+
+    bool theory_str::lower_num_bound(expr* e, rational& lo) const {
+        context& ctx = get_context();
+        ast_manager & m = get_manager();
+        expr_ref _lo(m);
+        family_id afid = m_autil.get_family_id();
+        do {
+            theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, e);
+            if (tha && tha->get_lower(ctx.get_enode(e), _lo)) break;
+            theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, e);
+            if (thi && thi->get_lower(ctx.get_enode(e), _lo)) break;
+            theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, e);
+            if (thr && thr->get_lower(ctx.get_enode(e), _lo)) break;
+            return false;
+        }
+        while (false);
+        return m_autil.is_numeral(_lo, lo) && lo.is_int();
+    }
+
     void theory_str::get_concats_in_eqc(expr * n, std::set<expr*> & concats) {
 
         expr * eqcNode = n;
@@ -9055,6 +9373,30 @@ namespace smt {
 
     void theory_str::init_model(model_generator& mg) {
         STRACE("str", tout << "initializing model..." << std::endl;);
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        for (const auto& n : variable_set){
+            STRACE("str", tout << "var " << mk_pp(n, m););
+            rational vLen;
+            if (get_len_value(n, vLen))
+                STRACE("str", tout << " len = " << vLen << std::endl;);
+            STRACE("str", tout << std::endl;);
+        }
+
+        for (const auto& n : arrMap){
+            STRACE("str", tout << "var " << mk_pp(n.second, m););
+            rational vLen;
+            if (get_len_value(n.first, vLen)){
+                for (int i = 0; i < vLen.get_int32(); ++i){
+                    expr* val_i = createSelectOperator(n.second, m_autil.mk_int(i));
+                    rational v_i;
+                    if (get_arith_value(val_i, v_i))
+                        STRACE("str", tout << " val_" << i << " = " << v_i << std::endl;);
+                }
+
+            }
+            STRACE("str", tout << std::endl;);
+        }
     }
 
     void theory_str::finalize_model(model_generator& mg) {
@@ -9064,8 +9406,24 @@ namespace smt {
         for (const auto& n : variable_set){
             STRACE("str", tout << "var " << mk_pp(n, m););
             rational vLen;
-            bool vLen_exists = get_len_value(n, vLen);
-            STRACE("str", tout << " len = " << vLen << std::endl;);
+            if (get_len_value(n, vLen))
+                STRACE("str", tout << " len = " << vLen << std::endl;);
+            STRACE("str", tout << std::endl;);
+        }
+
+        for (const auto& n : arrMap){
+            STRACE("str", tout << "var " << mk_pp(n.second, m););
+            rational vLen;
+            if (get_len_value(n.first, vLen)){
+                for (int i = 0; i < vLen.get_int32(); ++i){
+                    expr* val_i = createSelectOperator(n.second, m_autil.mk_int(i));
+                    rational v_i;
+                    if (get_arith_value(val_i, v_i))
+                    STRACE("str", tout << " val_" << i << " = " << v_i << std::endl;);
+                }
+
+            }
+            STRACE("str", tout << std::endl;);
         }
     }
 
