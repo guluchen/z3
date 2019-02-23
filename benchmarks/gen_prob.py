@@ -193,33 +193,31 @@ class Problem:
 
 def main():
     # Set argument parser
-    arg_parser = ArgumentParser(prog=None,
-                                usage=None,
-                                description='A simple SMT (quadratic) string problem generator.',
-                                epilog=None)
-    arg_parser.add_argument('prob_num', help='number of the problems to generate')
-    arg_parser.add_argument('-d', '--dir', help='path to generate problems, default is `./prob`',
-                            dest='dir', default='./prob')
+    arg_parser = ArgumentParser(description='A simple SMT (quadratic) string problem generator')
+    arg_parser.add_argument('NUM', help='number of the problems to generate')
+    arg_parser.add_argument('-d', '--dir',
+                            help='path to output problems (default: \'./prob\')',
+                            dest='d', default='./prob')
     arg_parser.add_argument('-p', '--prefix',
-                            help='prefix of the generated file names, default is `ttt_`',
-                            dest='prefix', default='ttt_')
+                            help='prefix of the output names (default: \'ttt_\')',
+                            dest='p', default='ttt_')
     arg_parser.add_argument('--non-quadratic',
-                            help='generate non-quadratic problems, default is off',
+                            help='generate non-quadratic problems (default: off)',
                             dest='non_quadratic', action='store_true')
-    arg_parser.add_argument('--inequation',
-                            help='generate problems having inequations, default is off',
-                            dest='inequation', action='store_true')
+    arg_parser.add_argument('--disequality',
+                            help='generate problems having disequalities (default: off)',
+                            dest='disequality', action='store_true')
     args = arg_parser.parse_args()
 
-    prob_num = int(args.prob_num)
-    output_dir = args.dir
-    file_prefix = args.prefix
-    print('Generating problems....')
-    print(f'   output dir: {output_dir}')
+    prob_num = int(args.NUM)
+    output_dir = args.d
+    file_prefix = args.p
+    print('Generating problems...')
     print(f'  file prefix: {file_prefix}')
+    print(f'   output dir: {output_dir}')
     print(f'  problem num: {prob_num}')
     print(f'non-quadratic: {args.non_quadratic}')
-    print(f'   inequation: {args.inequation}')
+    print(f'  disequality: {args.disequality}')
 
     # Proceed problem generation
     problem_set: Set[Problem] = set()
@@ -230,7 +228,7 @@ def main():
     else:
         while len(problem_set) < prob_num:
             problem_set.add(Problem.random_quadratic())
-    if not args.inequation:
+    if not args.disequality:
         for p in problem_set:
             p.equalize_all_constraints()
 

@@ -13,6 +13,8 @@ TOOL = os.getenv('TOOL', TOOL_DEFAULT_PATH)
 Z3STR3_OPT = 'smt.string_solver=z3str3'
 TIMEOUT = 30  # in seconds
 
+Answer = List[str]  # prob_name, expected_ans
+
 
 def run_tool(filename: str) -> str:
     try:
@@ -29,11 +31,11 @@ def run_tool(filename: str) -> str:
         return 'unknown'
 
 
-def check(prob_set_path: str, prob_notes: List[List[str]]):
+def check(prob_set_dir: str, prob_notes: List[Answer]):
     print(f'problem expected actual')
     all_checked = True
     for prob, ans in prob_notes:
-        result = run_tool(f'{prob_set_path}/{prob}')
+        result = run_tool(f'{prob_set_dir}/{prob}')
         if result != ans:
             all_checked = False
             print(f'{prob} {ans} {result}')
@@ -43,23 +45,20 @@ def check(prob_set_path: str, prob_notes: List[List[str]]):
 
 def main():
     # Set argument parser
-    arg_parser = ArgumentParser(prog=None,
-                                usage=None,
-                                description='Verify our tool using problems with known answers',
-                                epilog=None)
-    arg_parser.add_argument('prob_set_path', help='path to the problems')
-    arg_parser.add_argument('prob_ans_note', help='path to the answer note')
+    arg_parser = ArgumentParser(description='Verify our tool using problems with known answers')
+    arg_parser.add_argument('DIR', help='directory of the problems')
+    arg_parser.add_argument('NOTE', help='path to the corresponding answer note')
     args = arg_parser.parse_args()
 
     # Run the check
-    prob_set_path = os.path.normpath(args.prob_set_path)
-    print(f'problem set path: {prob_set_path}')
-    print(f'       tool path: {TOOL}')
-    print(f'         timeout: {TIMEOUT}s')
-    prob_ans_note = os.path.normpath(args.prob_ans_note)
+    prob_set_dir = os.path.normpath(args.DIR)
+    print(f'problem set dir: {prob_set_dir}')
+    print(f'      tool path: {TOOL}')
+    print(f'        timeout: {TIMEOUT}s')
+    prob_ans_note = os.path.normpath(args.NOTE)
     note_file = open(prob_ans_note)
     prob_notes = [line.strip().split() for line in note_file.readlines()]
-    check(prob_set_path, prob_notes)
+    check(prob_set_dir, prob_notes)
 
 
 if __name__ == '__main__':
