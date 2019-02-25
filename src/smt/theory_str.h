@@ -504,6 +504,8 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
+            bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
                 void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
                 void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);

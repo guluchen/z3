@@ -3271,14 +3271,14 @@ namespace smt {
         (void) ctx;
         TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << std::endl;);
 
-        // enhancement: improved backpropagation of length information
+        // enhancement: improved backpropagation of value/length information
         {
             std::set<expr*> varSet;
             std::set<expr*> concatSet;
             std::map<expr*, int> exprLenMap;
 
-            bool length_propagation_occurred = propagate_length(varSet, concatSet, exprLenMap);
-            if (length_propagation_occurred) {
+            bool propagation_occurred = propagate_final(varSet, concatSet, exprLenMap);
+            if (propagation_occurred) {
                 TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
                 return FC_CONTINUE;
             }
@@ -3334,6 +3334,7 @@ namespace smt {
                 }
                 else {
                     rational v_l, v_h;
+
                     if (lower_num_bound(n, v_l))
                     STRACE("str", tout << "; low = " << v_l;);
                     if (upper_num_bound(n, v_h))
@@ -3385,7 +3386,7 @@ namespace smt {
 //        }
     }
 
-    bool theory_str::propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap) {
+    bool theory_str::propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap){
         context & ctx = get_context();
         ast_manager & m = get_manager();
         expr_ref_vector assignments(m);
@@ -3400,6 +3401,192 @@ namespace smt {
                 collect_var_concat(*it, varSet, concatSet);
             }
         }
+
+        axiomAdded = axiomAdded || propagate_value(concatSet);
+        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
+        return axiomAdded;
+    }
+
+    bool  theory_str::propagate_value(std::set<expr*> & concatSet){
+        ast_manager & m = get_manager();
+        context & ctx = get_context();
+        bool axiomAdded = false;
+        // iterate each concat
+        // if a concat doesn't have length info, check if the length of all leaf nodes can be resolved
+        for (std::set<expr*>::iterator it = concatSet.begin(); it != concatSet.end(); it++) {
+            app * concat = to_app(*it);
+
+            expr * concat_lhs = concat->get_arg(0);
+            expr * concat_rhs = concat->get_arg(1);
+            // If the concat LHS and RHS both have a string constant in their EQC,
+            // but the var does not, then we assert an axiom of the form
+            // (lhs = "lhs" AND rhs = "rhs") --> (Concat lhs rhs) = "lhsrhs"
+            bool concat_lhs_haseqc, concat_rhs_haseqc, concat_haseqc;
+            expr * concat_lhs_str = get_eqc_value(concat_lhs, concat_lhs_haseqc);
+            expr * concat_rhs_str = get_eqc_value(concat_rhs, concat_rhs_haseqc);
+            expr * concat_str = get_eqc_value(*it, concat_haseqc);
+            if (concat_lhs_haseqc && concat_rhs_haseqc && !concat_haseqc) {
+                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                                  << "LHS ~= " << mk_pp(concat_lhs_str, m) << " RHS ~= " << mk_pp(concat_rhs_str, m) << std::endl;);
+
+                zstring lhsString, rhsString;
+                u.str.is_string(concat_lhs_str, lhsString);
+                u.str.is_string(concat_rhs_str, rhsString);
+                zstring concatString = lhsString + rhsString;
+
+                // special handling: don't assert that string constants are equal to themselves
+                expr_ref_vector lhs_terms(m);
+                if (!u.str.is_string(concat_lhs)) {
+                    lhs_terms.push_back(ctx.mk_eq_atom(concat_lhs, concat_lhs_str));
+                }
+
+                if (!u.str.is_string(concat_rhs)) {
+                    lhs_terms.push_back(ctx.mk_eq_atom(concat_rhs, concat_rhs_str));
+                }
+
+                if (lhs_terms.empty()) {
+                    // no assumptions on LHS
+                    expr_ref rhs(ctx.mk_eq_atom(concat, mk_string(concatString)), m);
+                    assert_axiom(rhs);
+                } else {
+                    expr_ref lhs(mk_and(lhs_terms), m);
+                    expr_ref rhs(ctx.mk_eq_atom(concat, mk_string(concatString)), m);
+                    assert_implication(lhs, rhs);
+                }
+                axiomAdded = true;
+            }
+            else if (!concat_lhs_haseqc && concat_rhs_haseqc && concat_haseqc) {
+                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                                  << "Concat ~= " << mk_pp(concat_str, m) << " RHS ~= " << mk_pp(concat_rhs_str, m) << std::endl;);
+
+                zstring concatString, rhsString;
+                u.str.is_string(concat_str, concatString);
+                u.str.is_string(concat_rhs_str, rhsString);
+                zstring lhsString = concatString.extract(0, concatString.length() - rhsString.length());
+
+                // special handling: don't assert that string constants are equal to themselves
+                expr_ref_vector terms(m);
+                if (!u.str.is_string(*it)) {
+                    terms.push_back(ctx.mk_eq_atom(*it, concat_str));
+                }
+
+                if (!u.str.is_string(concat_rhs)) {
+                    terms.push_back(ctx.mk_eq_atom(concat_rhs, concat_rhs_str));
+                }
+
+                if (terms.empty()) {
+                    // no assumptions on LHS
+                    expr_ref rhs(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
+                    assert_axiom(rhs);
+                } else {
+                    expr_ref lhs(mk_and(terms), m);
+                    expr_ref rhs(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
+                    assert_implication(lhs, rhs);
+                }
+
+                axiomAdded = true;
+
+            }
+            else if (concat_lhs_haseqc && !concat_rhs_haseqc && concat_haseqc) {
+                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                                  << "Concat ~= " << mk_pp(concat_str, m) << " LHS ~= " << mk_pp(concat_lhs_str, m) << std::endl;);
+
+                zstring concatString, lhsString;
+                u.str.is_string(concat_str, concatString);
+                u.str.is_string(concat_lhs_str, lhsString);
+                zstring rhsString = concatString.extract(lhsString.length(), concatString.length() - lhsString.length());
+
+                // special handling: don't assert that string constants are equal to themselves
+                expr_ref_vector terms(m);
+                if (!u.str.is_string(*it)) {
+                    terms.push_back(ctx.mk_eq_atom(*it, concat_str));
+                }
+
+                if (!u.str.is_string(concat_lhs)) {
+                    terms.push_back(ctx.mk_eq_atom(concat_lhs, concat_lhs_str));
+                }
+
+                if (terms.empty()) {
+                    // no assumptions on LHS
+                    expr_ref rhs(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
+                    assert_axiom(rhs);
+                } else {
+                    expr_ref lhs(mk_and(terms), m);
+                    expr_ref rhs(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
+                    assert_implication(lhs, rhs);
+                }
+
+                axiomAdded = true;
+            }
+            else if (!concat_lhs_haseqc && !concat_rhs_haseqc && concat_haseqc) {
+                rational lhs_len, rhs_len;
+                if (get_len_value(concat_lhs, lhs_len)){
+                    TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                                      << "Concat ~= " << mk_pp(concat_str, m) << " | LHS | ~= " << lhs_len << std::endl;);
+                    zstring concatString;
+                    u.str.is_string(concat_str, concatString);
+
+                    zstring lhsString = concatString.extract(0, lhs_len.get_int32());
+                    zstring rhsString = concatString.extract(lhs_len.get_int32(), concatString.length() - lhsString.length());
+
+                    expr_ref_vector lhs_terms(m), rhs_terms(m);
+                    if (!u.str.is_string(*it)) {
+                        lhs_terms.push_back(ctx.mk_eq_atom(*it, concat_str));
+                    }
+
+                    lhs_terms.push_back(ctx.mk_eq_atom(mk_int(lhs_len), mk_strlen(concat_lhs)));
+
+                    expr_ref lhs(mk_and(lhs_terms), m);
+
+                    expr_ref rhs_val(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
+                    expr_ref lhs_val(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
+                    rhs_terms.push_back(rhs_val);
+                    rhs_terms.push_back(lhs_val);
+                    expr_ref rhs(mk_and(rhs_terms), m);
+
+                    assert_implication(lhs, rhs);
+                    axiomAdded = true;
+                }
+
+                else if (get_len_value(concat_rhs, rhs_len)){
+                    TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                                      << "Concat ~= " << mk_pp(concat_str, m) << " | RHS | ~= " << rhs_len << std::endl;);
+                    zstring concatString;
+                    u.str.is_string(concat_str, concatString);
+
+                    zstring lhsString = concatString.extract(0, concatString.length() - rhs_len.get_int32());
+                    zstring rhsString = concatString.extract(concatString.length() - rhs_len.get_int32(), rhs_len.get_int32());
+
+                    expr_ref_vector lhs_terms(m), rhs_terms(m);
+                    if (!u.str.is_string(*it)) {
+                        lhs_terms.push_back(ctx.mk_eq_atom(*it, concat_str));
+                    }
+
+                    lhs_terms.push_back(ctx.mk_eq_atom(mk_int(rhs_len), mk_strlen(concat_rhs)));
+
+                    expr_ref lhs(mk_and(lhs_terms), m);
+
+                    expr_ref rhs_val(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
+                    expr_ref lhs_val(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
+                    rhs_terms.push_back(rhs_val);
+                    rhs_terms.push_back(lhs_val);
+                    expr_ref rhs(mk_and(rhs_terms), m);
+
+                    assert_implication(lhs, rhs);
+                    axiomAdded = true;
+                }
+            }
+        }
+        return axiomAdded;
+    }
+
+    bool theory_str::propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+        bool axiomAdded = false;
+
         // iterate each concat
         // if a concat doesn't have length info, check if the length of all leaf nodes can be resolved
         for (std::set<expr*>::iterator it = concatSet.begin(); it != concatSet.end(); it++) {
@@ -3411,7 +3598,7 @@ namespace smt {
                 // the length of concat is unresolved yet
                 if (get_len_value(concat, lenValue)) {
                     // but all leaf nodes have length information
-                    TRACE("str", tout << "* length pop-up: " <<  mk_ismt2_pp(concat, m) << "| = " << lenValue << std::endl;);
+                    TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " <<  mk_ismt2_pp(concat, m) << "| = " << lenValue << std::endl;);
                     std::set<expr*> leafNodes;
                     get_unique_non_concat_nodes(concat, leafNodes);
                     expr_ref_vector l_items(m);
@@ -3437,6 +3624,58 @@ namespace smt {
                     }
                 }
             }
+            else {
+                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " <<  mk_ismt2_pp(concat, m) << "  --->  " << lenValue << std::endl;);
+                // infer child len from concat len
+                ptr_vector<expr> leafNodes;
+                get_nodes_in_concat(concat, leafNodes);
+                std::map<expr*, int> unresolvedNodes;
+                expr_ref_vector l_items(m);
+
+                expr_ref concatLenValueExpr (mk_int(lenValue), m);
+                expr_ref lcExpr (ctx.mk_eq_atom(concatlenExpr, concatLenValueExpr), m);
+                l_items.push_back(lcExpr);
+                int pos = -1;
+                for (int i = 0; i < leafNodes.size(); ++i) {
+                    rational leafLenValue;
+                    if (get_len_value(leafNodes[i], leafLenValue)) {
+                        expr_ref leafItLenExpr (mk_strlen(leafNodes[i]), m);
+                        expr_ref leafLenValueExpr (mk_int(leafLenValue), m);
+                        expr_ref lcExpr (ctx.mk_eq_atom(leafItLenExpr, leafLenValueExpr), m);
+                        l_items.push_back(lcExpr);
+
+                        lenValue = lenValue - leafLenValue;
+                    } else {
+                        if (unresolvedNodes.find(leafNodes[i]) == unresolvedNodes.end()) {
+                            unresolvedNodes[leafNodes[i]] = 1;
+                            if (unresolvedNodes.size() > 1)
+                                break;
+                            pos = i;
+                        }
+                        else
+                            unresolvedNodes[leafNodes[i]] = unresolvedNodes[leafNodes[i]] + 1;
+                    }
+                }
+
+                if (unresolvedNodes.size() == 1){
+                    STRACE("str", tout <<  " Number of unresolved nodes  " << unresolvedNodes.size() << " at " << mk_ismt2_pp(leafNodes[pos], m) <<  std::endl;);
+                    // get the node
+                    SASSERT(pos != -1);
+                    rational tmp(unresolvedNodes[leafNodes[pos]]);
+                    rational newLen = div(lenValue, tmp);
+                    expr_ref nodeLenExpr (mk_strlen(leafNodes[pos]), m) ;
+
+                    expr_ref axl(m.mk_and(l_items.size(), l_items.c_ptr()), m);
+                    expr_ref lenValueExpr (mk_int(newLen), m);
+                    expr_ref axr(ctx.mk_eq_atom(nodeLenExpr, lenValueExpr), m);
+                    assert_implication(axl, axr);
+                    STRACE("str", tout <<  mk_ismt2_pp(axl, m) << "  --->  " <<  mk_ismt2_pp(axr, m)<< std::endl;);
+                    axiomAdded = true;
+                }
+                else {
+                    STRACE("str", tout <<  " Number of unresolved nodes  " << unresolvedNodes.size() << std::endl;);
+                }
+            }
         }
 
         // if no concat length is propagated, check the length of variables.
@@ -3450,26 +3689,6 @@ namespace smt {
                         axiomAdded = true;
                     }
                 }
-//                else {
-//                    expr_ref_vector eqNodeSet(m);
-//                    expr* constValue = collect_eq_nodes(var, eqNodeSet);
-//                    rational lenConcat;
-//                    for (int i = 0; i < eqNodeSet.size(); ++i){
-//                        if (!get_len_value(eqNodeSet[i].get(), lenConcat)){
-//                            expr_ref_vector l_items(m);
-//                            expr_ref leafItLenExpr (mk_strlen(eqNodeSet[i].get()), m);
-//                            expr_ref leafLenValueExpr (mk_int(lenConcat), m);
-//                            expr_ref lcExpr (ctx.mk_eq_atom(leafItLenExpr, leafLenValueExpr), m);
-//                            l_items.push_back(lcExpr);
-//                            expr_ref axl(m.mk_and(l_items.size(), l_items.c_ptr()), m);
-//
-//                            expr_ref axr(ctx.mk_eq_atom(var, eqNodeSet[i].get()), m);
-//                            assert_implication(axr, axl);
-//                            STRACE("str", tout <<  mk_ismt2_pp(axr, m) << std::endl << "  --->  " << std::endl <<  mk_ismt2_pp(axl, m)<< std::endl;);
-//                            axiomAdded = true;
-//                        }
-//                    }
-//                }
             }
 
         }
