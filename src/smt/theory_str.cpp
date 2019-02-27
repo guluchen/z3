@@ -3230,11 +3230,17 @@ namespace smt {
 
     void theory_str::pop_scope_eh(const unsigned num_scopes) {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << " pop " << num_scopes << std::endl;);
+
+        if (m_scope_level >= uState.level && m_scope_level - num_scopes <= uState.level)
+            uState.reset();
+
         m_scope_level -= num_scopes;
         m_we_expr_memo.pop_scope(num_scopes);
         m_wi_expr_memo.pop_scope(num_scopes);
         membership_memo.pop_scope(num_scopes);
         non_membership_memo.pop_scope(num_scopes);
+
+
 
         ptr_vector<enode> new_m_basicstr;
         for (ptr_vector<enode>::iterator it = m_basicstr_axiom_todo.begin(); it != m_basicstr_axiom_todo.end(); ++it) {
@@ -3344,17 +3350,6 @@ namespace smt {
             }
         }
 
-        expr_ref_vector assignments(m);
-        ctx.get_assignments(assignments);
-        bool axiomAdded = false;
-        // collect all concats in context
-        for (expr_ref_vector::iterator it = assignments.begin(); it != assignments.end(); ++it) {
-            if (! ctx.is_relevant(*it)) {
-                continue;
-            }
-            STRACE("str", tout << __LINE__ << " " << mk_pp(*it, m) << std::endl;);
-        }
-
         for (const auto& we: non_membership_memo) {
             STRACE("str", tout << "Non membership: " << we.first << " = " << we.second << std::endl;);
         }
@@ -3363,10 +3358,58 @@ namespace smt {
             STRACE("str", tout << "Membership: " << we.first << " = " << we.second << std::endl;);
         }
 
-        std::set<std::pair<expr*, int>> importantVars = collect_important_vars(eqc_roots);
-        std::map<expr*, std::set<expr*>> eq_combination = construct_eq_combination(importantVars);
-        const str::state& root = build_state_from_memo();
-        underapproximation(eq_combination, importantVars, root);
+        std::set<std::pair<expr *, int>> importantVars = collect_important_vars(eqc_roots);
+        std::map<expr*, std::set<expr*>> causes;
+        std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, importantVars);
+
+        const str::state &root = build_state_from_memo();
+        bool axiomAdded = underapproximation(eq_combination, causes, importantVars, root);
+        if (axiomAdded) {
+            return FC_CONTINUE;
+        } else {
+            std::set<expr*> freeVars;
+            if (fixedLength(freeVars))
+                return FC_DONE;
+            else {
+                // assign some length
+                for (const auto& var : freeVars){
+                    if (eq_combination.find(var) != eq_combination.end()){
+                        // check it is non-root
+                        if (eq_combination[var].size() == 1){
+                            expr* n  = *eq_combination[var].begin();
+                            if (u.str.is_concat(n) || u.str.is_string(n))
+                                continue;
+
+                            // find lower bound
+                            rational low;
+                            if (lower_bound(var, low)){
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(var, m) << " >= " << low << std::endl;);
+                                axiomAdded = true;
+                                expr_ref expr1(ctx.mk_eq_atom(mk_strlen(var), mk_int(low)), m);
+//                                expr_ref expr2(createLessOperator(mk_int(low), mk_strlen(var)), m);
+                                expr_ref expr3(createLessEqOperator(mk_int(low), mk_strlen(var)), m);
+                                add_theory_aware_branching_info(expr1, 0.7, l_true);
+
+                                expr_ref_vector lhs_terms(m), rhs_terms(m);
+                                rhs_terms.push_back(expr1);
+//                                rhs_terms.push_back(expr2);
+
+                                lhs_terms.push_back(expr3);
+
+                                expr_ref lhs(mk_and(lhs_terms), m);
+                                expr_ref rhs(mk_or(rhs_terms), m);
+                                assert_implication(lhs, rhs);
+                            }
+                        }
+                    }
+                }
+                if (axiomAdded)
+                    return FC_CONTINUE;
+                else
+                    return FC_DONE;
+            }
+        }
+
 //        STRACE("str", tout << "root built:\n" << root << std::endl;);
 //        str::neilson_based_solver solver{root};
 //        if (root.unsolvable_by_inference() && block_dpllt_assignment_from_memo()) {
@@ -3384,6 +3427,26 @@ namespace smt {
 //            STRACE("str", dump_assignments(););
 //            return FC_DONE;
 //        }
+    }
+
+    void theory_str::add_theory_aware_branching_info(expr * term, double priority, lbool phase) {
+        context & ctx = get_context();
+        ctx.internalize(term, false);
+        bool_var v = ctx.get_bool_var(term);
+        ctx.add_theory_aware_branching_info(v, priority, phase);
+    }
+
+    bool theory_str::fixedLength(std::set<expr*> &freeVars){
+        bool unassigned = true;
+        ast_manager & m = get_manager();
+        for (const auto& var : variable_set) {
+            rational lenVal;
+            if (!get_len_value(var, lenVal)){
+                unassigned = false;
+                freeVars.insert(var);
+            }
+        }
+        return unassigned;
     }
 
     bool theory_str::propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap){
@@ -3418,6 +3481,168 @@ namespace smt {
 
             expr * concat_lhs = concat->get_arg(0);
             expr * concat_rhs = concat->get_arg(1);
+            expr_ref_vector eqLhs(m);
+            collect_eq_nodes(concat_lhs, eqLhs);
+
+            expr_ref_vector eqRhs(m);
+            collect_eq_nodes(concat_rhs, eqRhs);
+
+            rational len_lhs, len_rhs;
+            bool has_len_lhs = get_len_value(concat_lhs, len_lhs);
+            bool has_len_rhs = get_len_value(concat_rhs, len_rhs);
+
+            expr_ref_vector eqNodeSet(m);
+            collect_eq_nodes(*it, eqNodeSet);
+            for (int i = 0; i < eqNodeSet.size(); ++i)
+                if (eqNodeSet[i].get() != *it) {
+                    rational len_i;
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(eqNodeSet[i].get() , m) << std::endl;);
+                    if (get_len_value(eqNodeSet[i].get(), len_i)) {
+                        if (has_len_lhs && len_i == len_lhs) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                               << "LHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " RHS ~= empty"
+                                               << std::endl;);
+                            // left = var, right = emtpy
+                            zstring empty("");
+                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+
+                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_int(len_lhs)), m);
+                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(eqNodeSet[i].get()), mk_int(len_i)), m);
+
+                            lhs_terms.push_back(expr1);
+                            lhs_terms.push_back(expr2);
+                            lhs_terms.push_back(expr3);
+
+                            expr_ref expr4(ctx.mk_eq_atom(concat_lhs, eqNodeSet[i].get()), m);
+                            expr_ref expr5(ctx.mk_eq_atom(concat_rhs, mk_string(empty)), m);
+                            if (!eqLhs.contains(eqNodeSet[i].get()))
+                                rhs_terms.push_back(expr4);
+                            if (!eqRhs.contains(mk_string(empty)))
+                                rhs_terms.push_back(expr5);
+
+                            if (rhs_terms.size() > 0) {
+
+                                expr_ref lhs(mk_and(lhs_terms), m);
+                                expr_ref rhs(mk_and(rhs_terms), m);
+                                assert_implication(lhs, rhs);
+
+                                axiomAdded = true;
+                            }
+                        }
+
+                        if (has_len_rhs && len_i == len_rhs) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                               << "RHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " LHS ~= empty"
+                                               << std::endl;);
+                            // right = var, left = emtpy
+                            zstring empty("");
+                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+
+                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_int(len_rhs)), m);
+                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(eqNodeSet[i].get()), mk_int(len_i)), m);
+
+                            lhs_terms.push_back(expr1);
+                            lhs_terms.push_back(expr2);
+                            lhs_terms.push_back(expr3);
+
+                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, eqNodeSet[i].get()), m);
+                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, mk_string(empty)), m);
+
+                            if (!eqRhs.contains(eqNodeSet[i].get()))
+                                rhs_terms.push_back(expr4);
+                            if (!eqLhs.contains(mk_string(empty)))
+                                rhs_terms.push_back(expr5);
+
+                            if (rhs_terms.size() > 0) {
+
+                                expr_ref lhs(mk_and(lhs_terms), m);
+                                expr_ref rhs(mk_and(rhs_terms), m);
+                                assert_implication(lhs, rhs);
+
+                                axiomAdded = true;
+                            }
+                        }
+                    }
+
+                    if (u.str.is_concat(eqNodeSet[i].get())) {
+                        app *concat_i = to_app(eqNodeSet[i].get());
+                        expr *i_lhs = concat_i->get_arg(0);
+                        expr *i_rhs = concat_i->get_arg(1);
+                        rational len_i_lhs, len_i_rhs;
+                        if (get_len_value(i_lhs, len_i_lhs) && has_len_lhs && len_i_lhs == len_lhs) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                               << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
+                                               << std::endl;);
+                            // left = left, right = right
+                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+
+                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_int(len_lhs)), m);
+                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(i_lhs), mk_int(len_i_lhs)), m);
+
+                            lhs_terms.push_back(expr1);
+                            lhs_terms.push_back(expr2);
+                            lhs_terms.push_back(expr3);
+
+                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, i_rhs), m);
+                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, i_lhs), m);
+
+                            if (!eqRhs.contains(i_rhs))
+                                rhs_terms.push_back(expr4);
+                            if (!eqLhs.contains(i_lhs))
+                                rhs_terms.push_back(expr5);
+
+                            if (rhs_terms.size() > 0) {
+
+                                expr_ref lhs(mk_and(lhs_terms), m);
+                                expr_ref rhs(mk_and(rhs_terms), m);
+                                assert_implication(lhs, rhs);
+
+                                axiomAdded = true;
+                            }
+                        }
+
+                        if (get_len_value(i_rhs, len_i_rhs) && has_len_rhs && len_i_rhs == len_rhs) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                               << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
+                                               << std::endl;);
+                            // left = left, right = right
+                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+
+                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_int(len_rhs)), m);
+                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(i_rhs), mk_int(len_i_rhs)), m);
+
+                            lhs_terms.push_back(expr1);
+                            lhs_terms.push_back(expr2);
+                            lhs_terms.push_back(expr3);
+
+                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, i_rhs), m);
+                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, i_lhs), m);
+                            if (!eqRhs.contains(i_rhs))
+                                rhs_terms.push_back(expr4);
+                            if (!eqLhs.contains(i_lhs))
+                                rhs_terms.push_back(expr5);
+
+                            if (rhs_terms.size() > 0) {
+
+                                expr_ref lhs(mk_and(lhs_terms), m);
+                                expr_ref rhs(mk_and(rhs_terms), m);
+                                assert_implication(lhs, rhs);
+
+                                axiomAdded = true;
+                            }
+                        }
+                    }
+
+                }
+
             // If the concat LHS and RHS both have a string constant in their EQC,
             // but the var does not, then we assert an axiom of the form
             // (lhs = "lhs" AND rhs = "rhs") --> (Concat lhs rhs) = "lhsrhs"
@@ -3426,7 +3651,7 @@ namespace smt {
             expr * concat_rhs_str = get_eqc_value(concat_rhs, concat_rhs_haseqc);
             expr * concat_str = get_eqc_value(*it, concat_haseqc);
             if (concat_lhs_haseqc && concat_rhs_haseqc && !concat_haseqc) {
-                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
                                   << "LHS ~= " << mk_pp(concat_lhs_str, m) << " RHS ~= " << mk_pp(concat_rhs_str, m) << std::endl;);
 
                 zstring lhsString, rhsString;
@@ -3456,7 +3681,7 @@ namespace smt {
                 axiomAdded = true;
             }
             else if (!concat_lhs_haseqc && concat_rhs_haseqc && concat_haseqc) {
-                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
                                   << "Concat ~= " << mk_pp(concat_str, m) << " RHS ~= " << mk_pp(concat_rhs_str, m) << std::endl;);
 
                 zstring concatString, rhsString;
@@ -3488,7 +3713,7 @@ namespace smt {
 
             }
             else if (concat_lhs_haseqc && !concat_rhs_haseqc && concat_haseqc) {
-                TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
                                   << "Concat ~= " << mk_pp(concat_str, m) << " LHS ~= " << mk_pp(concat_lhs_str, m) << std::endl;);
 
                 zstring concatString, lhsString;
@@ -3521,7 +3746,7 @@ namespace smt {
             else if (!concat_lhs_haseqc && !concat_rhs_haseqc && concat_haseqc) {
                 rational lhs_len, rhs_len;
                 if (get_len_value(concat_lhs, lhs_len)){
-                    TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
                                       << "Concat ~= " << mk_pp(concat_str, m) << " | LHS | ~= " << lhs_len << std::endl;);
                     zstring concatString;
                     u.str.is_string(concat_str, concatString);
@@ -3549,7 +3774,7 @@ namespace smt {
                 }
 
                 else if (get_len_value(concat_rhs, rhs_len)){
-                    TRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(concat, m) << std::endl
                                       << "Concat ~= " << mk_pp(concat_str, m) << " | RHS | ~= " << rhs_len << std::endl;);
                     zstring concatString;
                     u.str.is_string(concat_str, concatString);
@@ -3773,12 +3998,20 @@ namespace smt {
         return res;
     }
 
-    void theory_str::underapproximation(
+    bool theory_str::underapproximation(
             std::map<expr*, std::set<expr*>> eq_combination,
+            std::map<expr*, std::set<expr*>> causes,
             std::set<std::pair<expr*, int>> importantVars,
             str::state root) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
+        UnderApproxState state(m_scope_level, eq_combination, importantVars);
+        if (state == uState)
+            return false;
+        else {
+            uState = state.clone();
+        }
+
 //        printEqualMap(eq_combination);
 //        staticIntegerAnalysis(fileDir);
 //        resetUnderapprox(wellForm);
@@ -3800,7 +4033,29 @@ namespace smt {
             v_combination[v.first] = tmp;
         }
 
-        convertEqualities(v_combination, connectedVars);
+        for (const auto& v : causes){
+
+            STRACE("str", tout << __LINE__ <<  " *** " << mk_pp(v.first, m) << ": " << v.second.size()  << std::endl;);
+            for (const auto& n : v.second) {
+                STRACE("str", tout << __LINE__ <<  " \t " << mk_ismt2_pp(n, m) << std::endl;);
+            }
+        }
+
+        std::map<expr*, expr*> _causes;
+        for (const auto& v : causes){
+            expr_ref_vector tmp(m);
+            for (const auto& n : v.second) {
+                tmp.push_back(n);
+            }
+            if (tmp.size() == 0)
+                _causes[v.first] = m.mk_true();
+            else {
+                expr_ref tmpExpr(createAndOperator(tmp), m);
+                _causes[v.first] = tmpExpr;
+            }
+        }
+
+        return convertEqualities(v_combination, connectedVars, _causes);
     }
 
     void theory_str::staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination){
@@ -3932,14 +4187,15 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
-    void theory_str::convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
-                                       std::map<expr*, int> importantVars){
+    bool theory_str::convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                                       std::map<expr*, int> importantVars,
+                                       std::map<expr*, expr*> causes){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         ast_manager &m = get_manager();
         clock_t t = clock();
         currVarPieces.clear();
         generatedEqualities.clear();
-
+        bool axiomAdded = false;
         for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
 
             std::string tmp = " ";
@@ -3979,7 +4235,10 @@ namespace smt {
                     if (result != NULL) {
                         /* sync result */
                         STRACE("str", tout << __LINE__ <<  mk_pp(result, m) << std::endl;);
-                        assert_axiom(result);
+                        if (!m.is_true(result)){
+                            axiomAdded = true;
+                        }
+                        assert_implication(causes[it->first], result);
                     }
                     else {
                         STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
@@ -4007,7 +4266,10 @@ namespace smt {
                     if (result != NULL) {
                         /* sync result */
                         STRACE("str", tout << __LINE__ <<  mk_pp(result, m) << std::endl;);
-                        assert_axiom(result);
+                        if (!m.is_true(result)){
+                            axiomAdded = true;
+                        }
+                        assert_implication(causes[it->first], result);
                     }
                     else {
                         STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
@@ -4044,8 +4306,21 @@ namespace smt {
                         );
                         t = clock() - t;
                         if (result != NULL) {
+                            STRACE("str", tout << __LINE__ <<  mk_pp(result, m) << std::endl;);
+                            if (causes.find(it->first) != causes.end()) {
+                                STRACE("str", tout << __LINE__ <<  " has causes" << std::endl;);
+                                STRACE("str", tout << __LINE__ << mk_pp(causes[it->first], m) << std::endl;);
+                            }
+                            else
+                                STRACE("str", tout << __LINE__ <<  " no causes" << std::endl;);
+                            if (!m.is_true(result)){
+                                axiomAdded = true;
+                            }
                             /* sync result*/
-                            assert_axiom(result);
+                            if (causes.find(it->first) != causes.end())
+                                assert_implication(causes[it->first], result);
+                            else
+                                assert_axiom(result);
                         }
                         else {
                             STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
@@ -4057,6 +4332,7 @@ namespace smt {
 
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+        return axiomAdded;
     }
 
     /*
@@ -7701,7 +7977,9 @@ namespace smt {
         return result;
     }
 
-    std::map<expr*, std::set<expr*>> theory_str::construct_eq_combination(std::set<std::pair<expr*, int>> importantVars){
+    std::map<expr*, std::set<expr*>> theory_str::construct_eq_combination(
+            std::map<expr*, std::set<expr*>> &causes,
+            std::set<std::pair<expr*, int>> importantVars){
         ast_manager &m = get_manager();
         context& ctx = get_context();
         (void) ctx;
@@ -7721,7 +7999,7 @@ namespace smt {
         for (const auto& node : eqc_roots){
             if (combinations.find(node) == combinations.end()){
                 std::set<expr*> parents;
-                combinations[node] = extend_object(node, combinations, parents, importantVars);
+                combinations[node] = extend_object(node, combinations, causes, parents, importantVars);
             }
         }
 
@@ -7736,6 +8014,7 @@ namespace smt {
     std::set<expr*> theory_str::extend_object(
             expr* object,
             std::map<expr*, std::set<expr*>> &combinations,
+            std::map<expr*, std::set<expr*>> &causes,
             std::set<expr*> parents,
             std::set<std::pair<expr*, int>> importantVars){
         if (combinations[object].size() != 0)
@@ -7755,6 +8034,14 @@ namespace smt {
         expr* constValue = collect_eq_nodes(object, eqNodeSet);
         if (constValue != nullptr) {
             result.insert(constValue);
+
+            if (object != constValue) {
+                expr_ref tmp(ctx.mk_eq_atom(object, constValue), m);
+                ctx.internalize(tmp, false);
+                causes[object].insert(tmp);
+
+                STRACE("str", tout << __LINE__ << " constaaaaaa " << mk_pp(tmp, m) << std::endl;);
+            }
         }
 
         std::set<expr *> eqConcat;
@@ -7790,6 +8077,14 @@ namespace smt {
 
         for (expr_ref_vector::iterator it = refined_eqNodeSet.begin(); it != refined_eqNodeSet.end(); ++it) {
             if (u.str.is_concat(*it)) {
+
+                if (object != *it) {
+                    expr_ref tmp(ctx.mk_eq_atom(object, *it), m);
+                    ctx.internalize(tmp, false);
+                    causes[object].insert(tmp);
+
+                    STRACE("str", tout << __LINE__ << " aaaaaa " << mk_pp(tmp, m) << std::endl;);
+                }
                 // get lhs
                 STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " == " << mk_pp(*it, m) << std::endl;);
                 expr* arg0 = to_app(*it)->get_arg(0);
@@ -7802,7 +8097,7 @@ namespace smt {
                     std::set<expr*> lhsParents;
                     lhsParents.insert(parents.begin(), parents.end());
                     lhsParents.insert(arg0);
-                    eqLhs = extend_object(arg0, combinations, lhsParents, importantVars);
+                    eqLhs = extend_object(arg0, combinations, causes, lhsParents, importantVars);
                 }
                 else {
                     eqLhs.insert(arg0);
@@ -7815,7 +8110,7 @@ namespace smt {
                     std::set<expr*> rhsParents;
                     rhsParents.insert(parents.begin(), parents.end());
                     rhsParents.insert(arg1);
-                    eqRhs = extend_object(arg1, combinations, rhsParents, importantVars);
+                    eqRhs = extend_object(arg1, combinations, causes, rhsParents, importantVars);
                     for (const auto& obj : combinations[arg1])
                         STRACE("str", tout << __LINE__ << " " <<  mk_pp(arg1, m) << " = " << mk_pp(obj, m) << std::endl;);
                 }
@@ -7828,10 +8123,22 @@ namespace smt {
                     eqLhs.clear();
                     eqLhs.insert(arg0);
                 }
+                else {
+                    if (causes[arg0].size() > 0) {
+                        for (const auto& n : causes[arg0])
+                            causes[object].insert(n);
+                    }
+                }
 
                 if (eqRhs.size() > 200){
                     eqRhs.clear();
                     eqRhs.insert(arg1);
+                }
+                else {
+                    if (causes[arg1].size() > 0) {
+                        for (const auto& n : causes[arg1])
+                            causes[object].insert(n);
+                    }
                 }
 
                 // check if value of lhs is empty
@@ -7855,24 +8162,33 @@ namespace smt {
 //                if (eqConcat.size() == 0) // both LHS and RHS are not empty
                 for (const auto &l : eqLhs)
                     for (const auto &r : eqRhs) {
-                        zstring val;
+                        zstring val_lhs, val_rhs;
+                        bool is_lhs_str = u.str.is_string(l, val_lhs);
+                        bool is_rhs_str = u.str.is_string(r, val_rhs);
                         bool specialCase = false;
-                        if (u.str.is_string(l, val))
-                            if (val.length() == 0) {
+                        if (is_lhs_str)
+                            if (val_lhs.length() == 0) {
                                 specialCase = true;
                                 eqConcat.insert(r);
                             }
 
-                        if (!specialCase && u.str.is_string(r, val))
-                            if (val.length() == 0){
+                        if (!specialCase && is_rhs_str)
+                            if (val_rhs.length() == 0){
                                 specialCase = true;
                                 eqConcat.insert(l);
                             }
 
                         if (!specialCase) {
-                            expr *tmp = u.str.mk_concat(l, r);
-                            m_trail.push_back(tmp);
-                            eqConcat.insert(tmp);
+                            if (is_lhs_str && is_rhs_str){
+                                expr *tmp = u.str.mk_string(val_lhs + val_rhs);
+                                m_trail.push_back(tmp);
+                                eqConcat.insert(tmp);
+                            }
+                            else {
+                                expr *tmp = u.str.mk_concat(l, r);
+                                m_trail.push_back(tmp);
+                                eqConcat.insert(tmp);
+                            }
                         }
                     }
             }

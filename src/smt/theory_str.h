@@ -460,6 +460,61 @@ namespace smt {
             }
         };
 
+        class UnderApproxState{
+        public:
+            std::map<expr*, std::set<expr*>> eq_combination;
+            std::set<std::pair<expr*, int>> importantVars;
+            int level = -1;
+
+            UnderApproxState(){
+
+            }
+
+            UnderApproxState(int _level,
+                            std::map<expr*, std::set<expr*>> _eq_combination,
+                            std::set<std::pair<expr*, int>> _importantVars):level(_level), eq_combination(_eq_combination), importantVars(_importantVars){
+
+            }
+
+            UnderApproxState clone(){
+                UnderApproxState tmp(level, eq_combination, importantVars);
+                return tmp;
+            }
+
+            void reset(){
+                level = -1;
+                eq_combination.clear();
+                importantVars.clear();
+            }
+
+            bool operator==(const UnderApproxState state){
+                std::map<expr*, std::set<expr*>> _eq_combination = state.eq_combination;
+                if (_eq_combination.size() != eq_combination.size())
+                    return false;
+                if (state.importantVars.size() != importantVars.size())
+                    return false;
+
+                for (const auto& v : importantVars)
+                    if (state.importantVars.find(v) == state.importantVars.end())
+                        return false;
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+
+                for (const auto& n : eq_combination) {
+                    if (_eq_combination.find(n.first) == _eq_combination.end())
+                        return false;
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+
+                    std::set<expr*> tmp = _eq_combination[n.first];
+                    for (const auto &e : n.second) {
+
+                        if (tmp.find(e) == tmp.end())
+                            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                            return false;
+                    }
+                }
+                return true;
+            }
+        };
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
@@ -504,14 +559,17 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
+            bool fixedLength(std::set<expr*> &freeVars);
             bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
             bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
                 void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
                 void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
                 bool propagate_length_within_eqc(expr * var);
-            void underapproximation(
+            bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
+                std::map<expr*, std::set<expr*>> causes,
                 std::set<std::pair<expr*, int>> importantVars,
                 str::state root);
 
@@ -521,8 +579,9 @@ namespace smt {
                 */
                 void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
                     void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
-            void convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
-                                           std::map<expr*, int> importantVars);
+            bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                                           std::map<expr*, int> importantVars,
+                                            std::map<expr*, expr*> causes);
             /*
              *
              */
@@ -991,10 +1050,13 @@ namespace smt {
                     int &len);
             void print_all_assignments();
             std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
-            std::map<expr*, std::set<expr*>> construct_eq_combination(std::set<std::pair<expr*, int>> importantVars);
+            std::map<expr*, std::set<expr*>> construct_eq_combination(
+                    std::map<expr*, std::set<expr*>> &causes,
+                    std::set<std::pair<expr*, int>> importantVars);
                 std::set<expr*> extend_object(
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,
+                    std::map<expr*, std::set<expr*>> &causes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
         bool can_propagate() override;
@@ -1250,6 +1312,8 @@ namespace smt {
         std::map<expr*, std::vector<expr*>> iterMap;
         std::map<expr*, expr*> arrMap;
         int connectingSize;
+
+        UnderApproxState uState;
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
