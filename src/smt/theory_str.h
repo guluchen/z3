@@ -473,7 +473,6 @@ namespace smt {
             UnderApproxState(int _level,
                             std::map<expr*, std::set<expr*>> _eq_combination,
                             std::set<std::pair<expr*, int>> _importantVars):level(_level), eq_combination(_eq_combination), importantVars(_importantVars){
-
             }
 
             UnderApproxState clone(){
@@ -482,36 +481,54 @@ namespace smt {
             }
 
             void reset(){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << level << std::endl;);
                 level = -1;
                 eq_combination.clear();
                 importantVars.clear();
             }
 
+            UnderApproxState&  operator=(const UnderApproxState& other){
+                level = other.level;
+                eq_combination = other.eq_combination;
+                importantVars = other.importantVars;
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << other.eq_combination.size() << " --> " << eq_combination.size() << std::endl;);
+                return *this;
+            }
+
             bool operator==(const UnderApproxState state){
                 std::map<expr*, std::set<expr*>> _eq_combination = state.eq_combination;
-                if (_eq_combination.size() != eq_combination.size())
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                if (_eq_combination.size() != eq_combination.size()) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << _eq_combination.size() << " vs " << eq_combination.size() <<  std::endl;);
                     return false;
-                if (state.importantVars.size() != importantVars.size())
+                }
+
+                if (state.importantVars.size() != importantVars.size()) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.importantVars.size() << " vs " << importantVars.size() <<  std::endl;);
                     return false;
+                }
 
                 for (const auto& v : importantVars)
-                    if (state.importantVars.find(v) == state.importantVars.end())
+                    if (state.importantVars.find(v) == state.importantVars.end()) {
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
                         return false;
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                    }
 
                 for (const auto& n : eq_combination) {
-                    if (_eq_combination.find(n.first) == _eq_combination.end())
+                    if (_eq_combination.find(n.first) == _eq_combination.end()) {
+                        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
                         return false;
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
-
+                    }
                     std::set<expr*> tmp = _eq_combination[n.first];
                     for (const auto &e : n.second) {
 
-                        if (tmp.find(e) == tmp.end())
-                            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                        if (tmp.find(e) == tmp.end()) {
+                            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
                             return false;
+                        }
                     }
                 }
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": Equal. " << std::endl;);
                 return true;
             }
         };
@@ -560,7 +577,47 @@ namespace smt {
         void reset_eh() override;
         final_check_status final_check_eh() override;
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
-            bool fixedLength(std::set<expr*> &freeVars);
+            std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
+            bool assignValues(const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> importantVars);
+            std::vector<int> createString(
+                expr* name,
+                zstring value,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> strValue,
+                std::vector<std::pair<int, int>> iters,
+                bool &assigned,
+                bool assignAnyway = false);
+            bool needValue(expr* name,
+                                   std::map<expr*, rational> len,
+                                   std::map<expr*, std::vector<int>> strValue);
+            void syncConst(
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            rational getVarLength(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len);
+            void forwardPropagate(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            void backwardPropagarate(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            void backwardPropagarate_simple(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            std::vector<int> getVarValue(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue);
+            bool fixedValue(std::vector<std::pair<expr*, rational>> &freeVars, std::map<expr*, rational> varLens);
+            bool fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens);
             bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
             bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
@@ -574,9 +631,12 @@ namespace smt {
                 str::state root);
 
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
-                /*
-                *
-                */
+                void createConstSet();
+                char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
+                std::set<char> initExcludeCharSet();
+                std::set<char> initIncludeCharSet();
+                void createAppearanceMap(
+                        std::map<expr*, std::set<expr*>> eq_combination);
                 void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
                     void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
             bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
@@ -1306,10 +1366,11 @@ namespace smt {
         std::set<std::string> generatedEqualities;
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
-        std::map<expr*, std::string> constMap;
+        std::set<zstring> constSet;
 
         std::map<expr*, std::vector<expr*>> lenMap;
         std::map<expr*, std::vector<expr*>> iterMap;
+        std::map<expr*, std::set<expr*>> appearanceMap;
         std::map<expr*, expr*> arrMap;
         int connectingSize;
 
