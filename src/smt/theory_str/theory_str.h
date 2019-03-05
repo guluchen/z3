@@ -309,8 +309,9 @@ namespace smt {
         private:
             automaton::sptr derive_var_membership(const var_relation& g, memberships::sptr m, const element& var);
             bool check_straight_line_membership(const var_relation& g, memberships::sptr m);
+            automaton::sptr concat_simple_membership(memberships::sptr m, const word_term& w);
+            bool check_linear_membership(const state& s);
             bool finish_after_found(const state& s);
-            bool check_linear_membership() const;
             const state& add_sibling_ext_record(const state& s, state&& sib, const element& v);
             const state& add_child_var_removed(const state& s, state&& c, const element& v);
             result split_var_empty_cases();

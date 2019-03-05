@@ -958,6 +958,8 @@ namespace smt {
 
         result solver::check(const bool split_var_empty_ahead) {
             if (in_status(result::SAT)) return m_status;
+            SASSERT(m_pending.size() == 1);
+            if (!check_linear_membership(m_pending.top())) return m_status = result::UNSAT;
             if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) return m_status;
             STRACE("str", tout << "[Check SAT]\n";);
             while (!m_pending.empty()) {
@@ -1043,11 +1045,46 @@ namespace smt {
 
             for (const auto& h : g.heads()) {
                 automaton::sptr lhs = m->get(h);
-                lhs = lhs ? lhs : m_aut_maker->mk_universe();
                 automaton::sptr rhs = derive_var_membership(g, m, h);
-                if (lhs->intersect_with(rhs)->is_empty()) {
-                    return false;
+                if ((!lhs && rhs->is_empty()) || lhs->intersect_with(rhs)->is_empty()) return false;
+            }
+            return true;
+        }
+
+        automaton::sptr solver::concat_simple_membership(memberships::sptr m, const word_term& w) {
+            std::list<automaton::sptr> as;
+            zstring str;
+            for (const auto& e : w.content()) {
+                if (e.typed(element::t::VAR)) {
+                    if (!str.empty()) {
+                        as.emplace_back(m_aut_maker->mk_from_word(str));
+                        str = zstring{};
+                    }
+                    automaton::sptr a = m->get(e);
+                    as.emplace_back(a ? a : m_aut_maker->mk_universe());
+                    continue;
+                } else if (e.typed(element::t::CONST)) {
+                    str = str + e.value();
+                    continue;
                 }
+            }
+            if (!str.empty()) {
+                as.emplace_back(m_aut_maker->mk_from_word(str));
+            }
+            static const auto concat = [](automaton::sptr a1, automaton::sptr a2) {
+                return a1->append(a2);
+            };
+            return std::accumulate(as.begin(), as.end(), m_aut_maker->mk_from_word({}), concat);
+        }
+
+        bool solver::check_linear_membership(const state& s) {
+            if (s.memberships()->empty()) {
+                return true;
+            }
+            for (const auto& we : s.word_eqs()) {
+                automaton::sptr lhs = concat_simple_membership(s.memberships(), we.lhs());
+                automaton::sptr rhs = concat_simple_membership(s.memberships(), we.rhs());
+                if (lhs->intersect_with(rhs)->is_empty()) return false;
             }
             return true;
         }
