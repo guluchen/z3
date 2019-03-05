@@ -76,7 +76,9 @@ namespace smt {
         public:
             virtual ~automaton_factory() = 0;
             virtual automaton::sptr mk_empty() = 0;
-            virtual automaton::sptr mk_from_re_expr(expr *re) = 0;
+            virtual automaton::sptr mk_universe() { return mk_empty()->complement(); }
+            virtual automaton::sptr mk_from_word(const zstring& str) = 0;
+            virtual automaton::sptr mk_from_re_expr(expr *re, bool minimize_result) = 0;
         };
 
         class zaut : public automaton {
@@ -216,12 +218,13 @@ namespace smt {
             zaut::symbol_solver *m_sym_solver;
             zaut::symbol_boolean_algebra *m_sym_ba;
             zaut::handler *m_aut_man;
-            std::map<expr *, zaut::sptr> m_re_aut_cache;
+            std::map<std::string, zaut::sptr> m_re_aut_cache;
         public:
             zaut_adaptor(ast_manager& m, context& ctx);
             ~zaut_adaptor() override;
             automaton::sptr mk_empty() override;
-            automaton::sptr mk_from_re_expr(expr *re) override;
+            automaton::sptr mk_from_word(const zstring& str) override;
+            automaton::sptr mk_from_re_expr(expr *re, bool minimize_result) override;
         };
 
         class oaut_adaptor : public automaton_factory {
@@ -234,7 +237,7 @@ namespace smt {
             seq_util m_util_s;
         public:
             explicit oaut_adaptor(ast_manager& m) : m{m}, m_util_s{m} {}
-            automaton::sptr mk_from_re_expr(expr *re) override;
+            automaton::sptr mk_from_re_expr(expr *re, bool minimize_result) override;
         private:
             std::shared_ptr<oaut> mk_oaut_from_re_expr(expr *re);
             unsigned exprToUnsigned(expr *);

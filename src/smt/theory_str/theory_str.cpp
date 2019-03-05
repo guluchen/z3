@@ -323,6 +323,49 @@ namespace smt {
             }
         }
 
+        var_relation::var_relation(const state& s) {
+            SASSERT(s.in_definition_form());
+
+            m_heads = s.variables();
+            for (const auto& we : s.word_eqs()) {
+                const node& n = we.definition_var();
+                if (m_record.find(n) != m_record.end()) { // var definition not unique
+                    m_valid = false;
+                    return;
+                }
+                nodes&& related = we.definition_body().variables();
+                for (const auto& r : related) {
+                    m_heads.erase(r);
+                }
+                m_record.emplace(std::make_pair(n, std::move(related)));
+                m_definition.emplace(std::make_pair(n, we.definition_body()));
+            }
+        }
+
+        bool var_relation::check_straight_line(const node& n) {
+            if (m_straight_line.find(n) != m_straight_line.end()) return true;
+            if (m_visited.find(n) != m_visited.end()) return false;
+
+            m_visited.insert(n);
+            const auto& var_related = m_record.find(n);
+            if (var_related != m_record.end()) {
+                for (const auto& related : var_related->second) {
+                    if (!check_straight_line(related)) return false;
+                }
+            }
+            m_straight_line.insert(n);
+            return true;
+        }
+
+        bool var_relation::is_straight_line() {
+            if (!is_valid()) return false;
+
+            for (const auto& var_related : m_record) {
+                if (!check_straight_line(var_related.first)) return false;
+            }
+            return true;
+        };
+
         memberships::~memberships() = default;
 
         std::ostream& operator<<(std::ostream& os, const memberships::sptr m) {
@@ -349,11 +392,20 @@ namespace smt {
 
         void basic_memberships::set(const element& var, expr *re) {
             auto fit = m_record.find(var);
+            automaton::sptr aut = m_aut_maker->mk_from_re_expr(re, true);
+            if (aut->is_empty()) {
+                m_inconsistent = true;
+            }
             if (fit != m_record.end()) {
-                fit->second.ref = m_aut_maker->mk_from_re_expr(re);
+                fit->second.ref = aut;
                 return;
             }
-            m_record.emplace(std::make_pair(var, m_aut_maker->mk_from_re_expr(re)));
+            m_record.emplace(std::make_pair(var, aut));
+        }
+
+        automaton::sptr basic_memberships::get(const element& var) {
+            auto fit = m_record.find(var);
+            return fit != m_record.end() ? fit->second.ref : nullptr;
         }
 
         memberships::ptr basic_memberships::assign_empty(const element& var) {
@@ -578,13 +630,15 @@ namespace smt {
             return m_eq_wes.size() == 1 ? *m_eq_wes.begin() : word_equation::null();
         }
 
+        var_relation state::var_rel_graph() const {
+            SASSERT(in_definition_form());
+
+            return var_relation{*this};
+        }
+
         bool state::in_definition_form() const {
             static const auto& in_def_form = std::mem_fn(&word_equation::in_definition_form);
             return std::all_of(m_eq_wes.begin(), m_eq_wes.end(), in_def_form);
-        }
-
-        bool state::in_solved_form() const {
-            return (in_definition_form() && definition_acyclic()) || m_eq_wes.empty();
         }
 
         bool state::eq_classes_inconsistent() const {
@@ -779,39 +833,6 @@ namespace smt {
             return os << std::flush;
         }
 
-        bool state::dag_def_check_node(const def_graph& graph, const def_node& node,
-                                       def_nodes& marked, def_nodes& checked) {
-            if (checked.find(node) != checked.end()) return true;
-            if (marked.find(node) != marked.end()) return false;
-
-            marked.insert(node);
-            const auto& dept_dests = graph.find(node);
-            if (dept_dests != graph.end()) {
-                for (const auto& next : dept_dests->second) {
-                    if (!dag_def_check_node(graph, next, marked, checked)) return false;
-                }
-            }
-            checked.insert(node);
-            return true;
-        }
-
-        bool state::definition_acyclic() const {
-            SASSERT(in_definition_form());
-
-            def_graph graph;
-            def_nodes marked;
-            def_nodes checked;
-            for (const auto& we : m_eq_wes) {
-                const def_node& node = we.definition_var();
-                if (graph.find(node) != graph.end()) return false; // definition not unique
-                graph[node] = we.definition_body().variables();
-            }
-            for (const auto& dept_dests : graph) {
-                if (!dag_def_check_node(graph, dept_dests.first, marked, checked)) return false;
-            }
-            return true;
-        }
-
         solver::move solver::move::add_record(const element& e) const {
             std::vector<element> r{m_record};
             r.push_back(e);
@@ -926,12 +947,13 @@ namespace smt {
             return m_backward_def.emplace(std::move(pair)).first->first;
         }
 
-        solver::solver(state&& root) : m_rec_root{m_records.add_state(std::move(root))} {
+        solver::solver(state&& root, automaton_factory::sptr af)
+                : m_rec_root{m_records.add_state(std::move(root))}, m_aut_maker{std::move(af)} {
             m_pending.push(m_rec_root);
         }
 
         bool solver::should_explore_all() const {
-            return true;
+            return false;
         }
 
         result solver::check(const bool split_var_empty_ahead) {
@@ -954,9 +976,13 @@ namespace smt {
                         STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
-                    if (s.in_solved_form()) {
-                        if (finish_after_found(s)) return m_status;
-                        continue;
+                    if (s.in_definition_form()) {
+                        var_relation&& var_rel = s.var_rel_graph();
+                        if (var_rel.is_straight_line() &&
+                            check_straight_line_membership(var_rel, s.memberships())) {
+                            if (finish_after_found(s)) return m_status;
+                            continue;
+                        }
                     }
                     const word_equation& only_one_left = s.only_one_eq_left();
                     if (only_one_left && only_one_left.in_definition_form()) {
@@ -976,6 +1002,56 @@ namespace smt {
             return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
         }
 
+        automaton::sptr
+        solver::derive_var_membership(const var_relation& g, memberships::sptr m,
+                                      const element& var) {
+            SASSERT(g.is_valid());
+
+            const auto& def_table = g.definition_table();
+            const auto fit = def_table.find(var);
+            if (fit == def_table.end()) {
+                return m_aut_maker->mk_universe();
+            }
+            const auto& def = fit->second;
+            std::list<automaton::sptr> as;
+            zstring str;
+            for (const auto& e : def.content()) {
+                if (e.typed(element::t::VAR)) {
+                    if (!str.empty()) {
+                        as.emplace_back(m_aut_maker->mk_from_word(str));
+                        str = zstring{};
+                    }
+                    as.emplace_back(derive_var_membership(g, m, e));
+                    continue;
+                } else if (e.typed(element::t::CONST)) {
+                    str = str + e.value();
+                    continue;
+                }
+            }
+            if (!str.empty()) {
+                as.emplace_back(m_aut_maker->mk_from_word(str));
+            }
+            static const auto concat = [](automaton::sptr a1, automaton::sptr a2) {
+                return a1->append(a2);
+            };
+            return std::accumulate(as.begin(), as.end(), m_aut_maker->mk_from_word({}), concat);
+        }
+
+        bool solver::check_straight_line_membership(const var_relation& g, memberships::sptr m) {
+            SASSERT(g.is_valid());
+            if (m->empty()) return true;
+
+            for (const auto& h : g.heads()) {
+                automaton::sptr lhs = m->get(h);
+                lhs = lhs ? lhs : m_aut_maker->mk_universe();
+                automaton::sptr rhs = derive_var_membership(g, m, h);
+                if (lhs->intersect_with(rhs)->is_empty()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         bool solver::finish_after_found(const state& s) {
             STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
             m_rec_success_leaves.emplace_back(s);
@@ -986,8 +1062,7 @@ namespace smt {
             return false;
         }
 
-        const state&
-        solver::add_sibling_more_removed(const state& s, state&& sib, const element& v) {
+        const state& solver::add_sibling_ext_record(const state& s, state&& sib, const element& v) {
             const state& added = m_records.add_state(std::move(sib));
             for (const auto& m : m_records.incoming_moves(s)) {
                 m_records.add_move(m.add_record(v), added);
@@ -1020,19 +1095,23 @@ namespace smt {
                         continue;
                     }
                     next_s.allow_empty_var(true);
-                    if (next_s.in_solved_form()) {
-                        const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
-                        if (finish_after_found(s)) return m_status;
-                        continue;
+                    if (next_s.in_definition_form()) {
+                        var_relation&& var_rel = next_s.var_rel_graph();
+                        if (var_rel.is_straight_line() &&
+                            check_straight_line_membership(var_rel, next_s.memberships())) {
+                            const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
+                            if (finish_after_found(s)) return m_status;
+                            continue;
+                        }
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
-                        const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
+                        const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
                         STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
                     next_s.allow_empty_var(false);
-                    const state& s = add_sibling_more_removed(curr_s, std::move(next_s), var);
+                    const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
                     pending.push(s);
                     STRACE("str", tout << "add:\n" << s << '\n';);
                 }
@@ -1053,10 +1132,14 @@ namespace smt {
                         continue;
                     }
                     next_s.allow_empty_var(true);
-                    if (next_s.in_solved_form()) {
-                        const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
-                        if (finish_after_found(s)) return {};
-                        continue;
+                    if (next_s.in_definition_form()) {
+                        var_relation&& var_rel = next_s.var_rel_graph();
+                        if (var_rel.is_straight_line() &&
+                            check_straight_line_membership(var_rel, next_s.memberships())) {
+                            const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
+                            if (finish_after_found(s)) return {};
+                            continue;
+                        }
                     }
                     if (next_s.unsolvable_by_check()) {
                         next_s.allow_empty_var(false);
@@ -1275,6 +1358,7 @@ namespace smt {
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
 
+        if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
@@ -1282,9 +1366,7 @@ namespace smt {
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
-        solver solver{std::move(root)};
-//        result res = solver.check();
-//        if (res == result::SAT) {
+        solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
             // build counter system from transform graph and run abstraction interpretation
             counter_system cs = counter_system(solver);
@@ -1293,18 +1375,17 @@ namespace smt {
 //            cs.print_var_expr(get_manager());
             apron_counter_system ap_cs = apron_counter_system(cs);
 //            std::cout << "apron_counter_system constructed..." << std::endl;
-//            ap_cs.print_apron_counter_system();
+            ap_cs.print_apron_counter_system();
 //            std::cout << "apron_counter_system abstraction starting..." << std::endl;
             ap_cs.run_abstraction();
 //            std::cout << "apron_counter_system abstraction finished..." << std::endl;
             // make length constraints from the result of abstraction interpretation
 //            std::cout << "generating length constraints..." << std::endl;
-            length_constraint lenc =
-                    length_constraint(ap_cs.get_ap_manager(),&ap_cs.get_final_node().get_abs(),ap_cs.get_var_expr());
+            length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(), ap_cs.get_var_expr());
 //            lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-//                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
+                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
                 add_axiom(lenc_res);
             }
 
@@ -1423,8 +1504,7 @@ namespace smt {
 
     str::state theory_str::mk_state_from_todo() {
         using namespace str;
-        const auto af = std::make_shared<zaut_adaptor>(get_manager(), get_context());
-        state result{std::make_shared<str::basic_memberships>(af)};
+        state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
         STRACE("str", tout << "[Build State]\nmembership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto& m : m_membership_todo) {

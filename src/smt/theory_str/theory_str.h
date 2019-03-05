@@ -44,7 +44,7 @@ namespace smt {
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
-            expr* oringin_expr() const { return m_expr; }
+            expr* origin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -123,6 +123,24 @@ namespace smt {
             void sort();
         };
 
+        class var_relation {
+            using node = element;
+            using nodes = std::set<node>;
+            bool m_valid = true;
+            nodes m_heads;
+            nodes m_visited;
+            nodes m_straight_line;
+            std::map<node, nodes> m_record;
+            std::map<node, word_term> m_definition;
+        public:
+            explicit var_relation(const state& s);
+            bool is_valid() const { return m_valid; }
+            bool check_straight_line(const node& n);
+            bool is_straight_line();
+            const nodes& heads() const { return m_heads; }
+            const std::map<node, word_term>& definition_table() const { return m_definition; }
+        };
+
         class memberships {
         public:
             using ptr = std::unique_ptr<memberships>;
@@ -135,6 +153,7 @@ namespace smt {
             virtual std::size_t hash() = 0;
             virtual std::set<element> variables() = 0;
             virtual void set(const element& var, expr * re) = 0;
+            virtual automaton::sptr get(const element& var) = 0;
             virtual ptr assign_empty(const element& var) = 0;
             virtual ptr assign_empty_all(const std::set<element>& vars) = 0;
             virtual ptr assign_const(const element& var, const word_term& tgt) = 0;
@@ -170,6 +189,7 @@ namespace smt {
             std::size_t hash() override;
             std::set<element> variables() override;
             void set(const element& var, expr * re) override;
+            automaton::sptr get(const element& var) override;
             ptr assign_empty(const element& var) override;
             ptr assign_empty_all(const std::set<element>& vars) override;
             ptr assign_const(const element& var, const word_term& tgt) override;
@@ -193,9 +213,6 @@ namespace smt {
                 std::size_t operator()(const state& s) const;
             };
         private:
-            using def_node = element;
-            using def_nodes = std::set<def_node>;
-            using def_graph = std::map<def_node, def_nodes>;
             bool m_allow_empty_var = true;
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
@@ -205,11 +222,13 @@ namespace smt {
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
+            const memberships::sptr memberships() const { return m_memberships; }
+            const std::set<word_equation>& word_eqs() const { return m_eq_wes; }
             const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
+            var_relation var_rel_graph() const;
             bool allows_empty_var() const { return m_allow_empty_var; }
             bool in_definition_form() const;
-            bool in_solved_form() const;
             bool eq_classes_inconsistent() const;
             bool diseq_inconsistent() const;
             bool unsolvable_by_check() const;
@@ -227,10 +246,6 @@ namespace smt {
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
             friend std::ostream& operator<<(std::ostream& os, const state& s);
-        private:
-            static bool dag_def_check_node(const def_graph& graph, const def_node& node,
-                                           def_nodes& marked, def_nodes& checked);
-            bool definition_acyclic() const;
         };
 
         enum class result {
@@ -282,8 +297,9 @@ namespace smt {
             state::cref m_rec_root;
             std::list<state::cref> m_rec_success_leaves;
             std::stack<state::cref> m_pending;
+            automaton_factory::sptr m_aut_maker;
         public:
-            explicit solver(state&& root);
+            explicit solver(state&& root, automaton_factory::sptr af);
             bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
             result check(bool split_var_empty_ahead = false);
@@ -291,8 +307,11 @@ namespace smt {
             const std::list<state::cref>& get_success_leaves() const { return m_rec_success_leaves; };
             const state::cref get_root() const { return m_rec_root; };
         private:
+            automaton::sptr derive_var_membership(const var_relation& g, memberships::sptr m, const element& var);
+            bool check_straight_line_membership(const var_relation& g, memberships::sptr m);
             bool finish_after_found(const state& s);
-            const state& add_sibling_more_removed(const state& s, state&& sib, const element& v);
+            bool check_linear_membership() const;
+            const state& add_sibling_ext_record(const state& s, state&& sib, const element& v);
             const state& add_child_var_removed(const state& s, state&& c, const element& v);
             result split_var_empty_cases();
             std::queue<state::cref> split_first_level_var_empty();
@@ -307,6 +326,7 @@ namespace smt {
         th_rewriter m_rewrite;
         arith_util m_util_a;
         seq_util m_util_s;
+        str::automaton_factory::sptr m_aut_imp;
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;

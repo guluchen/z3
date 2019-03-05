@@ -103,7 +103,7 @@ namespace smt {
                             assign.num = 0;  // assign to zero
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(),e.oringin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr());
                             }
                             break;
                         case solver::move::t::TO_CONST:
@@ -111,26 +111,26 @@ namespace smt {
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
                             SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
+                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr());
                             break;
                         case solver::move::t::TO_VAR:
                             assign.type = counter_system::assign_type::VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(),e.oringin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr());
                             }
                             break;
                         case solver::move::t::TO_VAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(),e.oringin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr());
                             }
                             break;
                         case solver::move::t::TO_CHAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_ONE;
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_expr(m.m_record[0].value().encode(),m.m_record[0].oringin_expr());
+                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr());
                             break;
                         default: SASSERT(false);
                     }

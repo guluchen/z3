@@ -256,6 +256,11 @@ namespace smt {
             return mk_ptr(internal::mk_union(*m_imp, *o->m_imp));
         }
 
+        automaton::ptr zaut::append(sptr other) {
+            zaut *const o = static_cast<zaut *>(other.get()); // one imp at a time
+            return mk_ptr(internal::mk_concat(*m_imp, *o->m_imp));
+        }
+
         void zaut::set_init(state s) {
             const scoped_ptr<internal> old{m_imp};
             m_imp = alloc(internal, m_dep.sym_man, s, m_imp->final_states(), transitions());
@@ -438,27 +443,6 @@ namespace smt {
             return ptr{new zaut{a, {m_dep}}};
         }
 
-        automaton::ptr zaut::append(sptr other) {
-            unsigned num_states = m_imp->num_states();
-            moves new_trans = transitions();
-            unsigned_vector new_fin;
-            zaut *const o = static_cast<zaut *>(other.get());
-
-            moves trans = o->transitions();
-            for(auto tr : trans) {
-                new_trans.push_back(internal::move(m_dep.sym_man, tr.src()+num_states,
-                                                   tr.dst()+num_states, tr.t()));
-            }
-            for(state fin : get_finals()) {
-                new_trans.push_back(internal::move(m_dep.sym_man, fin, num_states));
-            }
-            for(state fot : o->get_finals()) {
-                new_fin.push_back(fot + num_states);
-            }
-
-            return mk_ptr(alloc(internal, m_dep.sym_man, get_init(), new_fin, new_trans));
-        }
-
         zaut_adaptor::zaut_adaptor(ast_manager& m, context& ctx)
                 : m_ast_man{m}, m_util_s{m}, m_aut_make{m}, m_sym_man{m_aut_make.get_manager()} {
             m_sym_solver = alloc(zaut::symbol_solver, m, ctx.get_fparams());
@@ -480,20 +464,33 @@ namespace smt {
             expr_ref a{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"a"})), m_ast_man};
             expr_ref b{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"b"})), m_ast_man};
             expr_ref empty{m_util_s.re.mk_inter(a, b), m_ast_man};
-            return mk_from_re_expr(empty);
+            return mk_from_re_expr(empty, true);
         }
 
-        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re) {
-            if (m_re_aut_cache.find(re) != m_re_aut_cache.end()) {
-                return m_re_aut_cache[re];
+        automaton::sptr zaut_adaptor::mk_from_word(const zstring& str) {
+            expr_ref str_re{m_util_s.re.mk_to_re(m_util_s.str.mk_string(str)), m_ast_man};
+            return mk_from_re_expr(str_re, false);
+        }
+
+        automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re, bool minimize_result) {
+            std::stringstream ss;
+            ss << mk_pp(re, m_ast_man);
+            const std::string& re_str = ss.str();
+            auto fit = m_re_aut_cache.find(re_str);
+            if (fit != m_re_aut_cache.end()) {
+                return fit->second;
             }
             if (!m_aut_make.has_solver()) {
                 m_aut_make.set_solver(m_sym_solver);
             }
             zaut::dependency_ref dep{m_ast_man, m_util_s, *m_sym_man, *m_sym_ba, *m_aut_man};
-            auto&& aut = std::make_shared<zaut>(m_aut_make(re), dep);
-            auto&& pair = std::make_pair(re, std::move(aut));
-            return m_re_aut_cache.emplace(std::move(pair)).first->second;
+            automaton::sptr result = std::make_shared<zaut>(m_aut_make(re), dep);
+            if (!minimize_result) {
+                return result;
+            }
+            result = result->determinize()->simplify();
+            m_re_aut_cache[re_str] = result;
+            return result;
         }
 
         oaut::oaut(internal a): m_imp{a} {
@@ -980,7 +977,7 @@ namespace smt {
             return str_form[0];
         }
 
-        automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re) {
+        automaton::sptr oaut_adaptor::mk_from_re_expr(expr *const re, bool minimize_result) {
             return mk_oaut_from_re_expr(re);
         }
 
