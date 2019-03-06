@@ -3469,11 +3469,57 @@ namespace smt {
             std::set<std::pair<expr *, int>> importantVars){
         bool unassigned = true;
         ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__  << " " <<  __FUNCTION__ << std::endl;);
         std::vector<unsigned> idx = sort_indexes(freeVars);
         std::map<expr*, std::vector<int>> strValue;
         bool completion = true;
         syncConst(varLens, strValue, completion);
+        if (completion) {
+            std::map<expr*, int> iterInt;
+            for (const auto& v : variable_set) {
+                for (int i = 0; i < varPieces[v]; ++i){
+                    rational val;
+                    expr* tmp = getExprVarFlatIter(std::make_pair(v, i));
+                    if (get_arith_value(tmp, val)){
+                        iterInt[tmp] = val.get_int32();
+                    }
+                }
+            }
 
+            std::map<expr*, zstring> solverValues;
+            for (const auto& n : arrMap){
+                STRACE("str", tout << "var " << mk_pp(n.first, m) << " --> " << mk_pp(n.second, m) << std::endl;);
+                rational vLen;
+                if (get_len_value(n.first, vLen)){
+                    zstring zstringVal("");
+                    for (int i = 0; i < vLen.get_int32(); ++i){
+                        expr* val_i = createSelectOperator(n.second, m_autil.mk_int(i));
+                        rational v_i;
+                        if (get_arith_value(val_i, v_i)) {
+                            zstringVal = zstringVal + (char)v_i.get_int32();
+                        }
+                        else {
+                            rational l_vi, r_vi;
+                            if (lower_num_bound(val_i, l_vi)){
+                                zstringVal = zstringVal + (char)l_vi.get_int32();
+                            }
+                            else {
+                                zstringVal = zstringVal + (char)0;
+                            }
+                        }
+                    }
+                    solverValues[n.first] = zstringVal;
+                }
+            }
+
+            std::map<expr*, int> connectedVars;
+            for (const auto& p : importantVars)
+                connectedVars[p.first] = p.second;
+
+            formatConnectedVars(idx, solverValues, freeVars, varLens, iterInt, strValue, connectedVars, completion);
+            syncVarValue(strValue);
+            formatOtherVars(idx, solverValues, freeVars, varLens, iterInt, strValue, connectedVars, completion);
+        }
         expr_ref_vector ands(m);
         for (const auto& var : freeVars)
             if (strValue.find(var.first) != strValue.end()) {
@@ -3492,7 +3538,21 @@ namespace smt {
                 }
             }
         assert_axiom(createAndOperator(ands));
-        return unassigned;
+        return !unassigned;
+    }
+
+    void theory_str::syncVarValue(std::map<expr*, std::vector<int>> &strValue){
+        ast_manager & m = get_manager();
+        for (const auto& var : variable_set)
+            if (strValue.find(var) == strValue.end()){
+                expr_ref_vector eqNodes(m);
+                collect_eq_nodes(var, eqNodes);
+                for (int i = 0; i < eqNodes.size(); ++i)
+                    if (strValue.find(eqNodes[i].get()) != strValue.end()){
+                        strValue[var] = strValue[eqNodes[i].get()];
+                        break;
+                    }
+            }
     }
 
     void theory_str::formatConnectedVars(
@@ -3505,6 +3565,7 @@ namespace smt {
             std::map<expr *, int> importantVars,
             bool &completion){
         ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__  << " " <<  __FUNCTION__ << std::endl;);
         /* 1st: handling connected vars */
         for (const auto& s : indexes) {
             expr* varName = lenVector[s].first;
@@ -3526,11 +3587,11 @@ namespace smt {
                         for (unsigned i = 0; i < QMAX; ++i){
                             rational len, iter;
                             if (get_arith_value(getExprVarFlatSize(std::make_pair(varName, i)), len) &&
-                            get_arith_value(getExprVarFlatIter(std::make_pair(varName, i)), iter))
+                                get_arith_value(getExprVarFlatIter(std::make_pair(varName, i)), iter))
                             iters.emplace_back(std::make_pair(len.get_int32(), iter.get_int32()));
                         }
 
-                        std::vector<int> tmp = createString(varName, solverValue, len, strValue, iters, assigned);
+                        std::vector<int> tmp = createString(varName, solverValue, len, strValue, iters, assigned, true);
                         if (assigned) {
                             STRACE("str", tout << __LINE__ <<  " assign: " << mk_pp(varName, m) << std::endl;);
                             strValue[varName] = tmp;
@@ -3548,6 +3609,141 @@ namespace smt {
                 }
             }
         }
+    }
+
+
+    /*
+     * create str values after running Z3
+     */
+    void theory_str::formatOtherVars(
+            std::vector<unsigned> indexes,
+            std::map<expr*, zstring> solverValues,
+            std::vector<std::pair<expr*, rational>> lenVector,
+            std::map<expr*, rational> len,
+            std::map<expr*, int> iterInt,
+            std::map<expr*, std::vector<int>> &strValue,
+            std::map<expr *, int> importantVars,
+            bool &completion){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__  << " " <<  __FUNCTION__ << std::endl;);
+        std::map<expr*, int> index = createSimpleEqualMap(len);
+
+        /* 3rd: handling other vars */
+        for (const auto& s : indexes) {
+            expr* varName = lenVector[s].first;
+            if (lenVector[s].second == 0) {
+            }
+            else {
+                std::stringstream ss;
+                ss << mk_ismt2_pp(varName, m);
+                std::string varNameStr = ss.str();
+
+                if (varNameStr.find("!tmp") != std::string::npos){
+                    continue;
+                }
+
+                bool assigned = true;
+
+                if (needValue(varName, len, strValue)) {
+                    expr_ref_vector eqNodes(m);
+                    expr* constStrNode = collect_eq_nodes(varName, eqNodes);
+                    if (constStrNode != nullptr)
+                        continue;
+
+                    std::vector<expr*> eqVar;
+                    if (index.find(varName) == index.end()) {
+                        eqVar.emplace_back(varName);
+                    }
+                    else {
+                        int num = index[varName];
+                        for (const auto& v : index)
+                            if (v.second == num)
+                                eqVar.emplace_back(v.first);
+                    }
+//                    if (isBlankValue(varName, len, strValue))
+//                        if (findExistsingValue(varName, equalities, len, strValue, eqVar))
+//                            continue;
+                    STRACE("str", tout << __LINE__ <<  " consider var: : " << mk_pp(varName, m) << std::endl;);
+
+                    zstring solverValue = solverValues[varName];
+                    std::vector<std::pair<int, int>> iters;
+
+                    std::vector<int> tmp = createString(varName, solverValue, len, strValue, iters, assigned, true);
+                    if (assigned) {
+                        STRACE("str", tout << __LINE__ <<  " assign: " << mk_pp(varName, m) << std::endl;);
+                        strValue[varName] = tmp;
+
+                        backwardPropagarate(varName, len, strValue, completion);
+                        forwardPropagate(varName, len, strValue, completion);
+                        if (completion == false) {
+                            STRACE("str", tout << __LINE__ <<  " cannot find value for var: " << mk_pp(varName, m) << std::endl;);
+                        }
+                            STRACE("str", tout << __LINE__ <<  " done formating: " << mk_pp(varName, m) << std::endl;);
+                    }
+                    else
+                        STRACE("str", tout << __LINE__ <<  " cannot assign" << mk_pp(varName, m) << std::endl;);
+                }
+            }
+        }
+    }
+
+    std::map<expr*, int> theory_str::createSimpleEqualMap(
+            std::map<expr*, rational> len){
+        std::map<expr*, int> index;
+        int maxIndex = 0;
+        for (const auto& op : m_we_expr_memo){
+            expr* arg01 = op.first.get();
+            expr* arg02 = op.second.get();
+
+            {
+                if (getVarLength(arg02, len) != getVarLength(arg01, len)) {
+                    if (index.find(arg01) == index.end()){
+                        maxIndex++;
+                        index[arg01] = maxIndex;
+                    }
+                    if (index.find(arg02) == index.end()){
+                        maxIndex++;
+                        index[arg02] = maxIndex;
+                    }
+                    continue;
+                }
+                if (index.find(arg01) != index.end()){
+                    if (index.find(arg02) != index.end()) {
+                        int num01 = index[arg01];
+                        int num02 = index[arg02];
+                        for (const auto& v : index)
+                            if (v.second == num02)
+                                index[v.first] = num01;
+                    }
+                    else {
+                        index[arg02] = index[arg01];
+                    }
+
+                }
+                else if (index.find(arg02) != index.end()){
+                    index[arg01] = index[arg02];
+                }
+                else {
+                    maxIndex++;
+                    index[arg01] = maxIndex;
+                    index[arg02] = maxIndex;
+                }
+            }
+        }
+        return index;
+    }
+
+    /*
+     *
+     */
+    bool theory_str::isBlankValue(expr* name,
+                      std::map<expr*, rational> len,
+                      std::map<expr*, std::vector<int>> strValue){
+        std::vector<int> value = getVarValue(name, len, strValue);
+        for (const auto& v : value)
+            if (v != 0)
+                return false;
+        return true;
     }
 
     /*
@@ -5007,8 +5203,7 @@ namespace smt {
             if (it->second.size() == 0)
                 continue;
 
-            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
-
+            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){ 
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
                 /* compare with others */
                 for (const auto& element: it->second) {

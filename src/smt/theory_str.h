@@ -579,6 +579,7 @@ namespace smt {
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
             std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
             bool assignValues(const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> importantVars);
+            void syncVarValue(std::map<expr*, std::vector<int>> &strValue);
             void formatConnectedVars(
                 std::vector<unsigned> indexes,
                 std::map<expr*, zstring> solverValues,
@@ -588,6 +589,20 @@ namespace smt {
                 std::map<expr*, std::vector<int>> &strValue,
                 std::map<expr *, int> importantVars,
                 bool &completion);
+            void formatOtherVars(
+                std::vector<unsigned> indexes,
+                std::map<expr*, zstring> solverValues,
+                std::vector<std::pair<expr*, rational>> lenVector,
+                std::map<expr*, rational> len,
+                std::map<expr*, int> iterInt,
+                std::map<expr*, std::vector<int>> &strValue,
+                std::map<expr *, int> importantVars,
+                bool &completion);
+                std::map<expr*, int> createSimpleEqualMap(
+                std::map<expr*, rational> len);
+                    bool isBlankValue(expr* name,
+                                      std::map<expr*, rational> len,
+                                      std::map<expr*, std::vector<int>> strValue);
             std::vector<int> createString(
                 expr* name,
                 zstring value,
