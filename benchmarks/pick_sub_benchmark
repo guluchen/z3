@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""
+A Python script to pick a subset of benchmark from a given benchmark directory.
+Usage:
+    pick_sub_benchmakr path_to_benchmark -n=number
+
+where {number} is the size of sub-benchmark to be picked. (default is 60 if not specified)
+The picked sub-benchmark will be put on a directory named '{path_to_benchmark}_{number}'
+"""
+import sys
+import os
+import shutil
+_base_dir = os.path.dirname(os.path.realpath(__file__))
+import random
+from argparse import ArgumentParser
+
+
+def create_dirs(pathname):
+    if not os.path.exists(pathname):
+        create_dirs(os.path.dirname(pathname))
+        os.mkdir(pathname)
+
+
+def main(argv):
+    # Set argument parser
+    arg_parser = ArgumentParser(prog=None,
+                                usage=None,
+                                description="A python script to pick a subset of benchmark from a benchmark.",
+                                epilog=None)
+    arg_parser.add_argument("benchmark_path", help="path of benchmark")
+    arg_parser.add_argument("-n", "--number",
+                            help="Size of sub-benchmark, default is 60.",
+                            dest="number", default=60, type=int)
+    arg_parser.add_argument("-d", "--destination",
+                            help="Destination directory for sub-benchmark, default: \'{path_of_benchmark}_{number}\'.",
+                            dest="destination", default="")
+    args = arg_parser.parse_args()
+
+    # collect filenames of benchmark
+    benchmark_path = os.path.normpath(args.benchmark_path)
+    benchmark_files = sorted([os.path.relpath(os.path.join(root, file), benchmark_path)
+                              for root, dirs, files in os.walk(benchmark_path) for file in files])
+    benchmark_size = len(benchmark_files)
+
+    print(f'benchmark path: {benchmark_path}')
+    print(f'benchmark size: {benchmark_size}')
+
+    # compute pick indexes and collect filenames for sub-benchmark
+    interval_span = benchmark_size // args.number
+    interval_offset = random.randrange(0, interval_span + 1)
+    print(f'remaing for plus adjustment: {benchmark_size % args.number}')
+    sample_list = sorted(random.sample(range(args.number), benchmark_size % args.number))
+    # print(f'sample_list({len(sample_list)}:{sample_list}')
+    interval_plus = [1 if i in sample_list else 0 for i in range(args.number)]
+    print(f'interval_span={interval_span}, interval_offset={interval_offset}')
+    # print(f'interval_plus({len(interval_plus)})({sum(interval_plus)}):{interval_plus}')
+
+    indexes = [interval_span * i + interval_offset + sum(interval_plus[:i]) for i in range(args.number)]
+    assert len(indexes) == args.number and indexes[len(indexes)-1] < benchmark_size  # make sure no out of range
+    sub_benchmark_files = [benchmark_files[i] for i in indexes]
+
+    print(f'sub-benchmark size:{len(indexes)}')
+    # print(sub_benchmark_files)
+    print(f'selected indexes: {indexes}')
+    # exit(0)
+
+    # copy sub-benchmark file to destination directory
+    if args.destination == '':
+        dest_dir = f'{os.path.basename(benchmark_path)}_{args.number}'
+    else:
+        dest_dir = args.destination
+    # dest_dir = f'{os.path.join(_base_dir, dest_dir_name)}'
+    # print(dest_dir_name)
+    print(f'sub-benchmark directory: {dest_dir}')
+
+    if os.path.exists(dest_dir):
+        print(f'Error, {dest_dir} already exists')
+        exit(1)
+    else:
+        os.makedirs(dest_dir)
+
+    for file in sub_benchmark_files:
+        # print(os.path.join(benchmark_path, file))
+        # print(os.path.join(dest_dir, file))
+        # print(os.path.dirname(file))
+        create_dirs(os.path.join(dest_dir, os.path.dirname(file)))
+        shutil.copy(os.path.join(benchmark_path, file), os.path.join(dest_dir, file))
+
+    # for result check
+    # sub_benchmark_files_copied = sorted([os.path.relpath(os.path.join(root, file), dest_dir)
+    #                                      for root, dirs, files in os.walk(dest_dir) for file in files])
+    # print(f'sub_benchmark_files size: {len(sub_benchmark_files)}')
+    # print(f'sub_benchmark_files_copied size: {len(sub_benchmark_files_copied)}')
+    # print(sum([1 for i in range(len(sub_benchmark_files)) if sub_benchmark_files[i] == sub_benchmark_files_copied[i]]))
+    # for i in range(len(sub_benchmark_files)):
+    #     print(sub_benchmark_files[i])
+    #     print(sub_benchmark_files_copied[i])
+
+
+if __name__ == '__main__':
+    main(sys.argv)
