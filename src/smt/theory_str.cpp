@@ -3560,7 +3560,7 @@ namespace smt {
             std::map<expr*, std::vector<int>> strValue,
             std::vector<std::pair<int, int>> iters,
             bool &assigned,
-            bool assignAnyway = false){
+            bool assignAnyway){
         ast_manager & m = get_manager();
         int lenVar = getVarLength(name, len).get_int32();
 
@@ -3578,11 +3578,13 @@ namespace smt {
 
         /* check if the value is usable or not */
         bool usable = true;
-        for (const auto& str : notContainMap)
-            if (str.second == false && str.first.first.compare(name) == 0){
-                if (value.contains(str.first.second)) {
-                    usable = false;
-                    break;
+        if (notContainMap.find(name) != notContainMap.end())
+            for (const auto& str : notContainMap[name]) {
+                zstring notContain;
+                if (u.str.is_string(str, notContain)){
+                    if (value.indexof(notContain, 0) == -1){
+                        usable = false;
+                    }
                 }
             }
 
@@ -3661,6 +3663,7 @@ namespace smt {
         ast_manager & m = get_manager();
         std::set<expr*> propagatingList;
         for (const auto& var : uState.eq_combination){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var.first, m) << std::endl;);
             /* init value */
             zstring value;
             if (u.str.is_string(var.first, value)) {
@@ -3677,13 +3680,18 @@ namespace smt {
             }
 
             bool update = false;
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var.first, m) << std::endl;);
             std::vector<int> tmp = getVarValue(var.first, len, strValue);
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var.first, m) << std::endl;);
             for (const auto& eq : var.second){
                 int pos = 0;
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(eq, nodes);
+
                 for (int i = 0; i < nodes.size(); ++i){
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
                     int lengthS = getVarLength(nodes[i], len).get_int32();
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
                     zstring value;
                     if (u.str.is_string(nodes[i], value)) {
                         if (value.length() == 0)
@@ -3705,7 +3713,6 @@ namespace smt {
                         strValue[nodes[i]] = tmpValue;
                     }
                     pos += lengthS;
-
                 }
             }
             if (update == true) {
@@ -3736,7 +3743,7 @@ namespace smt {
             std::map<expr*, std::vector<int>> &strValue,
             bool &completion){
         ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": completion " << (completion? 1 : 0) << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(newlyUpdate, m) << ": completion " << (completion? 1 : 0) << std::endl;);
         if (completion == false)
             return;
         std::vector<int> sValue = getVarValue(newlyUpdate, len, strValue);
@@ -3755,6 +3762,11 @@ namespace smt {
 
             std::vector<int> value = getVarValue(var.first, len, strValue);
             int varLen = value.size();
+            for (unsigned i = 0; i < value.size(); ++i)
+                if (value[i] != 0) {
+                    STRACE("str", tout << (char) value[i];);
+                } else STRACE("str", tout << value[i];);
+            STRACE("str", tout << " end of " << mk_pp(var.first, m) << std::endl;);
 
             /* update parents */
             bool foundInParents = false;
@@ -3762,11 +3774,6 @@ namespace smt {
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(eq, nodes);
                 if (std::find(nodes.begin(), nodes.end(), newlyUpdate) != nodes.end()) {
-                    for (unsigned i = 0; i < value.size(); ++i)
-                        if (value[i] != 0) {
-                            STRACE("str", tout << (char) value[i];);
-                        } else STRACE("str", tout << value[i];);
-                    STRACE("str", tout << std::endl;);
                     int pos = 0;
 
                     for (int i = 0; i < nodes.size(); ++i) {
@@ -3852,7 +3859,7 @@ namespace smt {
             std::map<expr*, std::vector<int>> &strValue,
             bool &completion){
         ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": completion " << (completion? 1 : 0) << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(newlyUpdate, m) << ": completion " << (completion? 1 : 0) << std::endl;);
         if (completion == false)
             return;
 
@@ -3885,7 +3892,7 @@ namespace smt {
                         }
 
                     if (update == true) {
-                        STRACE("str", tout << __LINE__ << " pdate existed value" << std::endl;);
+                        STRACE("str", tout << __LINE__ << " update existed value" << std::endl;);
                         for (unsigned i = 0; i < value.size(); ++i)
                             if (value[i] != 0) {
                                 STRACE("str", tout << (char)value[i];);
@@ -3933,7 +3940,7 @@ namespace smt {
             std::map<expr*, std::vector<int>> &strValue,
             bool &completion){
         ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": completion " << (completion? 1 : 0) << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(newlyUpdate, m) << ": completion " << (completion? 1 : 0) << std::endl;);
         if (completion == false)
             return;
 
@@ -3943,64 +3950,69 @@ namespace smt {
         if (length.get_int32() == 0) {
             return;
         }
+
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(newlyUpdate, m) << ": completion " << (completion? 1 : 0) << std::endl;);
         for (const auto& eq : uState.eq_combination[newlyUpdate]){
+
             int pos = 0;
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
-            for (int i = 0; i < nodes.size(); ++i) {
-                if (u.str.is_string(nodes[i])) {
-                    int lengthVar = getVarLength(nodes[i], len).get_int32();
-                    pos += lengthVar;
-                }
-                else if(strValue.find(nodes[i]) != strValue.end()){
-                    std::vector<int> sValue = getVarValue(nodes[i], len, strValue);
-                    int lengthVar = getVarLength(nodes[i], len).get_int32();
-                    /* verify a determined value */
+            for (int i = 0; i < nodes.size(); ++i)
+                if (nodes[i] != newlyUpdate) {
+                    if (u.str.is_string(nodes[i])) {
+                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        pos += lengthVar;
+                    } else if (strValue.find(nodes[i]) != strValue.end()) {
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__ << "  update " << mk_pp(nodes[i], m) << " from "
+                                    << mk_pp(newlyUpdate, m) << std::endl;);
+                        std::vector<int> sValue = getVarValue(nodes[i], len, strValue);
+                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        /* verify a determined value */
 
-                    bool update = false;
-                    for (int i = 0; i < lengthVar; ++i)
-                        if (value[pos + i] != 0 && sValue[i] != 0 && value[pos + i] != sValue[i]) {
-                            STRACE("str", tout << __LINE__ << " error at :  " << mk_pp(nodes[i], m) << std::endl;);
-                            completion = false;
-                            return;
-                        }
-                        else if (value[pos + i] != 0 && sValue[i] == 0){
-                            sValue[i] = value[pos + i];
-                            update = true;
-                        }
-                        else if (value[pos + i] == 0 && sValue[i] != 0){
-                        }
-
-                    pos += lengthVar;
-
-                    if (update == true) {
-                        STRACE("str", tout << __LINE__ << " update existed value " << mk_pp(nodes[i], m) << std::endl;);
-                        for (unsigned i = 0; i < value.size(); ++i)
-                            if (value[i] != 0) {
-                                STRACE("str", tout << (char)value[i];);
+                        bool update = false;
+                        for (int i = 0; i < lengthVar; ++i)
+                            if (value[pos + i] != 0 && sValue[i] != 0 && value[pos + i] != sValue[i]) {
+                                STRACE("str", tout << __LINE__ << " error at :  " << mk_pp(nodes[i], m) << std::endl;);
+                                completion = false;
+                                return;
+                            } else if (value[pos + i] != 0 && sValue[i] == 0) {
+                                sValue[i] = value[pos + i];
+                                update = true;
+                            } else if (value[pos + i] == 0 && sValue[i] != 0) {
                             }
-                            else
-                                STRACE("str", tout << value[i];);
-                        STRACE("str", tout << std::endl;);
 
+                        pos += lengthVar;
+
+                        if (update == true) {
+                            STRACE("str",
+                                   tout << __LINE__ << " update existed value " << mk_pp(nodes[i], m) << std::endl;);
+                            for (unsigned i = 0; i < value.size(); ++i)
+                                if (value[i] != 0) {
+                                    STRACE("str", tout << (char) value[i];);
+                                } else STRACE("str", tout << value[i];);
+                            STRACE("str", tout << std::endl;);
+
+                            strValue[nodes[i]] = sValue;
+                            backwardPropagarate_simple(nodes[i], len, strValue, completion);
+                        }
+                    } else {
+                        STRACE("str", tout << __LINE__ << " assign a new value: " << mk_pp(nodes[i], m) << std::endl;);
+                        SASSERT(len.find(nodes[i]) != len.end());
+                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        /* update a new value */
+                        std::vector<int> sValue;
+                        for (int i = 0; i < lengthVar; ++i)
+                            sValue.emplace_back(value[pos + i]);
                         strValue[nodes[i]] = sValue;
+                        pos += lengthVar;
                         backwardPropagarate_simple(nodes[i], len, strValue, completion);
                     }
                 }
-                else {
-                    STRACE("str", tout << __LINE__ << " assign a new value: " << mk_pp(nodes[i], m) << std::endl;);
-                    SASSERT(len.find(nodes[i]) != len.end());
-                    int lengthVar = getVarLength(nodes[i], len).get_int32();
-                    /* update a new value */
-                    std::vector<int> sValue;
-                    for (int i = 0; i < lengthVar; ++i)
-                        sValue.emplace_back(value[pos + i]);
-                    strValue[nodes[i]] = sValue;
-                    pos += lengthVar;
-                    backwardPropagarate_simple(nodes[i], len, strValue, completion);
-                }
+            else {
+                    pos =  pos + length.get_int32();
             }
-            SASSERT(pos == length);
+            SASSERT(pos == length.get_int32());
         }
     }
 
@@ -4019,22 +4031,31 @@ namespace smt {
             return tmp;
         }
         else {
-            if (strValue.find(newlyUpdate) != strValue.end()) {
-                std::vector<int> value = strValue[newlyUpdate];
-                rational length = getVarLength(newlyUpdate, len);
-                if ((int)value.size() < length.get_int32()) {
-                    for (int i = (int)value.size(); i < length; ++i)
-                        value.emplace_back(0);
-                    strValue[newlyUpdate] = value;
-                }
-                return value;
+            expr_ref_vector eq(get_manager());
+            expr* valueExpr = collect_eq_nodes(newlyUpdate, eq);
+            if (valueExpr != nullptr){
+                u.str.is_string(valueExpr, value);
+                std::vector<int> tmp;
+                for (int i = 0; i < value.length(); ++i)
+                    tmp.push_back(value[i]);
+                return tmp;
             }
-            else {
-                rational length = getVarLength(newlyUpdate, len);
-                strValue[newlyUpdate] = std::vector<int>(length.get_int32(), 0);
-                return strValue[newlyUpdate];
-            }
+        }
 
+        if (strValue.find(newlyUpdate) != strValue.end()) {
+            std::vector<int> value = strValue[newlyUpdate];
+            rational length = getVarLength(newlyUpdate, len);
+            if ((int)value.size() < length.get_int32()) {
+                for (int i = (int)value.size(); i < length; ++i)
+                    value.emplace_back(0);
+                strValue[newlyUpdate] = value;
+            }
+            return value;
+        }
+        else {
+            rational length = getVarLength(newlyUpdate, len);
+            strValue[newlyUpdate] = std::vector<int>(length.get_int32(), 0);
+            return strValue[newlyUpdate];
         }
     }
 
@@ -4047,10 +4068,21 @@ namespace smt {
             std::map<expr*, rational> len){
         zstring value;
         if (u.str.is_string(newlyUpdate, value)){
-            return value.length();
+            return rational(value.length());
         }
         else {
-            SASSERT(len.find(newlyUpdate) != len.end());
+            if (len.find(newlyUpdate) == len.end()){
+                if (u.str.is_concat(newlyUpdate)){
+                    ptr_vector<expr> nodes;
+                    get_nodes_in_concat(newlyUpdate, nodes);
+                    rational lenTmp(0);
+                    for (int i = 0; i < nodes.size(); ++i)
+                        lenTmp = lenTmp + len[nodes[i]];
+                    len[newlyUpdate] = lenTmp;
+                }
+                else
+                    SASSERT(false);
+            }
             return len[newlyUpdate];
         }
     }
@@ -4809,7 +4841,7 @@ namespace smt {
             }
         }
 
-        createNotContainMap(rewriterStrMap);
+        createNotContainMap();
         createConstSet();
 
         initConnectingSize(eq_combination, importantVars, false);
@@ -4817,14 +4849,56 @@ namespace smt {
         createAppearanceMap(eq_combination);
     }
 
-    void theory_str::createNotContainMap(std::map<StringOP, std::string> rewriterStrMap){
-        for (const auto op : rewriterStrMap)
-            if (op.first.name.compare(config.languageMap[CONTAINS]) == 0 && op.second.compare(FALSETR) == 0){
-                std::string arg02 = op.first.args[1].name;
-                if (arg02[0] == '"') {
-                    notContainMap[std::make_pair(op.first.args[0].toString(), arg02.substr(1, arg02.length() - 2))] = false;
+    void theory_str::createNotContainMap(){
+        ast_manager & m = get_manager();
+        for (const auto& ieq : m_wi_expr_memo){
+            expr* lhs = ieq.first.get();
+            expr* rhs = ieq.second.get();
+
+            if (u.str.is_concat(lhs)){
+                ptr_vector<expr> exprVector;
+                get_nodes_in_concat(lhs, exprVector);
+                if (exprVector.size() == 3) {
+                    std::stringstream ss01;
+                    ss01 << mk_ismt2_pp(exprVector[0], m);
+                    std::string varName = ss01.str();
+
+                    bool found01 = varName.find("pre_contain") != std::string::npos;
+
+                    std::stringstream ss02;
+                    ss02 << mk_ismt2_pp(exprVector[2], m);
+                    varName = ss02.str();
+                    bool found02 = varName.find("post_contain") != std::string::npos;
+
+                    if (found01 && found02){
+                        notContainMap[rhs].insert(exprVector[1]);
+                    }
                 }
             }
+
+            if (u.str.is_concat(rhs)){
+                ptr_vector<expr> exprVector;
+                get_nodes_in_concat(rhs, exprVector);
+                if (exprVector.size() == 3) {
+                    std::stringstream ss01;
+                    ss01 << mk_ismt2_pp(exprVector[0], m);
+                    std::string varName = ss01.str();
+
+                    bool found01 = varName.find("pre_contain") != std::string::npos;
+
+                    std::stringstream ss02;
+                    ss02 << mk_ismt2_pp(exprVector[2], m);
+                    varName = ss02.str();
+                    bool found02 = varName.find("post_contain") != std::string::npos;
+
+                    if (found01 && found02){
+                        notContainMap[lhs].insert(exprVector[1]);
+                    }
+                }
+            }
+        }
+
+
     }
 
     void theory_str::createConstSet(){
@@ -9198,8 +9272,8 @@ namespace smt {
 
         TRACE("str", tout << "instantiate prefixof axiom for " << mk_pp(expr, m) << std::endl;);
 
-        expr_ref ts0(mk_str_var("ts0"), m);
-        expr_ref ts1(mk_str_var("ts1"), m);
+        expr_ref ts0(mk_str_var("pre_prefix"), m);
+        expr_ref ts1(mk_str_var("post_prefix"), m);
 
         expr_ref_vector innerItems(m);
         innerItems.push_back(ctx.mk_eq_atom(expr->get_arg(1), mk_concat(ts0, ts1)));
@@ -9235,8 +9309,8 @@ namespace smt {
 
         TRACE("str", tout << "instantiate suffixof axiom for " << mk_pp(expr, m) << std::endl;);
 
-        expr_ref ts0(mk_str_var("ts0"), m);
-        expr_ref ts1(mk_str_var("ts1"), m);
+        expr_ref ts0(mk_str_var("pre_suffix"), m);
+        expr_ref ts1(mk_str_var("post_suffix"), m);
 
         expr_ref_vector innerItems(m);
         innerItems.push_back(ctx.mk_eq_atom(expr->get_arg(1), mk_concat(ts0, ts1)));
@@ -9301,7 +9375,7 @@ namespace smt {
 
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(ex, m) << std::endl;);
 
-        std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("ts0"), mk_str_var("ts1"));
+        std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("pre_contain"), mk_str_var("post_contain"));
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
         enode* key = ensure_enode(a);

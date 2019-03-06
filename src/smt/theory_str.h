@@ -579,6 +579,15 @@ namespace smt {
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
             std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
             bool assignValues(const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> importantVars);
+            void formatConnectedVars(
+                std::vector<unsigned> indexes,
+                std::map<expr*, zstring> solverValues,
+                std::vector<std::pair<expr*, rational>> lenVector,
+                std::map<expr*, rational> len,
+                std::map<expr*, int> iterInt,
+                std::map<expr*, std::vector<int>> &strValue,
+                std::map<expr *, int> importantVars,
+                bool &completion);
             std::vector<int> createString(
                 expr* name,
                 zstring value,
@@ -631,6 +640,7 @@ namespace smt {
                 str::state root);
 
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
+                void createNotContainMap();
                 void createConstSet();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
                 std::set<char> initExcludeCharSet();
@@ -1371,6 +1381,7 @@ namespace smt {
         std::map<expr*, std::vector<expr*>> lenMap;
         std::map<expr*, std::vector<expr*>> iterMap;
         std::map<expr*, std::set<expr*>> appearanceMap;
+        std::map<expr*, std::set<expr*>> notContainMap;
         std::map<expr*, expr*> arrMap;
         int connectingSize;
 
