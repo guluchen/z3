@@ -981,7 +981,7 @@ namespace smt {
                     if (s.in_definition_form()) {
                         var_relation&& var_rel = s.var_rel_graph();
                         if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, s.memberships())) {
+                            check_straight_line_membership(var_rel, s.get_memberships())) {
                             if (finish_after_found(s)) return m_status;
                             continue;
                         }
@@ -1078,12 +1078,12 @@ namespace smt {
         }
 
         bool solver::check_linear_membership(const state& s) {
-            if (s.memberships()->empty()) {
+            if (s.get_memberships()->empty()) {
                 return true;
             }
             for (const auto& we : s.word_eqs()) {
-                automaton::sptr lhs = concat_simple_membership(s.memberships(), we.lhs());
-                automaton::sptr rhs = concat_simple_membership(s.memberships(), we.rhs());
+                automaton::sptr lhs = concat_simple_membership(s.get_memberships(), we.lhs());
+                automaton::sptr rhs = concat_simple_membership(s.get_memberships(), we.rhs());
                 if (lhs->intersect_with(rhs)->is_empty()) return false;
             }
             return true;
@@ -1135,7 +1135,7 @@ namespace smt {
                     if (next_s.in_definition_form()) {
                         var_relation&& var_rel = next_s.var_rel_graph();
                         if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, next_s.memberships())) {
+                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
                             const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
                             if (finish_after_found(s)) return m_status;
                             continue;
@@ -1172,7 +1172,7 @@ namespace smt {
                     if (next_s.in_definition_form()) {
                         var_relation&& var_rel = next_s.var_rel_graph();
                         if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, next_s.memberships())) {
+                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
                             const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
                             if (finish_after_found(s)) return {};
                             continue;

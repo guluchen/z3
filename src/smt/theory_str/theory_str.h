@@ -222,7 +222,7 @@ namespace smt {
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
-            const memberships::sptr memberships() const { return m_memberships; }
+            memberships::sptr get_memberships() const { return m_memberships; }
             const std::set<word_equation>& word_eqs() const { return m_eq_wes; }
             const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
