@@ -99,8 +99,8 @@ namespace smt {
         }
 
         bool word_term::unequalable(const word_term& w1, const word_term& w2) {
-            return (!w1.has_variable() && w1.constant_num() < w2.constant_num()) ||
-                   (!w2.has_variable() && w2.constant_num() < w1.constant_num()) ||
+            return (!w1.has_variable() && w1.count_const() < w2.count_const()) ||
+                   (!w2.has_variable() && w2.count_const() < w1.count_const()) ||
                    prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
         }
 
@@ -108,9 +108,19 @@ namespace smt {
             m_elements.insert(m_elements.begin(), list.begin(), list.end());
         }
 
-        std::size_t word_term::constant_num() const {
+        std::size_t word_term::count_const() const {
             static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
+        }
+
+        std::size_t word_term::count_var(const element& tgt) const {
+            SASSERT(tgt.typed(element::t::VAR));
+
+            std::size_t result = 0;
+            for (const auto& e : m_elements) {
+                result = e == tgt ? result + 1 : result;
+            }
+            return result;
         }
 
         std::set<element> word_term::variables() const {
@@ -222,6 +232,10 @@ namespace smt {
                 m_lhs = rhs;
                 m_rhs = lhs;
             }
+        }
+
+        std::size_t word_equation::count_var(const element& e) const {
+            return m_lhs.count_var(e) + m_rhs.count_var(e);
         }
 
         std::set<element> word_equation::variables() const {
@@ -678,6 +692,17 @@ namespace smt {
         bool state::unsolvable_by_inference() const {
             return diseq_inconsistent() || eq_classes_inconsistent() ||
                    m_memberships->inconsistent();
+        }
+
+        bool state::quadratic() const {
+            for (const auto& v : variables()) {
+                std::size_t count = 0;
+                for (const auto& we : m_eq_wes) {
+                    count += we.count_var(v);
+                }
+                if (count > 2) return false;
+            }
+            return true;
         }
 
         void state::add_word_eq(const word_equation& we) {

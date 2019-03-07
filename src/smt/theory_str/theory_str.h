@@ -71,7 +71,8 @@ namespace smt {
             word_term() = default;
             word_term(std::initializer_list<element> list);
             std::size_t length() const { return m_elements.size(); }
-            std::size_t constant_num() const;
+            std::size_t count_const() const;
+            std::size_t count_var(const element& e) const;
             std::set<element> variables() const;
             const std::list<element>& content() const { return m_elements; }
             const element& head() const;
@@ -101,6 +102,7 @@ namespace smt {
         public:
             word_equation(const word_term& lhs, const word_term& rhs);
             element::pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
+            std::size_t count_var(const element& e) const;
             std::set<element> variables() const;
             const word_term& lhs() const { return m_lhs; }
             const word_term& rhs() const { return m_rhs; }
@@ -233,6 +235,7 @@ namespace smt {
             bool diseq_inconsistent() const;
             bool unsolvable_by_check() const;
             bool unsolvable_by_inference() const;
+            bool quadratic() const;
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
