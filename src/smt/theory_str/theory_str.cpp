@@ -1422,10 +1422,10 @@ namespace smt {
 //            lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-                expr_ref lenc_res_ex{lenc_res, get_manager()};
-                m_rewrite(lenc_res_ex);
-                std::cout << mk_pp(lenc_res_ex, get_manager()) << std::endl;
-                add_axiom(lenc_res_ex);
+//                expr_ref lenc_res_ex{lenc_res, get_manager()};
+//                m_rewrite(lenc_res_ex);
+                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
+                add_axiom(lenc_res);
             }
 
             // counter system part ends here

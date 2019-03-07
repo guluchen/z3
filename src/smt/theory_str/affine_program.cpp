@@ -330,8 +330,13 @@ namespace smt {
         expr* length_constraint::len_cons::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
             expr* ret = ap_util_a.mk_int(m_cst);
             for (const auto& e : m_var_expr_coeff) {
-                ret = ap_util_a.mk_add(ret,
-                        ap_util_a.mk_mul(ap_util_s.str.mk_length(e.second.first),ap_util_a.mk_int(e.second.second)));
+                if (e.second.second == 1) {
+                    ret = ap_util_a.mk_add(ret, ap_util_s.str.mk_length(e.second.first));
+                }
+                else {
+                    ret = ap_util_a.mk_add(ret, ap_util_a.mk_mul(ap_util_a.mk_int(e.second.second),
+                                                                 ap_util_s.str.mk_length(e.second.first)));
+                }
             }
             switch (m_type) {
                 case lcons_type::EQ:
