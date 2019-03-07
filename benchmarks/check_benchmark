@@ -25,43 +25,68 @@ DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp'],
                 'z3str3': ['z3', 'smt.string_solver=z3str3'],
                 'trau': ['./trau', '-language', 'smt2.6'],
                 'trauc': ['./trauc', 'smt.string_solver=z3str3']}
-RECORD = List[str]
+ERROR_MSGS = {'VIOLATION', 'segfault', 'dumped', 'exception'}
+
+
+def contains_error_msg(text: str) -> bool:
+    for msg in ERROR_MSGS:
+        if msg in text:
+            return True
+    return False
 
 
 def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str):
     fp = open(log_file, 'a')
+    fp_err = open(log_file + '.err', 'a')
     for file in benchmark_files:
         shell_command = command + [file]
         time_start = time.time()
         try:
-            output = str(check_output(shell_command, stderr=STDOUT, timeout=time_out))
+            out = str(check_output(shell_command, stderr=STDOUT, timeout=time_out))
         except CalledProcessError as err:
-            output = str(err.output)
-        except TimeoutExpired:
-            output = 'timeout'
+            out_err = str(err.output)
+            out = 'exception'
+        except TimeoutExpired as err:
+            out_err = str(err.output)
+            out = 'timeout'
         time_end = time.time()
         time_exec = time_end - time_start
         # print(f'execution time: {time_exec} (sec.)')
         # print(f'output: {output}')
-        if 'unsat' in output or 'UNSAT' in output:
+        if 'unsat' in out or 'UNSAT' in out:
             res = 'unsat'
-        elif 'sat' in output or 'SAT' in output:
+        elif 'sat' in out or 'SAT' in out:
             res = 'sat'
-        elif 'timeout' in output:
+        elif out == 'timeout':
             res = 'timeout'
-        elif 'segfault' in output or 'segmentation' in output or 'core dumped' in output:
-            res = 'core_dumped'
-            print(f'output: {output}')
-        elif 'unknown' in output:
+        elif out == 'exception':
+            res = 'exception'
+        elif 'unknown' in out:
             res = 'unknown'
-        else:
+        else:  # should not encounter this case
             res = '???'
-            print(f'output: {output}')
+            # print(f'unexpected output: {out}')
 
-        log_str = f'{file}, {tool_name}, {res}, {"{:2.3f}".format(time_exec)}'
+        # detect error message
+        if res == 'timeout' or res == 'exception':
+            if contains_error_msg(out_err):
+                res = 'error'
+
+        log_str = f'{file}, {tool_name}, {res}, {"{:2.5f}".format(time_exec)}'
         print(log_str)
         fp.write(f'{log_str}\n')
+
+        # record errors for debug
+        if res == 'error':
+            print(f'ERROR_REPORT: {out_err}')
+            fp_err.write(f'{log_str}\n{out_err}\n\n')
+
+        if res == '???':  # should not encounter this case
+            print(f'UNEXPECTED_OUTPUT: {out}')
+            fp_err.write(f'{log_str}\n{out}\n\n')
+
     fp.close()
+    fp_err.close()
 
 
 def main(argv):

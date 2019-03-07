@@ -1596,7 +1596,10 @@ namespace smt {
         if (e == nullptr || get_manager().is_true(e)) return;
 
         context& ctx = get_context();
-        SASSERT(!ctx.b_internalized(e));
+//        SASSERT(!ctx.b_internalized(e));
+        if(!ctx.b_internalized(e)){
+            ctx.internalize(e, false);
+        }
         ctx.internalize(e, false);
         literal l{ctx.get_literal(e)};
         ctx.mark_as_relevant(l);
