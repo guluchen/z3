@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""
+A Python script to compare benchmark checking log of TrauC (z3qses) to other string solvers.
+Usage:
+    compare_benchmark_logs benchmark_name
+
+tools in comparison:
+    cvc4, z3, z3str3, Trau
+"""
+import sys
+import os
+import re
+_base_dir = os.path.dirname(os.path.realpath(__file__))
+from argparse import ArgumentParser
+from typing import List
+from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
+
+
+# default commands
+DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp'],
+                'z3seq': ['z3'],
+                'z3str3': ['z3', 'smt.string_solver=z3str3'],
+                'trau': ['./trau', '-language', 'smt2.6'],
+                'trauc': ['./trauc', 'smt.string_solver=z3str3']}
+RECORD = List[str]
+
+
+class LogElem:
+    def __init__(self, log: str):
+        elems = log.split(', ')
+        assert len(elems) == 4
+        self.filename = elems[0]
+        self.tool = elems[1]
+        self.result = elems[2]
+        self.time = float(elems[3])
+
+    def __str__(self):
+        return f'{self.filename}_{self.tool}_{self.result}_{self.time}'
+
+
+class CheckLog:
+    def __init__(self, filename: str):
+        self.filename = filename
+        with open(filename, 'r') as fp:
+            self.benchmark_path = fp.readline().split()[1]
+            self.benchmark_size = int(fp.readline().split()[1])
+            self.check_date = fp.readline().split()[1]
+            self.check_tool = fp.readline().split()[1]
+            lines = fp.readlines()
+        self.logs = list()
+        for line in lines:
+            self.logs.append(LogElem(line))
+        # for e in self.logs:
+        #     print(e)
+        assert len(self.logs) == self.benchmark_size
+
+    def count_result(self, res: str):
+        return len([e for e in self.logs if e.result == res])
+
+    def benchmark_files(self) -> List[str]:
+        return [os.path.basename(e.filename) for e in self.logs]
+
+    def is_same_benchmark(self, other) -> bool:
+        return (os.path.basename(self.benchmark_path) == os.path.basename(other.benchmark_path)) and \
+               (self.benchmark_size == other.benchmark_size) and \
+               len(set(self.benchmark_files()) - set(other.benchmark_files())) == 0
+
+
+def compare_check_logs(check_logs: List[CheckLog]):
+    for i in range(len(check_logs)-1):
+        assert check_logs[i].is_same_benchmark(check_logs[i+1])
+    num_logs = len(check_logs)
+    print(f'benchmark_path: {check_logs[0].benchmark_path}')
+    print(f'benchmark_size: {check_logs[0].benchmark_size}')
+    print('(tool-check_date, #unsat, #sat, #timeout, #misc)')
+    for i in range(num_logs):
+        tool_date = f'{check_logs[i].check_tool}-{check_logs[i].check_date}'
+        num_unsat = check_logs[i].count_result("unsat")
+        num_sat = check_logs[i].count_result("sat")
+        num_timeout = check_logs[i].count_result("timeout")
+        num_misc = check_logs[i].benchmark_size - num_unsat - num_sat - num_timeout
+        print(f'({tool_date}, {num_unsat}, {num_sat}, {num_timeout}, {num_misc})')
+
+
+def main(argv):
+    # Set argument parser
+    arg_parser = ArgumentParser(prog=None,
+                                usage=None,
+                                description="A Python script to compare benchmark checking log of TrauC (z3qses) to "
+                                            "other string solvers.",
+                                epilog=None)
+    arg_parser.add_argument("benchmark_log_name",
+                            help="Filename of benchmark check log without extensions (before '.')")
+    args = arg_parser.parse_args()
+
+    # prepare benchmark
+    all_log_files = [f for f in os.listdir('.')
+                     if re.match(re.escape(args.benchmark_log_name) + r'\.[0-9]+\.[a-zA-z0-9]+\.log$', f)]
+    print('log files read:')
+    print('  ' + '\n  '.join(all_log_files))
+
+    check_logs = [CheckLog(log) for log in all_log_files]
+    compare_check_logs(check_logs)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
