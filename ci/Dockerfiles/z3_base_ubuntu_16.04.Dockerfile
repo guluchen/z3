@@ -11,12 +11,12 @@ RUN apt-get update && \
         cmake \
         doxygen \
         default-jdk \
-        gcc-6-multilib \
+        gcc-multilib \
         git \
         wget \
         tar \
         graphviz \
-        g++-6-multilib \
+        g++-multilib \
         libgmp-dev \
         libgomp1 \
         libomp5 \
@@ -34,13 +34,6 @@ RUN apt-get update && \
         python-setuptools \
         sudo
 
-# Install clang6.0
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-	apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main" && \
-	apt-get update && \
-	apt-get install -y clang-6.0 && \
-	update-alternatives --install /usr/bin/clang clang /usr/bin/clang-6.0 60 --slave  /usr/bin/clang++ clang++ /usr/bin/clang++-6
-
 # Create `user` user for container with password `user`.  and give it
 # password-less sudo access
 RUN useradd -m user && \
@@ -49,4 +42,3 @@ RUN useradd -m user && \
     echo 'user  ALL=(root) NOPASSWD: ALL' >> /etc/sudoers
 USER user
 WORKDIR /home/user
-ENV ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.9/bin/llvm-symbolizer

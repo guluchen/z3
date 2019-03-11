@@ -30,10 +30,6 @@ if [ "X${Z3_CMAKE_GENERATOR}" = "XNinja" ]; then
   brew_install_or_upgrade ninja
 fi
 
-if [ "X${USE_LIBGMP}" = "X1" ]; then
-  brew_install_or_upgrade gmp
-fi
-
 if [ "X${BUILD_DOCS}" = "X1" ]; then
   brew_install_or_upgrade doxygen
 fi
@@ -45,3 +41,12 @@ fi
 if [ "X${JAVA_BINDINGS}" = "X1" ]; then
   brew cask install java
 fi
+
+# Install dependencies for Apron
+brew_install_or_upgrade perl
+brew_install_or_upgrade gnu-sed
+brew_install_or_upgrade gmp
+brew_install_or_upgrade mpfr
+
+# Install Openfst and Apron
+"${SCRIPT_DIR}/install-lib.sh"

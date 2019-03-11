@@ -70,7 +70,16 @@ ENV \
 # Build Z3
 RUN mkdir -p "${Z3_SRC_DIR}" && \
   mkdir -p "${Z3_SRC_DIR}/contrib/ci/scripts" && \
+  mkdir -p "${Z3_SRC_DIR}/third-parties-lib" && \
   mkdir -p "${Z3_SRC_DIR}/contrib/suppressions/sanitizers"
+
+# Install dependencies
+ADD \
+	/contrib/ci/scripts/install-lib.sh \
+  	/contrib/ci/scripts/run_quiet.sh \
+	${Z3_SRC_DIR}/third-parties-lib/
+RUN ${Z3_SRC_DIR}/third-parties-lib/install-lib.sh
+
 # Deliberately leave out `contrib`
 ADD /cmake ${Z3_SRC_DIR}/cmake/
 ADD /doc ${Z3_SRC_DIR}/doc/
@@ -88,38 +97,38 @@ ADD \
 RUN ${Z3_SRC_DIR}/contrib/ci/scripts/build_z3_cmake.sh
 
 # Test building docs
-ADD \
-  /contrib/ci/scripts/test_z3_docs.sh \
-  /contrib/ci/scripts/run_quiet.sh \
-  ${Z3_SRC_DIR}/contrib/ci/scripts/
-RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_docs.sh
+# ADD \
+#   /contrib/ci/scripts/test_z3_docs.sh \
+#   /contrib/ci/scripts/run_quiet.sh \
+#   ${Z3_SRC_DIR}/contrib/ci/scripts/
+# RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_docs.sh
 
 # Test examples
-ADD \
-  /contrib/ci/scripts/test_z3_examples_cmake.sh \
-  /contrib/ci/scripts/sanitizer_env.sh \
-  ${Z3_SRC_DIR}/contrib/ci/scripts/
-ADD \
-  /contrib/suppressions/sanitizers/asan.txt \
-  /contrib/suppressions/sanitizers/lsan.txt \
-  /contrib/suppressions/sanitizers/ubsan.txt \
-  ${Z3_SRC_DIR}/contrib/suppressions/sanitizers/
-RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_examples_cmake.sh
+# ADD \
+#   /contrib/ci/scripts/test_z3_examples_cmake.sh \
+#   /contrib/ci/scripts/sanitizer_env.sh \
+#   ${Z3_SRC_DIR}/contrib/ci/scripts/
+# ADD \
+#   /contrib/suppressions/sanitizers/asan.txt \
+#   /contrib/suppressions/sanitizers/lsan.txt \
+#   /contrib/suppressions/sanitizers/ubsan.txt \
+#   ${Z3_SRC_DIR}/contrib/suppressions/sanitizers/
+# RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_examples_cmake.sh
 
 # Run unit tests
-ADD \
-  /contrib/ci/scripts/test_z3_unit_tests_cmake.sh \
-  ${Z3_SRC_DIR}/contrib/ci/scripts/
-RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_unit_tests_cmake.sh
+# ADD \
+#   /contrib/ci/scripts/test_z3_unit_tests_cmake.sh \
+#   ${Z3_SRC_DIR}/contrib/ci/scripts/
+# RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_unit_tests_cmake.sh
 
 # Run system tests
-ADD \
-  /contrib/ci/scripts/test_z3_system_tests.sh \
-  ${Z3_SRC_DIR}/contrib/ci/scripts/
-RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_system_tests.sh
+# ADD \
+#   /contrib/ci/scripts/test_z3_system_tests.sh \
+#   ${Z3_SRC_DIR}/contrib/ci/scripts/
+# RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_system_tests.sh
 
 # Test install
-ADD \
-  /contrib/ci/scripts/test_z3_install_cmake.sh \
-  ${Z3_SRC_DIR}/contrib/ci/scripts/
-RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_install_cmake.sh
+# ADD \
+#   /contrib/ci/scripts/test_z3_install_cmake.sh \
+#   ${Z3_SRC_DIR}/contrib/ci/scripts/
+# RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_install_cmake.sh
