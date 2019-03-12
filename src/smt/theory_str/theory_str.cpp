@@ -491,7 +491,7 @@ namespace smt {
             if (aut->is_empty()) {
                 result->m_inconsistent = true;
             }
-            fit_to->second.ref = aut;
+            fit_to->second.ref = aut; // TODO: see if need to erase fit_from
             return mk_ptr(result);
         }
 
@@ -978,7 +978,7 @@ namespace smt {
         }
 
         bool solver::should_explore_all() const {
-            return false;
+            return true;
         }
 
         result solver::check(const bool split_var_empty_ahead) {
@@ -1431,24 +1431,25 @@ namespace smt {
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
             // build counter system from transform graph and run abstraction interpretation
+            STRACE("str", tout << "[COUNTER SYSTEM]\n";);
             counter_system cs = counter_system(solver);
-//            std::cout << "counter_system extracted!" << std::endl;
-//            cs.print_counter_system();
-//            cs.print_var_expr(get_manager());
+            STRACE("str", tout << "counter_system extracted!" << std::endl;);
+            cs.print_counter_system();
+            cs.print_var_expr(get_manager());
+            STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
             apron_counter_system ap_cs = apron_counter_system(cs);
-//            std::cout << "apron_counter_system constructed..." << std::endl;
+            STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
             ap_cs.print_apron_counter_system();
-//            std::cout << "apron_counter_system abstraction starting..." << std::endl;
+            STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
             ap_cs.run_abstraction();
-//            std::cout << "apron_counter_system abstraction finished..." << std::endl;
+            STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
             // make length constraints from the result of abstraction interpretation
-//            std::cout << "generating length constraints..." << std::endl;
-            length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(), ap_cs.get_var_expr());
-//            lenc.pretty_print(get_manager());
+            STRACE("str", tout << "generating length constraints..." << std::endl;);
+            length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
+                    ap_cs.get_var_expr());
+            lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-//                expr_ref lenc_res_ex{lenc_res, get_manager()};
-//                m_rewrite(lenc_res_ex);
                 std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
                 add_axiom(lenc_res);
             }

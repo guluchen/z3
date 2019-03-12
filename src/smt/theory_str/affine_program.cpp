@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include "util/trace.h"
 #include "ast/ast_pp.h"
 #include "smt/smt_theory.h"
 #include "smt/theory_str/theory_str.h"
@@ -142,6 +143,11 @@ namespace smt {
             }
             set_final_state(mapped_states[solv.get_root()]);  // at last, set final state
             num_states = mapped_states.size();
+            STRACE("str", tout << "[COUNTER_SYSTEM]\nmapped_states final...\n";);
+            STRACE("str", tout << "mapped_states size = " << num_states << '\n';);
+            for (const auto& e : mapped_states) {
+                STRACE("str", tout << "state number " << e.second << " maps to state:\n" << e.first  << '\n';);
+            }
 //            std::cout << "mapped_states final..." << std::endl;
 //            std::cout << "mapped_states size = " << num_states << std::endl;
 //            for (const auto& e : mapped_states) {
@@ -150,9 +156,9 @@ namespace smt {
         }
 
         void counter_system::print_var_expr(ast_manager &m) {
-            std::cout << "[var_name <--> expr] in counter system: " << std::endl;
+            STRACE("str", tout << "[var_name <--> expr] in counter system: " << std::endl;);
             for (const auto& e: var_expr) {
-                std::cout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second,m) << " ]" << std::endl;
+                STRACE("str", tout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second,m) << " ]" << std::endl;);
             }
         }
 
@@ -160,60 +166,59 @@ namespace smt {
                                               const smt::str::counter_system::cs_assign &assign,
                                               const smt::str::counter_system::cs_state s_to) const {
             std::string sep_str;
-            std::cout << "(" << s << "," << s_to << ")[";
+            STRACE("str", tout << "(" << s << "," << s_to << ")[";);
             switch (assign.type) {
                 case counter_system::assign_type::CONST:
                     sep_str = "";
                     for (const auto &v : assign.vars) {
-                        std::cout << sep_str << v << "=" << assign.num;
+                        STRACE("str", tout << sep_str << v << "=" << assign.num;);
                         sep_str = ",";
                     }
                     break;
                 case counter_system::assign_type::VAR:
-                    std::cout << *(assign.vars.begin()) << "=" << *(std::next(assign.vars.begin()));
+                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(std::next(assign.vars.begin())););
                     break;
                 case counter_system::assign_type::PLUS_ONE:
-                    std::cout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+1";
+                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+1";);
                     break;
                 case counter_system::assign_type::PLUS_VAR:
-                    std::cout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+"
-                              << *(std::next(assign.vars.begin()));
+                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+"
+                    << *(std::next(assign.vars.begin())););
                     break;
                 default:
                     break;
             }
-            std::cout << "]";
-
+            STRACE("str", tout << "]";);
         }
 
         void counter_system::print_counter_system() const {
             std::string sep_str;
-            std::cout << "counter system pretty print..." << std::endl;
-            std::cout << "init={";
+            STRACE("str", tout << "counter system pretty print..." << std::endl;);
+            STRACE("str", tout << "init={";);
             sep_str = "";
             for (auto i : init) {
-                std::cout << sep_str << i;
+                STRACE("str", tout << sep_str << i;);
                 sep_str = ", ";
             }
-            std::cout << "}" << std::endl;
-            std::cout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;
-            std::cout << "vars={";
+            STRACE("str", tout << "}" << std::endl;);
+            STRACE("str", tout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;);
+            STRACE("str", tout << "vars={";);
             sep_str = "";
             for (auto const v : var_expr) {
-                std::cout << sep_str << v.first;
+                STRACE("str", tout << sep_str << v.first;);
                 sep_str = ", ";
             }
-            std::cout << "}" << std::endl;
-            std::cout << "relations(" << relation.size() << "): {" << std::endl;
+            STRACE("str", tout << "}" << std::endl;);
+            STRACE("str", tout << "relations(" << relation.size() << "): {" << std::endl;);
             char tab[] = "    ";
             for (auto const &r : relation) {
                 for (auto const &tran: r.second) {
-                    std::cout << tab;
+                    STRACE("str", tout << tab;);
                     print_transition(r.first, tran.first, tran.second);
-                    std::cout << std::endl;
+                    STRACE("str", tout << std::endl;);
                 }
             }
-            std::cout << "}" << std::endl;
+            STRACE("str", tout << "}" << std::endl;);
         }
 
         apron_counter_system::node::node(ap_manager_t *man, ap_abstract1_t &base_abs) {
@@ -302,26 +307,26 @@ namespace smt {
         }
 
         void length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
-//            std::cout << "length constraint:" << std::endl;
+//            STRACE("str", tout << "length constraint:" << std::endl;);
             for (const auto& e : m_var_expr_coeff) {
-                std::cout << "(" << e.second.second << ")*" << mk_pp(e.second.first,ast_man) << " + ";
+                STRACE("str", tout << "(" << e.second.second << ")*" << mk_pp(e.second.first,ast_man) << " + ";);
             }
-            std::cout << m_cst;
+            STRACE("str", tout << m_cst;);
             switch (m_type) {
                 case lcons_type::EQ:
-                    std::cout << " = 0";
+                    STRACE("str", tout << " = 0";);
                     break;
                 case lcons_type::SUPEQ:
-                    std::cout << " >=0";
+                    STRACE("str", tout << " >=0";);
                     break;
                 default:
                     SASSERT(false);
             }
-            std::cout << std::endl;
+            STRACE("str", tout << std::endl;);
         }
 
         void length_constraint::pretty_print(ast_manager &ast_man) {
-            std::cout << "total linear constraints: " << m_cons.size() << std::endl;
+            STRACE("str", tout << "total linear constraints: " << m_cons.size() << '\n';);
             for (auto& e : m_cons) {
                 e.pretty_print(ast_man);
             }
