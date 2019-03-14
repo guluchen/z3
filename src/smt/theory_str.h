@@ -22,7 +22,6 @@
 #include "util/union_find.h"
 #include "smt/smt_arith_value.h"
 
-#define ROUNDCHECK 1
 #define LOCALSPLITMAX 20
 #define SUMFLAT 100000000
 #define EMPTYFLAT 9999999
@@ -33,162 +32,10 @@
 #define LENPREFIX "len_"
 #define ARRPREFIX "arr_"
 #define ITERSUFFIX "__iter"
-#define ZERO "0"
-#define REGEXSUFFIX "_10000"
 
 namespace smt {
 
-    namespace str {
 
-        enum class element_t {
-            CONST, VAR, NONE
-        };
-
-        class element {
-            element_t m_type;
-            std::string m_value;
-        public:
-            static const element& null();
-            element(const element_t& t, std::string v) : m_type{t}, m_value{std::move(v)} {}
-            const element_t& type() const { return m_type; }
-            const std::string& value() const { return m_value; }
-            const bool typed(const element_t& t) const { return m_type == t; }
-            explicit operator bool() const { return *this != null(); }
-            const bool operator==(const element& other) const;
-            const bool operator!=(const element& other) const { return !(*this == other); }
-            const bool operator<(const element& other) const;
-            friend std::ostream& operator<<(std::ostream& os, const element& e);
-        };
-
-        class word_term {
-            std::list<element> m_elements;
-        public:
-            static const word_term& null();
-            static word_term of_string(const std::string& literal);
-            static word_term of_variable(const std::string& name);
-            static const bool prefix_mismatched_in_consts(const word_term& w1, const word_term& w2);
-            static const bool suffix_mismatched_in_consts(const word_term& w1, const word_term& w2);
-            static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
-            static const bool unequalable(const word_term& w1, const word_term& w2);
-            word_term() = default;
-            word_term(std::initializer_list<element> list);
-            const std::size_t length() const { return m_elements.size(); }
-            const std::size_t constant_count() const;
-            const element& head() const;
-            const std::set<element> variables() const;
-            const bool empty() const { return m_elements.empty(); }
-            const bool has_constant() const;
-            const bool has_variable() const;
-            const bool check_head(const element_t& t) const;
-            void remove_head();
-            void concat(const word_term& other);
-            void replace(const element& tgt, const word_term& subst);
-            explicit operator bool() const { return *this != null(); }
-            const bool operator==(const word_term& other) const;
-            const bool operator!=(const word_term& other) const { return !(*this == other); }
-            const bool operator<(const word_term& other) const;
-            friend std::ostream& operator<<(std::ostream& os, const word_term& w);
-        };
-
-        using head_pair = std::pair<const element&, const element&>;
-
-        class word_equation {
-            word_term m_lhs;
-            word_term m_rhs;
-        public:
-            static const word_equation& null();
-            word_equation(const word_term& lhs, const word_term& rhs);
-            const word_term& lhs() const { return m_lhs; }
-            const word_term& rhs() const { return m_rhs; }
-            const head_pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
-            const std::set<element> variables() const;
-            const element& definition_var() const;
-            const word_term& definition_body() const;
-            const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
-            const bool unsolvable(bool allow_empty_var = true) const;
-            const bool in_definition_form() const;
-            const bool check_heads(const element_t& lht, const element_t& rht) const;
-            word_equation trim_prefix() const;
-            word_equation replace(const element& tgt, const word_term& subst) const;
-            word_equation remove(const element& tgt) const;
-            word_equation remove_all(const std::set<element>& tgt) const;
-            explicit operator bool() const { return *this != null(); }
-            const bool operator==(const word_equation& other) const;
-            const bool operator!=(const word_equation& other) const { return !(*this == other); }
-            const bool operator<(const word_equation& other) const;
-            friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
-        private:
-            void sort();
-        };
-
-        class state {
-            using def_node = element;
-            using def_nodes = std::set<def_node>;
-            using def_graph = std::map<def_node, def_nodes>;
-            using trans_source = std::pair<const word_equation&, const word_equation&>;
-
-            class transform {
-                const state& m_state;
-                const word_equation& m_src;
-                const bool m_src_should_fail;
-                std::list<state> m_result;
-
-                transform(const state& s, const word_equation& src, bool by_wi = false);
-                const bool src_vars_empty() const;
-                const bool src_var_well_defined() const;
-                const bool src_two_var_unequal() const;
-                void transform_one_var();
-                void transform_two_var();
-                std::list<state> compute();
-            };
-
-            bool m_allow_empty_var = true;
-            std::set<word_equation> m_wes_to_satisfy;
-            std::set<word_equation> m_wes_to_fail;
-        public:
-            state() = default;
-            explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
-            const std::set<element> variables() const;
-            const word_equation& only_one_equation_left() const;
-            const std::vector<std::vector<word_term>> equivalence_classes() const;
-            const bool equivalence_classes_inconsistent() const;
-            const bool disequalities_inconsistent() const;
-            const bool unsolvable_by_check() const;
-            const bool unsolvable_by_inference() const;
-            const bool in_definition_form() const;
-            const bool in_solved_form() const;
-            void allow_empty_variable(const bool enable) { m_allow_empty_var = enable; }
-            void satisfy_constraint(const word_equation& we);
-            void fail_constraint(const word_equation& we);
-            state replace(const element& tgt, const word_term& subst) const;
-            state remove(const element& tgt) const;
-            state remove_all(const std::set<element>& tgt) const;
-            const std::list<state> transform() const;
-            const bool operator<(const state& other) const;
-            friend std::ostream& operator<<(std::ostream& os, const state& s);
-        private:
-            static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
-                                                 def_nodes& marked, def_nodes& checked);
-            const bool definition_acyclic() const;
-            const trans_source transformation_source() const;
-            void transform_one_var(const head_pair& hh, std::list<state>& result) const;
-            void transform_two_var(const head_pair& hh, std::list<state>& result) const;
-        };
-
-        class neilson_based_solver {
-            std::set<state> m_processed;
-            std::stack<state> m_pending;
-            bool m_solution_found;
-        public:
-            explicit neilson_based_solver(const state& root);
-            const bool solution_found() const { return m_solution_found; }
-            void explore_var_empty_cases();
-            void check_sat();
-        };
-
-        using expr_pair = std::pair<expr_ref, expr_ref>;
-
-    }
 
     enum {
         NONE = 0,
@@ -213,10 +60,6 @@ namespace smt {
     class theory_str : public theory {
         int m_scope_level;
         const theory_str_params& m_params;
-        scoped_vector<str::expr_pair> m_we_expr_memo;
-        scoped_vector<str::expr_pair> m_wi_expr_memo;
-        scoped_vector<str::expr_pair> membership_memo;
-        scoped_vector<str::expr_pair> non_membership_memo;
 
         typedef union_find<theory_str> th_union_find;
         typedef trail_stack<theory_str> th_trail_stack;
@@ -231,16 +74,6 @@ namespace smt {
         public:
             std::vector<int> left_arr;
             std::vector<int> right_arr;
-
-            int connectingSize; // extra info for all Arrangement
-
-            Arrangment(std::vector<int> _left_arr,
-                       std::vector<int> _right_arr,
-                       std::map<std::string, std::string> _constMap,
-                       int _connectingSize){
-                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
-                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
-            }
 
             Arrangment(std::vector<int> _left_arr,
                        std::vector<int> _right_arr){
@@ -290,132 +123,15 @@ namespace smt {
                 return false;
             }
 
-            /*
-             * Input: string that we are going to split, and number of flats
-             * Ouput: able to split or not
-             */
-            int splitWithMinFlats(int boundedFlat, int boundSize, std::string frame){
-                for (int i = 1; i <= boundedFlat; ++i) { /* number of flats */
-                    std::vector<std::string> flats;
-                    if (canSplit(i, PMAX, 0, frame, flats)){
-                        return i;
-                    }
-                    flats.clear();
-                }
-                return -1;
-            }
 
-            void splitPrintTest(std::vector<int> currentSplit, std::string msg = ""){
-                STRACE("str", tout << msg << std::endl;);
-                for (unsigned int i = 0; i < currentSplit.size(); ++i)
-                STRACE("str", tout << currentSplit[i] << " - " << std::endl;);
-                STRACE("str", tout << std::endl << "------------" << std::endl;);
-            }
-
-            /**
-             * Print a list
-             */
-            template<typename T>
-            void printList(T list, std::string msg = "") {
-                if (msg.length() > 0 )
-                    printf("%s\n", msg.c_str());
-                for (std::vector<int>::iterator it = list.begin(); it != list.end(); ++it) {
-                    printf("%d ", *it);
-                }
-                printf("\n");
-            }
 
             bool isUnionStr(std::string str){
                 return str.find("|") != std::string::npos;
             }
 
-            bool feasibleSplit_const(
-                    std::string str,
-                    std::vector<std::pair<std::string, int> > elementNames,
-                    std::vector<int> currentSplit){
-                /* check feasible const split */
-                int pos = 0;
-                for (unsigned i = 0; i < currentSplit.size(); ++i) {
-                    if (elementNames[i].second == REGEX_CODE || isUnionStr(elementNames[i].first)) {
-                    }
-
-                        /* TODO: bound P */
-                    else if (elementNames[i].second < 0) { /* const */
-                        if (currentSplit[i] > (int)elementNames[i].first.length()) {
-                        }
-                        SASSERT ((int)elementNames[i].first.length() >= currentSplit[i]);
-
-                        std::string lhs = str.substr(pos, currentSplit[i]);
-                        std::string rhs = "";
-                        if (elementNames[i].second % QCONSTMAX == -1) /* head */ {
-                            rhs = elementNames[i].first.substr(0, currentSplit[i]);
-
-                            if (i + 1 < elementNames.size()) {
-                                if (QCONSTMAX == 1 || elementNames[i].first.length() == 1) {
-                                    SASSERT (currentSplit[i] == (int)elementNames[i].first.length()); /* const length must be equal to length of const */
-                                }
-                                else {
-                                    SASSERT (elementNames[i + 1].second % QCONSTMAX == 0);
-                                    SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)elementNames[i].first.length())); /* sum of all const parts must be equal to length of const */
-                                }
-                            }
-                        }
-                        else { /* tail */
-                            rhs = elementNames[i].first.substr(elementNames[i].first.length() - currentSplit[i], currentSplit[i]);
-                        }
-
-                        if (lhs.compare(rhs) != 0){
-                            SASSERT(false);
-                            STRACE("str", tout << __LINE__ << " " << lhs << " - " << rhs << std::endl;);
-                            return false;
-                        }
-                    }
-                    pos += currentSplit[i];
-                }
-                return true;
-            }
-
             /*
-             * we do not allow empty flats in the middle
-             */
-            bool isPossibleArrangement(){
-                if (left_arr[left_arr.size() -1] == EMPTYFLAT &&
-                    right_arr[right_arr.size() -1] == EMPTYFLAT)
-                    return false;
-                /* not allow empty flats in the middle */
-                int startPos = 0;
-                int endPos = left_arr.size() - 1;
-                /* check lhs */
-                for (startPos = 0; startPos < (int)left_arr.size(); ++startPos)
-                    if (left_arr[startPos] != EMPTYFLAT)
-                        break;
-                for (endPos = (int)left_arr.size() - 1; endPos >= 0; --endPos)
-                    if (left_arr[endPos] != EMPTYFLAT)
-                        break;
-                for (int i = startPos; i < endPos; ++i)
-                    if (left_arr[i] == EMPTYFLAT) {
-                        // printArrangement("ERRORR");
-                        return false;
-                    }
-
-                /* check rhs */
-                for (startPos = 0; startPos < (int)right_arr.size(); ++startPos)
-                    if (right_arr[startPos] != EMPTYFLAT)
-                        break;
-                for (endPos = (int)right_arr.size() - 1; endPos >= 0; --endPos)
-                    if (right_arr[endPos] != EMPTYFLAT)
-                        break;
-                for (int i = startPos; i < endPos; ++i)
-                    if (right_arr[i] == EMPTYFLAT) {
-                        // printArrangement("ERRORR");
-                        return false;
-                    }
-                return true;
-            }
-
-            /*
-             * Pre-Condition: x_i == 0 --> x_i+1 == 0
-             */
+            * Pre-Condition: x_i == 0 --> x_i+1 == 0
+            */
             bool isPossibleArrangement(
                     std::vector<std::pair<expr*, int>> lhs_elements,
                     std::vector<std::pair<expr*, int>> rhs_elements){
@@ -448,90 +164,19 @@ namespace smt {
 
             void printArrangement(std::string msg = ""){
                 if (msg.length() > 0)
-                    STRACE("str", tout << msg << std::endl;);
+                STRACE("str", tout << msg << std::endl;);
 
                 for (unsigned int i = 0; i < left_arr.size(); ++i)
-                    STRACE("str", tout << left_arr[i] << " ";);
+                STRACE("str", tout << left_arr[i] << " ";);
 
                 STRACE("str", tout << std::endl;);
                 for (unsigned int i = 0; i < right_arr.size(); ++i)
-                    STRACE("str", tout << right_arr[i] << " ";);
+                STRACE("str", tout << right_arr[i] << " ";);
                 STRACE("str", tout <<  std::endl;);
             }
         };
 
-        class UnderApproxState{
-        public:
-            std::map<expr*, std::set<expr*>> eq_combination;
-            std::set<std::pair<expr*, int>> importantVars;
-            int level = -1;
 
-            UnderApproxState(){
-
-            }
-
-            UnderApproxState(int _level,
-                            std::map<expr*, std::set<expr*>> _eq_combination,
-                            std::set<std::pair<expr*, int>> _importantVars):level(_level), eq_combination(_eq_combination), importantVars(_importantVars){
-            }
-
-            UnderApproxState clone(){
-                UnderApproxState tmp(level, eq_combination, importantVars);
-                return tmp;
-            }
-
-            void reset(){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << level << std::endl;);
-                level = -1;
-                eq_combination.clear();
-                importantVars.clear();
-            }
-
-            UnderApproxState&  operator=(const UnderApproxState& other){
-                level = other.level;
-                eq_combination = other.eq_combination;
-                importantVars = other.importantVars;
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << other.eq_combination.size() << " --> " << eq_combination.size() << std::endl;);
-                return *this;
-            }
-
-            bool operator==(const UnderApproxState state){
-                std::map<expr*, std::set<expr*>> _eq_combination = state.eq_combination;
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
-                if (_eq_combination.size() != eq_combination.size()) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << _eq_combination.size() << " vs " << eq_combination.size() <<  std::endl;);
-                    return false;
-                }
-
-                if (state.importantVars.size() != importantVars.size()) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.importantVars.size() << " vs " << importantVars.size() <<  std::endl;);
-                    return false;
-                }
-
-                for (const auto& v : importantVars)
-                    if (state.importantVars.find(v) == state.importantVars.end()) {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
-                        return false;
-                    }
-
-                for (const auto& n : eq_combination) {
-                    if (_eq_combination.find(n.first) == _eq_combination.end()) {
-                        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
-                        return false;
-                    }
-                    std::set<expr*> tmp = _eq_combination[n.first];
-                    for (const auto &e : n.second) {
-
-                        if (tmp.find(e) == tmp.end()) {
-                            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
-                            return false;
-                        }
-                    }
-                }
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": Equal. " << std::endl;);
-                return true;
-            }
-        };
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
@@ -563,12 +208,11 @@ namespace smt {
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         void new_eq_eh(theory_var, theory_var) override;
         void new_diseq_eh(theory_var, theory_var) override;
-            /*
-             * Add an axiom of the form:
-             * len lhs != len rhs -> lhs != rhs
-             * len lhs == 0 == len rhs --> lhs == rhs
-             */
-            void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs);
+        /*
+         * Add an axiom of the form:
+         * len lhs != len rhs -> lhs != rhs
+         * len lhs == 0 == len rhs --> lhs == rhs
+         */
         void init_search_eh() override;
         void relevant_eh(app *n) override;
         void assign_eh(bool_var v, bool is_true) override;
@@ -576,579 +220,19 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
-            void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
-            std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
-            bool assignValues(const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> importantVars);
-            void syncVarValue(std::map<expr*, std::vector<int>> &strValue);
-            void formatConnectedVars(
-                std::vector<unsigned> indexes,
-                std::map<expr*, zstring> solverValues,
-                std::vector<std::pair<expr*, rational>> lenVector,
-                std::map<expr*, rational> len,
-                std::map<expr*, int> iterInt,
-                std::map<expr*, std::vector<int>> &strValue,
-                std::map<expr *, int> importantVars,
-                bool &completion);
-            void formatOtherVars(
-                std::vector<unsigned> indexes,
-                std::map<expr*, zstring> solverValues,
-                std::vector<std::pair<expr*, rational>> lenVector,
-                std::map<expr*, rational> len,
-                std::map<expr*, int> iterInt,
-                std::map<expr*, std::vector<int>> &strValue,
-                std::map<expr *, int> importantVars,
-                bool &completion);
-                std::map<expr*, int> createSimpleEqualMap(
-                std::map<expr*, rational> len);
-                    bool isBlankValue(expr* name,
-                                      std::map<expr*, rational> len,
-                                      std::map<expr*, std::vector<int>> strValue);
-            std::vector<int> createString(
-                expr* name,
-                zstring value,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> strValue,
-                std::vector<std::pair<int, int>> iters,
-                bool &assigned,
-                bool assignAnyway = false);
-            bool needValue(expr* name,
-                                   std::map<expr*, rational> len,
-                                   std::map<expr*, std::vector<int>> strValue);
-            void syncConst(
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            rational getVarLength(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len);
-            void forwardPropagate(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            void backwardPropagarate(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            void backwardPropagarate_simple(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            std::vector<int> getVarValue(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue);
-            bool fixedValue(std::vector<std::pair<expr*, rational>> &freeVars, std::map<expr*, rational> varLens);
-            bool fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens);
-            bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
-            bool propagate_value(std::set<expr*> & concatSet);
-            bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
-                void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
-                void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
-                bool propagate_length_within_eqc(expr * var);
-            bool underapproximation(
-                std::map<expr*, std::set<expr*>> eq_combination,
-                std::map<expr*, std::set<expr*>> causes,
-                std::set<std::pair<expr*, int>> importantVars,
-                str::state root);
-
-            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
-                void createNotContainMap();
-                void createConstSet();
-                char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
-                std::set<char> initExcludeCharSet();
-                std::set<char> initIncludeCharSet();
-                void createAppearanceMap(
-                        std::map<expr*, std::set<expr*>> eq_combination);
-                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
-                    void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
-            bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
-                                           std::map<expr*, int> importantVars,
-                                            std::map<expr*, expr*> causes);
-            /*
-             *
-             */
-            expr* constraintsIfEmpty(
-                    ptr_vector<expr> lhs,
-                    ptr_vector<expr> rhs);
-            /*
-             * convert lhs == rhs to SMT formula
-             */
-            expr* equalityToSMT(
-                std::string lhs, std::string rhs,
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements,
-                std::map<expr*, int> connectedVariables,
-                int p = PMAX);
-
-            /*
-             * lhs: size of the lhs
-             * rhs: size of the rhs
-             * lhs_elements: elements of lhs
-             * rhs_elements: elements of rhs
-             *
-             * Pre-Condition: x_i == 0 --> x_i+1 == 0
-             *
-             */
-            expr_ref_vector collectAllPossibleArrangements(
-                std::string lhs_str, std::string rhs_str,
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements,
-                std::map<expr*, int> connectedVariables,
-                int p = PMAX);
-
-            void updatePossibleArrangements(
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements,
-                std::vector<Arrangment> tmp,
-                std::vector<Arrangment> &possibleCases);
-
-            /*
-             *
-             */
-            Arrangment manuallyCreate_arrangment(
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements);
-
-            bool passNotContainMapReview(
-                Arrangment a,
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements);
-
-            bool passSelfConflict(
-                Arrangment a,
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements);
-            /*
-             * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
-             */
-            expr* generateSMT(int p,
-                                            std::vector<int> left_arr,
-                                            std::vector<int> right_arr,
-                                            std::string lhs_str, std::string rhs_str,
-                                            std::vector<std::pair<expr*, int>> lhs_elements,
-                                            std::vector<std::pair<expr*, int>> rhs_elements,
-                                            std::map<expr*, int> connectedVariables);
-
-            /*
-             *
-             * Flat = empty
-             */
-
-            expr* generateConstraint00(
-                    std::pair<expr*, int> a,
-                    std::string l_r_hs);
-
-            /*
-             * Flat = Flat
-             * size = size && it = it  ||
-             * size = size && it = 1
-             */
-            expr* generateConstraint01(
-                    std::string lhs_str, std::string rhs_str,
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
-                    int pMax,
-                    std::map<expr*, int> connectedVariables,
-                    bool optimizing);
-            /*
-             * Flat = sum (flats)
-             */
-            expr* generateConstraint02(
-                std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elementNames,
-                std::string lhs_str, std::string rhs_str,
-                int pMax,
-                std::map<expr*, int> connectedVariables,
-                bool optimizing);
-
-                /*
-                * Input: split a string
-                * Output: SMT
-                */
-                expr* toConstraint_havingConnectedVar_andConst(
-                        std::pair<expr*, int> a, /* const || regex */
-                        std::vector<std::pair<expr*, int> > elementNames, /* const + connected var */
-                        std::vector<int> split,
-                        std::string lhs, std::string rhs,
-                        std::map<expr*, int> connectedVariables,
-                        bool optimizing,
-                        int pMax);
-
-                    /*
-                    *
-                    */
-                    expr* lengthConstraint_toConnectedVarConstraint(
-                            std::pair<expr*, int> a, /* const || regex */
-                            std::vector<std::pair<expr*, int> > elementNames,
-                            expr_ref_vector subElements,
-                            int currentPos,
-                            int subLength,
-                            std::string lhs, std::string rhs,
-                            std::map<expr*, int> connectedVariables,
-                            bool optimizing,
-                            int pMax);
-
-                        /*
-                        *
-                        */
-                        expr* connectedVar_atSpecificLocation(
-                                std::pair<expr*, int> a, /* const or regex */
-                                std::vector<std::pair<expr*, int>> elementNames, /* have connected var */
-                                int connectedVarPos,
-                                int connectedVarLength,
-                                std::string lhs, std::string rhs,
-                                std::map<expr*, int> connectedVariables,
-                                bool optimizing,
-                                int pMax);
-                /*
-                 * Input: split a string
-                 * Output: SMT
-                 */
-                expr_ref_vector toConstraint_NoConnectedVar(
-                        std::pair<expr*, int> a, /* const || regex */
-                        std::vector<std::pair<expr*, int> > elementNames, /* no connected var */
-                        std::vector<int> split,
-                        std::string lhs, std::string rhs,
-                        bool optimizing);
-                /*
-                 *
-                 */
-                expr* unrollConnectedVariable(
-                        std::pair<expr*, int> a, /* connected variable */
-                        std::vector<std::pair<expr*, int> > elementNames, /* contain const */
-                        std::string lhs_str, std::string rhs_str,
-                        std::map<expr*, int> connectedVariables,
-                        bool optimizing,
-                        int pMax = PMAX);
-                    /*
-                     * Generate constraints for the case
-                     * X = T . "abc" . Y . Z
-                     * constPos: position of const element
-                     * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
-                     */
-                    expr* handle_SubConst_WithPosition_array(
-                            std::pair<expr*, int> a, // connected var
-                            std::vector<std::pair<expr*, int>> elementNames,
-                            std::string lhs_str, std::string rhs_str,
-                            int constPos,
-                            bool optimizing,
-                            int pMax = PMAX);
-
-                        /*
-                        * Generate constraints for the case
-                        * X = T . "abc"* . Y . Z
-                        * regexPos: position of regex element
-                        * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
-                        */
-                        expr* handle_Regex_WithPosition_array(
-                                std::pair<expr*, int> a, // connected var
-                                std::vector<std::pair<expr*, int>> elementNames,
-                                std::string lhs_str, std::string rhs_str,
-                                int regexPos,
-                                bool optimizing,
-                                int pMax = PMAX,
-                                expr* extraConstraint = NULL/* length = ? */
-                        );
-
-                        /*
-                        * Generate constraints for the case
-                        * X = T . "abc" . Y . Z
-                        * constPos: position of const element
-                        * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
-                        */
-                        expr* handle_Const_WithPosition_array(
-                                std::pair<expr*, int> a,
-                                std::vector<std::pair<expr*, int>> elementNames,
-                                std::string lhs_str, std::string rhs_str,
-                                int constPos,
-                                zstring value, /* value of regex */
-                                int start, int finish,
-                                bool optimizing,
-                                int pMax = PMAX,
-                                expr* extraConstraint = NULL /* length = ? */);
-
-                    /*
-                    * connected = a + connected + b
-                    */
-                    expr* handle_connected_connected_array(
-                            std::pair<expr*, int> a,
-                            std::vector<std::pair<expr*, int>> elementNames,
-                            std::string lhs_str, std::string rhs_str,
-                            int pos,
-                            int bound,
-                            bool optimizing,
-                            int pMax = PMAX);
-
-                /*
-                 *
-                 */
-                expr* toConstraint_ConnectedVar(
-                        std::pair<expr*, int> a, /* const or regex */
-                        std::vector<std::pair<expr*, int>> elementNames, /* have connected var, do not have const */
-                        std::string lhs, std::string rhs,
-                        std::map<expr*, int> connectedVariables,
-                        bool optimizing,
-                        int pMax);
-                /*
-                 * elementNames[pos] is a connected.
-                 * how many parts of that connected variable are in the const | regex
-                 */
-                expr* find_partsOfConnectedVariablesInAVector(
-                        int pos,
-                        std::vector<std::pair<expr*, int>> elementNames,
-                        int &partCnt);
-                /*
-                * pre elements + pre fix of itself
-                */
-                expr* leng_prefix_lhs(std::pair<expr*, int> a,
-                                          std::vector<std::pair<expr*, int>> elementNames,
-                                          std::string lhs, std::string rhs,
-                                          int pos,
-                                          bool optimizing,
-                                          bool unrollMode);
-
-                /*
-                *  pre fix of itself
-                */
-                expr* leng_prefix_rhs(
-                        std::pair<expr*, int> a, /* var */
-                        std::string rhs,
-                        bool unrollMode);
-
-                /*
-                 * 0: No const, No connected var
-                * 1: const		No connected var
-                * 2: no const, connected var
-                * 3: have both
-                */
-                int findSplitType(
-                        std::vector<std::pair<expr*, int>> elementNames,
-                        std::map<expr*, int> connectedVariables);
-
-                /*
-                * Input: constA and a number of flats
-                * Output: all possible ways to split constA
-                */
-                std::vector<std::vector<int> > collectAllPossibleSplits(
-                        std::pair<expr*, int> lhs,
-                        std::vector<std::pair<expr*, int> > elementNames,
-                        bool optimizing);
-
-                /*
-                * textLeft: length of string
-                * nMax: number of flats
-                * pMax: size of a flat
-                *
-                * Pre-Condition: 1st flat and n-th flat must be greater than 0
-                * Output: of the form 1 * 1 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 3 + 2 * 3 = 10
-                */
-                void collectAllPossibleSplits_const(
-                        int pos,
-                        zstring str, /* const */
-                        int pMax,
-                        std::vector<std::pair<expr*, int> > elementNames,
-                        std::vector<int> currentSplit,
-                        std::vector<std::vector<int> > &allPossibleSplits
-                );
-
-                zstring parse_regex_content(expr* a);
-
-                zstring parse_regex_full_content(expr* a);
 
 
-                bool isUnionStr(expr* a);
 
-                bool isUnionStr(zstring a);
+        void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
 
-                std::set<zstring > extendComponent(zstring  s);
-
-                std::vector<zstring> collectAlternativeComponents(zstring  s);
-
-                /*
-                * (a|b|c)*_xxx --> range <a, c>
-                */
-                std::pair<int, int> collectCharRange(zstring a);
-                std::pair<int, int> collectCharRange(expr* a);
-
-                bool feasibleSplit_const(
-                        zstring str,
-                        std::vector<std::pair<expr*, int> > elementNames,
-                        std::vector<int> currentSplit);
-            /*
-             * Given a flat,
-             * generate its size constraint
-             */
-            std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarSize(std::pair<expr*, int> a);
-            /*
-             *
-             */
-            std::string generateFlatIter(std::pair<expr*, int> a);
-            expr* getExprVarFlatIter(std::pair<expr*, int> a);
-            /*
-             * Given a flat,
-             * generate its size constraint
-             */
-            std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarFlatSize(std::pair<expr*, int> a);
-
-            /*
-             *
-             */
-            app* createEqualOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createMultiplyOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createModOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createAddOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createAddOperator(expr_ref_vector adds);
-            /*
-             *
-             */
-            app* createLessOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createLessEqOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createGreaterOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createGreaterEqOperator(expr* x, expr* y);
-
-            /*
-             *
-             */
-            app* createAndOperator(expr_ref_vector ands);
-
-            /*
-             *
-             */
-            app* createOrOperator(expr_ref_vector ors);
-
-            /*
-             *
-             */
-            expr* createNotOperator(expr_ref x);
-
-            /*
-             *
-             */
-            expr* createImpliesOperator(expr* a, expr* b);
-
-            /*
-             *
-             */
             app* createSelectOperator(expr* x, expr* y);
 
-            int canBeOptimized_LHS(
-                    int i, int startPos, int j,
-                    std::vector<int> left_arr,
-                    std::vector<int> right_arr,
-                    std::vector<std::pair<std::string, int>> lhs_elements,
-                    std::vector<std::pair<std::string, int>> rhs_elements);
 
-            int canBeOptimized_RHS(
-                    int i, int startPos, int j,
-                    std::vector<int> left_arr,
-                    std::vector<int> right_arr,
-                    std::vector<std::pair<std::string, int>> lhs_elements,
-                    std::vector<std::pair<std::string, int>> rhs_elements);
-            /*
-             * Given a flat,
-             * generate its array name
-             */
-            std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarFlatArray(std::pair<expr*, int> a);
-            /*
-            * First base case
-            */
-            void handleCase_0_0_general();
-            /*
-             * 2nd base case [0] = (sum rhs...)
-             */
-            void handleCase_0_n_general(int lhs, int rhs);
-            /*
-             * 2nd base case (sum lhs...) = [0]
-             */
-            void handleCase_n_0_general(int lhs, int rhs);
-            /*
-             * general case
-             */
-            void handleCase_n_n_general(int lhs, int rhs);
-            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v);
-            std::string expr2str(expr* node);
-            /*
-             * Create a general value that the component belongs to
-             */
-            std::string sumStringVector(expr* node);
-            std::string sumStringVector(ptr_vector<expr> list);
-            std::string sumStringVector(std::vector<expr*> list);
-            /*
-             * extra variables
-             */
-            std::vector<expr*> createSetOfFlatVariables(int flatP, std::map<expr*, int> &importantVars);
-            /*
-             * Input: x . y
-             * Output: flat . flat . flat . flat . flat . flat
-             */
-            std::vector<std::pair<expr*, int>> createEquality(expr* node);
-            std::vector<std::pair<expr*, int>> createEquality(ptr_vector<expr> list);
-            std::vector<std::pair<expr*, int>> createEquality(std::vector<expr*> list);
-                void createInternalVar(expr* v);
-            std::vector<expr*> set2vector(std::set<expr*> s);
-            unsigned findMaxP(std::vector<expr*> v);
-            /*
-             * cut the same prefix and suffix
-             */
-            void optimizeEquality(
-                    expr* lhs,
-                    expr* rhs,
-                    ptr_vector<expr> &new_lhs,
-                    ptr_vector<expr> &new_rhs);
-            std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
-                bool is_importantVar(
-                    expr* nn,
-                    std::set<expr*> eqc_roots,
-                    int &len);
-            void print_all_assignments();
-            std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
-            std::map<expr*, std::set<expr*>> construct_eq_combination(
-                    std::map<expr*, std::set<expr*>> &causes,
-                    std::set<std::pair<expr*, int>> importantVars);
-                std::set<expr*> extend_object(
-                    expr* object,
-                    std::map<expr*, std::set<expr*>> &combinations,
-                    std::map<expr*, std::set<expr*>> &causes,
-                    std::set<expr*> parents,
-                    std::set<std::pair<expr*, int>> importantVars);
+
+
         bool can_propagate() override;
         void propagate() override;
         void init_model(model_generator& m) override;
-        void finalize_model(model_generator& mg) override;
-
         void handle_equality(expr * lhs, expr * rhs);
         /*
          * strArgmt::solve_concat_eq_str()
@@ -1197,16 +281,10 @@ namespace smt {
          * Then add an assertion: (y2 == (Concat ce m2)) AND ("str3" == (Concat abc x2)) -> (y2 != "str3")
          */
         bool new_eq_check(expr * lhs, expr * rhs);
-            void propagate_const_str(expr * lhs, expr * rhs, zstring value);
-            void propagate_non_const(expr_ref_vector litems, expr * concat, expr * new_concat);
-        void check_regex_in(expr * nn1, expr * nn2);
-            void check_regex_in_lhs_rhs(expr * nn1, expr * nn2);
-                expr* construct_concat_overapprox(expr* nn, expr_ref_vector & litems);
-        void propagate_contain_in_new_eq(expr * n1, expr * n2);
-        void check_contain_by_eqc_val(expr * varNode, expr * constNode);
-        void check_contain_by_substr(expr * varNode, expr_ref_vector & willEqClass);
-        bool in_contain_idx_map(expr * n);
-        void check_contain_by_eq_nodes(expr * n1, expr * n2);
+        void propagate_const_str(expr * lhs, expr * rhs, zstring value);
+        void propagate_non_const(expr_ref_vector litems, expr * concat, expr * new_concat);
+        expr* construct_concat_overapprox(expr* nn, expr_ref_vector & litems);
+
         /*
         * Decide whether n1 and n2 are already in the same equivalence class.
         * This only checks whether the core considers them to be equal;
@@ -1229,15 +307,6 @@ namespace smt {
         * Length(Concat(x, y)) = Length(x) + Length(y)
         */
         void instantiate_concat_axiom(enode * cat);
-        void instantiate_axiom_prefixof(enode * e);
-        void instantiate_axiom_suffixof(enode * e);
-        void instantiate_axiom_contains(enode * e);
-        void instantiate_axiom_charAt(enode * e);
-        void instantiate_axiom_indexof(enode * e);
-        void instantiate_axiom_indexof_extended(enode * _e);
-        void instantiate_axiom_substr(enode * e);
-        void instantiate_axiom_replace(enode * e);
-        void instantiate_axiom_regexIn(enode * e);
 
         app * mk_fresh_const(char const* name, sort* s);
         app * mk_strlen(expr * e);
@@ -1248,31 +317,18 @@ namespace smt {
         expr * mk_concat_const_str(expr * n1, expr * n2);
         app * mk_int(int n);
         app * mk_int(rational & q);
-        app * mk_contains(expr * haystack, expr * needle);
-        app * mk_indexof(expr * haystack, expr * needle);
-        app * mk_int_var(std::string name);
-        app * mk_regex_rep_var();
-        expr * mk_regexIn(expr * str, expr * regexp);
-        app * mk_unroll(expr * n, expr * bound);
-        app * mk_unroll_bound_var();
-        app * mk_str_to_re(expr *);
-        app * mk_arr_var(std::string name);
+
 
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         expr * get_eqc_value(expr * n, bool & hasEqcValue);
-        expr * z3str2_get_eqc_value(expr * n , bool & hasEqcValue);
         expr * get_eqc_next(expr * n);
 
         theory_var get_var(expr * n) const;
         app * get_ast(theory_var v);
-        zstring get_std_regex_str(expr * regex);
         bool get_len_value(expr* e, rational& val);
         bool get_arith_value(expr* e, rational& val) const;
-        bool lower_bound(expr* _e, rational& lo) const;
-        bool upper_bound(expr* _e, rational& hi) const;
         bool upper_num_bound(expr* e, rational& hi) const;
         bool lower_num_bound(expr* e, rational& hi) const;
-        void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
         /*
          * Collect constant strings (from left to right) in an AST node.
          */
@@ -1280,16 +336,12 @@ namespace smt {
         /*
         * Collect constant strings (from left to right) in an AST node.
         */
-        void get_const_regex_str_asts_in_node(expr * node, expr_ref_vector & astList);
-
         /*
          * Collect important vars in AST node
          */
-        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList);
         eautomaton* get_automaton(expr* re);
 
         void track_variable_scope(expr * var);
-        expr * rewrite_implication(expr * premise, expr * conclusion);
         void assert_implication(expr * premise, expr * conclusion);
 
         enode* ensure_enode(expr* e);
@@ -1400,15 +452,9 @@ namespace smt {
         std::map<expr*, expr*> arrMap;
         int connectingSize;
 
-        UnderApproxState uState;
     private:
         void assert_axiom(expr *e);
-        void dump_assignments();
-        const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;
-        str::word_term get_word_term(expr *e) const;
-        str::state build_state_from_memo() const;
-        const bool block_dpllt_assignment_from_memo();
         void set_up_axioms(expr * ex);
     };
 
