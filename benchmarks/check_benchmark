@@ -25,7 +25,12 @@ DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp'],
                 'z3str3': ['z3', 'smt.string_solver=z3str3'],
                 'trau': ['./trau', '-language', 'smt2.6'],
                 'trauc': ['./trauc', 'smt.string_solver=z3str3'],
-                'trau2': ['./trau2', 'smt.string_solver=z3str3']}
+                'trau2': ['./trau2', 'smt.string_solver=z3str3'],
+                'trauc17d0ef5': ['./trauc17d0ef5', 'smt.string_solver=z3str3'],
+                'trau2pre': ['./trau2pre', 'smt.string_solver=z3str3'],
+                'trauctest': ['./trauctest', 'smt.string_solver=z3str3']}
+
+# expected error messages
 ERROR_MSGS = {'VIOLATION', 'segfault', 'dumped', 'exception'}
 
 
@@ -36,7 +41,7 @@ def contains_error_msg(text: str) -> bool:
     return False
 
 
-def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str):
+def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str, silent: bool):
     fp = open(log_file, 'a')
     fp_err = open(log_file + '.err', 'a')
     for file in benchmark_files:
@@ -106,13 +111,20 @@ def main(argv):
                                                 "'z3seq : 'z3', \n"
                                                 "'z3str3 : 'z3 smt.string_solver=z3str3', \n"
                                                 "'trau' : './trau' (symbolic link), \n"
-                                                "'trauc' : './trauc smt.string_solver=z3str3' (symbolic link),\n"
-                                                "'trau2' : './trau2 smt.string_solver=z3str3' (symbolic link).",
-                            dest="cmd", default='')
+                                                "'trauc' : './trauc smt.string_solver=z3str3',\n"
+                                                "'trau2' : './trau2 smt.string_solver=z3str3',\n"
+                                                "'trauc17d0ef5' : './trauc17d0ef5 smt.string_solver=z3str3',\n"
+                                                "'trau2pre' : './trau2pre smt.string_solver=z3str3',\n"
+                                                "'trauctest' : './trauctest smt.string_solver=z3str3'",
+    dest="cmd", default='')
     arg_parser.add_argument("-t", "--timeout", help="Set timeout, default is 10 (seconds).",
                             dest="timeout", default=10, type=int)
     arg_parser.add_argument("-d", "--date", help="Set date, default is current date from system.",
                             dest="date", default='')
+    arg_parser.add_argument('--nolog', help='do not write log file (but still write error log).', dest='nolog',
+                            action='store_true')
+    arg_parser.add_argument('--z3opt', help='run with z3str3 option: \'smt.string_solver=z3str3\' '
+                                            'and will ignore shortcut commands', dest='z3opt', action='store_true')
     args = arg_parser.parse_args()
 
     # prepare benchmark
@@ -122,6 +134,7 @@ def main(argv):
     benchmark_size = len(benchmark_files)
     print(f'benchmark_path: {os.path.realpath(benchmark_path)}')
     print(f'benchmark_size: {benchmark_size}')
+    print(f'nolog: {args.nolog}')
 
     time_out = args.timeout
     if args.date == '':
@@ -136,7 +149,9 @@ def main(argv):
     if args.cmd == '':
         print(f'Error, command not specified, use -h to see help.')
         exit(1)
-    if args.cmd in DEFAULT_CMDS:
+    if args.z3opt:  # No further check. It is the responsibility of the user to specify args.cmd correctly.
+        command = [args.cmd, 'smt.string_solver=z3str3']
+    elif args.cmd in DEFAULT_CMDS:
         command = DEFAULT_CMDS[args.cmd]
     elif ' ' in args.cmd:
         command = args.cmd.split()
@@ -146,16 +161,17 @@ def main(argv):
     cmd_log = re.sub(r"[^A-Za-z0-9]", "", args.cmd)
     log_file = f'{os.path.basename(benchmark_path)}.{check_date}.{cmd_log}.log'
     print(f'log file: {log_file}')
-    if os.path.exists(log_file):
-        print(f'Error, log file already exists. Remove or rename it.')
-        exit(1)
-    with open(log_file, 'w') as fp:
-        fp.write(f'benchmark_path: {os.path.realpath(benchmark_path)}\n')
-        fp.write(f'benchmark_size: {benchmark_size}\n')
-        fp.write(f'date: {check_date}\n')
-        fp.write(f'tool: {args.cmd}\n')
+    if not args.nolog:
+        if os.path.exists(log_file):
+            print(f'Error, log file already exists. Remove or rename it.')
+            exit(1)
+        with open(log_file, 'w') as fp:
+            fp.write(f'benchmark_path: {os.path.realpath(benchmark_path)}\n')
+            fp.write(f'benchmark_size: {benchmark_size}\n')
+            fp.write(f'date: {check_date}\n')
+            fp.write(f'tool: {args.cmd}\n')
 
-    check(args.cmd, command, benchmark_files, time_out, log_file)
+    check(args.cmd, command, benchmark_files, time_out, log_file, args.nolog)
 
 
 if __name__ == '__main__':
