@@ -78,7 +78,9 @@ ADD \
 	/contrib/ci/scripts/install-lib.sh \
   	/contrib/ci/scripts/run_quiet.sh \
 	${Z3_SRC_DIR}/third-parties-lib/
-RUN ${Z3_SRC_DIR}/third-parties-lib/install-lib.sh
+
+RUN CC=/usr/bin/gcc CXX=/usr/bin/g++ \
+	${Z3_SRC_DIR}/third-parties-lib/install-lib.sh
 
 # Deliberately leave out `contrib`
 ADD /cmake ${Z3_SRC_DIR}/cmake/

@@ -45,8 +45,6 @@ fi
 # Install dependencies for Apron
 brew_install_or_upgrade perl
 brew_install_or_upgrade gnu-sed
-brew_install_or_upgrade gmp
-brew_install_or_upgrade mpfr
 
 # Install Openfst and Apron
 "${SCRIPT_DIR}/install-lib.sh"
