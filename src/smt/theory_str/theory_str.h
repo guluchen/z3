@@ -383,6 +383,9 @@ namespace smt {
         void set_conflict(const literal_vector& ls);
         void block_curr_assignment();
         void dump_assignments() const;
+        void string_theory_propagation(expr * ex);
+        void propagate_concat_axiom(enode * cat);
+        void propagate_basic_string_axioms(enode * str);
     };
 
 }

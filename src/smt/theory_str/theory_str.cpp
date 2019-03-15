@@ -1315,6 +1315,150 @@ namespace smt {
 
     void theory_str::init_search_eh() {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search\n";);
+        context& ctx = get_context();
+        unsigned nFormulas = ctx.get_num_asserted_formulas();
+        for (unsigned i = 0; i < nFormulas; ++i) {
+            expr * ex = ctx.get_asserted_formula(i);
+            string_theory_propagation(ex);
+        }
+
+    }
+
+    void theory_str::string_theory_propagation(expr * expr) {
+        ast_manager &m = get_manager();
+        context &ctx = get_context();
+        sort *expr_sort = m.get_sort(expr);
+        sort *str_sort = m_util_s.str.mk_string_sort();
+
+        if (expr_sort == str_sort) {
+            enode *n = ctx.get_enode(expr);
+            propagate_basic_string_axioms(n);
+            if (is_app(expr) && m_util_s.str.is_concat(to_app(expr))) {
+                propagate_concat_axiom(n);
+            }
+        }
+        // if expr is an application, recursively inspect all arguments
+        if (is_app(expr)) {
+            app *term = to_app(expr);
+            unsigned num_args = term->get_num_args();
+            for (unsigned i = 0; i < num_args; i++) {
+                string_theory_propagation(term->get_arg(i));
+            }
+        }
+    }
+
+    void theory_str::propagate_concat_axiom(enode * cat) {
+        app * a_cat = cat->get_owner();
+        SASSERT(m_util_s.str.is_concat(a_cat));
+        ast_manager & m = get_manager();
+
+        // build LHS
+        expr_ref len_xy(m);
+        len_xy = m_util_s.str.mk_length(a_cat);
+        SASSERT(len_xy);
+
+        // build RHS: start by extracting x and y from Concat(x, y)
+        SASSERT(a_cat->get_num_args() == 2);
+        app * a_x = to_app(a_cat->get_arg(0));
+        app * a_y = to_app(a_cat->get_arg(1));
+        expr_ref len_x(m);
+        len_x = m_util_s.str.mk_length(a_x);
+        SASSERT(len_x);
+
+        expr_ref len_y(m);
+        len_y = m_util_s.str.mk_length(a_y);
+        SASSERT(len_y);
+
+        // now build len_x + len_y
+        expr_ref len_x_plus_len_y(m);
+        len_x_plus_len_y = m_util_a.mk_add(len_x, len_y);
+        SASSERT(len_x_plus_len_y);
+
+        // finally assert equality between the two subexpressions
+        app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
+        SASSERT(eq);
+        add_axiom(eq);
+    }
+
+    void theory_str::propagate_basic_string_axioms(enode * str) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        {
+            sort * a_sort = m.get_sort(str->get_owner());
+            sort * str_sort = m_util_s.str.mk_string_sort();
+            if (a_sort != str_sort) {
+                STRACE("str", tout << "WARNING: not setting up string axioms on non-string term " << mk_pp(str->get_owner(), m) << std::endl;);
+                return;
+            }
+        }
+
+        // TESTING: attempt to avoid a crash here when a variable goes out of scope
+        if (str->get_iscope_lvl() > ctx.get_scope_level()) {
+            STRACE("str", tout << "WARNING: skipping axiom setup on out-of-scope string term" << std::endl;);
+            return;
+        }
+
+        // generate a stronger axiom for constant strings
+        app * a_str = str->get_owner();
+
+        if (m_util_s.str.is_string(a_str)) {
+            expr_ref len_str(m);
+            len_str = m_util_s.str.mk_length(a_str);
+            SASSERT(len_str);
+
+            zstring strconst;
+            m_util_s.str.is_string(str->get_owner(), strconst);
+            unsigned int l = strconst.length();
+            expr_ref len(m_util_a.mk_numeral(rational(l), true), m);
+
+            literal lit(mk_eq(len_str, len, false));
+            ctx.mark_as_relevant(lit);
+            ctx.mk_th_axiom(get_id(), 1, &lit);
+        } else {
+            // build axiom 1: Length(a_str) >= 0
+            {
+                // build LHS
+                expr_ref len_str(m);
+                len_str = m_util_s.str.mk_length(a_str);
+                SASSERT(len_str);
+                // build RHS
+                expr_ref zero(m);
+                zero = m_util_a.mk_numeral(rational(0), true);
+                SASSERT(zero);
+                // build LHS >= RHS and assert
+                app * lhs_ge_rhs = m_util_a.mk_ge(len_str, zero);
+                SASSERT(lhs_ge_rhs);
+                STRACE("str", tout << "string axiom 1: " << mk_ismt2_pp(lhs_ge_rhs, m) << std::endl;);
+                add_axiom(lhs_ge_rhs);
+            }
+
+            // build axiom 2: Length(a_str) == 0 <=> a_str == ""
+            {
+                // build LHS of iff
+                expr_ref len_str(m);
+                len_str = m_util_s.str.mk_length(a_str);
+                SASSERT(len_str);
+                expr_ref zero(m);
+                zero = m_util_a.mk_numeral(rational(0), true);
+                SASSERT(zero);
+                expr_ref lhs(m);
+                lhs = ctx.mk_eq_atom(len_str, zero);
+                SASSERT(lhs);
+                // build RHS of iff
+                expr_ref empty_str(m);
+                empty_str = m_util_s.str.mk_string(symbol(""));
+                SASSERT(empty_str);
+                expr_ref rhs(m);
+                rhs = ctx.mk_eq_atom(a_str, empty_str);
+                SASSERT(rhs);
+                // build LHS <=> RHS and assert
+                literal l(mk_eq(lhs, rhs, true));
+                ctx.mark_as_relevant(l);
+                ctx.mk_th_axiom(get_id(), 1, &l);
+            }
+
+        }
     }
 
     void theory_str::relevant_eh(app *const n) {
