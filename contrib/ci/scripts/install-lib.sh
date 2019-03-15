@@ -32,4 +32,4 @@ run_quiet install_openfst
 
 # Install Apron
 echo "Installing Apron..."
-install_apron
+run_quiet install_apron
