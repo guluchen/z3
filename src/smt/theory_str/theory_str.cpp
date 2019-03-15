@@ -1199,7 +1199,8 @@ namespace smt {
                         if (var_rel.is_straight_line() &&
                             check_straight_line_membership(var_rel, next_s.get_memberships())) {
                             const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
-                            if (finish_after_found(s)) return {};
+                            std::queue<state::cref> empty_result;
+                            if (finish_after_found(s)) return empty_result;
                             continue;
                         }
                     }
