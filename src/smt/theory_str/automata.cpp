@@ -558,7 +558,8 @@ namespace smt {
                 cur->m_imp.SetFinal(state, (cur->m_imp.Final(state)==Zero)?One:Zero);
             }
             Minimize(&cur->m_imp);
-            return cur;
+            return std::unique_ptr<oaut>(new oaut(cur->m_imp));
+            //return cur;
         }
 
         automaton::ptr oaut::clone() {
@@ -582,7 +583,7 @@ namespace smt {
                     r_imp.AddArc(st_map[from], makeArc(symbol, st_map[to]));
                 }
             }
-            std::unique_ptr<oaut> result = std::unique_ptr<oaut>(new oaut(r_imp));
+            std::unique_ptr<automaton> result = std::unique_ptr<automaton>(new oaut(r_imp));
             return result;
         }
 
