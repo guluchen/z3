@@ -46,5 +46,12 @@ fi
 brew_install_or_upgrade perl
 brew_install_or_upgrade gnu-sed
 
+# Install ppl
+wget ftp://ftp.cs.unipr.it/pub/ppl/releases/1.2/ppl-1.2.tar.xz
+tar -xf ppl-1.2.tar.xz
+cd ppl-1.2
+./configure
+make && sudo make install
+
 # Install Openfst and Apron
 "${SCRIPT_DIR}/install-lib.sh"
