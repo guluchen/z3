@@ -210,7 +210,7 @@ namespace smt {
                            << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
 
 
-        handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
+ //       handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
 
         // merge eqc **AFTER** handle_equality
         m_find.merge(x, y);
@@ -247,9 +247,9 @@ namespace smt {
 
         // newEqCheck() -- check consistency wrt. existing equivalence classes
         // TODO check all disequalities
-        if (!new_eq_check(lhs, rhs)) {
-            return;
-        }
+//        if (!new_eq_check(lhs, rhs)) {
+//            return;
+//        }
 
         // BEGIN new_eq_handler() in strTheory
 
@@ -1486,122 +1486,18 @@ namespace smt {
     void theory_str::set_up_axioms(expr * ex) {
         ast_manager &m = get_manager();
         context &ctx = get_context();
-
         sort *ex_sort = m.get_sort(ex);
         sort *str_sort = u.str.mk_string_sort();
-        sort *bool_sort = m.mk_bool_sort();
-
-        family_id m_arith_fid = m.mk_family_id("arith");
-        sort *int_sort = m.mk_sort(m_arith_fid, INT_SORT);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(ex, m) << std::endl;);
 
         if (ex_sort == str_sort) {
-            STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort String" << std::endl;);
-            // set up basic string axioms
             enode *n = ctx.get_enode(ex);
-            SASSERT(n);
-            m_basicstr_axiom_todo.push_back(n);
-            STRACE("str", tout << "add " << mk_pp(ex, m) << " to m_basicstr_axiom_todo" << std::endl;);
-
-
+            instantiate_basic_string_axioms(n);
             if (is_app(ex)) {
                 app *ap = to_app(ex);
                 if (u.str.is_concat(ap)) {
-                    // if ex is a concat, set up concat axioms later
-                    m_concat_axiom_todo.push_back(n);
-                    // we also want to check whether we can eval this concat,
-                    // in case the rewriter did not totally finish with this term
-                    m_concat_eval_todo.push_back(n);
-                } else if (u.str.is_length(ap)) {
-                    // if the argument is a variable,
-                    // keep track of this for later, we'll need it during model gen
-                    expr *var = ap->get_arg(0);
-                    app *aVar = to_app(var);
-                    if (aVar->get_num_args() == 0 && !u.str.is_string(aVar)) {
-                        input_var_in_len.insert(var);
-                    }
-                } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
-                    m_library_aware_axiom_todo.push_back(n);
-                } else if (u.str.is_itos(ap)) {
-                    TRACE("str",
-                          tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
-                    string_int_conversion_terms.push_back(ap);
-                    m_library_aware_axiom_todo.push_back(n);
-                } else if (ap->get_num_args() == 0 && !u.str.is_string(ap)) {
-                    // if ex is a variable, add it to our list of variables
-                    STRACE("str", tout << "tracking variable " << mk_ismt2_pp(ap, get_manager()) << std::endl;);
-                    variable_set.insert(ex);
-                    ctx.mark_as_relevant(ex);
-                    // this might help??
-                    theory_var v = mk_var(n);
-                    STRACE("str", tout << "variable " << mk_ismt2_pp(ap, get_manager()) << " is #" << v << std::endl;);
-                    (void) v;
+                    instantiate_concat_axiom(n);
                 }
             }
-        } else if (ex_sort == bool_sort && !is_quantifier(ex)) {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort Bool" << std::endl;);
-            // set up axioms for boolean terms
-
-            ensure_enode(ex);
-            if (ctx.e_internalized(ex)) {
-                enode *n = ctx.get_enode(ex);
-                SASSERT(n);
-
-                if (is_app(ex)) {
-                    app *ap = to_app(ex);
-                    if (u.str.is_prefix(ap) || u.str.is_suffix(ap) || u.str.is_contains(ap) || u.str.is_in_re(ap)) {
-                        m_library_aware_axiom_todo.push_back(n);
-                    }
-                }
-            } else {
-                STRACE("str", tout << "WARNING: Bool term " << mk_ismt2_pp(ex, get_manager())
-                                  << " not internalized. Delaying axiom setup to prevent a crash." << std::endl;);
-                ENSURE(!search_started); // infinite loop prevention
-                m_delayed_axiom_setup_terms.push_back(ex);
-                return;
-            }
-        } else if (ex_sort == int_sort) {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort Int" << std::endl;);
-            // set up axioms for integer terms
-            enode *n = ensure_enode(ex);
-            SASSERT(n);
-
-            if (is_app(ex)) {
-                app *ap = to_app(ex);
-                if (u.str.is_index(ap)) {
-                    m_library_aware_axiom_todo.push_back(n);
-                } else if (u.str.is_stoi(ap)) {
-                    STRACE("str",
-                          tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
-                    string_int_conversion_terms.push_back(ap);
-                    m_library_aware_axiom_todo.push_back(n);
-                }
-            }
-        }
-        else if (is_app(ex)){
-            app *ap = to_app(ex);
-            if (u.re.is_star(ap)
-                || u.re.is_plus(ap)
-                || u.re.is_concat(ap)
-                || u.re.is_union(ap)
-                || u.re.is_complement(ap)
-                || u.re.is_empty(ap)
-                || u.re.is_full_char(ap)
-                || u.re.is_intersection(ap)
-                || u.re.is_range(ap)
-                || u.re.is_to_re(ap)) {
-            }
-            else {
-                STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                                   ": expr is of wrong sort, ignoring" << std::endl;);
-            }
-        }
-        else {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of wrong sort, ignoring" << std::endl;);
         }
 
         // if expr is an application, recursively inspect all arguments
@@ -1643,7 +1539,7 @@ namespace smt {
 
         // this might be cheating but we need to make sure that certain maps are populated
         // before the first call to new_eq_eh()
-        propagate();
+    //    propagate();
 
         STRACE("str", tout << "search started" << std::endl;);
         search_started = true;
@@ -1741,92 +1637,53 @@ namespace smt {
     }
 
     void theory_str::propagate() {
-        context & ctx = get_context();
-        while (can_propagate()) {
-            TRACE("str", tout << std::endl;);
+//        context & ctx = get_context();
+//        while (can_propagate()) {
+//            TRACE("str", tout << std::endl;);
+//
+//            while(true) {
+//                // this can potentially recursively activate itself
+//                unsigned start_count = m_basicstr_axiom_todo.size();
+//                ptr_vector<enode> axioms_tmp(m_basicstr_axiom_todo);
+//                for (auto const& el : axioms_tmp) {
+//                    instantiate_basic_string_axioms(el);
+//                }
+//                unsigned end_count = m_basicstr_axiom_todo.size();
+//                if (end_count > start_count) {
+//                    STRACE("str", tout << "new basic string axiom terms added -- checking again" << std::endl;);
+//                    continue;
+//                } else {
+//                    break;
+//                }
+//            }
+//            m_basicstr_axiom_todo.reset();
+//
+//
+//            for (auto const& el : m_concat_axiom_todo) {
+//                instantiate_concat_axiom(el);
+//            }
+//            m_concat_axiom_todo.reset();
+//            m_concat_eval_todo.reset();
 
-            while(true) {
-                // this can potentially recursively activate itself
-                unsigned start_count = m_basicstr_axiom_todo.size();
-                ptr_vector<enode> axioms_tmp(m_basicstr_axiom_todo);
-                for (auto const& el : axioms_tmp) {
-                    instantiate_basic_string_axioms(el);
-                }
-                unsigned end_count = m_basicstr_axiom_todo.size();
-                if (end_count > start_count) {
-                    STRACE("str", tout << "new basic string axiom terms added -- checking again" << std::endl;);
-                    continue;
-                } else {
-                    break;
-                }
-            }
-            m_basicstr_axiom_todo.reset();
-            STRACE("str", tout << "reset m_basicstr_axiom_todo" << std::endl;);
-
-
-
-            for (auto const& el : m_concat_axiom_todo) {
-                instantiate_concat_axiom(el);
-            }
-            m_concat_axiom_todo.reset();
-            m_concat_eval_todo.reset();
-
-            while(true) {
-                // Special handling: terms can recursively set up other terms
-                // (e.g. indexof can instantiate other indexof terms).
-                // - Copy the list so it can potentially be modified during setup.
-                // - Don't clear this list if new ones are added in the process;
-                //   instead, set up all the new terms before proceeding.
-                // TODO see if any other propagate() worklists need this kind of handling
-                // TODO we really only need to check the new ones on each pass
-                unsigned start_count = m_library_aware_axiom_todo.size();
-                ptr_vector<enode> axioms_tmp(m_library_aware_axiom_todo);
-                for (auto const& e : axioms_tmp) {
-                    app * a = e->get_owner();
-                    if (u.str.is_stoi(a)) {
-                    } else if (u.str.is_itos(a)) {
-                    } else if (u.str.is_at(a)) {
-                    } else if (u.str.is_prefix(a)) {
-                    } else if (u.str.is_suffix(a)) {
-                    } else if (u.str.is_contains(a)) {
-                    } else if (u.str.is_index(a)) {
-                    } else if (u.str.is_extract(a)) {
-                    } else if (u.str.is_replace(a)) {
-                    } else if (u.str.is_in_re(a)) {
-                    } else {
-                        STRACE("str", tout << "BUG: unhandled library-aware term " << mk_pp(e->get_owner(), get_manager()) << std::endl;);
-                        NOT_IMPLEMENTED_YET();
-                    }
-                }
-                unsigned end_count = m_library_aware_axiom_todo.size();
-                if (end_count > start_count) {
-                    STRACE("str", tout << "new library-aware terms added during axiom setup -- checking again" << std::endl;);
-                    continue;
-                } else {
-                    break;
-                }
-            }
-            m_library_aware_axiom_todo.reset();
-
-            for (auto el : m_delayed_axiom_setup_terms) {
-                // I think this is okay
-                ctx.internalize(el, false);
-                set_up_axioms(el);
-            }
-            m_delayed_axiom_setup_terms.reset();
-
-            for (expr * a : m_persisted_axiom_todo) {
-                assert_axiom(a);
-            }
-            m_persisted_axiom_todo.reset();
-
-            if (search_started) {
-                for (auto const& el : m_delayed_assertions_todo) {
-                    assert_axiom(el);
-                }
-                m_delayed_assertions_todo.reset();
-            }
-        }
+//            for (auto el : m_delayed_axiom_setup_terms) {
+//                // I think this is okay
+//                ctx.internalize(el, false);
+//                set_up_axioms(el);
+//            }
+//            m_delayed_axiom_setup_terms.reset();
+//
+//            for (expr * a : m_persisted_axiom_todo) {
+//                assert_axiom(a);
+//            }
+//            m_persisted_axiom_todo.reset();
+//
+//            if (search_started) {
+//                for (auto const& el : m_delayed_assertions_todo) {
+//                    assert_axiom(el);
+//                }
+//                m_delayed_assertions_todo.reset();
+//            }
+//        }
     }
 
     /*
