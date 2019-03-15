@@ -24,7 +24,9 @@ env:
     # Build for running unit tests under ASan/UBSan
     # FIXME: We should really be doing a debug build but the unit tests run too
     # slowly when we do that.
-    - LINUX_BASE=ubuntu_16.04 C_COMPILER=/usr/bin/clang-6.0 CXX_COMPILER=/usr/bin/clang++-6.0 TARGET_ARCH=x86_64 Z3_BUILD_TYPE=RelWithDebInfo ASAN_BUILD=1 RUN_UNIT_TESTS=BUILD_AND_RUN ASAN_DSO=/usr/lib/clang/6.0/lib/linux/libclang_rt.asan-x86_64.so UBSAN_BUILD=1 RUN_API_EXAMPLES=0 RUN_SYSTEM_TESTS=0 DOTNET_BINDINGS=0 JAVA_BINDINGS=0 PYTHON_BINDINGS=0
+    #
+    # FIXME: This is taking too long to compile. Comment out for now.
+    # - LINUX_BASE=ubuntu_16.04 C_COMPILER=/usr/bin/clang-6.0 CXX_COMPILER=/usr/bin/clang++-6.0 TARGET_ARCH=x86_64 Z3_BUILD_TYPE=RelWithDebInfo ASAN_BUILD=1 RUN_UNIT_TESTS=BUILD_AND_RUN ASAN_DSO=/usr/lib/clang/6.0/lib/linux/libclang_rt.asan-x86_64.so UBSAN_BUILD=1 RUN_API_EXAMPLES=0 RUN_SYSTEM_TESTS=0 DOTNET_BINDINGS=0 JAVA_BINDINGS=0 PYTHON_BINDINGS=0
 
     # 64-bit GCC 5.4 RelWithDebInfo
     - LINUX_BASE=ubuntu_16.04 C_COMPILER=/usr/bin/gcc-6 CXX_COMPILER=/usr/bin/g++-6 TARGET_ARCH=x86_64 Z3_BUILD_TYPE=RelWithDebInfo
@@ -44,7 +46,7 @@ env:
     - LINUX_BASE=ubuntu_16.04 C_COMPILER=/usr/bin/clang-6.0 CXX_COMPILER=/usr/bin/clang++-6.0 TARGET_ARCH=x86_64 Z3_BUILD_TYPE=Debug RUN_UNIT_TESTS=BUILD_ONLY
 
     # 32-bit GCC 5.4 RelWithDebInfo
-    - LINUX_BASE=ubuntu32_16.04 C_COMPILER=/usr/bin/gcc-6 CXX_COMPILER=/usr/bin/g++-6 TARGET_ARCH=i686 Z3_BUILD_TYPE=RelWithDebInfo
+    # - LINUX_BASE=ubuntu32_16.04 C_COMPILER=/usr/bin/gcc-6 CXX_COMPILER=/usr/bin/g++-6 TARGET_ARCH=i686 Z3_BUILD_TYPE=RelWithDebInfo
 
     # Both of the two configurations below build the docs because the current
     # implementation uses python as part of the building process.
@@ -70,6 +72,8 @@ env:
 # Ubuntu 14.04 LTS
 ###############################################################################
     # GCC 6
+    # TOO OLD!
+    # It's 2019!
     # 64-bit GCC 4.8 RelWithDebInfo
     # - LINUX_BASE=ubuntu_14.04 C_COMPILER=/usr/bin/gcc-6 CXX_COMPILER=/usr/bin/g++-6 TARGET_ARCH=x86_64 Z3_BUILD_TYPE=RelWithDebInfo
     # 64-bit GCC 4.8 Debug

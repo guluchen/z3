@@ -31,6 +31,11 @@ if [ "X${UBSAN_BUILD}" = "X1" ]; then
   CFLAGS="${CFLAGS} -fsanitize=undefined"
 fi
 
+if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+  CXXFLAGS="${CXXFLAGS} -std=c++11"
+  CFLAGS="${CFLAGS} -std=c11"
+fi
+
 # Report flags
 echo "CXXFLAGS: ${CXXFLAGS}"
 echo "CFLAGS: ${CFLAGS}"

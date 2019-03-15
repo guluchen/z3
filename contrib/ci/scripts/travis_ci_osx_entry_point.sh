@@ -39,13 +39,14 @@ fi
 
 # Build Z3
 "${SCRIPT_DIR}/build_z3_cmake.sh"
+
 # Test building docs
-"${SCRIPT_DIR}/test_z3_docs.sh"
+#"${SCRIPT_DIR}/test_z3_docs.sh"
 # Test examples
-"${SCRIPT_DIR}/test_z3_examples_cmake.sh"
+#"${SCRIPT_DIR}/test_z3_examples_cmake.sh"
 # Run unit tests
-"${SCRIPT_DIR}/test_z3_unit_tests_cmake.sh"
+#"${SCRIPT_DIR}/test_z3_unit_tests_cmake.sh"
 # Run system tests
-"${SCRIPT_DIR}/test_z3_system_tests.sh"
+#"${SCRIPT_DIR}/test_z3_system_tests.sh"
 # Test install
-"${SCRIPT_DIR}/test_z3_install_cmake.sh"
+#"${SCRIPT_DIR}/test_z3_install_cmake.sh"

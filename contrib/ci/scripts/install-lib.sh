@@ -28,8 +28,8 @@ set -o pipefail
 
 # Install openfst
 echo "Installing Openfst..."
-run_quiet install_openfst
+install_openfst
 
 # Install Apron
 echo "Installing Apron..."
-run_quiet install_apron
+install_apron

@@ -185,7 +185,7 @@ namespace smt {
             std::set<state> get_finals() override;
             ptr clone() override;
             ptr determinize() override;
-            ptr complement() override;
+            oaut::ptr complement() override;
             ptr intersect_with(sptr other) override;
             ptr union_with(sptr other) override;
             state add_state(){return m_imp.AddState();};
