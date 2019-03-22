@@ -1575,6 +1575,12 @@ namespace smt {
         }
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
+            // for test: print graph size then exit
+            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+            std::cout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';
+            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
+            STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
+            // exit(1);
             // build counter system from transform graph and run abstraction interpretation
             STRACE("str", tout << "[COUNTER SYSTEM]\n";);
             counter_system cs = counter_system(solver);
