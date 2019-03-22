@@ -219,6 +219,15 @@ namespace smt {
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
             memberships::sptr m_memberships;
+
+            std::map<element, unsigned> var_occurrence;
+            std::map<word_term, std::set<word_term>> eq_class_map;
+            void initialize_eq_class_map();
+            void remove_single_variable_word_term();
+            void count_variable_occurrences();
+            bool quadratic_after_add_this_term(const word_term&);
+            bool has_non_quadratic_var(const word_term& wt);
+            word_term find_alternative_term(const word_term&,const word_term&);
         public:
             explicit state(memberships::sptr m) : m_memberships{std::move(m)} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
@@ -236,6 +245,7 @@ namespace smt {
             bool unsolvable_by_check() const;
             bool unsolvable_by_inference() const;
             bool quadratic() const;
+            void quadratify();
             void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
