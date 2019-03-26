@@ -56,6 +56,7 @@ ENV \
   USE_OPENMP=${USE_OPENMP} \
   Z3_SRC_DIR=${Z3_SRC_DIR} \
   Z3_BUILD_DIR=/home/user/z3_build \
+  Z3_BENCHMARK_DIR=/home/user/benchmark \
   Z3_BUILD_TYPE=${Z3_BUILD_TYPE} \
   Z3_CMAKE_GENERATOR=${Z3_CMAKE_GENERATOR} \
   Z3_VERBOSE_BUILD_OUTPUT=${Z3_VERBOSE_BUILD_OUTPUT} \
@@ -70,6 +71,8 @@ ENV \
 # Build Z3
 RUN mkdir -p "${Z3_SRC_DIR}" && \
   mkdir -p "${Z3_SRC_DIR}/contrib/ci/scripts" && \
+  mkdir -p "${Z3_BENCHMARK_DIR}" && \
+  mkdir -p "${Z3_BENCHMARK_DIR}/regression" && \
   mkdir -p "${Z3_SRC_DIR}/third-parties-lib" && \
   mkdir -p "${Z3_SRC_DIR}/contrib/suppressions/sanitizers"
 
@@ -98,16 +101,27 @@ ADD \
   ${Z3_SRC_DIR}/contrib/ci/scripts/
 RUN ${Z3_SRC_DIR}/contrib/ci/scripts/build_z3_cmake.sh
 
+RUN echo "Build complete!"
+
+# Test regression
+ADD \
+  /benchmarks/regression/* \
+  ${Z3_BENCHMARK_DIR}/regression/
+ADD \
+  /contrib/ci/scripts/test_regression.sh \
+  ${Z3_BENCHMARK_DIR}/
+RUN ${Z3_BENCHMARK_DIR}/test_regression.sh
+
 # Test building docs
 # ADD \
-#   /contrib/ci/scripts/test_z3_docs.sh \
+#   /contrib/ci/scripts/legacy/test_z3_docs.sh \
 #   /contrib/ci/scripts/run_quiet.sh \
 #   ${Z3_SRC_DIR}/contrib/ci/scripts/
 # RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_docs.sh
 
 # Test examples
 # ADD \
-#   /contrib/ci/scripts/test_z3_examples_cmake.sh \
+#   /contrib/ci/scripts/legacy/test_z3_examples_cmake.sh \
 #   /contrib/ci/scripts/sanitizer_env.sh \
 #   ${Z3_SRC_DIR}/contrib/ci/scripts/
 # ADD \
@@ -119,18 +133,18 @@ RUN ${Z3_SRC_DIR}/contrib/ci/scripts/build_z3_cmake.sh
 
 # Run unit tests
 # ADD \
-#   /contrib/ci/scripts/test_z3_unit_tests_cmake.sh \
+#   /contrib/ci/scripts/legacy/test_z3_unit_tests_cmake.sh \
 #   ${Z3_SRC_DIR}/contrib/ci/scripts/
 # RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_unit_tests_cmake.sh
 
 # Run system tests
 # ADD \
-#   /contrib/ci/scripts/test_z3_system_tests.sh \
+#   /contrib/ci/scripts/legacy/test_z3_system_tests.sh \
 #   ${Z3_SRC_DIR}/contrib/ci/scripts/
 # RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_system_tests.sh
 
 # Test install
 # ADD \
-#   /contrib/ci/scripts/test_z3_install_cmake.sh \
+#   /contrib/ci/scripts/legacy/test_z3_install_cmake.sh \
 #   ${Z3_SRC_DIR}/contrib/ci/scripts/
 # RUN ${Z3_SRC_DIR}/contrib/ci/scripts/test_z3_install_cmake.sh

@@ -24,6 +24,7 @@ fi
 export PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE:-$(which python)}"
 export Z3_SRC_DIR="${TRAVIS_BUILD_DIR}"
 export Z3_BUILD_DIR="${Z3_SRC_DIR}/build"
+export Z3_BENCHMARK_DIR="${Z3_SRC_DIR}/benchmarks"
 export Z3_SYSTEM_TEST_DIR="${Z3_SRC_DIR}/z3_system_test"
 
 # Overwrite whatever what set in TravisCI
@@ -41,12 +42,12 @@ fi
 "${SCRIPT_DIR}/build_z3_cmake.sh"
 
 # Test building docs
-#"${SCRIPT_DIR}/test_z3_docs.sh"
+#"${SCRIPT_DIR}/legacy/test_z3_docs.sh"
 # Test examples
-#"${SCRIPT_DIR}/test_z3_examples_cmake.sh"
+#"${SCRIPT_DIR}/legacy/test_z3_examples_cmake.sh"
 # Run unit tests
-#"${SCRIPT_DIR}/test_z3_unit_tests_cmake.sh"
+#"${SCRIPT_DIR}/legacy/test_z3_unit_tests_cmake.sh"
 # Run system tests
-#"${SCRIPT_DIR}/test_z3_system_tests.sh"
+#"${SCRIPT_DIR}/legacy/test_z3_system_tests.sh"
 # Test install
-#"${SCRIPT_DIR}/test_z3_install_cmake.sh"
+#"${SCRIPT_DIR}/legacy/test_z3_install_cmake.sh"

@@ -1,3 +1,2 @@
 # Maintainers
-
-- Dan Liew (@delcypher)
+- Wei-Cheng Wu (@spencerwuwu)
