@@ -1567,6 +1567,7 @@ namespace smt {
 
         if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
+        root.quadratify();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
@@ -1575,6 +1576,12 @@ namespace smt {
         }
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
+            // for test: print graph size then exit
+            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+            std::cout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';
+            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
+            STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
+            // exit(1);
             // build counter system from transform graph and run abstraction interpretation
             STRACE("str", tout << "[COUNTER SYSTEM]\n";);
             counter_system cs = counter_system(solver);
@@ -1737,7 +1744,101 @@ namespace smt {
         }
         return result;
     }
+    void str::state::initialize_eq_class_map(){
+        std::map<word_term, word_term> union_find;
 
+        for(auto& eq :m_eq_wes) {
+            if(union_find.find(eq.lhs())==union_find.end()) {
+                union_find[eq.lhs()] = eq.lhs();
+            }
+            union_find[eq.rhs()] = union_find[eq.lhs()];
+        }
+
+        for(auto& k:union_find){
+            auto& member=k.first;
+            auto& farther=k.second;
+            while(farther!= union_find[farther]){
+                farther= union_find[farther];
+            }
+            eq_class_map[farther].insert(member);
+        }
+    }
+    void str::state::remove_single_variable_word_term() {
+        std::set<word_equation> updated_result;
+
+        bool updated =true;
+
+
+        while (updated) {
+            updated = false;
+            for(auto &eq:m_eq_wes){
+                const element* source;
+                const word_term* target;
+
+                if (eq.lhs().length() == 1 && eq.lhs().has_variable()) {
+                    source= &eq.lhs().head();
+                    target= &eq.rhs();
+                    updated =true;
+                } else if (eq.rhs().length() == 1 && eq.rhs().has_variable()) {
+                    source= &eq.rhs().head();
+                    target= &eq.lhs();
+                    updated =true;
+                }
+                if(updated){
+                    for (auto &eq2:m_eq_wes) {
+                        word_equation eq3 = eq2.replace(*source, *target);
+                        if (eq3.lhs() != eq3.rhs()) updated_result.insert(eq3);
+                    }
+                    m_eq_wes = updated_result;
+                    updated_result.clear();
+                    break;
+                }
+            }
+        }
+    }
+
+
+    bool str::state::has_non_quadratic_var(const word_term& wt){
+        for(const element& e:wt.content()){
+            if(e.typed(element::t::VAR) && var_occurrence[e]>2){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //best effort implementation to make the word equation quadratic
+    void str::state::quadratify(){
+        using namespace std;
+
+        remove_single_variable_word_term();
+
+        STRACE("str", tout << "\nremoved single variable word terms:\n" << *this << '\n';);
+
+        initialize_eq_class_map();
+
+        set<word_equation> result;
+        for(auto &k: eq_class_map) {
+            set<word_term>::iterator cur=k.second.begin();
+            set<word_term>::iterator next=++k.second.begin();
+
+            bool selected=false;
+            while(next!=eq_class_map[k.first].end()) {
+                if(has_non_quadratic_var(*cur)||has_non_quadratic_var(*cur)){
+                    selected=true;
+                }else{
+                    result.insert({*cur, *next});
+                }
+
+                cur++;
+                next++;
+                if(selected && next==eq_class_map[k.first].end()){
+                    result.insert({*cur, *k.second.begin()});
+                }
+            };
+        }
+        m_eq_wes=result;
+    }
     void theory_str::add_axiom(expr *const e) {
         if (e == nullptr || get_manager().is_true(e)) return;
 
