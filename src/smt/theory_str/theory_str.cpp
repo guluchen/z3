@@ -945,7 +945,7 @@ namespace smt {
                 move m{m_state, move::t::TO_EMPTY, {v}};
                 result.emplace_back(std::make_pair(std::move(m), m_state.assign_empty(v)));
             } else {
-                move m{m_state, move::t::TO_CONST, {c}};
+                move m{m_state, move::t::TO_CONST, {v, c}};
                 result.emplace_back(std::make_pair(std::move(m), m_state.assign_const(v, {c})));
             }
             return result;
@@ -1577,21 +1577,19 @@ namespace smt {
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
             // for test: print graph size then exit
+            std::cout << "graph construction summary:\n";
+            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
             std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
-            std::cout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';
-            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
-            // exit(1);
-            // build counter system from transform graph and run abstraction interpretation
-            STRACE("str", tout << "[COUNTER SYSTEM]\n";);
+            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
             counter_system cs = counter_system(solver);
-            STRACE("str", tout << "counter_system extracted!" << std::endl;);
-            cs.print_counter_system();
-            cs.print_var_expr(get_manager());
+            cs.print_counter_system();  // STRACE output
+            cs.print_var_expr(get_manager());  // STRACE output
+
             STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
             apron_counter_system ap_cs = apron_counter_system(cs);
             STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
-            ap_cs.print_apron_counter_system();
+            // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
             STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
             ap_cs.run_abstraction();
             STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
@@ -1602,7 +1600,8 @@ namespace smt {
             lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;
+                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;  // keep standard output for now
+                STRACE("str", tout << mk_pp(lenc_res, get_manager()) << std::endl;);
                 add_axiom(lenc_res);
             }
 

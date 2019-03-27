@@ -97,7 +97,6 @@ namespace smt {
                     } else {
                         cs_tgt = mapped_states[tgt];
                     }
-                    // set transition according to transform type
                     switch (m.m_type) {
                         case solver::move::t::TO_EMPTY:
                             assign.type = counter_system::assign_type::CONST;
@@ -110,7 +109,7 @@ namespace smt {
                         case solver::move::t::TO_CONST:
                             assign.type = counter_system::assign_type::CONST;
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
-                            SASSERT(assign.num >= 0);  // 0 for the case of split_var_empty_ahead=true in solver::check
+                            SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
                             add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr());
                             break;
@@ -153,20 +152,18 @@ namespace smt {
                 STRACE("str", tout << "state number " << e.second << " maps to state:\n" << e.first  << '\n';);
             }
             std::cout << "[COUNTER_SYSTEM]:\n";
-            std::cout << "#states=" << num_states << "\n;";
-            std::cout << "#transitions=" << num_trans << '\n';
-            std::cout << "root is quadratic=" << solv.get_root().get().quadratic() << '\n';
+            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
+            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
             STRACE("str", tout << "[COUNTER_SYSTEM]:\n";);
-            STRACE("str", tout << "#states=" << num_states << "\n;";);
-            STRACE("str", tout << "#transitions=" << num_trans << '\n';);
-            STRACE("str", tout << "root is quadratic=" << solv.get_root().get().quadratic() << '\n';);
-//            std::cerr << "exception" << '\n';
-//            exit(1);
-//            std::cout << "mapped_states final..." << std::endl;
-//            std::cout << "mapped_states size = " << num_states << std::endl;
+            STRACE("str", tout << "#states=" << num_states << "; #transitions=" << num_trans << '\n';);
+            STRACE("str", tout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';);
+
+            STRACE("str", tout << "mapped_states final..." << std::endl;);
+            STRACE("str", tout << "mapped_states size = " << num_states << std::endl;);
 //            for (const auto& e : mapped_states) {
-//                std::cout << e.first  << "    " << e.second << std::endl;
+//                STRACE("str", tout << e.first  << "    " << e.second << std::endl;);
 //            }
+            STRACE("str", tout << "counter_system extracted!" << std::endl;);
         }
 
         void counter_system::print_var_expr(ast_manager &m) {
