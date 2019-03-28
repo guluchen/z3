@@ -140,5 +140,3 @@ cmake \
 source ${SCRIPT_DIR}/set_generator_args.sh
 cmake --build $(pwd) "${GENERATOR_ARGS[@]}"
 
-# Create symbolic link 
-sudo ln ${Z3_BUILD_DIR}/z3 /usr/bin/z3

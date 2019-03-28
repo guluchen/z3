@@ -9,7 +9,7 @@ function run_test() { #line
         _EXPECT="unsat"
     fi
     _TARGET_F=${Z3_BENCHMARK_DIR}/regression/$_TARGET
-    _ANS="$(timeout 10 z3 smt.string_solver=z3str3 $_TARGET_F)"
+    _ANS="$(timeout 20 ${Z3_BUILD_DIR}/z3 smt.string_solver=z3str3 $_TARGET_F | tail -n 1)"
 
     if [ "$_ANS" == "" ]
     then

@@ -41,6 +41,8 @@ fi
 # Build Z3
 "${SCRIPT_DIR}/build_z3_cmake.sh"
 
+# Regression test
+"${SCRIPT_DIR}/test_regression.sh"
 # Test building docs
 #"${SCRIPT_DIR}/legacy/test_z3_docs.sh"
 # Test examples
