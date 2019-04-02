@@ -396,6 +396,10 @@ namespace smt {
         void string_theory_propagation(expr * ex);
         void propagate_concat_axiom(enode * cat);
         void propagate_basic_string_axioms(enode * str);
+        void print_ast(expr *e);
+        void print_ctx();
+        bool length_check_sat(expr *e);
+        bool mini_check_sat(expr *e);
     };
 
 }

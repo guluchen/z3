@@ -1313,15 +1313,61 @@ namespace smt {
         return true;
     }
 
+    void theory_str::print_ctx() {  // test_hlin
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        std::cout << "~~~~~ print ctx start ~~~~~~~\n";
+        context& ctx = get_context();
+        unsigned nFormulas = ctx.get_num_asserted_formulas();
+        expr_ref_vector Literals(get_manager()), Assigns(get_manager());
+        ctx.get_guessed_literals(Literals);
+        ctx.get_assignments(Assigns);
+        std::cout << "~~~~~~ from get_asserted_formulas ~~~~~~\n";
+        for (unsigned i = 0; i < nFormulas; ++i) {
+            expr * ex = ctx.get_asserted_formula(i);
+            std::cout << mk_pp(ex,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~~ from get_guessed_literals ~~~~~~\n";
+        for (auto & e : Literals){
+            std::cout << mk_pp(e,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~~ from get_assignments ~~~~~~\n";
+        for (auto & e : Assigns){
+//            print_ast(e);
+            std::cout << mk_pp(e,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~ print ctx end ~~~~~~~~~\n";
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+    }
+
+    void theory_str::print_ast(expr *e) {  // test_hlin
+        ast_manager m = get_manager();
+        unsigned int id = e->get_id();
+        ast_kind ast = e->get_kind();
+        sort *e_sort = m.get_sort(e);
+        sort *bool_sort = m.mk_bool_sort();
+        sort *str_sort = m_util_s.str.mk_string_sort();
+        std::cout << "#e.id = " << id << std::endl;
+        std::cout << "#e.kind = " << get_ast_kind_name(ast) << std::endl;
+        std::cout << std::boolalpha << "#is bool sort? " << (e_sort == bool_sort) << std::endl;
+        std::cout << std::boolalpha << "#is string sort? " << (e_sort == str_sort) << std::endl;
+        std::cout << std::boolalpha << "#is string term? " << m_util_s.str.is_string(e) << std::endl;
+        std::cout << std::boolalpha << "#is_numeral? " << m_util_a.is_numeral(e) << std::endl;
+        std::cout << std::boolalpha << "#is_to_int? " << m_util_a.is_to_int(e) << std::endl;
+        std::cout << std::boolalpha << "#is_int_expr? " << m_util_a.is_int_expr(e) << std::endl;
+        std::cout << std::boolalpha << "#is_le? " << m_util_a.is_le(e) << std::endl;
+        std::cout << std::boolalpha << "#is_ge? " << m_util_a.is_ge(e) << std::endl;
+    }
+
+
     void theory_str::init_search_eh() {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search\n";);
         context& ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
+        print_ctx();  // test_hlin
         for (unsigned i = 0; i < nFormulas; ++i) {
             expr * ex = ctx.get_asserted_formula(i);
             string_theory_propagation(ex);
         }
-
     }
 
     void theory_str::string_theory_propagation(expr * expr) {
@@ -1559,6 +1605,28 @@ namespace smt {
         STRACE("str", tout << "reset" << '\n';);
     }
 
+
+    bool theory_str::mini_check_sat(expr *e) {
+        ast_manager man;
+        smt_params params;
+        str::zaut::symbol_solver csolver(man, params);
+        lbool mini_chk_res = csolver.check_sat(e);
+        std::cout << std::boolalpha << "mini_chk_res = " << mini_chk_res << std::endl;
+        return mini_chk_res;
+    }
+
+    bool theory_str::length_check_sat(expr *e) {
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+        std::cout << "~~~~~ length_check_sat start ~~~~~~~~~\n";
+        str::zaut::symbol_solver csolver(get_manager(), get_context().get_fparams());
+        lbool chk_res = csolver.check_sat(e);
+        std::cout << std::boolalpha << "chk_res = " << chk_res << std::endl;
+        std::cout << "~~~~~ length_check_sat end ~~~~~~~~~~~\n";
+        std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+//        exit(1);
+        return chk_res;
+    }
+
     final_check_status theory_str::final_check_eh() {
         using namespace str;
         if (m_word_eq_todo.empty()) return FC_DONE;
@@ -1602,6 +1670,10 @@ namespace smt {
                 expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
                 std::cout << mk_pp(lenc_res, get_manager()) << std::endl;  // keep standard output for now
                 STRACE("str", tout << mk_pp(lenc_res, get_manager()) << std::endl;);
+//                print_ctx();
+//                length_check_sat(lenc_res);  // test_hlin
+//                mini_check_sat(lenc_res);  // test_hlin
+//                print_ctx();
                 add_axiom(lenc_res);
             }
 
