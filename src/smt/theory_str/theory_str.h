@@ -63,8 +63,7 @@ namespace smt {
             static word_term from_variable(const zstring& name, expr* e);
             static bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
-            static bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
-            static bool unequalable(const word_term& w1, const word_term& w2);
+            static bool unequalable(const word_term& w1, const word_term& w2, const std::map<element, size_t>& lb ) ;
         private:
             std::list<element> m_elements;
         public:
@@ -72,6 +71,16 @@ namespace smt {
             word_term(std::initializer_list<element> list);
             std::size_t length() const { return m_elements.size(); }
             std::size_t count_const() const;
+            std::size_t minimal_model_length(const std::map<element, size_t>& lb) const {
+                size_t length=0;
+
+                for(auto& e:m_elements) {
+                    if (e.typed(element::t::CONST)) length++;
+                    else if (e.typed(element::t::VAR) && lb.find(e) != lb.end())
+                        length += lb.find(e)->second;
+                }
+                return length;
+            }
             std::size_t count_var(const element& e) const;
             std::set<element> variables() const;
             const std::list<element>& content() const { return m_elements; }
@@ -100,6 +109,7 @@ namespace smt {
             word_term m_lhs;
             word_term m_rhs;
         public:
+           ;
             word_equation(const word_term& lhs, const word_term& rhs);
             element::pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
             std::size_t count_var(const element& e) const;
@@ -109,7 +119,7 @@ namespace smt {
             const element& definition_var() const;
             const word_term& definition_body() const;
             bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
-            bool unsolvable(bool allow_empty_var = true) const;
+            bool unsolvable(const std::map<element, size_t>& lb = std::map<element, size_t>()) const;
             bool in_definition_form() const;
             bool check_heads(const element::t& lht, const element::t& rht) const;
             word_equation trim_prefix() const;
@@ -214,8 +224,14 @@ namespace smt {
             struct hash {
                 std::size_t operator()(const state& s) const;
             };
+            std::map<element, size_t> m_lower_bound;
+            enum class transform_strategy {
+                allow_empty_var, not_allow_empty_var, dynamic_empty_var_detection
+            };
+
         private:
-            bool m_allow_empty_var = true;
+            state::transform_strategy m_strategy;
+
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
             memberships::sptr m_memberships;
@@ -229,7 +245,7 @@ namespace smt {
             bool has_non_quadratic_var(const word_term& wt);
             word_term find_alternative_term(const word_term&,const word_term&);
         public:
-            explicit state(memberships::sptr m) : m_memberships{std::move(m)} {}
+            explicit state(memberships::sptr m) : m_memberships{std::move(m)}, m_strategy{state::transform_strategy::dynamic_empty_var_detection} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
@@ -238,7 +254,9 @@ namespace smt {
             const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
             var_relation var_rel_graph() const;
-            bool allows_empty_var() const { return m_allow_empty_var; }
+            const transform_strategy get_strategy() const { return m_strategy; }
+            void set_strategy(transform_strategy st) { m_strategy=st; }
+            bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
             bool in_definition_form() const;
             bool eq_classes_inconsistent() const;
             bool diseq_inconsistent() const;
@@ -246,11 +264,11 @@ namespace smt {
             bool unsolvable_by_inference() const;
             bool quadratic() const;
             void quadratify();
-            void allow_empty_var(const bool enable) { m_allow_empty_var = enable; }
+            void remove_useless_diseq();
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
             void add_membership(const element& var, expr * re);
-            state assign_empty(const element& var) const;
+            state assign_empty(const element& var, const element& non_zero_var=element::null()) const;
             state assign_empty_all(const std::set<element>& vars) const;
             state assign_const(const element& var, const word_term& tgt) const;
             state assign_as(const element& var, const element& as_var) const;
@@ -315,7 +333,7 @@ namespace smt {
             explicit solver(state&& root, automaton_factory::sptr af);
             bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
-            result check(bool split_var_empty_ahead = false);
+            result check();
             const record_graph& get_graph() const { return m_records; };
             const std::list<state::cref>& get_success_leaves() const { return m_rec_success_leaves; };
             const state::cref get_root() const { return m_rec_root; };
@@ -376,7 +394,7 @@ namespace smt {
         bool is_const_fun(expr *e) const;
         expr_ref mk_sub(expr *a, expr *b);
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
-                           expr *e4 = nullptr, sort *range = nullptr);
+                           expr *e4 = nullptr, sort *sort = nullptr);
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
         str::word_term mk_word_term(expr *e) const;

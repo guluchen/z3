@@ -6,6 +6,10 @@
 #include "smt/theory_str/theory_str.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
+#include "smt/theory_lra.h"
+#include "smt/theory_arith.h"
+#include "smt/smt_context.h"
+
 
 
 namespace smt {
@@ -92,17 +96,6 @@ namespace smt {
                    it1->value() != it2->value();
         }
 
-        bool word_term::unequalable_no_empty_var(const word_term& w1, const word_term& w2) {
-            return (!w1.has_variable() && w1.length() < w2.length()) ||
-                   (!w2.has_variable() && w2.length() < w1.length()) ||
-                   prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
-        }
-
-        bool word_term::unequalable(const word_term& w1, const word_term& w2) {
-            return (!w1.has_variable() && w1.count_const() < w2.count_const()) ||
-                   (!w2.has_variable() && w2.count_const() < w1.count_const()) ||
-                   prefix_const_mismatched(w1, w2) || suffix_const_mismatched(w1, w2);
-        }
 
         word_term::word_term(std::initializer_list<element> list) {
             m_elements.insert(m_elements.begin(), list.begin(), list.end());
@@ -270,10 +263,17 @@ namespace smt {
             return word_term::null();
         }
 
-        bool word_equation::unsolvable(const bool allow_empty_var) const {
-            return allow_empty_var ? word_term::unequalable(m_lhs, m_rhs)
-                                   : word_term::unequalable_no_empty_var(m_lhs, m_rhs);
+
+        bool word_term::unequalable(const word_term& w1, const word_term& w2, const std::map<element, size_t>& lb )  {
+            return (!w1.has_variable() && w1.length() < w2.minimal_model_length(lb)) ||
+                   (!w2.has_variable() && w2.length() < w1.minimal_model_length(lb)) ||
+                   word_term::prefix_const_mismatched(w1, w2) || word_term::suffix_const_mismatched(w1, w2);
         }
+
+        bool word_equation::unsolvable(const std::map<element, size_t>& lb ) const {
+                return word_term::unequalable(lhs(),rhs(),lb);
+        }
+
 
         bool word_equation::in_definition_form() const {
             return (bool) definition_var();
@@ -578,7 +578,7 @@ namespace smt {
         std::size_t state::hash::operator()(const state& s) const {
             static const auto word_equation_hash{word_equation::hash{}};
             std::size_t result{22447};
-            result += s.m_allow_empty_var ? 10093 : 0;
+            result += (s.get_strategy()==state::transform_strategy::allow_empty_var)? 10093 : 0;
             for (const auto& we : s.m_eq_wes) {
                 result += word_equation_hash(we);
             }
@@ -656,11 +656,10 @@ namespace smt {
         }
 
         bool state::eq_classes_inconsistent() const {
-            const auto& unequalable = m_allow_empty_var ? word_term::unequalable
-                                                        : word_term::unequalable_no_empty_var;
+            const auto& unequalable = word_term::unequalable;
             for (const auto& cls : eq_classes()) {
                 if (cls.size() == 2) {
-                    if (unequalable(cls.at(0), cls.at(1))) return true;
+                    if (unequalable(cls.at(0), cls.at(1), m_lower_bound)) return true;
                     continue;
                 }
                 std::vector<bool> select(cls.size());
@@ -673,7 +672,7 @@ namespace smt {
                             selected.push_back(cls.at(i));
                         }
                     }
-                    if (unequalable(selected.at(0), selected.at(1))) return true;
+                    if (unequalable(selected.at(0), selected.at(1), m_lower_bound)) return true;
                 } while (std::next_permutation(select.begin(), select.end()));
             }
             return false;
@@ -684,7 +683,7 @@ namespace smt {
         }
 
         bool state::unsolvable_by_check() const {
-            const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_allow_empty_var);
+            const auto& unsolvable = std::bind(&word_equation::unsolvable, _1, m_lower_bound);
             return std::any_of(m_eq_wes.begin(), m_eq_wes.end(), unsolvable) ||
                    diseq_inconsistent() || m_memberships->inconsistent();
         }
@@ -712,25 +711,59 @@ namespace smt {
             word_equation&& trimmed = we.trim_prefix();
             if (trimmed.empty()) return;
             m_eq_wes.insert(std::move(trimmed));
+            if(m_strategy==transform_strategy::not_allow_empty_var){
+                for(auto& v : we.variables()){
+                    m_lower_bound[v]=1;
+                }
+            }
         }
 
         void state::add_word_diseq(const word_equation& we) {
             SASSERT(we);
 
             word_equation&& trimmed = we.trim_prefix();
-            if (trimmed.unsolvable(m_allow_empty_var)) return;
+            //update length bound
+
+            if(we.in_definition_form() && we.definition_body().length()==0){
+                m_lower_bound[we.definition_var()]=1;
+            }
+//            std::cout<<we<<" is in definition form "<<we.in_definition_form()<<" and its length of definition body is "<<we.definition_body().length()<<std::endl;
+            if (trimmed.unsolvable(m_lower_bound)) return;
+
             m_diseq_wes.insert(std::move(trimmed));
+
+
+        }
+
+
+        void str::state::remove_useless_diseq(){
+            std::set<word_equation> to_remove;
+
+//            for(auto& v: m_lower_bound){
+//                std::cout<<v.first<<"->"<<v.second<<std::endl;
+//            }
+//
+
+            for(auto & diseq:m_diseq_wes){
+                if(diseq.unsolvable(m_lower_bound)) to_remove.insert(diseq);
+            }
+            for(auto & rm_diseq:to_remove){
+                m_diseq_wes.erase(rm_diseq);
+            }
+
         }
 
         void state::add_membership(const element& var, expr *re) {
             m_memberships->set(var, re);
         }
 
-        state state::assign_empty(const element& var) const {
+        state state::assign_empty(const element& var, const element& non_zero_var) const {
             SASSERT(var.typed(element::t::VAR));
 
             state result{m_memberships->assign_empty(var)};
-            result.allow_empty_var(m_allow_empty_var);
+            result.set_strategy(m_strategy);
+            result.m_lower_bound=m_lower_bound;
+            result.m_lower_bound[non_zero_var]=1;
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.remove(var));
             }
@@ -745,7 +778,14 @@ namespace smt {
             SASSERT(std::all_of(vars.begin(), vars.end(), is_var));
 
             state result{m_memberships->assign_empty_all(vars)};
-            result.allow_empty_var(m_allow_empty_var);
+            result.set_strategy(m_strategy);
+            result.m_lower_bound=m_lower_bound;
+
+            for (std::set<element>::iterator it(vars.begin()); it != vars.end(); ++it)
+            {
+                result.m_lower_bound.erase(*it);
+            }
+
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.remove_all(vars));
             }
@@ -761,7 +801,9 @@ namespace smt {
             SASSERT(std::all_of(tgt.content().begin(), tgt.content().end(), is_const));
 
             state result{m_memberships->assign_const(var, tgt)};
-            result.allow_empty_var(m_allow_empty_var);
+            result.set_strategy(m_strategy);
+            result.m_lower_bound=m_lower_bound;
+
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.replace(var, tgt));
             }
@@ -775,7 +817,10 @@ namespace smt {
             SASSERT(var.typed(element::t::VAR) && as_var.typed(element::t::VAR));
 
             state result{m_memberships->assign_as(var, as_var)};
-            result.allow_empty_var(m_allow_empty_var);
+            result.set_strategy(m_strategy);
+            result.m_lower_bound=m_lower_bound;
+            result.m_lower_bound[as_var]=1;
+
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.replace(var, {as_var}));
             }
@@ -799,7 +844,9 @@ namespace smt {
             std::list<state> result;
             for (auto& m : m_memberships->assign_prefix(var, ch)) {
                 state s{std::move(m)};
-                s.allow_empty_var(m_allow_empty_var);
+                s.set_strategy(m_strategy);
+                s.m_lower_bound=m_lower_bound;
+
                 for (const auto& we : wes) {
                     s.add_word_eq(we);
                 }
@@ -825,7 +872,9 @@ namespace smt {
             std::list<state> result;
             for (auto& m : m_memberships->assign_prefix_var(var, prefix)) {
                 state s{std::move(m)};
-                s.allow_empty_var(m_allow_empty_var);
+                s.set_strategy(m_strategy);
+                s.m_lower_bound=m_lower_bound;
+
                 for (const auto& we : wes) {
                     s.add_word_eq(we);
                 }
@@ -838,7 +887,7 @@ namespace smt {
         }
 
         bool state::operator==(const state& other) const {
-            return m_allow_empty_var == other.m_allow_empty_var &&
+            return m_strategy == other.m_strategy &&
                    m_eq_wes == other.m_eq_wes &&
                    m_diseq_wes == other.m_diseq_wes &&
                    *m_memberships == *other.m_memberships;
@@ -868,6 +917,9 @@ namespace smt {
                 : m_state{s}, m_src{src} {}
 
         std::list<solver::action> solver::mk_move::operator()() {
+
+
+
             if (src_vars_empty()) {
                 SASSERT(!m_src.rhs().has_constant());
                 return {prop_empty()};
@@ -882,7 +934,7 @@ namespace smt {
         }
 
         bool solver::mk_move::src_vars_empty() {
-            return m_state.allows_empty_var() && m_src.lhs().empty();
+            return !(m_state.get_strategy()==state::transform_strategy ::not_allow_empty_var)&& m_src.lhs().empty();
         }
 
         bool solver::mk_move::src_var_is_const() {
@@ -913,18 +965,37 @@ namespace smt {
             std::list<action> result;
             for (auto& s : m_state.assign_prefix_var(x, y)) {
                 move m{m_state, move::t::TO_VAR_VAR, {x, y}};
+                if(m_state.get_strategy()==state::transform_strategy::dynamic_empty_var_detection){
+                    s.m_lower_bound[x]=1;
+                    s.m_lower_bound[y]=1;
+                }
                 result.emplace_back(std::make_pair(std::move(m), std::move(s)));
             }
             for (auto& s : m_state.assign_prefix_var(y, x)) {
                 move m{m_state, move::t::TO_VAR_VAR, {y, x}};
+                if(m_state.get_strategy()==state::transform_strategy::dynamic_empty_var_detection){
+                    s.m_lower_bound[x]=1;
+                    s.m_lower_bound[y]=1;
+                }
                 result.emplace_back(std::make_pair(std::move(m), std::move(s)));
             }
-            if (m_state.allows_empty_var()) {
+            if (m_state.get_strategy()==state::transform_strategy::allow_empty_var) {
                 move mx{m_state, move::t::TO_EMPTY, {x}};
                 result.emplace_back(std::make_pair(std::move(mx), m_state.assign_empty(x)));
                 move my{m_state, move::t::TO_EMPTY, {y}};
                 result.emplace_back(std::make_pair(std::move(my), m_state.assign_empty(y)));
-            } else {
+            } else if (m_state.get_strategy()==state::transform_strategy::not_allow_empty_var) {
+                move m{m_state, move::t::TO_VAR, {x, y}};
+                result.emplace_back(std::make_pair(std::move(m), m_state.assign_as(x, y)));
+            }else{
+                if(!m_state.is_non_empty_var(x)) {
+                    move mx{m_state, move::t::TO_EMPTY, {x}};
+                    result.emplace_back(std::make_pair(std::move(mx), m_state.assign_empty(x)));
+                }
+                if(!m_state.is_non_empty_var(y)) {
+                    move my{m_state, move::t::TO_EMPTY, {y}};
+                    result.emplace_back(std::make_pair(std::move(my), m_state.assign_empty(y)));
+                }
                 move m{m_state, move::t::TO_VAR, {x, y}};
                 result.emplace_back(std::make_pair(std::move(m), m_state.assign_as(x, y)));
             }
@@ -941,12 +1012,20 @@ namespace smt {
                 move m{m_state, move::t::TO_CHAR_VAR, {v, c}};
                 result.emplace_back(std::make_pair(std::move(m), std::move(s)));
             }
-            if (m_state.allows_empty_var()) {
+            if (m_state.get_strategy()==state::transform_strategy::allow_empty_var) {
                 move m{m_state, move::t::TO_EMPTY, {v}};
                 result.emplace_back(std::make_pair(std::move(m), m_state.assign_empty(v)));
-            } else {
+            } else if (m_state.get_strategy()==state::transform_strategy::not_allow_empty_var) {
                 move m{m_state, move::t::TO_CONST, {v, c}};
                 result.emplace_back(std::make_pair(std::move(m), m_state.assign_const(v, {c})));
+            }else{
+                if(!m_state.is_non_empty_var(v)) {
+                    move m{m_state, move::t::TO_EMPTY, {v}};
+                    result.emplace_back(std::make_pair(std::move(m), m_state.assign_empty(v)));
+                }
+                move m{m_state, move::t::TO_CONST, {v, c}};
+                result.emplace_back(std::make_pair(std::move(m), m_state.assign_const(v, {c})));
+
             }
             return result;
         }
@@ -981,15 +1060,17 @@ namespace smt {
             return true;
         }
 
-        result solver::check(const bool split_var_empty_ahead) {
+        result solver::check() {
             if (in_status(result::SAT)) return m_status;
             SASSERT(m_pending.size() == 1);
             if (!check_linear_membership(m_pending.top())) return m_status = result::UNSAT;
-            if (split_var_empty_ahead && split_var_empty_cases() == result::SAT) return m_status;
             STRACE("str", tout << "[Check SAT]\n";);
+            int cnt=0;
             while (!m_pending.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
+                cnt++;
+
                 STRACE("str", tout << "from:\n" << curr_s << '\n';);
                 for (auto& action : transform(curr_s)) {
                     if (m_records.contains(action.second)) {
@@ -1011,21 +1092,24 @@ namespace smt {
                             continue;
                         }
                     }
-                    const word_equation& only_one_left = s.only_one_eq_left();
-                    if (only_one_left && only_one_left.in_definition_form()) {
-                        // solved form check failed, the we in definition form must be recursive
-                        const word_equation& last_we_recursive_def = only_one_left;
-                        if (!last_we_recursive_def.definition_body().has_constant()) {
-                            if (finish_after_found(s)) return m_status;
-                            continue;
-                        }
-                        STRACE("str", tout << "failed:\n" << s << '\n';);
-                        continue;
-                    }
+//                    const word_equation& only_one_left = s.only_one_eq_left();
+//                    if (only_one_left && only_one_left.in_definition_form()) {
+//                        // solved form check failed, the we in definition form must be recursive
+//                        const word_equation& last_we_recursive_def = only_one_left;
+//                        if (!last_we_recursive_def.definition_body().has_constant()) {
+//                            if (finish_after_found(s)) return m_status;
+//                            continue;
+//                        }
+//                        STRACE("str", tout << "failed:\n" << s << '\n';);
+//                        continue;
+//                    }
                     STRACE("str", tout << "to:\n" << s << '\n';);
-                    m_pending.push(s);
+
+                    if(s.word_eq_num() != 0)
+                        m_pending.push(s);
                 }
             }
+            std::cout<<"number of states: "<<cnt<<std::endl;
             return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
         }
 
@@ -1138,86 +1222,86 @@ namespace smt {
             return added;
         }
 
-        result solver::split_var_empty_cases() {
-            STRACE("str", tout << "[Split Empty Variable Cases]\n";);
-            std::queue<state::cref> pending{split_first_level_var_empty()};
-            SASSERT(m_pending.empty());
-            if (in_status(result::SAT)) return m_status;
-            while (!pending.empty()) {
-                const state& curr_s = pending.front();
-                pending.pop();
-                m_pending.push(curr_s);
-                for (const auto& var : curr_s.variables()) {
-                    state&& next_s = curr_s.assign_empty(var);
-                    next_s.allow_empty_var(false);
-                    if (m_records.contains(next_s)) {
-                        for (const auto& m : m_records.incoming_moves(curr_s)) {
-                            m_records.add_move(m.add_record(var), next_s);
-                        }
-                        continue;
-                    }
-                    next_s.allow_empty_var(true);
-                    if (next_s.in_definition_form()) {
-                        var_relation&& var_rel = next_s.var_rel_graph();
-                        if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
-                            const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
-                            if (finish_after_found(s)) return m_status;
-                            continue;
-                        }
-                    }
-                    if (next_s.unsolvable_by_check()) {
-                        next_s.allow_empty_var(false);
-                        const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
-                        STRACE("str", tout << "failed:\n" << s << '\n';);
-                        continue;
-                    }
-                    next_s.allow_empty_var(false);
-                    const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
-                    pending.push(s);
-                    STRACE("str", tout << "add:\n" << s << '\n';);
-                }
-            }
-            return m_status = m_rec_success_leaves.empty() ? result::UNKNOWN : result::SAT;
-        }
-
-        std::queue<state::cref> solver::split_first_level_var_empty() {
-            std::queue<state::cref> result;
-            while (!m_pending.empty()) {
-                const state& curr_s = m_pending.top();
-                m_pending.pop();
-                for (const auto& var : curr_s.variables()) {
-                    state&& next_s = curr_s.assign_empty(var);
-                    next_s.allow_empty_var(false);
-                    if (m_records.contains(next_s)) {
-                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, next_s);
-                        continue;
-                    }
-                    next_s.allow_empty_var(true);
-                    if (next_s.in_definition_form()) {
-                        var_relation&& var_rel = next_s.var_rel_graph();
-                        if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
-                            const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
-                            std::queue<state::cref> empty_result;
-                            if (finish_after_found(s)) return empty_result;
-                            continue;
-                        }
-                    }
-                    if (next_s.unsolvable_by_check()) {
-                        next_s.allow_empty_var(false);
-                        const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
-                        STRACE("str", tout << "failed:\n" << s << '\n';);
-                        continue;
-                    }
-                    next_s.allow_empty_var(false);
-                    const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
-                    result.push(s);
-                    STRACE("str", tout << "add:\n" << s << '\n';);
-                }
-            }
-            return result;
-        }
+//        result solver::split_var_empty_cases() {
+//            STRACE("str", tout << "[Split Empty Variable Cases]\n";);
+//            std::queue<state::cref> pending{split_first_level_var_empty()};
+//            SASSERT(m_pending.empty());
+//            if (in_status(result::SAT)) return m_status;
+//            while (!pending.empty()) {
+//                const state& curr_s = pending.front();
+//                pending.pop();
+//                m_pending.push(curr_s);
+//                for (const auto& var : curr_s.variables()) {
+//                    state&& next_s = curr_s.assign_empty(var);
+//                    next_s.allow_empty_var(false);
+//                    if (m_records.contains(next_s)) {
+//                        for (const auto& m : m_records.incoming_moves(curr_s)) {
+//                            m_records.add_move(m.add_record(var), next_s);
+//                        }
+//                        continue;
+//                    }
+//                    next_s.allow_empty_var(true);
+//                    if (next_s.in_definition_form()) {
+//                        var_relation&& var_rel = next_s.var_rel_graph();
+//                        if (var_rel.is_straight_line() &&
+//                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
+//                            const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
+//                            if (finish_after_found(s)) return m_status;
+//                            continue;
+//                        }
+//                    }
+//                    if (next_s.unsolvable_by_check()) {
+//                        next_s.allow_empty_var(false);
+//                        const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
+//                        STRACE("str", tout << "failed:\n" << s << '\n';);
+//                        continue;
+//                    }
+//                    next_s.allow_empty_var(false);
+//                    const state& s = add_sibling_ext_record(curr_s, std::move(next_s), var);
+//                    pending.push(s);
+//                    STRACE("str", tout << "add:\n" << s << '\n';);
+//                }
+//            }
+//            return m_status = m_rec_success_leaves.empty() ? result::UNKNOWN : result::SAT;
+//        }
+//
+//        std::queue<state::cref> solver::split_first_level_var_empty() {
+//            std::queue<state::cref> result;
+//            while (!m_pending.empty()) {
+//                const state& curr_s = m_pending.top();
+//                m_pending.pop();
+//                for (const auto& var : curr_s.variables()) {
+//                    state&& next_s = curr_s.assign_empty(var);
+//                    next_s.allow_empty_var(false);
+//                    if (m_records.contains(next_s)) {
+//                        m_records.add_move({curr_s, move::t::TO_EMPTY, {var}}, next_s);
+//                        continue;
+//                    }
+//                    next_s.allow_empty_var(true);
+//                    if (next_s.in_definition_form()) {
+//                        var_relation&& var_rel = next_s.var_rel_graph();
+//                        if (var_rel.is_straight_line() &&
+//                            check_straight_line_membership(var_rel, next_s.get_memberships())) {
+//                            const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
+//                            std::queue<state::cref> empty_result;
+//                            if (finish_after_found(s)) return empty_result;
+//                            continue;
+//                        }
+//                    }
+//                    if (next_s.unsolvable_by_check()) {
+//                        next_s.allow_empty_var(false);
+//                        const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
+//                        STRACE("str", tout << "failed:\n" << s << '\n';);
+//                        continue;
+//                    }
+//                    next_s.allow_empty_var(false);
+//                    const state& s = add_child_var_removed(curr_s, std::move(next_s), var);
+//                    result.push(s);
+//                    STRACE("str", tout << "add:\n" << s << '\n';);
+//                }
+//            }
+//            return result;
+//        }
 
         std::list<solver::action> solver::transform(const state& s) const {
             SASSERT(!s.unsolvable_by_check() && s.word_eq_num() != 0);
@@ -1521,10 +1605,38 @@ namespace smt {
         STRACE("str", tout << "new_eq: " << l << " = " << r << '\n';);
     }
 
+    template <class T>
+    static T* get_th_arith(context& ctx, theory_id afid, expr* e) {
+        theory* th = ctx.get_theory(afid);
+        if (th && ctx.e_internalized(e)) {
+            return dynamic_cast<T*>(th);
+        }
+        else {
+            return nullptr;
+        }
+    }
+
     void theory_str::new_diseq_eh(theory_var x, theory_var y) {
         ast_manager& m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
+
+//        //add lower bound from solvers
+//
+//        context& ctx = get_context();
+//        expr_ref el(m_util_s.str.mk_length(l), m);
+//        expr_ref er(m_util_s.str.mk_length(r), m);
+//        expr_ref _lo(m);
+//        family_id afid = m_util_a.get_family_id();
+//        for(const expr_ref& e :{el,er}) {
+//            theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, e);
+//            if (tha && tha->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
+//            theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, e);
+//            if (thi && thi->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
+//            theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, e);
+//            if (thr && thr->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
+//        }
+//
         m_word_diseq_todo.push_back({l, r});
         STRACE("str", tout << "new_diseq: " << l << " != " << r << '\n';);
     }
@@ -1574,6 +1686,7 @@ namespace smt {
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
+
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
             // for test: print graph size then exit
@@ -1662,15 +1775,32 @@ namespace smt {
     }
 
     expr_ref
-    theory_str::mk_skolem(symbol const& name, expr *e1, expr *e2, expr *e3, expr *e4, sort *range) {
+    theory_str::mk_skolem(symbol const& name, expr *e1, expr *e2, expr *e3, expr *e4, sort *sort) {
         ast_manager& m = get_manager();
+        context & ctx = get_context();
         expr *es[4] = {e1, e2, e3, e4};
         unsigned len = e4 ? 4 : (e3 ? 3 : (e2 ? 2 : 1));
 
-        if (!range) {
-            range = m.get_sort(e1);
+        if (!sort) {
+            sort = m.get_sort(e1);
         }
-        return expr_ref(m_util_s.mk_skolem(name, len, es, range), m);
+        app * a = m_util_s.mk_skolem(name, len, es, sort);
+
+//        ctx.internalize(a, false);
+//        mk_var(ctx.get_enode(a));
+//        propagate_basic_string_axioms(ctx.get_enode(a));
+//
+//        enode* n = ctx.get_enode(a);
+//
+//        if (!is_attached_to_var(n)) {
+//            const theory_var v = theory::mk_var(n);
+//            ctx.attach_th_var(n, this, v);
+//            ctx.mark_as_relevant(n);
+//            STRACE("str", tout << "new theory_var #" << v << '\n';);
+//        }
+
+        return expr_ref(a,m);
+
     }
 
     literal theory_str::mk_literal(expr *const e) {
@@ -1741,6 +1871,8 @@ namespace smt {
             result.add_word_diseq({mk_word_term(diseq.first), mk_word_term(diseq.second)});
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
         }
+
+        result.remove_useless_diseq();
         return result;
     }
     void str::state::initialize_eq_class_map(){
