@@ -15,7 +15,8 @@
 namespace smt {
 
     namespace str {
-
+        size_t element::var_num=0;
+        std::set<element> element::variables= std::set<element>();
         using namespace std::placeholders;
 
         std::size_t element::hash::operator()(const element& e) const {
@@ -42,7 +43,12 @@ namespace smt {
         }
 
         std::ostream& operator<<(std::ostream& os, const element& s) {
-            os << s.value();
+            static const auto element_hash{element::hash{}};
+
+            if(s.typed(element::t::CONST))
+                os << s.value();
+            else
+                os << s.shortname();
             return os;
         }
 
@@ -724,7 +730,7 @@ namespace smt {
             word_equation&& trimmed = we.trim_prefix();
             //update length bound
 
-            if(we.in_definition_form() && we.definition_body().length()==0){
+            if(we.in_definition_form() && we.definition_body().length()==0 && get_strategy()==state::transform_strategy::dynamic_empty_var_detection){
                 m_lower_bound[we.definition_var()]=1;
             }
 //            std::cout<<we<<" is in definition form "<<we.in_definition_form()<<" and its length of definition body is "<<we.definition_body().length()<<std::endl;
@@ -894,16 +900,23 @@ namespace smt {
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
+            std::set<element> vars;
+
+
             if (s.m_eq_wes.empty()) {
                 os << "(no word equation left)" << std::endl;
             }
             for (const auto& we : s.m_eq_wes) {
                 os << we << '\n';
+                for(auto& v:we.variables()){
+                    vars.insert(v);
+                }
             }
             for (const auto& we : s.m_diseq_wes) {
                 os << "not (" << we << ")\n";
             }
-            os << s.m_memberships;
+            os << s.m_memberships<<std::endl;
+
             return os << std::flush;
         }
 
@@ -1065,11 +1078,10 @@ namespace smt {
             SASSERT(m_pending.size() == 1);
             if (!check_linear_membership(m_pending.top())) return m_status = result::UNSAT;
             STRACE("str", tout << "[Check SAT]\n";);
-            int cnt=0;
             while (!m_pending.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
-                cnt++;
+
 
                 STRACE("str", tout << "from:\n" << curr_s << '\n';);
                 for (auto& action : transform(curr_s)) {
@@ -1084,14 +1096,14 @@ namespace smt {
                         STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
-                    if (s.in_definition_form()) {
-                        var_relation&& var_rel = s.var_rel_graph();
-                        if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, s.get_memberships())) {
-                            if (finish_after_found(s)) return m_status;
-                            continue;
-                        }
-                    }
+//                    if (s.in_definition_form()) {
+//                        var_relation&& var_rel = s.var_rel_graph();
+//                        if (var_rel.is_straight_line() &&
+//                            check_straight_line_membership(var_rel, s.get_memberships())) {
+//                            if (finish_after_found(s)) return m_status;
+//                            continue;
+//                        }
+//                    }
 //                    const word_equation& only_one_left = s.only_one_eq_left();
 //                    if (only_one_left && only_one_left.in_definition_form()) {
 //                        // solved form check failed, the we in definition form must be recursive
@@ -1108,9 +1120,21 @@ namespace smt {
                     if(s.word_eq_num() != 0)
                         m_pending.push(s);
                 }
+
             }
-            std::cout<<"number of states: "<<cnt<<std::endl;
+
             return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
+        }
+        string element::abbreviation_to_fullname(){
+            string ret;
+            for(auto& var:element::variables){
+                ret+=var.shortname();
+                ret+=" <=> ";
+                ret+=var.m_value.encode();
+                ret+="\n";
+            }
+            return ret;
+
         }
 
         automaton::sptr
@@ -1587,7 +1611,17 @@ namespace smt {
             if (is_true) {
                 handle_contains(e);
             } else {
-                TRACE("str", tout << "TODO: not contains\n";);
+                if(m_util_s.str.is_string(e2)){
+                    expr* re = m_util_s.re.mk_to_re(e2);
+                    expr* all_seq=m_util_s.re.mk_full_seq(m.get_sort(re));
+                    re = m_util_s.re.mk_concat(all_seq, re);
+                    re = m_util_s.re.mk_concat(re, all_seq);
+                    re = m_util_s.re.mk_complement(re);
+                    m_membership_todo.push_back({{e1, m}, {re,m}});
+                }else{
+                    TRACE("str", tout << "TODO: not contains "<<mk_pp(e, m)<< "\n" ;);
+                }
+
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);
@@ -1679,6 +1713,9 @@ namespace smt {
 
         if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
+        STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
+
+
         root.quadratify();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
@@ -1690,9 +1727,9 @@ namespace smt {
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
             // for test: print graph size then exit
-            std::cout << "graph construction summary:\n";
-            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
-            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+//            std::cout << "graph construction summary:\n";
+//            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
+//            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
             STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
             counter_system cs = counter_system(solver);
@@ -1721,6 +1758,8 @@ namespace smt {
             // counter system part ends here
             TRACE("str", tout << "final_check ends\n";);
             IN_CHECK_FINAL = false;
+
+            dump_assignments();
             return FC_DONE;
         }
         block_curr_assignment();
@@ -1906,11 +1945,11 @@ namespace smt {
                 const element* source;
                 const word_term* target;
 
-                if (eq.lhs().length() == 1 && eq.lhs().has_variable()) {
+                if (eq.lhs().length() == 1 && eq.lhs().has_variable() && m_memberships->get(eq.lhs().head())== nullptr ) {
                     source= &eq.lhs().head();
                     target= &eq.rhs();
                     updated =true;
-                } else if (eq.rhs().length() == 1 && eq.rhs().has_variable()) {
+                } else if (eq.rhs().length() == 1 && eq.rhs().has_variable() && m_memberships->get(eq.rhs().head())== nullptr) {
                     source= &eq.rhs().head();
                     target= &eq.lhs();
                     updated =true;
@@ -1942,6 +1981,7 @@ namespace smt {
     void str::state::quadratify(){
         using namespace std;
 
+        STRACE("str", tout << "\noriginal:\n" << *this << '\n';);
         remove_single_variable_word_term();
 
         STRACE("str", tout << "\nremoved single variable word terms:\n" << *this << '\n';);
@@ -2213,6 +2253,7 @@ namespace smt {
     }
 
     void theory_str::block_curr_assignment() {
+
         ast_manager& m = get_manager();
         expr *refinement = nullptr;
         STRACE("str", tout << "[Refinement]\nformulas:\n";);
@@ -2235,11 +2276,12 @@ namespace smt {
         STRACE("str", \
                 ast_manager& m = get_manager();
                 context& ctx = get_context();
-                tout << "dump all assignments:\n";
+                std::cout << "dump all assignments:\n";
                 expr_ref_vector assignments{m};
                 ctx.get_assignments(assignments);
                 for (expr *const e : assignments) {
-                    tout << mk_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (not relevant)\n");
+                   // ctx.mark_as_relevant(e);
+                    std::cout <<"**"<< mk_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (not relevant)\n");
                 }
         );
     }

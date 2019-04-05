@@ -151,9 +151,9 @@ namespace smt {
             for (const auto& e : mapped_states) {
                 STRACE("str", tout << "state number " << e.second << " maps to state:\n" << e.first  << '\n';);
             }
-            std::cout << "[COUNTER_SYSTEM]:\n";
-            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
-            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
+//            std::cout << "[COUNTER_SYSTEM]:\n";
+//            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
+//            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
             STRACE("str", tout << "[COUNTER_SYSTEM]:\n";);
             STRACE("str", tout << "#states=" << num_states << "; #transitions=" << num_trans << '\n';);
             STRACE("str", tout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';);
