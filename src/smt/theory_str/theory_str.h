@@ -36,14 +36,29 @@ namespace smt {
                 std::size_t operator()(const element& e) const;
             };
             static const element& null();
+
         private:
+            static size_t var_num;
+            static std::set<element> variables;
             element::t m_type;
             zstring m_value;
             expr* m_expr;
+            string m_shortname;
         public:
-            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {}
+            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {
+                if(m_type==t::VAR){
+                    if(variables.find(*this)==variables.end()){
+                        m_shortname = "V"+std::to_string(var_num);
+                        var_num++;
+                        variables.insert(*this);
+                    }else{
+                        m_shortname=variables.find(*this)->m_shortname;
+                    }
+                }
+            }
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
+            const string& shortname() const { return m_shortname; }
             expr* origin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
@@ -51,6 +66,7 @@ namespace smt {
             bool operator<(const element& other) const;
             explicit operator bool() const { return *this != null(); }
             friend std::ostream& operator<<(std::ostream& os, const element& e);
+            static string abbreviation_to_fullname();
         };
 
         class word_term {
@@ -348,6 +364,7 @@ namespace smt {
             result split_var_empty_cases();
             std::queue<state::cref> split_first_level_var_empty();
             std::list<action> transform(const state& s) const;
+
         };
 
     }
