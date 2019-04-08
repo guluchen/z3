@@ -9,7 +9,8 @@
 #include "smt/theory_lra.h"
 #include "smt/theory_arith.h"
 #include "smt/smt_context.h"
-
+#include "ast/seq_decl_plugin.h"
+#include "ast/reg_decl_plugins.h"
 
 
 namespace smt {
@@ -1424,15 +1425,59 @@ namespace smt {
         return true;
     }
 
+    void theory_str::print_ctx(context& ctx) {  // test_hlin
+        std::cout << "~~~~~ print ctx start ~~~~~~~\n";
+//        context& ctx = get_context();
+        unsigned nFormulas = ctx.get_num_asserted_formulas();
+        expr_ref_vector Literals(get_manager()), Assigns(get_manager());
+        ctx.get_guessed_literals(Literals);
+        ctx.get_assignments(Assigns);
+        std::cout << "~~~~~~ from get_asserted_formulas ~~~~~~\n";
+        for (unsigned i = 0; i < nFormulas; ++i) {
+            expr * ex = ctx.get_asserted_formula(i);
+            std::cout << mk_pp(ex,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~~ from get_guessed_literals ~~~~~~\n";
+        for (auto & e : Literals){
+            std::cout << mk_pp(e,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~~ from get_assignments ~~~~~~\n";
+        for (auto & e : Assigns){
+//            print_ast(e);
+            std::cout << mk_pp(e,get_manager()) << std::endl;
+        }
+        std::cout << "~~~~~ print ctx end ~~~~~~~~~\n";
+    }
+
+    void theory_str::print_ast(expr *e) {  // test_hlin
+        ast_manager m = get_manager();
+        unsigned int id = e->get_id();
+        ast_kind ast = e->get_kind();
+        sort *e_sort = m.get_sort(e);
+        sort *bool_sort = m.mk_bool_sort();
+        sort *str_sort = m_util_s.str.mk_string_sort();
+        std::cout << "#e.id = " << id << std::endl;
+        std::cout << "#e.kind = " << get_ast_kind_name(ast) << std::endl;
+        std::cout << std::boolalpha << "#is bool sort? " << (e_sort == bool_sort) << std::endl;
+        std::cout << std::boolalpha << "#is string sort? " << (e_sort == str_sort) << std::endl;
+        std::cout << std::boolalpha << "#is string term? " << m_util_s.str.is_string(e) << std::endl;
+        std::cout << std::boolalpha << "#is_numeral? " << m_util_a.is_numeral(e) << std::endl;
+        std::cout << std::boolalpha << "#is_to_int? " << m_util_a.is_to_int(e) << std::endl;
+        std::cout << std::boolalpha << "#is_int_expr? " << m_util_a.is_int_expr(e) << std::endl;
+        std::cout << std::boolalpha << "#is_le? " << m_util_a.is_le(e) << std::endl;
+        std::cout << std::boolalpha << "#is_ge? " << m_util_a.is_ge(e) << std::endl;
+    }
+
+
     void theory_str::init_search_eh() {
-        STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search\n";);
+        STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search_eh\n";);
         context& ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
+        std::cout << "init_search_eh" << std::endl;  // test_hlin
         for (unsigned i = 0; i < nFormulas; ++i) {
             expr * ex = ctx.get_asserted_formula(i);
             string_theory_propagation(ex);
         }
-
     }
 
     void theory_str::string_theory_propagation(expr * expr) {
@@ -1713,6 +1758,70 @@ namespace smt {
         STRACE("str", tout << "reset" << '\n';);
     }
 
+
+    bool theory_str::mini_check_sat(expr *e) {  // test_hlin
+        ast_manager m;
+        reg_decl_plugins(m);
+        seq_util su(m);
+        arith_util au(m);
+        smt_params params;
+        params.m_model = true;
+        smt::context ctx(m, params);
+        expr * exp = au.mk_ge(au.mk_int(0), au.mk_add(au.mk_int(1), au.mk_int(2)));
+        std::cout << "expr made:\n" << mk_pp(exp, m) << std::endl;
+//        std::cout << "print ctx ... \n";
+//        print_ctx(ctx);
+//        std::cout << "print ctx2 ... \n";
+//        sort * intSort = au.mk_int();
+//        m.mk_var(0, intSort);
+//        mk_literal(expr);
+        print_ctx(ctx);
+        str::zaut::symbol_solver csolver(m, params);
+        lbool mini_chk_res = csolver.check_sat(exp);
+        std::cout << std::boolalpha << "mini_chk_res = " << mini_chk_res << std::endl;
+        return mini_chk_res;
+    }
+
+    bool theory_str::lenc_check_sat(expr *e) {
+        std::cout << "~~~~~ lenc_check_sat start ~~~~~~~~~\n";  // test_hlin
+        str::zaut::symbol_solver csolver(get_manager(), get_context().get_fparams());
+        lbool chk_res = csolver.check_sat(e);
+        STRACE("str", tout << std::boolalpha << "lenc_check_sat result = " << chk_res << std::endl;);
+        std::cout << std::boolalpha << "lenc_check_sat result = " << chk_res << std::endl;
+        std::cout << "~~~~~ lenc_check_sat end ~~~~~~~~~~~\n";  // test_hlin
+        return chk_res;
+    }
+
+    bool theory_str::check_counter_system_lenc(smt::str::solver &solver) {
+        using namespace str;
+        counter_system cs = counter_system(solver);
+        cs.print_counter_system();  // STRACE output
+        cs.print_var_expr(get_manager());  // STRACE output
+
+        STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
+        apron_counter_system ap_cs = apron_counter_system(cs);
+        STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
+        // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
+        STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
+        ap_cs.run_abstraction();
+        STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
+        // make length constraints from the result of abstraction interpretation
+        STRACE("str", tout << "generating length constraints..." << std::endl;);
+        length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
+                                                   ap_cs.get_var_expr());
+        lenc.pretty_print(get_manager());
+        if (!lenc.empty()) {
+            expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
+            std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
+            STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
+            return lenc_check_sat(lenc_res);
+//            add_axiom(lenc_res);
+        }
+        else {
+            return false;
+        }
+    }
+
     final_check_status theory_str::final_check_eh() {
         using namespace str;
 
@@ -1755,40 +1864,21 @@ namespace smt {
 
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
-            // for test: print graph size then exit
-//            std::cout << "graph construction summary:\n";
-//            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
-//            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
             STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
-            counter_system cs = counter_system(solver);
-            cs.print_counter_system();  // STRACE output
-            cs.print_var_expr(get_manager());  // STRACE output
+            // stdout for test: print graph size then exit
+            std::cout << "graph construction summary:\n";
+            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
+            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
 
-            STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
-            apron_counter_system ap_cs = apron_counter_system(cs);
-            STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
-            // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
-            STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
-            ap_cs.run_abstraction();
-            STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
-            // make length constraints from the result of abstraction interpretation
-            STRACE("str", tout << "generating length constraints..." << std::endl;);
-            length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
-                    ap_cs.get_var_expr());
-            lenc.pretty_print(get_manager());
-            if (!lenc.empty()) {
-                expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-                std::cout << mk_pp(lenc_res, get_manager()) << std::endl;  // keep standard output for now
-                STRACE("str", tout << mk_pp(lenc_res, get_manager()) << std::endl;);
-                add_axiom(lenc_res);
-            }
+            bool cs_lenc_check_res = check_counter_system_lenc(solver);
 
-            // counter system part ends here
             TRACE("str", tout << "final_check ends\n";);
-            IN_CHECK_FINAL = false;
 
-            return FC_DONE;
+            if (cs_lenc_check_res) {
+                IN_CHECK_FINAL = false;
+                return FC_DONE;
+            }  // will leave this if block if lenc_check_sat returns false
         }
         block_curr_assignment();
         TRACE("str", tout << "final_check ends\n";);
