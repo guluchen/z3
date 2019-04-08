@@ -1096,14 +1096,17 @@ namespace smt {
                         STRACE("str", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
-//                    if (s.in_definition_form()) {
-//                        var_relation&& var_rel = s.var_rel_graph();
-//                        if (var_rel.is_straight_line() &&
-//                            check_straight_line_membership(var_rel, s.get_memberships())) {
-//                            if (finish_after_found(s)) return m_status;
-//                            continue;
-//                        }
-//                    }
+
+                    if (s.in_definition_form()) {
+                        var_relation&& var_rel = s.var_rel_graph();
+                        if (var_rel.is_straight_line() &&
+                            check_straight_line_membership(var_rel, s.get_memberships())) {
+                            if (finish_after_found(s)) return m_status;
+                            continue;
+                        }
+                    }
+
+
 //                    const word_equation& only_one_left = s.only_one_eq_left();
 //                    if (only_one_left && only_one_left.in_definition_form()) {
 //                        // solved form check failed, the we in definition form must be recursive
@@ -1712,6 +1715,27 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         using namespace str;
+
+//
+//        ast_manager& m = get_manager();
+//        context& ctx = get_context();
+//        expr_ref_vector assignments{m};
+//
+//        ctx.get_assignments(assignments);
+//        for (expr *const e : assignments) {
+//            if(ctx.is_relevant(e))
+//                std::cout <<"**"<< mk_pp(e, m) <<"\n";
+//        }
+//        for(int i=0;i<<ctx.get_num_asserted_formulas();i++){
+//            std::cout <<"*-*"<< mk_pp(ctx.get_asserted_formula(i), m) <<"\n";
+//        }
+//        ctx.get_guessed_literals(assignments);
+//        for (expr *const e : assignments) {
+//            if(ctx.is_relevant(e))
+//                std::cout <<"*+*"<< mk_pp(e, m) <<"\n";
+//        }
+//
+
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
@@ -1721,7 +1745,7 @@ namespace smt {
         STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
 
-        root.quadratify();
+        root.remove_single_variable_word_term();
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
@@ -1764,7 +1788,6 @@ namespace smt {
             TRACE("str", tout << "final_check ends\n";);
             IN_CHECK_FINAL = false;
 
-            dump_assignments();
             return FC_DONE;
         }
         block_curr_assignment();

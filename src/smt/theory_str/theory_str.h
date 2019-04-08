@@ -255,7 +255,6 @@ namespace smt {
             std::map<element, unsigned> var_occurrence;
             std::map<word_term, std::set<word_term>> eq_class_map;
             void initialize_eq_class_map();
-            void remove_single_variable_word_term();
             void count_variable_occurrences();
             bool quadratic_after_add_this_term(const word_term&);
             bool has_non_quadratic_var(const word_term& wt);
@@ -280,6 +279,7 @@ namespace smt {
             bool unsolvable_by_inference() const;
             bool quadratic() const;
             void quadratify();
+            void remove_single_variable_word_term();
             void remove_useless_diseq();
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
