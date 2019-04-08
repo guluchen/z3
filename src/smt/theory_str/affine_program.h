@@ -59,8 +59,9 @@ namespace smt {
             void add_init_state(const cs_state s) { init.insert(s); };
             void set_final_state(const cs_state s) { final = s; }  // Note: no check of number of states
             bool add_transition(const cs_state s, const cs_assign &assign, const cs_state s_to);  // add one transition
-            bool add_var_expr(const std::string &str, expr* var_exp);
+            bool add_var_expr(const std::string &str, expr* var_exp, const std::string& str_short);
             const std::map<std::string,expr*> &get_var_expr() const { return var_expr; };
+            const std::map<std::string,std::string> &get_var_short() const { return var_short; };
             const unsigned long get_num_states() const { return num_states; };
             const cs_relation &get_relations() const { return relation; };
             void print_counter_system() const;  // printout
@@ -68,6 +69,7 @@ namespace smt {
         private:
             // private attributes
             std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
+            std::map<std::string,std::string> var_short;  // map var name to its short name
             unsigned long num_states;
             std::set<cs_state> init;  // initial (success) states
             cs_state final;           // final state (root of word equation)
@@ -90,7 +92,7 @@ namespace smt {
                 node(ap_manager_t *man, ap_environment_t *env, bool top_flag);  // initialize with apron defaults
                 bool equal_to_pre(ap_manager_t *man) { return ap_abstract1_is_eq(man, &abs_pre, &abs); };
                 ap_abstract1_t &get_abs() { return abs; };
-                bool join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs);
+                void join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs);
                 void widening(ap_manager_t *man);
                 void print_abs(ap_manager_t *man) { ap_abstract1_fprint(stdout, man, &abs); };
                 void print_abs_silent(ap_manager_t *man);

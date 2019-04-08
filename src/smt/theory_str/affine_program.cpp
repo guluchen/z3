@@ -16,9 +16,10 @@ namespace smt {
             return false;
         }
 
-        bool counter_system::add_var_expr(const std::string &str, expr *var_exp) {
-            if (var_expr.count(str)==0) {
+        bool counter_system::add_var_expr(const std::string &str, expr *var_exp, const std::string& str_short) {
+            if (var_expr.count(str)==0 && var_short.count(str)==0) {
                 var_expr.insert({str,var_exp});
+                var_short.insert({str,str_short});
                 return true;
             }
             return false;
@@ -103,7 +104,7 @@ namespace smt {
                             assign.num = 0;  // assign to zero
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(), e.origin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr(), e.shortname());
                             }
                             break;
                         case solver::move::t::TO_CONST:
@@ -111,26 +112,26 @@ namespace smt {
                             assign.num = m.m_record.size() - 1;  // assign to a constant >= 1
                             SASSERT(assign.num >= 1);
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr());
+                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr(), m.m_record[0].shortname());
                             break;
                         case solver::move::t::TO_VAR:
                             assign.type = counter_system::assign_type::VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(), e.origin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr(), e.shortname());
                             }
                             break;
                         case solver::move::t::TO_VAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_VAR;
                             for (auto const &e : m.m_record) {
                                 assign.vars.push_back(e.value().encode());
-                                add_var_expr(e.value().encode(), e.origin_expr());
+                                add_var_expr(e.value().encode(), e.origin_expr(), e.shortname());
                             }
                             break;
                         case solver::move::t::TO_CHAR_VAR:
                             assign.type = counter_system::assign_type::PLUS_ONE;
                             assign.vars.push_back(m.m_record[0].value().encode());
-                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr());
+                            add_var_expr(m.m_record[0].value().encode(), m.m_record[0].origin_expr(), m.m_record[0].shortname());
                             break;
                         default: SASSERT(false);
                     }
@@ -181,8 +182,9 @@ namespace smt {
             switch (assign.type) {
                 case counter_system::assign_type::CONST:
                     sep_str = "";
-                    for (const auto &v : assign.vars) {
-                        STRACE("str", tout << sep_str << v << "=" << assign.num;);
+                    for (const auto v : assign.vars) {
+//                        STRACE("str", tout << sep_str << v << "=" << assign.num;);
+                        STRACE("str", tout << sep_str << var_short[v] << "=" << assign.num;);
                         sep_str = ",";
                     }
                     break;
@@ -215,8 +217,10 @@ namespace smt {
             STRACE("str", tout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;);
             STRACE("str", tout << "vars={";);
             sep_str = "";
-            for (auto const v : var_expr) {
-                STRACE("str", tout << sep_str << v.first;);
+//            for (auto const v : var_expr) {
+            for (auto const v : var_short) {
+//                STRACE("str", tout << sep_str << v.first;);
+                STRACE("str", tout << sep_str << v.second;);
                 sep_str = ", ";
             }
             STRACE("str", tout << "}" << std::endl;);
@@ -407,7 +411,7 @@ namespace smt {
             }
         }
 
-        bool apron_counter_system::node::join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs) {
+        void apron_counter_system::node::join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs) {
 //            std::cout << "before abstraction join_and_update..." << std::endl;
 //            std::cout << "from_abs -->" << std::endl;
 //            ap_abstract1_fprint(stdout,man,&from_abs);
