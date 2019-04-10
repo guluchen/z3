@@ -17,9 +17,8 @@ namespace smt {
         }
 
         bool counter_system::add_var_expr(const std::string &str, expr *var_exp, const std::string& str_short) {
-            if (var_expr.count(str)==0 && var_short.count(str)==0) {
-                var_expr.insert({str,var_exp});
-                var_short.insert({str,str_short});
+            if (var_expr.count(str)==0) {
+                var_expr.insert({str,{var_exp,str_short}});
                 return true;
             }
             return false;
@@ -158,6 +157,7 @@ namespace smt {
             STRACE("str", tout << "[COUNTER_SYSTEM]:\n";);
             STRACE("str", tout << "#states=" << num_states << "; #transitions=" << num_trans << '\n';);
             STRACE("str", tout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';);
+            STRACE("str", tout << "is dag? " << std::boolalpha << is_dag() << '\n';);
 
             STRACE("str", tout << "mapped_states final..." << std::endl;);
             STRACE("str", tout << "mapped_states size = " << num_states << std::endl;);
@@ -170,7 +170,7 @@ namespace smt {
         void counter_system::print_var_expr(ast_manager &m) {
             STRACE("str", tout << "[var_name <--> expr] in counter system: " << std::endl;);
             for (const auto& e: var_expr) {
-                STRACE("str", tout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second,m) << " ]" << std::endl;);
+                STRACE("str", tout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second.first,m) << " ]" << std::endl;);
             }
         }
 
@@ -184,19 +184,22 @@ namespace smt {
                     sep_str = "";
                     for (const auto v : assign.vars) {
 //                        STRACE("str", tout << sep_str << v << "=" << assign.num;);
-                        STRACE("str", tout << sep_str << var_short[v] << "=" << assign.num;);
+                        STRACE("str", tout << sep_str << var_expr.find(v)->second.second << "=" << assign.num;);
                         sep_str = ",";
                     }
                     break;
                 case counter_system::assign_type::VAR:
-                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(std::next(assign.vars.begin())););
+                    STRACE("str", tout << var_expr.find(*(assign.vars.begin()))->second.second << "=" <<
+                    var_expr.find(*(std::next(assign.vars.begin())))->second.second;);
                     break;
                 case counter_system::assign_type::PLUS_ONE:
-                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+1";);
+                    STRACE("str", tout << var_expr.find(*(assign.vars.begin()))->second.second << "=" <<
+                    var_expr.find(*(assign.vars.begin()))->second.second << "+1";);
                     break;
                 case counter_system::assign_type::PLUS_VAR:
-                    STRACE("str", tout << *(assign.vars.begin()) << "=" << *(assign.vars.begin()) << "+"
-                    << *(std::next(assign.vars.begin())););
+                    STRACE("str", tout << *(assign.vars.begin()) << "=" <<
+                    var_expr.find(*(assign.vars.begin()))->second.second << "+" <<
+                    var_expr.find(*(std::next(assign.vars.begin())))->second.second;);
                     break;
                 default:
                     break;
@@ -217,10 +220,8 @@ namespace smt {
             STRACE("str", tout << "final=" << final << ", " << "#var=" << var_expr.size() << std::endl;);
             STRACE("str", tout << "vars={";);
             sep_str = "";
-//            for (auto const v : var_expr) {
-            for (auto const v : var_short) {
-//                STRACE("str", tout << sep_str << v.first;);
-                STRACE("str", tout << sep_str << v.second;);
+            for (auto const v : var_expr) {
+                STRACE("str", tout << sep_str << v.second.second;);
                 sep_str = ", ";
             }
             STRACE("str", tout << "}" << std::endl;);
@@ -234,6 +235,109 @@ namespace smt {
                 }
             }
             STRACE("str", tout << "}" << std::endl;);
+        }
+
+//        counter_system::dag_check::dag_check(cs_relation& rels) {
+//            white = std::set<int>();
+//            gray = std::set<int>();
+//            black = std::set<int>();
+//            parent = std::map<int,int>();
+//            // copy relation into a graph of cs_state for processing
+//            for (const auto& rel : rels) {
+//                white.insert(rel.first);
+//                graph[rel.first] = {};
+//                for (const auto& tran : rel.second) {
+//                    graph[rel.first].insert(tran.second);
+//                }
+//            }
+//        }
+//
+//        bool counter_system::dag_check::is_dag_dfs(int curr) {
+//            gray.insert(curr);
+//            white.erase(curr);
+//            for (auto next: graph[curr]) {
+//                parent[next] = curr;
+//                graph[curr].erase(next);
+//                if (black.find(next) != black.end()) continue;
+//                if (gray.find(next) != gray.end()) return true;
+//                if (white.find(next) != white.end()) {
+//                    curr = *white.find(next);
+//                    gray.insert(curr);
+//                    white.erase(curr);
+//                }
+//
+//                graph[curr].erase(next);
+//            }
+//            black.insert(curr);
+//            gray.erase(curr);
+//        }
+//
+//        bool counter_system::dag_check::is_dag() {
+//            int curr;
+//            while (!white.empty()) {
+//                curr = *white.begin();
+//                parent[curr] = -1;  // no parent
+//                if (is_dag_dfs(curr)) return true;
+//            }
+//            return false;
+//        }
+
+        bool counter_system::is_dag() {  // standard dag cycle detection algorithm
+            std::set<int> white{}, gray{}, black{};
+            std::map<int,std::set<int>> graph;
+            std::map<int,int> parent;  // maps to -1 means no parent state
+            int curr = -1, next = -1;
+            // copy relation into a graph of cs_state for processing
+            for (const auto& rel : relation) {
+                white.insert(rel.first);
+                graph[rel.first] = {};
+                for (const auto& tran : rel.second) {
+                    white.insert(tran.second);  // in case of a state without outgoing transition
+                    graph[rel.first].insert(tran.second);
+                }
+            }
+            // start algorithm
+            while (!white.empty()) {
+                if (curr == -1) {
+                    curr = *white.begin();
+                    gray.insert(curr);
+                    white.erase(curr);
+                    parent[curr] = -1;  // no parent
+                    std::cout << "start in white: " << curr << '\n';
+                }
+                while (!graph[curr].empty()) {
+                    next = *graph[curr].begin();
+                    std::cout << "next as curr: " << next << '\n';
+                    parent[next] = curr;
+                    graph[curr].erase(next);
+                    curr = next;
+                    if (black.find(curr) != black.end()) {
+                        curr = parent[curr];
+                        std::cout << "in black, go back to parent: " << curr << "\n";
+                    }
+                    else if (gray.find(curr) != gray.end()) {
+                        std::cout << "in gray, found cycle\n";
+                        while (curr != -1) {
+                            std::cout << curr << "-->" << parent[curr] << '\n';
+                            curr = parent[curr];
+                        }
+                        return false;  // found cycle
+                    }
+                    else if (white.find(curr) != white.end()) {
+                        std::cout << "in while, go next\n";
+                        gray.insert(curr);
+                        white.erase(curr);
+                    }
+                    else assert(false);
+                }
+                assert(gray.find(curr) != gray.end());
+                black.insert(curr);
+                gray.erase(curr);
+                curr = parent[curr]; // go parent
+                std::cout << "no outgoing transition, go back to parent: " << curr << "\n";
+            }
+            std::cout << "is dag...\n";
+            return true;
         }
 
         apron_counter_system::node::node(ap_manager_t *man, ap_abstract1_t &base_abs) {
@@ -271,7 +375,7 @@ namespace smt {
         }
 
         length_constraint::len_cons::len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
-                std::map<std::string,expr*>& var_expr) {
+                const std::map<std::string,std::pair<expr*,std::string>>& var_expr) {
             ap_constyp_t *ap_constyp;
             ap_coeff_t *ap_cst, *ap_coeff;
             ap_environment_name_of_dim_t *name_of_dim;
@@ -315,7 +419,7 @@ namespace smt {
                 if (num_coeff != 0) {
 //                    fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j], num_coeff);
                     std::string var_name(name_of_dim->p[j]);
-                    m_var_expr_coeff[var_name] = std::make_pair(var_expr[var_name],num_coeff);
+                    m_var_expr_coeff[var_name] = std::make_pair(var_expr.find(var_name)->second.first,num_coeff);
                 }
             }
             ap_environment_name_of_dim_free(name_of_dim);
@@ -391,7 +495,7 @@ namespace smt {
         }
 
         length_constraint::length_constraint(ap_manager_t *ap_man, ap_abstract1_t *ap_abs_ptr,
-                std::map<std::string,expr*>& var_expr) {
+                const std::map<std::string,std::pair<expr*,std::string>>& var_expr) {
             ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(ap_man, ap_abs_ptr);
             size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
 //            std::cout << "constructing linear constraint: " << std::endl;
