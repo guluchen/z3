@@ -1816,6 +1816,7 @@ namespace smt {
             STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
             return lenc_check_sat(lenc_res);
 //            add_axiom(lenc_res);
+//            return true;
         }
         else {
             return false;
@@ -1824,27 +1825,7 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         using namespace str;
-
-//
-//        ast_manager& m = get_manager();
-//        context& ctx = get_context();
-//        expr_ref_vector assignments{m};
-//
-//        ctx.get_assignments(assignments);
-//        for (expr *const e : assignments) {
-//            if(ctx.is_relevant(e))
-//                std::cout <<"**"<< mk_pp(e, m) <<"\n";
-//        }
-//        for(int i=0;i<<ctx.get_num_asserted_formulas();i++){
-//            std::cout <<"*-*"<< mk_pp(ctx.get_asserted_formula(i), m) <<"\n";
-//        }
-//        ctx.get_guessed_literals(assignments);
-//        for (expr *const e : assignments) {
-//            if(ctx.is_relevant(e))
-//                std::cout <<"*+*"<< mk_pp(e, m) <<"\n";
-//        }
-//
-
+//        print_ctx(get_context());  // test_hlin
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;

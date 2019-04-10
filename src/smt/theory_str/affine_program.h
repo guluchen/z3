@@ -59,15 +59,16 @@ namespace smt {
             void add_init_state(const cs_state s) { init.insert(s); };
             void set_final_state(const cs_state s) { final = s; }  // Note: no check of number of states
             bool add_transition(const cs_state s, const cs_assign &assign, const cs_state s_to);  // add one transition
-            bool add_var_expr(const std::string &str, expr* var_exp);
-            const std::map<std::string,expr*> &get_var_expr() const { return var_expr; };
+            bool add_var_expr(const std::string &str, expr* var_exp, const std::string& str_short);
+            const std::map<std::string,std::pair<expr*,std::string>> &get_var_expr() const { return var_expr; };
             const unsigned long get_num_states() const { return num_states; };
             const cs_relation &get_relations() const { return relation; };
             void print_counter_system() const;  // printout
             void print_var_expr(ast_manager & m);
+            bool is_dag();
         private:
             // private attributes
-            std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
+            std::map<std::string,std::pair<expr*,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3 together with their short names
             unsigned long num_states;
             std::set<cs_state> init;  // initial (success) states
             cs_state final;           // final state (root of word equation)
@@ -90,7 +91,7 @@ namespace smt {
                 node(ap_manager_t *man, ap_environment_t *env, bool top_flag);  // initialize with apron defaults
                 bool equal_to_pre(ap_manager_t *man) { return ap_abstract1_is_eq(man, &abs_pre, &abs); };
                 ap_abstract1_t &get_abs() { return abs; };
-                bool join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs);
+                void join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs);
                 void widening(ap_manager_t *man);
                 void print_abs(ap_manager_t *man) { ap_abstract1_fprint(stdout, man, &abs); };
                 void print_abs_silent(ap_manager_t *man);
@@ -118,7 +119,7 @@ namespace smt {
         private: // private attributes
             ap_manager_t *man;
             ap_var_t *variables;
-            std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
+            std::map<std::string,std::pair<expr*,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3
             ap_environment_t *env;
             unsigned long num_states;
             unsigned long num_vars;
@@ -135,7 +136,7 @@ namespace smt {
             ap_manager_t* get_ap_manager() { return man; };
             void print_apron_counter_system();
             node& get_final_node() { return nodes[final]; };  // use it like a const method.
-            std::map<std::string,expr*>& get_var_expr() { return var_expr; };  // use it like a const method.
+            const std::map<std::string,std::pair<expr*,std::string>>& get_var_expr() { return var_expr; };  // use it like a const method.
         };
 
         class length_constraint {
@@ -150,7 +151,7 @@ namespace smt {
                 long int m_cst;
             public:
                 len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
-                        std::map<std::string,expr*>& var_expr);
+                        const std::map<std::string,std::pair<expr*,std::string>>& var_expr);
                 void pretty_print(ast_manager& ast_man);
                 expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
             };
@@ -158,7 +159,7 @@ namespace smt {
             std::list<len_cons> m_cons;
         public:
             length_constraint(ap_manager_t *ap_man, ap_abstract1_t* ap_abs_ptr,
-                   std::map<std::string,expr*>& var_expr);
+                   const std::map<std::string,std::pair<expr*,std::string>>& var_expr);
             void pretty_print(ast_manager& ast_man);
             expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
             bool empty() { return m_cons.empty(); };
