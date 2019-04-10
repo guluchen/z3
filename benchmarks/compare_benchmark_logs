@@ -72,14 +72,16 @@ def compare_check_logs(check_logs: List[CheckLog]):
     num_logs = len(check_logs)
     print(f'benchmark_path: {check_logs[0].benchmark_path}')
     print(f'benchmark_size: {check_logs[0].benchmark_size}')
-    print('(tool-check_date, #unsat, #sat, #timeout, #misc)')
+    print('(tool-check_date, #unsat, #sat, #timeout, #unknown, #exception, #misc)')
     for i in range(num_logs):
         tool_date = f'{check_logs[i].check_tool}-{check_logs[i].check_date}'
         num_unsat = check_logs[i].count_result("unsat")
         num_sat = check_logs[i].count_result("sat")
         num_timeout = check_logs[i].count_result("timeout")
-        num_misc = check_logs[i].benchmark_size - num_unsat - num_sat - num_timeout
-        print(f'({tool_date}, {num_unsat}, {num_sat}, {num_timeout}, {num_misc})')
+        num_unknown = check_logs[i].count_result("unknown")
+        num_exception = check_logs[i].count_result("exception")
+        num_misc = check_logs[i].benchmark_size - num_unsat - num_sat - num_timeout - num_unknown - num_exception
+        print(f'({tool_date}, {num_unsat}, {num_sat}, {num_timeout}, {num_unknown}, {num_exception}, {num_misc})')
 
 
 def main(argv):
