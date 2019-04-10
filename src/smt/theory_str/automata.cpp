@@ -304,16 +304,34 @@ namespace smt {
             return result;
         }
 
-        std::set<zaut::state> zaut::successors(state s, const zstring& ch) {
-            SASSERT(ch.length() == 1);
+        std::set<zaut::state> zaut::epsilon_closure(state s) {
             std::set<state> result;
+            result.insert(s);
             for (const auto& move : m_imp->get_moves_from(s)) {
-                const symbol_ref c{mk_char(ch), m_dep.sym_man};
-                const symbol_ref avail{m_dep.sym_ba.mk_and(move.t(), c), m_dep.sym_man};
-                if (symbol_check_sat(avail) == l_true) {
+                if (move.t()== nullptr) {
                     result.insert(move.dst());
                 }
             }
+            return result;
+        }
+
+        std::set<zaut::state> zaut::successors(state s, const zstring& ch) {
+            SASSERT(ch.length() == 1);
+            std::set<state> result;
+
+            for( const auto& eps_reach_state: epsilon_closure(s)){
+                for (const auto& move : m_imp->get_moves_from(eps_reach_state)) {
+                    const symbol_ref c{mk_char(ch), m_dep.sym_man};
+                    if(move.t() != nullptr) {
+                        const symbol_ref avail{m_dep.sym_ba.mk_and(move.t(), c), m_dep.sym_man};
+                        if (symbol_check_sat(avail) == l_true) {
+                            std::set<zaut::state> destinations= epsilon_closure(move.dst());
+                            result.insert(destinations.begin(),destinations.end());
+                        }
+                    }
+                }
+            }
+
             return result;
         }
 
