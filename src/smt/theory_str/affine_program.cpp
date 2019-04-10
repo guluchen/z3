@@ -334,8 +334,11 @@ namespace smt {
                     m_type = lcons_type::SUPEQ;
                     break;
                 case AP_CONS_SUP:
+                    std::cout << "AP_CONS_SUP\n";
                 case AP_CONS_EQMOD:
+                    std::cout << "AP_CONS_EQMOD\n";
                 case AP_CONS_DISEQ:
+                    std::cout << "AP_CONS_DISEQ\n";
                     std::cout << "Unsupported type" << std::endl;
                 default:
                     SASSERT(false);
@@ -406,7 +409,7 @@ namespace smt {
                     ret = ap_util_a.mk_ge(ret,ap_util_a.mk_int(0));
                     break;
                 default:
-                SASSERT(false);
+                    SASSERT(false);
             }
             return ret;
         }
@@ -523,7 +526,12 @@ namespace smt {
             final = cs.final_state();
             num_states = cs.get_num_states();
             // set apron environment
+//            man = box_manager_alloc();
+//            man = oct_manager_alloc();
+//            man = pk_manager_alloc(true);
             man = ap_ppl_poly_manager_alloc(true);
+//            man = pkeq_manager_alloc();
+//            man = ap_ppl_grid_manager_alloc();
             env = ap_environment_alloc(variables, var_expr.size(), NULL, 0);
             // initialize nodes
             for (ap_state i = 1; i <= num_states; i++) {

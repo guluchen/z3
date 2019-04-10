@@ -1820,8 +1820,8 @@ namespace smt {
 //            add_axiom(lenc_res);
 //            return true;
         }
-        else {
-            return false;
+        else {  // if generated no length constraint, return true(sat)
+            return true;
         }
     }
 
