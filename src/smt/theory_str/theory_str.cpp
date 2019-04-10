@@ -1183,7 +1183,11 @@ namespace smt {
             for (const auto& h : g.heads()) {
                 automaton::sptr lhs = m->get(h);
                 automaton::sptr rhs = derive_var_membership(g, m, h);
-                if ((!lhs && rhs->is_empty()) || lhs->intersect_with(rhs)->is_empty()) return false;
+                if(!lhs) continue;
+                if (lhs->intersect_with(rhs)->is_empty()) return false;
+
+//                if ((!lhs && rhs->is_empty()) ) return false;
+//                if (lhs->intersect_with(rhs)->is_empty()) return false;
             }
             return true;
         }
@@ -1665,7 +1669,6 @@ namespace smt {
                     re = m_util_s.re.mk_concat(all_seq, re);
                     re = m_util_s.re.mk_concat(re, all_seq);
                     re = m_util_s.re.mk_complement(re);
-                    std::cout<<mk_pp(e1,m)<<std::endl;
                     if(is_const_fun(e1)){
                         m_membership_todo.push_back({{e1, m}, {re,m}});
                     }else{
@@ -1674,7 +1677,6 @@ namespace smt {
                 }else{
                     TRACE("str", tout << "TODO: not contains "<<mk_pp(e, m)<< "\n" ;);
                 }
-
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);

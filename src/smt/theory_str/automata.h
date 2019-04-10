@@ -157,6 +157,7 @@ namespace smt {
             std::ostream& display_timbuk(std::ostream& out);
             bool operator==(const automaton& other) override;
         private:
+            std::set<state> epsilon_closure(state s);
             moves transitions();
             moves transform_transitions(std::function<move(move)> transformer);
             symbol *mk_char(const zstring& ch);
