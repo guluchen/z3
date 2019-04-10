@@ -151,9 +151,10 @@ namespace smt {
             for (const auto& e : mapped_states) {
                 STRACE("str", tout << "state number " << e.second << " maps to state:\n" << e.first  << '\n';);
             }
-//            std::cout << "[COUNTER_SYSTEM]:\n";
-//            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
-//            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
+            std::cout << "[COUNTER_SYSTEM]:\n";
+            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
+            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
+            std::cout << "is dag? " << std::boolalpha << is_dag() << '\n';
             STRACE("str", tout << "[COUNTER_SYSTEM]:\n";);
             STRACE("str", tout << "#states=" << num_states << "; #transitions=" << num_trans << '\n';);
             STRACE("str", tout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';);
@@ -237,51 +238,6 @@ namespace smt {
             STRACE("str", tout << "}" << std::endl;);
         }
 
-//        counter_system::dag_check::dag_check(cs_relation& rels) {
-//            white = std::set<int>();
-//            gray = std::set<int>();
-//            black = std::set<int>();
-//            parent = std::map<int,int>();
-//            // copy relation into a graph of cs_state for processing
-//            for (const auto& rel : rels) {
-//                white.insert(rel.first);
-//                graph[rel.first] = {};
-//                for (const auto& tran : rel.second) {
-//                    graph[rel.first].insert(tran.second);
-//                }
-//            }
-//        }
-//
-//        bool counter_system::dag_check::is_dag_dfs(int curr) {
-//            gray.insert(curr);
-//            white.erase(curr);
-//            for (auto next: graph[curr]) {
-//                parent[next] = curr;
-//                graph[curr].erase(next);
-//                if (black.find(next) != black.end()) continue;
-//                if (gray.find(next) != gray.end()) return true;
-//                if (white.find(next) != white.end()) {
-//                    curr = *white.find(next);
-//                    gray.insert(curr);
-//                    white.erase(curr);
-//                }
-//
-//                graph[curr].erase(next);
-//            }
-//            black.insert(curr);
-//            gray.erase(curr);
-//        }
-//
-//        bool counter_system::dag_check::is_dag() {
-//            int curr;
-//            while (!white.empty()) {
-//                curr = *white.begin();
-//                parent[curr] = -1;  // no parent
-//                if (is_dag_dfs(curr)) return true;
-//            }
-//            return false;
-//        }
-
         bool counter_system::is_dag() {  // standard dag cycle detection algorithm
             std::set<int> white{}, gray{}, black{};
             std::map<int,std::set<int>> graph;
@@ -303,28 +259,19 @@ namespace smt {
                     gray.insert(curr);
                     white.erase(curr);
                     parent[curr] = -1;  // no parent
-                    std::cout << "start in white: " << curr << '\n';
                 }
                 while (!graph[curr].empty()) {
                     next = *graph[curr].begin();
-                    std::cout << "next as curr: " << next << '\n';
                     parent[next] = curr;
                     graph[curr].erase(next);
                     curr = next;
                     if (black.find(curr) != black.end()) {
                         curr = parent[curr];
-                        std::cout << "in black, go back to parent: " << curr << "\n";
                     }
                     else if (gray.find(curr) != gray.end()) {
-                        std::cout << "in gray, found cycle\n";
-                        while (curr != -1) {
-                            std::cout << curr << "-->" << parent[curr] << '\n';
-                            curr = parent[curr];
-                        }
                         return false;  // found cycle
                     }
                     else if (white.find(curr) != white.end()) {
-                        std::cout << "in while, go next\n";
                         gray.insert(curr);
                         white.erase(curr);
                     }
@@ -334,9 +281,7 @@ namespace smt {
                 black.insert(curr);
                 gray.erase(curr);
                 curr = parent[curr]; // go parent
-                std::cout << "no outgoing transition, go back to parent: " << curr << "\n";
             }
-            std::cout << "is dag...\n";
             return true;
         }
 
@@ -361,7 +306,6 @@ namespace smt {
         }
 
         void apron_counter_system::node::widening(ap_manager_t *man) {
-//            std::cout << "perform widening..." << std::endl;
             ap_abstract1_t abs_tmp = abs;
             abs = ap_abstract1_widening(man, &abs_pre, &abs);
             ap_abstract1_clear(man, &abs_tmp);
@@ -382,14 +326,11 @@ namespace smt {
 
             // set constraint type
             ap_constyp = ap_lincons1_constypref(ap_cons_ptr);
-//            std::cout << "constraint type: ";
             switch (*ap_constyp) {
                 case AP_CONS_EQ:
-//                    std::cout << "AP_CONS_EQ" << std::endl;
                     m_type = lcons_type::EQ;
                     break;
                 case AP_CONS_SUPEQ:
-//                    std::cout << "AP_CONS_SUPEQ" << std::endl;
                     m_type = lcons_type::SUPEQ;
                     break;
                 case AP_CONS_SUP:
@@ -404,9 +345,6 @@ namespace smt {
             ap_cst = ap_lincons1_cstref(ap_cons_ptr);
             SASSERT(ap_cst->discr == AP_COEFF_SCALAR &&
                     ap_cst->val.scalar->discr == AP_SCALAR_MPQ);  // only support this case
-//            std::cout << "constant: ";
-//            ap_coeff_fprint(stdout, ap_cst);
-//            std::cout << std::endl;
             name_of_dim = ap_environment_name_of_dim_alloc(ap_cons_ptr->env);
             m_cst = ap_coeff2int(ap_cst);
             long int num_coeff;
@@ -417,7 +355,6 @@ namespace smt {
                         ap_coeff->val.scalar->discr == AP_SCALAR_MPQ);  // only support this case
                 num_coeff = ap_coeff2int(ap_coeff);
                 if (num_coeff != 0) {
-//                    fprintf(stdout, "var: %s, coeff: %ld\n", name_of_dim->p[j], num_coeff);
                     std::string var_name(name_of_dim->p[j]);
                     m_var_expr_coeff[var_name] = std::make_pair(var_expr.find(var_name)->second.first,num_coeff);
                 }
@@ -426,7 +363,6 @@ namespace smt {
         }
 
         void length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
-//            STRACE("str", tout << "length constraint:" << std::endl;);
             for (const auto& e : m_var_expr_coeff) {
                 STRACE("str", tout << "(" << e.second.second << ")*" << mk_pp(e.second.first,ast_man) << " + ";);
             }
@@ -498,57 +434,24 @@ namespace smt {
                 const std::map<std::string,std::pair<expr*,std::string>>& var_expr) {
             ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(ap_man, ap_abs_ptr);
             size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
-//            std::cout << "constructing linear constraint: " << std::endl;
-//            std::cout << "---from abs: " << std::endl;
-//            ap_abstract1_fprint(stdout, ap_man, ap_abs_ptr);
-//            std::cout << "---extracted apron linear constraints array: (" << len_cons_arr << ")" << std::endl;
-//            ap_lincons1_array_fprint(stdout, &cons_arr);
-
-//            std::cout << "---process each linear constraint: (total " << len_cons_arr << ")" << std::endl;
             ap_lincons1_t ap_cons;
             for (size_t i = 0; i < len_cons_arr; i++) {
                 ap_cons = ap_lincons1_array_get(&cons_arr, i);
-//                std::cout << "linear constraint " << i << "-th :" << std::endl;
-//                ap_lincons1_fprint(stdout, &ap_cons);
-//                std::cout << std::endl;
                 m_cons.emplace_back(len_cons(ap_man, &ap_cons, var_expr));
             }
         }
 
         void apron_counter_system::node::join_and_update_abs(ap_manager_t *man, ap_abstract1_t &from_abs) {
-//            std::cout << "before abstraction join_and_update..." << std::endl;
-//            std::cout << "from_abs -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&from_abs);
-//            std::cout << "abs_pre -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&abs_pre);
-//            std::cout << "abs -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&abs);
-
             ap_abstract1_clear(man, &abs_pre);
             abs_pre = abs;
             abs = ap_abstract1_join(man, false, &abs, &from_abs);
-
-//            std::cout << "after abstraction join_and_update..." << std::endl;
-//            std::cout << "from_abs -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&from_abs);
-//            std::cout << "abs_pre -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&abs_pre);
-//            std::cout << "abs -->" << std::endl;
-//            ap_abstract1_fprint(stdout,man,&abs);
         }
 
         void apron_counter_system::ap_assign::abstraction_propagate(ap_manager_t *man, node &s, node &s_to) {
             ap_abstract1_t s_abs = ap_abstract1_copy(man, &s.get_abs());
-//            std::cout << "before abstraction propagate..." << std::endl;
-//            ap_abstract1_fprint(stdout,man,&s_abs);
             SASSERT(!var_exp_pairs.empty());
             for (auto &var_exp : var_exp_pairs) {
                 s_abs = ap_abstract1_assign_linexpr(man, true, &s_abs, var_exp.first, &var_exp.second, NULL);
-//                ap_abstract1_assign_linexpr(man,true,&s_abs,var_exp.first,&var_exp.second,NULL);
-//                std::cout << "assignment: ";
-//                printf("%s=", var_exp.first);
-//                ap_linexpr1_fprint(stdout,&var_exp.second);
-//                std::cout << std::endl;
             }
             s_to.join_and_update_abs(man, s_abs);
             ap_abstract1_minimize(man, &s_to.get_abs());  // necessary for efficiency
@@ -717,26 +620,16 @@ namespace smt {
                     if (visited.count(tr.second) == 0) process_queue.push(tr.second);
                 }
             }
-//            std::cout << std::endl;
             // Note: assume final is in nodes
             SASSERT(nodes.count(final) != 0);
-//            std::cout << "root state abs:" << std::endl;
-//            nodes[final].print_abs(man);
-//            std::cout << "root state abs_pre:" << std::endl;
-//            nodes[final].print_abs_pre(man);
         }
 
         void apron_counter_system::run_abstraction() {
             unsigned int loops = 1;
             do {
                 abstraction();
-//                std::cout << "end of abstraction loops: " << loops << std::endl;
-//                std::cout << "current abstractions: " << std::endl;
-//                print_apron_counter_system();
-//                std::cout << std::endl;
                 loops++;
                 bool widen = loops >= widening_threshold;
-//                std::cout << "widening: " << widen << std::endl;
                 if (loops >= 10) {
                     if (fixpoint_check(widen)) break;
                 }

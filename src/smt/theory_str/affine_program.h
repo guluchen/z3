@@ -51,17 +51,6 @@ namespace smt {
             using cs_transition = std::pair<cs_assign, cs_state>;
             using cs_relation = std::map<cs_state, std::set<cs_transition>>;
 
-//            struct dag_check {
-//                std::map<int,std::set<int>> graph;
-//                std::set<int> white;
-//                std::set<int> gray;
-//                std::set<int> black;
-//                std::map<int,int> parent;  // maps to -1 means no parent state
-//                dag_check(cs_relation& rels);
-//                bool is_dag_dfs(int curr);
-//                bool is_dag();
-//            };
-
             // public methods
             const std::set<cs_state> &init_states() const { return init; };  // return a copied reference
             const cs_state final_state() const { return final; };
@@ -72,7 +61,6 @@ namespace smt {
             bool add_transition(const cs_state s, const cs_assign &assign, const cs_state s_to);  // add one transition
             bool add_var_expr(const std::string &str, expr* var_exp, const std::string& str_short);
             const std::map<std::string,std::pair<expr*,std::string>> &get_var_expr() const { return var_expr; };
-//            const std::map<std::string,std::string> &get_var_short() const { return var_short; };
             const unsigned long get_num_states() const { return num_states; };
             const cs_relation &get_relations() const { return relation; };
             void print_counter_system() const;  // printout
@@ -81,8 +69,6 @@ namespace smt {
         private:
             // private attributes
             std::map<std::string,std::pair<expr*,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3 together with their short names
-//            std::map<std::string,expr*> var_expr;  // var names appeared mapped to their internal expressions in z3
-//            std::map<std::string,std::string> var_short;  // map var name to its short name
             unsigned long num_states;
             std::set<cs_state> init;  // initial (success) states
             cs_state final;           // final state (root of word equation)
