@@ -24,7 +24,7 @@ DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp', '--quiet'],
                 'z3seq': ['z3'],
                 'z3str3': ['z3', 'smt.string_solver=z3str3'],
                 'trau': ['trau', '-language', 'smt2.6'],
-                'trauc': ['trauc', 'smt.string_solver=z3str3'],
+                'trauc': ['trauc', 'smt.string_solver=z3str3', '-tr:str'],
                 'z3-trau': ['z3-trau', 'smt.string_solver=z3str3']}
 
 # expected error messages
@@ -38,7 +38,7 @@ def contains_error_msg(text: str) -> bool:
     return False
 
 
-def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str, silent: bool):
+def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str, silent: bool, trace_dir: str):
     fp = open(log_file, 'a')
     fp_err = open(log_file + '.err', 'a')
     for file in benchmark_files:
@@ -88,6 +88,9 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         if res == '???':  # should not encounter this case
             print(f'UNEXPECTED_OUTPUT: {out}')
             fp_err.write(f'{log_str}\n{out}\n\n')
+
+        filename = file.replace("/", ".")
+        os.system("mv .z3-trace " + "trace/" + filename)
 
     fp.close()
     fp_err.close()
@@ -155,6 +158,8 @@ def main(argv):
 
     cmd_log = re.sub(r"[^A-Za-z0-9]", "", args.cmd)
     log_file = f'{os.path.basename(benchmark_path)}.{check_date}.{cmd_log}.log'
+    trace_dir = _base_dir + "/trace"
+    os.system("rm -rf " + trace_dir + " && mkdir -p " + trace_dir)
     print(f'log file: {log_file}')
     if not args.nolog:
         if os.path.exists(log_file):
@@ -166,7 +171,7 @@ def main(argv):
             fp.write(f'date: {check_date}\n')
             fp.write(f'tool: {args.cmd}\n')
 
-    check(args.cmd, command, benchmark_files, time_out, log_file, args.nolog)
+    check(args.cmd, command, benchmark_files, time_out, log_file, args.nolog, trace_dir)
 
 
 if __name__ == '__main__':
