@@ -88,9 +88,10 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         if res == '???':  # should not encounter this case
             print(f'UNEXPECTED_OUTPUT: {out}')
             fp_err.write(f'{log_str}\n{out}\n\n')
-
-        filename = file.replace("/", ".")
-        os.system("mv .z3-trace " + "trace/" + filename)
+        
+        if "trauc" in command[0]:
+            filename = file.replace("/", ".")
+            os.system("mv .z3-trace " + "trace/" + filename)
 
     fp.close()
     fp_err.close()
