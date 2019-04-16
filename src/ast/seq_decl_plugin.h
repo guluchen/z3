@@ -267,7 +267,6 @@ public:
         app* mk_is_empty(expr* s) const;
 
         bool is_string(expr const * n) const { return is_app_of(n, m_fid, OP_STRING_CONST); }
-
         bool is_string(expr const* n, symbol& s) const {
             return is_string(n) && (s = to_app(n)->get_decl()->get_parameter(0).get_symbol(), true);
         }

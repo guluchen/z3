@@ -323,7 +323,7 @@ namespace smt {
             else {
                 enode * n = curr.get_enode();
                 SASSERT(n->get_root() == n);
-                TRACE("mg_top_sort", tout << curr << "\n";);
+                TRACE("mg_top_sort", tout << curr << " " << mk_pp(n->get_owner(), m_manager) <<"\n";);
                 dependencies.reset();
                 dependency_values.reset();
                 model_value_proc * proc = root2proc[n];
@@ -338,10 +338,11 @@ namespace smt {
                     }
                     else {
                         enode * child = d.get_enode();
-                        TRACE("mg_top_sort", tout << "#" << n->get_owner_id() << " (" << mk_pp(n->get_owner(), m_manager) << "): " << mk_pp(child->get_owner(), m_manager) << " " << mk_pp(child->get_root()->get_owner(), m_manager) << "\n";);
+
                         child = child->get_root();
                         app * val = nullptr;
                         m_root2value.find(child, val);
+                        TRACE("mg_top_sort", tout << "#" << n->get_owner_id() << " (" << mk_pp(val, m_manager) << "): " << mk_pp(d.get_enode()->get_owner(), m_manager) << "\n";);
                         SASSERT(val);
                         dependency_values.push_back(val);
                     }
@@ -350,6 +351,7 @@ namespace smt {
                 register_value(val);
                 m_asts.push_back(val);
                 m_root2value.insert(n, val);
+                TRACE("mg_top_sort", tout << curr << " " << mk_pp(n->get_owner(), m_manager) << " --> " << mk_pp(val, m_manager) <<"\n";);
             }
         }
         std::for_each(procs.begin(), procs.end(), delete_proc<model_value_proc>());

@@ -942,6 +942,8 @@ namespace smt {
                 }
             }
         }
+
+
         SASSERT(result != 0);
         select_set * sel_set = nullptr;
         m_selects.find(n->get_root(), sel_set);

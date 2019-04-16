@@ -1,769 +1,1916 @@
-/*++
-  Module Name:
-
-  theory_str.h
-
-  Abstract:
-
-  String Theory Plugin
-
-  Author:
-
-  Murphy Berzish and Yunhui Zheng
-
-  Revision History:
-
-  --*/
 #ifndef _THEORY_STR_H_
 #define _THEORY_STR_H_
 
-#include "util/trail.h"
-#include "util/union_find.h"
-#include "util/scoped_ptr_vector.h"
-#include "util/hashtable.h"
-#include "ast/ast_pp.h"
+#include <list>
+#include <set>
+#include <stack>
+#include <map>
+#include <vector>
 #include "ast/arith_decl_plugin.h"
-#include "ast/rewriter/th_rewriter.h"
-#include "ast/rewriter/seq_rewriter.h"
-#include "ast/seq_decl_plugin.h"
-#include "smt/smt_theory.h"
+#include "ast/array_decl_plugin.h"
+#include "ast/ast_pp.h"
 #include "smt/params/theory_str_params.h"
 #include "smt/proto_model/value_factory.h"
+#include "ast/rewriter/seq_rewriter.h"
+#include "ast/rewriter/th_rewriter.h"
+#include "ast/seq_decl_plugin.h"
 #include "smt/smt_model_generator.h"
+#include "smt/smt_theory.h"
+#include "util/hashtable.h"
+#include "util/scoped_vector.h"
+#include "util/scoped_ptr_vector.h"
+#include "util/trail.h"
+#include "util/union_find.h"
 #include "smt/smt_arith_value.h"
-#include<set>
-#include<stack>
-#include<vector>
-#include<map>
+
+#define ROUNDCHECK 1
+#define LOCALSPLITMAX 20
+#define SUMFLAT 100000000
+#define EMPTYFLAT 9999999
+
+#define REGEX_CODE -10000
+#define MINUSZERO 999
+
+#define LENPREFIX "len_"
+#define ARRPREFIX "arr_"
+#define ITERSUFFIX "__iter"
+#define ZERO "0"
+#define REGEXSUFFIX "_10000"
 
 namespace smt {
 
-typedef hashtable<symbol, symbol_hash_proc, symbol_eq_proc> symbol_set;
-typedef int_hashtable<int_hash, default_eq<int> > integer_set;
+    namespace str {
 
-class str_value_factory : public value_factory {
-    seq_util u;
-    symbol_set m_strings;
-    std::string delim;
-    unsigned m_next;
-public:
-    str_value_factory(ast_manager & m, family_id fid) :
-        value_factory(m, fid),
-        u(m), delim("!"), m_next(0) {}
-    ~str_value_factory() override {}
-    expr * get_some_value(sort * s) override {
-        return u.str.mk_string(symbol("some value"));
+        enum class element_t {
+            CONST, VAR, NONE
+        };
+
+        class element {
+            element_t m_type;
+            std::string m_value;
+        public:
+            static const element& null();
+            element(const element_t& t, std::string v) : m_type{t}, m_value{std::move(v)} {}
+            const element_t& type() const { return m_type; }
+            const std::string& value() const { return m_value; }
+            const bool typed(const element_t& t) const { return m_type == t; }
+            explicit operator bool() const { return *this != null(); }
+            const bool operator==(const element& other) const;
+            const bool operator!=(const element& other) const { return !(*this == other); }
+            const bool operator<(const element& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const element& e);
+        };
+
+        class word_term {
+            std::list<element> m_elements;
+        public:
+            static const word_term& null();
+            static word_term of_string(const std::string& literal);
+            static word_term of_variable(const std::string& name);
+            static const bool prefix_mismatched_in_consts(const word_term& w1, const word_term& w2);
+            static const bool suffix_mismatched_in_consts(const word_term& w1, const word_term& w2);
+            static const bool unequalable_no_empty_var(const word_term& w1, const word_term& w2);
+            static const bool unequalable(const word_term& w1, const word_term& w2);
+            word_term() = default;
+            word_term(std::initializer_list<element> list);
+            const std::size_t length() const { return m_elements.size(); }
+            const std::size_t constant_count() const;
+            const element& head() const;
+            const std::set<element> variables() const;
+            const bool empty() const { return m_elements.empty(); }
+            const bool has_constant() const;
+            const bool has_variable() const;
+            const bool check_head(const element_t& t) const;
+            void remove_head();
+            void concat(const word_term& other);
+            void replace(const element& tgt, const word_term& subst);
+            explicit operator bool() const { return *this != null(); }
+            const bool operator==(const word_term& other) const;
+            const bool operator!=(const word_term& other) const { return !(*this == other); }
+            const bool operator<(const word_term& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const word_term& w);
+        };
+
+        using head_pair = std::pair<const element&, const element&>;
+
+        class word_equation {
+            word_term m_lhs;
+            word_term m_rhs;
+        public:
+            static const word_equation& null();
+            word_equation(const word_term& lhs, const word_term& rhs);
+            const word_term& lhs() const { return m_lhs; }
+            const word_term& rhs() const { return m_rhs; }
+            const head_pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
+            const std::set<element> variables() const;
+            const element& definition_var() const;
+            const word_term& definition_body() const;
+            const bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
+            const bool unsolvable(bool allow_empty_var = true) const;
+            const bool in_definition_form() const;
+            const bool check_heads(const element_t& lht, const element_t& rht) const;
+            word_equation trim_prefix() const;
+            word_equation replace(const element& tgt, const word_term& subst) const;
+            word_equation remove(const element& tgt) const;
+            word_equation remove_all(const std::set<element>& tgt) const;
+            explicit operator bool() const { return *this != null(); }
+            const bool operator==(const word_equation& other) const;
+            const bool operator!=(const word_equation& other) const { return !(*this == other); }
+            const bool operator<(const word_equation& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const word_equation& we);
+        private:
+            void sort();
+        };
+
+        class state {
+            using def_node = element;
+            using def_nodes = std::set<def_node>;
+            using def_graph = std::map<def_node, def_nodes>;
+            using trans_source = std::pair<const word_equation&, const word_equation&>;
+
+            class transform {
+                const state& m_state;
+                const word_equation& m_src;
+                const bool m_src_should_fail;
+                std::list<state> m_result;
+
+                transform(const state& s, const word_equation& src, bool by_wi = false);
+                const bool src_vars_empty() const;
+                const bool src_var_well_defined() const;
+                const bool src_two_var_unequal() const;
+                void transform_one_var();
+                void transform_two_var();
+                std::list<state> compute();
+            };
+
+            bool m_allow_empty_var = true;
+            std::set<word_equation> m_wes_to_satisfy;
+            std::set<word_equation> m_wes_to_fail;
+        public:
+            state() = default;
+            explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
+            const std::set<element> variables() const;
+            const word_equation& only_one_equation_left() const;
+            const std::vector<std::vector<word_term>> equivalence_classes() const;
+            const bool equivalence_classes_inconsistent() const;
+            const bool disequalities_inconsistent() const;
+            const bool unsolvable_by_check() const;
+            const bool unsolvable_by_inference() const;
+            const bool in_definition_form() const;
+            const bool in_solved_form() const;
+            void allow_empty_variable(const bool enable) { m_allow_empty_var = enable; }
+            void satisfy_constraint(const word_equation& we);
+            void fail_constraint(const word_equation& we);
+            state replace(const element& tgt, const word_term& subst) const;
+            state remove(const element& tgt) const;
+            state remove_all(const std::set<element>& tgt) const;
+            const std::list<state> transform() const;
+            const bool operator<(const state& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const state& s);
+        private:
+            static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
+                                                 def_nodes& marked, def_nodes& checked);
+            const bool definition_acyclic() const;
+            const trans_source transformation_source() const;
+            void transform_one_var(const head_pair& hh, std::list<state>& result) const;
+            void transform_two_var(const head_pair& hh, std::list<state>& result) const;
+        };
+
+        class neilson_based_solver {
+            std::set<state> m_processed;
+            std::stack<state> m_pending;
+            bool m_solution_found;
+        public:
+            explicit neilson_based_solver(const state& root);
+            const bool solution_found() const { return m_solution_found; }
+            void explore_var_empty_cases();
+            void check_sat();
+        };
+
+        using expr_pair = std::pair<expr_ref, expr_ref>;
+
     }
-    bool get_some_values(sort * s, expr_ref & v1, expr_ref & v2) override {
-        v1 = u.str.mk_string(symbol("value 1"));
-        v2 = u.str.mk_string(symbol("value 2"));
-        return true;
-    }
-    expr * get_fresh_value(sort * s) override {
-        if (u.is_string(s)) {
-            while (true) {
-                std::ostringstream strm;
-                strm << delim << std::hex << (m_next++) << std::dec << delim;
-                symbol sym(strm.str().c_str());
-                if (m_strings.contains(sym)) continue;
-                m_strings.insert(sym);
-                return u.str.mk_string(sym);
+
+    enum {
+        NONE = 0,
+        LEFT_EMPTY = 1,
+        LEFT_EQUAL = 2,
+        LEFT_SUM = 3,
+        RIGHT_EMPTY = 4,
+        RIGHT_EQUAL = 5,
+        RIGHT_SUM = 6
+    };
+
+    enum {
+        SIMPLE_CASE = 0,
+        CONST_ONLY = 1,
+        CONNECTED_ONLY = 2,
+        CONST_CONNECTED = 3
+    };
+
+
+    class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
+
+    class theory_str : public theory {
+        int m_scope_level;
+        int mful_scope_level;
+        const theory_str_params& m_params;
+        scoped_vector<str::expr_pair> m_we_expr_memo;
+        scoped_vector<str::expr_pair> m_wi_expr_memo;
+        scoped_vector<str::expr_pair> membership_memo;
+        scoped_vector<str::expr_pair> non_membership_memo;
+
+        typedef union_find<theory_str> th_union_find;
+        typedef trail_stack<theory_str> th_trail_stack;
+        struct zstring_hash_proc {
+            unsigned operator()(zstring const & s) const {
+                return string_hash(s.encode().c_str(), static_cast<unsigned>(s.length()), 17);
             }
-        }
-        sort* seq = nullptr;
-        if (u.is_re(s, seq)) {
-            expr* v0 = get_fresh_value(seq);
-            return u.re.mk_to_re(v0);
-        }
-        TRACE("t_str", tout << "unexpected sort in get_fresh_value(): " << mk_pp(s, m_manager) << std::endl;);
-        UNREACHABLE(); return nullptr;
-    }
-    void register_value(expr * n) override { /* Ignore */ }
-};
+        };
+        typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> > string_map;
 
-// NSB: added operator[] and contains to obj_pair_hashtable
-class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
+        class Arrangment{
+        public:
+            std::vector<int> left_arr;
+            std::vector<int> right_arr;
 
-template<typename Ctx>
-class binary_search_trail : public trail<Ctx> {
-    obj_map<expr, ptr_vector<expr> > & target;
-    expr * entry;
-public:
-    binary_search_trail(obj_map<expr, ptr_vector<expr> > & target, expr * entry) :
-        target(target), entry(entry) {}
-    ~binary_search_trail() override {}
-    void undo(Ctx & ctx) override {
-        TRACE("t_str_binary_search", tout << "in binary_search_trail::undo()" << std::endl;);
-        if (target.contains(entry)) {
-            if (!target[entry].empty()) {
-                target[entry].pop_back();
-            } else {
-                TRACE("t_str_binary_search", tout << "WARNING: attempt to remove length tester from an empty stack" << std::endl;);
+            Arrangment(std::vector<int> _left_arr,
+                       std::vector<int> _right_arr,
+                       std::map<std::string, std::string> _constMap,
+                       int _connectingSize){
+                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
+                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
             }
-        } else {
-            TRACE("t_str_binary_search", tout << "WARNING: attempt to access length tester map via invalid key" << std::endl;);
-        }
-    }
-};
+
+            Arrangment(std::vector<int> _left_arr,
+                       std::vector<int> _right_arr){
+                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
+                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
+            }
+
+            void addLeft(int number) {
+                left_arr.emplace_back(number);
+            }
+
+            void addRight(int number) {
+                right_arr.emplace_back(number);
+            }
+
+            bool canSplit(int boundedFlat, int boundSize, int pos, std::string frame, std::vector<std::string> &flats) {
+                if ((int)flats.size() == boundedFlat)
+                    return false;
+
+                for (int size = 1; size <= boundSize; ++size) { /* size of a flat */
+                    std::string flat = frame.substr(pos, size);
+                    flats.emplace_back(flat); /* add to stack */
+                    int tmpPos = pos + size;
+
+                    while (true) {
+                        std::string nextIteration = frame.substr(tmpPos, size);
+                        if (nextIteration.compare(flat) != 0)
+                            break;
+                        else if (tmpPos < (int)frame.length() && tmpPos + size <= (int)frame.length()){
+                            tmpPos += size;
+                        }
+                        else
+                            break;
+                    }
+                    if (tmpPos < (int)frame.length()){
+                        if (canSplit(boundedFlat, boundSize, tmpPos, frame, flats))
+                            return true;
+                        else {
+                            /* de-stack */
+                            flats.pop_back();
+                        }
+                    }
+                    else {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            /*
+             * Input: string that we are going to split, and number of flats
+             * Ouput: able to split or not
+             */
+            int splitWithMinFlats(int boundedFlat, int boundSize, std::string frame){
+                for (int i = 1; i <= boundedFlat; ++i) { /* number of flats */
+                    std::vector<std::string> flats;
+                    if (canSplit(i, PMAX, 0, frame, flats)){
+                        return i;
+                    }
+                    flats.clear();
+                }
+                return -1;
+            }
+
+            void splitPrintTest(std::vector<int> currentSplit, std::string msg = ""){
+                STRACE("str", tout << msg << std::endl;);
+                for (unsigned int i = 0; i < currentSplit.size(); ++i)
+                STRACE("str", tout << currentSplit[i] << " - " << std::endl;);
+                STRACE("str", tout << std::endl << "------------" << std::endl;);
+            }
+
+            /**
+             * Print a list
+             */
+            template<typename T>
+            void printList(T list, std::string msg = "") {
+                if (msg.length() > 0 )
+                    printf("%s\n", msg.c_str());
+                for (std::vector<int>::iterator it = list.begin(); it != list.end(); ++it) {
+                    printf("%d ", *it);
+                }
+                printf("\n");
+            }
+
+            bool isUnionStr(std::string str){
+                return str.find("|") != std::string::npos;
+            }
+
+            bool feasibleSplit_const(
+                    std::string str,
+                    std::vector<std::pair<std::string, int> > elementNames,
+                    std::vector<int> currentSplit){
+                /* check feasible const split */
+                int pos = 0;
+                for (unsigned i = 0; i < currentSplit.size(); ++i) {
+                    if (elementNames[i].second == REGEX_CODE || isUnionStr(elementNames[i].first)) {
+                    }
+
+                        /* TODO: bound P */
+                    else if (elementNames[i].second < 0) { /* const */
+                        if (currentSplit[i] > (int)elementNames[i].first.length()) {
+                        }
+                        SASSERT ((int)elementNames[i].first.length() >= currentSplit[i]);
+
+                        std::string lhs = str.substr(pos, currentSplit[i]);
+                        std::string rhs = "";
+                        if (elementNames[i].second % QCONSTMAX == -1) /* head */ {
+                            rhs = elementNames[i].first.substr(0, currentSplit[i]);
+
+                            if (i + 1 < elementNames.size()) {
+                                if (QCONSTMAX == 1 || elementNames[i].first.length() == 1) {
+                                    SASSERT (currentSplit[i] == (int)elementNames[i].first.length()); /* const length must be equal to length of const */
+                                }
+                                else {
+                                    SASSERT (elementNames[i + 1].second % QCONSTMAX == 0);
+                                    SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)elementNames[i].first.length())); /* sum of all const parts must be equal to length of const */
+                                }
+                            }
+                        }
+                        else { /* tail */
+                            rhs = elementNames[i].first.substr(elementNames[i].first.length() - currentSplit[i], currentSplit[i]);
+                        }
+
+                        if (lhs.compare(rhs) != 0){
+                            SASSERT(false);
+                            STRACE("str", tout << __LINE__ << " " << lhs << " - " << rhs << std::endl;);
+                            return false;
+                        }
+                    }
+                    pos += currentSplit[i];
+                }
+                return true;
+            }
+
+            /*
+             * we do not allow empty flats in the middle
+             */
+            bool isPossibleArrangement(){
+                if (left_arr[left_arr.size() -1] == EMPTYFLAT &&
+                    right_arr[right_arr.size() -1] == EMPTYFLAT)
+                    return false;
+                /* not allow empty flats in the middle */
+                int startPos = 0;
+                int endPos = left_arr.size() - 1;
+                /* check lhs */
+                for (startPos = 0; startPos < (int)left_arr.size(); ++startPos)
+                    if (left_arr[startPos] != EMPTYFLAT)
+                        break;
+                for (endPos = (int)left_arr.size() - 1; endPos >= 0; --endPos)
+                    if (left_arr[endPos] != EMPTYFLAT)
+                        break;
+                for (int i = startPos; i < endPos; ++i)
+                    if (left_arr[i] == EMPTYFLAT) {
+                        // printArrangement("ERRORR");
+                        return false;
+                    }
+
+                /* check rhs */
+                for (startPos = 0; startPos < (int)right_arr.size(); ++startPos)
+                    if (right_arr[startPos] != EMPTYFLAT)
+                        break;
+                for (endPos = (int)right_arr.size() - 1; endPos >= 0; --endPos)
+                    if (right_arr[endPos] != EMPTYFLAT)
+                        break;
+                for (int i = startPos; i < endPos; ++i)
+                    if (right_arr[i] == EMPTYFLAT) {
+                        // printArrangement("ERRORR");
+                        return false;
+                    }
+                return true;
+            }
+
+            /*
+             * Pre-Condition: x_i == 0 --> x_i+1 == 0
+             */
+            bool isPossibleArrangement(
+                    std::vector<std::pair<expr*, int>> lhs_elements,
+                    std::vector<std::pair<expr*, int>> rhs_elements){
+                /* bla bla */
+                for (unsigned i = 0; i < left_arr.size(); ++i)
+                    if (left_arr[i] != -1){
+                        for (int j = i - 1; j >= 0; --j){
+                            if (lhs_elements[j].second < lhs_elements[i].second) { /* same var */
+                                if (left_arr[j] == -1)
+                                    return false;
+                            }
+                            else
+                                break;
+                        }
+                    }
+                for (unsigned i = 0; i < right_arr.size(); ++i)
+                    if (right_arr[i] != -1){
+                        for (int j = i - 1; j >= 0; --j){
+                            if (rhs_elements[j].second < rhs_elements[i].second) { /* same var */
+                                if (right_arr[j] == -1)
+                                    return false;
+                            }
+                            else
+                                break;
+                        }
+                    }
+                return true;
+            }
 
 
-class nfa {
-protected:
-    bool m_valid;
-    unsigned m_next_id;
+            void printArrangement(std::string msg = ""){
+                if (msg.length() > 0)
+                    STRACE("str", tout << msg << std::endl;);
 
-    unsigned next_id() {
-        unsigned retval = m_next_id;
-        ++m_next_id;
-        return retval;
-    }
+                for (unsigned int i = 0; i < left_arr.size(); ++i)
+                    STRACE("str", tout << left_arr[i] << " ";);
 
-    unsigned m_start_state;
-    unsigned m_end_state;
+                STRACE("str", tout << std::endl;);
+                for (unsigned int i = 0; i < right_arr.size(); ++i)
+                    STRACE("str", tout << right_arr[i] << " ";);
+                STRACE("str", tout <<  std::endl;);
+            }
+        };
 
-    std::map<unsigned, std::map<char, unsigned> > transition_map;
-    std::map<unsigned, std::set<unsigned> > epsilon_map;
+        class UnderApproxState{
+        public:
+            std::map<expr*, std::set<expr*>> eq_combination;
+            std::set<std::pair<expr*, int>> importantVars;
+            int level = -1;
+            int z3_level = -1;
+            std::vector<expr*> assertingConstraints;
+            UnderApproxState(){
 
-    void make_transition(unsigned start, char symbol, unsigned end) {
-        transition_map[start][symbol] = end;
-    }
+            }
 
-    void make_epsilon_move(unsigned start, unsigned end) {
-        epsilon_map[start].insert(end);
-    }
+            UnderApproxState(int _z3_level, int _level,
+                            std::map<expr*, std::set<expr*>> _eq_combination,
+                            std::set<std::pair<expr*, int>> _importantVars): z3_level(_z3_level), level(_level), eq_combination(_eq_combination), importantVars(_importantVars){
+                assertingConstraints.clear();
+            }
 
-    // Convert a regular expression to an e-NFA using Thompson's construction
-    void convert_re(expr * e, unsigned & start, unsigned & end, seq_util & u);
+            UnderApproxState clone(){
+                UnderApproxState tmp(z3_level, level, eq_combination, importantVars);
+                tmp.addAssertingConstraints(assertingConstraints);
+                return tmp;
+            }
 
-public:
-    nfa(seq_util & u, expr * e)
-: m_valid(true), m_next_id(0), m_start_state(0), m_end_state(0) {
-        convert_re(e, m_start_state, m_end_state, u);
-    }
+            void reset(){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << level << std::endl;);
+                z3_level = -1;
+                level = -1;
+                eq_combination.clear();
+                importantVars.clear();
+                assertingConstraints.clear();
+            }
 
-    nfa() : m_valid(false), m_next_id(0), m_start_state(0), m_end_state(0) {}
+            UnderApproxState&  operator=(const UnderApproxState& other){
+                z3_level = other.z3_level;
+                level = other.level;
+                eq_combination = other.eq_combination;
+                importantVars = other.importantVars;
+                assertingConstraints = other.assertingConstraints;
 
-    bool is_valid() const {
-        return m_valid;
-    }
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << other.eq_combination.size() << " --> " << eq_combination.size() << std::endl;);
+                return *this;
+            }
 
-    void epsilon_closure(unsigned start, std::set<unsigned> & closure);
+            void addAssertingConstraints(std::vector<expr*> _assertingConstraints){
+                for (const auto& e : _assertingConstraints)
+                    assertingConstraints.push_back(e);
+            }
 
-    bool matches(zstring input);
-};
+            void addAssertingConstraints(expr* assertingConstraint){
+                assertingConstraints.push_back(assertingConstraint);
+            }
 
-class regex_automaton_under_assumptions {
-protected:
-    expr * re_term;
-    eautomaton * aut;
-    bool polarity;
+            bool operator==(const UnderApproxState state){
+                std::map<expr*, std::set<expr*>> _eq_combination = state.eq_combination;
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                if (_eq_combination.size() != eq_combination.size()) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << _eq_combination.size() << " vs " << eq_combination.size() <<  std::endl;);
+                    return false;
+                }
 
-    bool assume_lower_bound;
-    rational lower_bound;
+                if (state.importantVars.size() != importantVars.size()) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.importantVars.size() << " vs " << importantVars.size() <<  std::endl;);
+                    return false;
+                }
 
-    bool assume_upper_bound;
-    rational upper_bound;
-public:
-    regex_automaton_under_assumptions() :
-        re_term(nullptr), aut(nullptr), polarity(false),
-        assume_lower_bound(false), assume_upper_bound(false) {}
+                for (const auto& v : importantVars)
+                    if (state.importantVars.find(v) == state.importantVars.end()) {
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+                        return false;
+                    }
 
-    regex_automaton_under_assumptions(expr * re_term, eautomaton * aut, bool polarity) :
-        re_term(re_term), aut(aut), polarity(polarity),
-        assume_lower_bound(false), assume_upper_bound(false) {}
+                for (const auto& n : eq_combination) {
+                    if (_eq_combination.find(n.first) == _eq_combination.end()) {
+                        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
+                        return false;
+                    }
+                    std::set<expr*> tmp = _eq_combination[n.first];
+                    for (const auto &e : n.second) {
 
-    void set_lower_bound(rational & lb) {
-        lower_bound = lb;
-        assume_lower_bound = true;
-    }
-    void unset_lower_bound() {
-        assume_lower_bound = false;
-    }
+                        if (tmp.find(e) == tmp.end()) {
+                            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
+                            return false;
+                        }
+                    }
+                }
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": Equal. " << std::endl;);
+                return true;
+            }
+        };
 
-    void set_upper_bound(rational & ub) {
-        upper_bound = ub;
-        assume_upper_bound = true;
-    }
-    void unset_upper_bound() {
-        assume_upper_bound = false;
-    }
+        class string_value_proc : public model_value_proc {
+            theory_str&                     th;
+            sort*                           m_sort;
+            svector<model_value_dependency> m_dependencies;
+            app*                            node;
+            enode*                          arr_node;
+            bool                            importantVar;
+            int                             len;
+        public:
 
-    bool get_lower_bound(rational & lb) const {
-        if (assume_lower_bound) {
-            lb = lower_bound;
-            return true;
-        } else {
-            return false;
-        }
-    }
+            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, enode* arr_node, int len = -1):
+                    th(th),
+                    m_sort(s),
+                    node(node),
+                    importantVar(importantVar),
+                    arr_node(arr_node),
+                    len(len){
+            }
 
-    bool get_upper_bound(rational & ub) const {
-        if (assume_upper_bound) {
-            ub = upper_bound;
-            return true;
-        } else {
-            return false;
-        }
-    }
+            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, int len = -1):
+                    th(th),
+                    m_sort(s),
+                    node(node),
+                    importantVar(importantVar),
+                    len(len){
+            }
 
-    eautomaton * get_automaton() const { return aut; }
-    expr * get_regex_term() const { return re_term; }
-    bool get_polarity() const { return polarity; }
+            ~string_value_proc() override {}
 
-    virtual ~regex_automaton_under_assumptions() {
-        // don't free str_in_re or aut;
-        // they are managed separately
-    }
-};
+            void add_entry(unsigned num_args, enode * const * args, enode * value) {
+                SASSERT(num_args > 0);
+                for (unsigned i = 0; i < num_args; i++)
+                    m_dependencies.push_back(model_value_dependency(args[i]));
+                m_dependencies.push_back(model_value_dependency(value));
+            }
 
-class theory_str : public theory {
-    struct T_cut
-    {
-        int level;
-        obj_map<expr, int> vars;
+            void add_entry(enode * value){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, th.get_manager()) << " --> " << mk_pp(value->get_owner(), th.get_manager()) << std::endl;);
+                m_dependencies.push_back(model_value_dependency(value));
+            }
 
-        T_cut() {
-            level = -100;
-        }
+            void get_dependencies(buffer<model_value_dependency> & result) override {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__  << " " << mk_pp(node, th.get_manager()) << std::endl;);
+                result.append(m_dependencies.size(), m_dependencies.c_ptr());
+            }
+
+            app * mk_value(model_generator & mg, ptr_vector<expr> & values) override {
+                // values must have size = m_num_entries * (m_dim + 1) + ((m_else || m_unspecified_else) ? 0 : 1)
+                // an array value is a lookup table + else_value
+                // each entry has m_dim indexes that map to a value.
+                ast_manager & m = mg.get_manager();
+                obj_map<enode, app *> m_root2value = mg.get_root2value();
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
+
+                for (int i = 0; i < m_dependencies.size(); ++i){
+                    app* val = nullptr;
+                    if (m_root2value.find(m_dependencies[i].get_enode(), val)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " " << mk_pp(val, m) << std::endl;);
+                    }
+                    else
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
+                }
+
+
+                sort * int_sort = m.mk_sort(th.m_autil.get_family_id(), INT_SORT);
+                sort * str_sort = th.u.str.mk_string_sort();
+                sort * arr_sort = th.m_arrayUtil.mk_array_sort(int_sort, int_sort);
+                bool is_string = str_sort == m_sort;
+
+
+
+                if (is_string) {
+                    int len_int = len;
+                    if (len_int != -1) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": len : " << len_int << std::endl;);
+                        if (importantVar) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": important" << std::endl;);
+                            if (len_int != -1) {
+                                zstring strValue;
+                                if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
+                                                       << std::endl;);
+                                    return to_app(th.mk_string(strValue));
+                                } else SASSERT(false);
+                            }
+                        } else {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": NOT important" << std::endl;);
+                            if (len_int != -1) {
+                                zstring strValue;
+                                // non root var
+                                bool constraint01 =
+                                        th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
+                                bool constraint02 = (th.backwardDep.find(node) != th.backwardDep.end() && th.backwardDep[node].size() > 0);
+                                if (constraint01 || constraint02) {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << std::endl;);
+                                    if (!constraint02) {
+                                        // free var
+                                        for (int i = 0; i < len_int; ++i)
+                                            strValue = strValue + th.defaultChar;
+                                        STRACE("str",
+                                               tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                                                    << std::endl;);
+                                        return to_app(th.mk_string(strValue));
+                                    } else {
+                                        // component var
+                                        for (const auto &ancestor : th.backwardDep[node]) {
+                                            STRACE("str",
+                                                   tout << __LINE__ << " " << __FUNCTION__
+                                                        << mk_pp(ancestor, m)
+                                                        << std::endl;);
+                                            zstring ancestorValue;
+                                            if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
+                                                            ancestorValue)) {
+                                                STRACE("str",
+                                                       tout << __LINE__ << " " << __FUNCTION__
+                                                            << mk_pp(ancestor, m)
+                                                            << std::endl;);
+                                                if (th.u.str.is_concat(ancestor)) {
+                                                    STRACE("str",
+                                                           tout << __LINE__ << " " << __FUNCTION__
+                                                                << mk_pp(ancestor, m)
+                                                                << std::endl;);
+                                                    if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
+                                                                                 len_int, strValue)) {
+                                                        STRACE("str",
+                                                               tout << __LINE__ << " " << __FUNCTION__ << ": value = "
+                                                                    << strValue
+                                                                    << std::endl;);
+                                                        return to_app(th.mk_string(strValue));
+                                                    }
+                                                }
+
+                                                {
+                                                    STRACE("str",
+                                                           tout << __LINE__ << " " << __FUNCTION__
+                                                                << mk_pp(ancestor, m)
+                                                                << std::endl;);
+                                                    // find in its eq
+                                                    if (th.uState.eq_combination.find(ancestor) !=
+                                                        th.uState.eq_combination.end()) {
+                                                        for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
+                                                            if (th.u.str.is_concat(ancestor_i)) {
+                                                                if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
+                                                                                             m_root2value, len_int,
+                                                                                             strValue)) {
+                                                                    STRACE("str",
+                                                                           tout << __LINE__ << " " << __FUNCTION__
+                                                                                << ": value = " << strValue
+                                                                                << std::endl;);
+                                                                    return to_app(th.mk_string(strValue));
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                            }
+                                            else {
+                                                STRACE("str",
+                                                       tout << __LINE__ << " " << __FUNCTION__
+                                                            << mk_pp(ancestor, m) << strValue
+                                                            << std::endl;);
+                                            }
+                                        }
+
+                                        STRACE("str",
+                                               tout << __LINE__ << " " << __FUNCTION__
+                                                    << mk_pp(node, m)
+                                                    << std::endl;);
+//                                        SASSERT(false);
+                                    }
+                                } else {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
+                                    // root var
+                                    std::vector<int> val;
+                                    for (int i = 0; i < len_int; ++i)
+                                        val.push_back(-1);
+                                    for (const auto &eq : th.uState.eq_combination[node]) {
+                                        constructStr(mg, eq, m_root2value, val);
+                                    }
+
+                                    for (int i = 0; i < len_int; ++i)
+                                        if (val[i] == -1) {
+                                            strValue = strValue + th.defaultChar;
+                                        } else
+                                            strValue = strValue + val[i];
+
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                                                       << std::endl;);
+                                    return to_app(th.mk_string(strValue));
+                                }
+                            }
+                            else {
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__
+                                            << mk_pp(node, m)
+                                            << std::endl;);
+                                SASSERT(false);
+                            }
+                        }
+                    }
+                    else {
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__
+                                    << mk_pp(node, m)
+                                    << std::endl;);
+                        SASSERT(false);
+                    }
+                }
+
+                else {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": not string: "  << mk_pp(node, m) << std::endl;);
+                }
+
+                return node;
+            }
+
+            bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
+                app* arr_val = nullptr;
+                if (m_root2value.find(arr, arr_val)) {
+                    std::vector<int> vValue (len_int, -1);
+
+                    func_decl * fd = to_func_decl(arr_val->get_parameter(0).get_ast());
+                    func_interp* fi = mg.get_model().get_func_interp(fd);
+
+                    unsigned num_entries = fi->num_entries();
+                    for(unsigned i = 0; i < num_entries; i++)
+                    {
+                        func_entry const* fe = fi->get_entry(i);
+                        expr* k =  fe->get_arg(0);
+                        rational key;
+                        if (th.m_autil.is_numeral(k, key)) {
+                            expr* v =  fe->get_result();
+
+                            rational value;
+                            if (th.m_autil.is_numeral(v, value)) {
+                                if (key.get_int32() < vValue.size())
+                                    vValue[key.get_int32()] = value.get_int32();
+                            }
+                        }
+                    }
+
+                    zstring value;
+                    for (int i = 0; i < vValue.size(); ++i) {
+                        if (vValue[i] <= 0 || vValue[i] >= 128)
+                            value = value + th.defaultChar;
+                        else
+                            value = value + (char) vValue[i];
+                    }
+
+                    val = value;
+                    return true;
+                }
+
+
+
+                return false;
+            }
+
+            void constructStr(model_generator & mg, expr* eq, obj_map<enode, app *> m_root2value, std::vector<int> &val){
+                if (th.u.str.is_concat(eq)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << mk_pp(eq, th.get_manager()) << std::endl;);
+                    ptr_vector<expr> leafNodes;
+                    th.get_nodes_in_concat(eq, leafNodes);
+
+                    int sum = 0;
+                    for (int i = 0; i < leafNodes.size(); ++i){
+                        if (th.isImportant(leafNodes[i]) || th.u.str.is_string(leafNodes[i])){
+                            zstring leafVal;
+
+                            if (getStrValue(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
+                                int len_int = leafVal.length();
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: "  << mk_pp(leafNodes[i], th.get_manager())  << " = " << leafVal << std::endl;);
+                                for (int j = sum; j < sum + len_int; ++j) {
+                                    if (val[j] == -1) {
+                                        val[j] = leafVal[j - sum];
+                                    } else {
+                                        if (val[j] != (int) leafVal[j - sum]) {
+                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": val: " << val[j]
+                                                               << std::endl;);
+                                            STRACE("str",
+                                                   tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j
+                                                        << " \"" << leafVal << "\" "
+                                                        << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                            SASSERT(val[j] == leafVal[j - sum]);
+                                        }
+                                    }
+                                }
+                                sum = sum + len_int;
+                            }
+                            else {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                SASSERT(false);
+                            }
+                        }
+                        else {
+                            int len_int = -1;
+                            if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, len_int)){
+                                sum += len_int;
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sum = "  << sum << std::endl;);
+                            }
+                            else {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get len: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                SASSERT(false);
+                            }
+                        }
+                    }
+                }
+            }
+
+            bool fetchValueBelongToConcat(model_generator & mg, expr* concat, zstring concatValue,obj_map<enode, app *> m_root2value, int len, zstring& value){
+                if (th.u.str.is_concat(concat)){
+
+                    ptr_vector<expr> leafNodes;
+                    th.get_nodes_in_concat(concat, leafNodes);
+
+                    if (leafNodes.contains(node)) {
+                        int sum = 0;
+                        // get all lens
+                        for (int i = 0; i < leafNodes.size(); ++i)
+                            if (node != leafNodes[i]) {
+                                int subLen = -1;
+                                if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, subLen)) {
+                                    sum += subLen;
+                                }
+                                else {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get len: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                    SASSERT(false);
+                                }
+                            }
+
+                        SASSERT(sum + len <= concatValue.length());
+                        value = concatValue.extract(sum, len);
+                        return true;
+                    }
+                    return false;
+                }
+                return false;
+            }
+
+            bool getLenValue(model_generator & mg, app* n, obj_map<enode, app *> m_root2value, int &value){
+                app* len_node = nullptr;
+                if (th.u.str.is_concat(n)){
+                    ptr_vector<expr> leafNodes;
+                    th.get_nodes_in_concat(n, leafNodes);
+                    int sum = 0;
+                    for (int i = 0; i < leafNodes.size(); ++i) {
+                        int val = -1;
+                        if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, val)){
+                            sum += val;
+                        }
+                        else
+                            return false;
+                        value = sum;
+                    }
+                    return true;
+                }
+
+                else {
+                    len_node = th.mk_strlen(n);
+                    return getIntValue(mg, th.get_context().get_enode(len_node), m_root2value, value);
+                }
+            }
+
+            bool getIntValue(model_generator & mg, enode* n, obj_map<enode, app *> m_root2value, int &value){
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__
+                            << mk_pp(n->get_owner(), th.get_manager())
+                            << std::endl;);
+                app* val = nullptr;
+                if (m_root2value.find(n, val)) {
+                    rational valInt;
+                    if (th.m_autil.is_numeral(val, valInt)) {
+                        value = valInt.get_int32();
+                        return true;
+                    }
+                    else {
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__
+                                       << mk_pp(val, th.get_manager())
+                                    << std::endl;);
+                        return false;
+                    }
+                }
+                else {
+                    // query int theory
+                    expr *value_ral = th.queryTheoryArithCore(n->get_owner(), mg);
+                    if (value_ral != nullptr) {
+
+                        rational tmp;
+                        if (th.m_autil.is_numeral(value_ral, tmp)) {
+                            value = tmp.get_int32();
+                            return true;
+                        }
+                        else
+                            SASSERT(false);
+                    }
+
+
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << std::endl;);
+                    return false;
+                }
+            }
+
+            bool getSelectValue(model_generator & mg, enode* n, obj_map<enode, app *> m_root2value, int &value){
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__
+                            << mk_pp(n->get_owner(), th.get_manager())
+                            << std::endl;);
+                app* val = nullptr;
+                if (m_root2value.find(n, val)) {
+                    rational valInt;
+                    if (th.m_autil.is_numeral(val, valInt)) {
+                        value = valInt.get_int32();
+                        return true;
+                    }
+                    else {
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__
+                                    << mk_pp(val, th.get_manager())
+                                    << std::endl;);
+                        return false;
+                    }
+                }
+                else {
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << std::endl;);
+                    return false;
+                }
+            }
+
+
+            bool getStrValue(enode* n, obj_map<enode, app *> m_root2value, zstring &value){
+                app* val = nullptr;
+                if (m_root2value.find(n, val)) {
+                    zstring valStr;
+                    if (th.u.str.is_string(val, valStr)) {
+                        value = valStr;
+                        return true;
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(n->get_owner(), th.get_manager()) << std::endl;);
+                        return false;
+                    }
+                }
+                else {
+                    zstring tmp;
+                    if (th.u.str.is_string(n->get_owner(), tmp)) {
+                        value = tmp;
+                        return true;
+                    }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(n->get_owner(), th.get_manager()) << std::endl;);
+                    return false;
+                }
+            }
+        };
+
+
+    public:
+        theory_str(ast_manager& m, const theory_str_params& params);
+        void display(std::ostream& os) const override;
+        th_trail_stack& get_trail_stack() { return m_trail_stack; }
+        void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
+        void after_merge_eh(theory_var r1, theory_var r2, theory_var v1, theory_var v2) { }
+        void unmerge_eh(theory_var v1, theory_var v2) {}
+
+    protected:
+        void init(context *ctx) override;
+        bool internalize_atom(app *atom, bool gate_ctx) override;
+        bool internalize_term(app *term) override;
+        theory_var mk_var(enode *n) override;
+        theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
+
+        /*
+         * Helper function for mk_value().
+         * Attempts to resolve the expression 'n' to a string constant.
+         * Stronger than get_eqc_value() in that it will perform recursive descent
+         * through every subexpression and attempt to resolve those to concrete values as well.
+         * Returns the concrete value obtained from this process,
+         * guaranteed to satisfy m_strutil.is_string(),
+         * if one could be obtained,
+         * or else returns NULL if no concrete value was derived.
+         */
+        app * mk_value_helper(app * n, model_generator& mg);
+        model_value_proc *mk_value(enode *n, model_generator& mg) override;
+            bool isImportant(expr* n);
+            bool isImportant(expr* n, int &val);
+            std::set<expr*> getDependency(expr* n);
+        void add_theory_assumptions(expr_ref_vector& assumptions) override;
+        lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
+        void new_eq_eh(theory_var, theory_var) override;
+        void new_diseq_eh(theory_var, theory_var) override;
+            /*
+             * Add an axiom of the form:
+             * len lhs != len rhs -> lhs != rhs
+             * len lhs == 0 == len rhs --> lhs == rhs
+             */
+            void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs);
+        void init_search_eh() override;
+        void relevant_eh(app *n) override;
+        void assign_eh(bool_var v, bool is_true) override;
+        void push_scope_eh() override;
+        void pop_scope_eh(unsigned num_scopes) override;
+        void reset_eh() override;
+        final_check_status final_check_eh() override;
+            std::set<expr*> get_eqc_roots();
+            void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
+            std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
+            bool assignValues(model_generator& mg, const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> importantVars);
+            void syncVarValue(std::map<expr*, std::vector<int>> &strValue);
+            void formatConnectedVars(
+                std::vector<unsigned> indexes,
+                std::map<expr*, zstring> solverValues,
+                std::vector<std::pair<expr*, rational>> lenVector,
+                std::map<expr*, rational> len,
+                std::map<expr*, int> iterInt,
+                std::map<expr*, std::vector<int>> &strValue,
+                std::map<expr *, int> importantVars,
+                bool &completion);
+            void formatOtherVars(
+                std::vector<unsigned> indexes,
+                std::map<expr*, zstring> solverValues,
+                std::vector<std::pair<expr*, rational>> lenVector,
+                std::map<expr*, rational> len,
+                std::map<expr*, int> iterInt,
+                std::map<expr*, std::vector<int>> &strValue,
+                std::map<expr *, int> importantVars,
+                bool &completion);
+                std::map<expr*, int> createSimpleEqualMap(
+                std::map<expr*, rational> len);
+                    bool isBlankValue(expr* name,
+                                      std::map<expr*, rational> len,
+                                      std::map<expr*, std::vector<int>> strValue);
+            std::vector<int> createString(
+                expr* name,
+                zstring value,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> strValue,
+                std::vector<std::pair<int, int>> iters,
+                bool &assigned,
+                bool assignAnyway = false);
+            bool needValue(expr* name,
+                                   std::map<expr*, rational> len,
+                                   std::map<expr*, std::vector<int>> strValue);
+            void syncConst(
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            rational getVarLength(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len);
+            void forwardPropagate(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            void backwardPropagarate(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            void backwardPropagarate_simple(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue,
+                bool &completion);
+            std::vector<int> getVarValue(
+                expr* newlyUpdate,
+                std::map<expr*, rational> len,
+                std::map<expr*, std::vector<int>> &strValue);
+            bool fixedValue(std::vector<std::pair<expr*, rational>> &freeVars, std::map<expr*, rational> varLens);
+            bool fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens);
+            bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
+            bool propagate_value(std::set<expr*> & concatSet);
+            bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
+                void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
+                void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
+                bool propagate_length_within_eqc(expr * var);
+            bool underapproximation(
+                std::map<expr*, std::set<expr*>> eq_combination,
+                std::map<expr*, std::set<expr*>> causes,
+                std::set<std::pair<expr*, int>> importantVars,
+                str::state root);
+            bool underapproximation_repeat();
+            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
+                void createNotContainMap();
+                void createConstSet();
+                char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
+                std::set<char> initExcludeCharSet();
+                std::set<char> initIncludeCharSet();
+                void createAppearanceMap(
+                        std::map<expr*, std::set<expr*>> eq_combination);
+            void initUnderapprox_repeat();
+
+            void additionalHandling();
+                void handle_NOTEqual();
+                    void handle_NOTEqual_const(expr* lhs, zstring rhs);
+                    void handle_NOTEqual_var(expr* lhs, expr* rhs);
+                void handle_NOTContain();
+                    void handle_NOTContain_var(expr* lhs, expr* rhs);
+                    void handle_NOTContain_const(expr* lhs, zstring rhs);
+                    bool isContains(expr* n, expr* &contain);
+                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
+                    void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
+            bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                                           std::map<expr*, int> importantVars,
+                                            std::map<expr*, expr*> causes);
+            /*
+             *
+             */
+            expr* constraintsIfEmpty(
+                    ptr_vector<expr> lhs,
+                    ptr_vector<expr> rhs);
+            /*
+             * convert lhs == rhs to SMT formula
+             */
+            expr* equalityToSMT(
+                std::string lhs, std::string rhs,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::map<expr*, int> connectedVariables,
+                int p = PMAX);
+
+            /*
+             * lhs: size of the lhs
+             * rhs: size of the rhs
+             * lhs_elements: elements of lhs
+             * rhs_elements: elements of rhs
+             *
+             * Pre-Condition: x_i == 0 --> x_i+1 == 0
+             *
+             */
+            expr_ref_vector collectAllPossibleArrangements(
+                std::string lhs_str, std::string rhs_str,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::map<expr*, int> connectedVariables,
+                int p = PMAX);
+
+            void updatePossibleArrangements(
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements,
+                std::vector<Arrangment> tmp,
+                std::vector<Arrangment> &possibleCases);
+
+            /*
+             *
+             */
+            Arrangment manuallyCreate_arrangment(
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements);
+
+            bool passNotContainMapReview(
+                Arrangment a,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements);
+
+            bool passSelfConflict(
+                Arrangment a,
+                std::vector<std::pair<expr*, int>> lhs_elements,
+                std::vector<std::pair<expr*, int>> rhs_elements);
+            /*
+             * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
+             */
+            expr* generateSMT(int p,
+                                            std::vector<int> left_arr,
+                                            std::vector<int> right_arr,
+                                            std::string lhs_str, std::string rhs_str,
+                                            std::vector<std::pair<expr*, int>> lhs_elements,
+                                            std::vector<std::pair<expr*, int>> rhs_elements,
+                                            std::map<expr*, int> connectedVariables);
+
+            /*
+             *
+             * Flat = empty
+             */
+
+            expr* generateConstraint00(
+                    std::pair<expr*, int> a,
+                    std::string l_r_hs);
+
+            /*
+             * Flat = Flat
+             * size = size && it = it  ||
+             * size = size && it = 1
+             */
+            expr* generateConstraint01(
+                    std::string lhs_str, std::string rhs_str,
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    int pMax,
+                    std::map<expr*, int> connectedVariables,
+                    bool optimizing);
+            /*
+             * Flat = sum (flats)
+             */
+            expr* generateConstraint02(
+                std::pair<expr*, int> a,
+                std::vector<std::pair<expr*, int>> elementNames,
+                std::string lhs_str, std::string rhs_str,
+                int pMax,
+                std::map<expr*, int> connectedVariables,
+                bool optimizing);
+
+                /*
+                * Input: split a string
+                * Output: SMT
+                */
+                expr* toConstraint_havingConnectedVar_andConst(
+                        std::pair<expr*, int> a, /* const || regex */
+                        std::vector<std::pair<expr*, int> > elementNames, /* const + connected var */
+                        std::vector<int> split,
+                        std::string lhs, std::string rhs,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax);
+
+                    /*
+                    *
+                    */
+                    expr* lengthConstraint_toConnectedVarConstraint(
+                            std::pair<expr*, int> a, /* const || regex */
+                            std::vector<std::pair<expr*, int> > elementNames,
+                            expr_ref_vector subElements,
+                            int currentPos,
+                            int subLength,
+                            std::string lhs, std::string rhs,
+                            std::map<expr*, int> connectedVariables,
+                            bool optimizing,
+                            int pMax);
+
+                        /*
+                        *
+                        */
+                        expr* connectedVar_atSpecificLocation(
+                                std::pair<expr*, int> a, /* const or regex */
+                                std::vector<std::pair<expr*, int>> elementNames, /* have connected var */
+                                int connectedVarPos,
+                                int connectedVarLength,
+                                std::string lhs, std::string rhs,
+                                std::map<expr*, int> connectedVariables,
+                                bool optimizing,
+                                int pMax);
+                /*
+                 * Input: split a string
+                 * Output: SMT
+                 */
+                expr_ref_vector toConstraint_NoConnectedVar(
+                        std::pair<expr*, int> a, /* const || regex */
+                        std::vector<std::pair<expr*, int> > elementNames, /* no connected var */
+                        std::vector<int> split,
+                        std::string lhs, std::string rhs,
+                        bool optimizing);
+                /*
+                 *
+                 */
+                expr* unrollConnectedVariable(
+                        std::pair<expr*, int> a, /* connected variable */
+                        std::vector<std::pair<expr*, int> > elementNames, /* contain const */
+                        std::string lhs_str, std::string rhs_str,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax = PMAX);
+                    /*
+                     * Generate constraints for the case
+                     * X = T . "abc" . Y . Z
+                     * constPos: position of const element
+                     * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
+                     */
+                    expr* handle_SubConst_WithPosition_array(
+                            std::pair<expr*, int> a, // connected var
+                            std::vector<std::pair<expr*, int>> elementNames,
+                            std::string lhs_str, std::string rhs_str,
+                            int constPos,
+                            bool optimizing,
+                            int pMax = PMAX);
+
+                        /*
+                        * Generate constraints for the case
+                        * X = T . "abc"* . Y . Z
+                        * regexPos: position of regex element
+                        * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
+                        */
+                        expr* handle_Regex_WithPosition_array(
+                                std::pair<expr*, int> a, // connected var
+                                std::vector<std::pair<expr*, int>> elementNames,
+                                std::string lhs_str, std::string rhs_str,
+                                int regexPos,
+                                bool optimizing,
+                                int pMax = PMAX,
+                                expr* extraConstraint = NULL/* length = ? */
+                        );
+
+                        /*
+                        * Generate constraints for the case
+                        * X = T . "abc" . Y . Z
+                        * constPos: position of const element
+                        * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
+                        */
+                        expr* handle_Const_WithPosition_array(
+                                std::pair<expr*, int> a,
+                                std::vector<std::pair<expr*, int>> elementNames,
+                                std::string lhs_str, std::string rhs_str,
+                                int constPos,
+                                zstring value, /* value of regex */
+                                int start, int finish,
+                                bool optimizing,
+                                int pMax = PMAX,
+                                expr* extraConstraint = NULL /* length = ? */);
+
+                    /*
+                    * connected = a + connected + b
+                    */
+                    expr* handle_connected_connected_array(
+                            std::pair<expr*, int> a,
+                            std::vector<std::pair<expr*, int>> elementNames,
+                            std::string lhs_str, std::string rhs_str,
+                            int pos,
+                            int bound,
+                            bool optimizing,
+                            int pMax = PMAX);
+
+                /*
+                 *
+                 */
+                expr* toConstraint_ConnectedVar(
+                        std::pair<expr*, int> a, /* const or regex */
+                        std::vector<std::pair<expr*, int>> elementNames, /* have connected var, do not have const */
+                        std::string lhs, std::string rhs,
+                        std::map<expr*, int> connectedVariables,
+                        bool optimizing,
+                        int pMax);
+                /*
+                 * elementNames[pos] is a connected.
+                 * how many parts of that connected variable are in the const | regex
+                 */
+                expr* find_partsOfConnectedVariablesInAVector(
+                        int pos,
+                        std::vector<std::pair<expr*, int>> elementNames,
+                        int &partCnt);
+                /*
+                * pre elements + pre fix of itself
+                */
+                expr* leng_prefix_lhs(std::pair<expr*, int> a,
+                                          std::vector<std::pair<expr*, int>> elementNames,
+                                          std::string lhs, std::string rhs,
+                                          int pos,
+                                          bool optimizing,
+                                          bool unrollMode);
+
+                /*
+                *  pre fix of itself
+                */
+                expr* leng_prefix_rhs(
+                        std::pair<expr*, int> a, /* var */
+                        std::string rhs,
+                        bool unrollMode);
+
+                /*
+                 * 0: No const, No connected var
+                * 1: const		No connected var
+                * 2: no const, connected var
+                * 3: have both
+                */
+                int findSplitType(
+                        std::vector<std::pair<expr*, int>> elementNames,
+                        std::map<expr*, int> connectedVariables);
+
+                /*
+                * Input: constA and a number of flats
+                * Output: all possible ways to split constA
+                */
+                std::vector<std::vector<int> > collectAllPossibleSplits(
+                        std::pair<expr*, int> lhs,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        bool optimizing);
+
+                /*
+                * textLeft: length of string
+                * nMax: number of flats
+                * pMax: size of a flat
+                *
+                * Pre-Condition: 1st flat and n-th flat must be greater than 0
+                * Output: of the form 1 * 1 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 3 + 2 * 3 = 10
+                */
+                void collectAllPossibleSplits_const(
+                        int pos,
+                        zstring str, /* const */
+                        int pMax,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<int> currentSplit,
+                        std::vector<std::vector<int> > &allPossibleSplits
+                );
+
+                zstring parse_regex_content(expr* a);
+
+                zstring parse_regex_full_content(expr* a);
+
+
+                bool isUnionStr(expr* a);
+
+                bool isUnionStr(zstring a);
+
+                std::set<zstring > extendComponent(zstring  s);
+
+                std::vector<zstring> collectAlternativeComponents(zstring  s);
+
+                /*
+                * (a|b|c)*_xxx --> range <a, c>
+                */
+                std::pair<int, int> collectCharRange(zstring a);
+                std::pair<int, int> collectCharRange(expr* a);
+
+                bool feasibleSplit_const(
+                        zstring str,
+                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<int> currentSplit);
+            /*
+             * Given a flat,
+             * generate its size constraint
+             */
+            std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarSize(std::pair<expr*, int> a);
+            /*
+             *
+             */
+            std::string generateFlatIter(std::pair<expr*, int> a);
+            expr* getExprVarFlatIter(std::pair<expr*, int> a);
+            /*
+             * Given a flat,
+             * generate its size constraint
+             */
+            std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarFlatSize(std::pair<expr*, int> a);
+
+            /*
+             *
+             */
+            app* createEqualOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createMultiplyOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createModOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createAddOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createAddOperator(expr_ref_vector adds);
+            /*
+             *
+             */
+            app* createLessOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createLessEqOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createGreaterOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createGreaterEqOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createAndOperator(expr_ref_vector ands);
+
+            /*
+             *
+             */
+            app* createOrOperator(expr_ref_vector ors);
+
+            /*
+             *
+             */
+            expr* createNotOperator(const expr_ref x);
+
+            /*
+             *
+             */
+            expr* createImpliesOperator(expr* a, expr* b);
+
+            /*
+             *
+             */
+            app* createSelectOperator(expr* x, expr* y);
+
+            int canBeOptimized_LHS(
+                    int i, int startPos, int j,
+                    std::vector<int> left_arr,
+                    std::vector<int> right_arr,
+                    std::vector<std::pair<std::string, int>> lhs_elements,
+                    std::vector<std::pair<std::string, int>> rhs_elements);
+
+            int canBeOptimized_RHS(
+                    int i, int startPos, int j,
+                    std::vector<int> left_arr,
+                    std::vector<int> right_arr,
+                    std::vector<std::pair<std::string, int>> lhs_elements,
+                    std::vector<std::pair<std::string, int>> rhs_elements);
+            /*
+             * Given a flat,
+             * generate its array name
+             */
+            std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* getExprVarFlatArray(std::pair<expr*, int> a);
+            /*
+            * First base case
+            */
+            void handleCase_0_0_general();
+            /*
+             * 2nd base case [0] = (sum rhs...)
+             */
+            void handleCase_0_n_general(int lhs, int rhs);
+            /*
+             * 2nd base case (sum lhs...) = [0]
+             */
+            void handleCase_n_0_general(int lhs, int rhs);
+            /*
+             * general case
+             */
+            void handleCase_n_n_general(int lhs, int rhs);
+            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v);
+            std::string expr2str(expr* node);
+            /*
+             * Create a general value that the component belongs to
+             */
+            std::string sumStringVector(expr* node);
+            std::string sumStringVector(ptr_vector<expr> list);
+            std::string sumStringVector(std::vector<expr*> list);
+            /*
+             * extra variables
+             */
+            std::vector<expr*> createSetOfFlatVariables(int flatP, std::map<expr*, int> &importantVars);
+            /*
+             * Input: x . y
+             * Output: flat . flat . flat . flat . flat . flat
+             */
+            std::vector<std::pair<expr*, int>> createEquality(expr* node);
+            std::vector<std::pair<expr*, int>> createEquality(ptr_vector<expr> list);
+            std::vector<std::pair<expr*, int>> createEquality(std::vector<expr*> list);
+                void createInternalVar(expr* v);
+                void reuseInternalVar(expr* v);
+            std::vector<expr*> set2vector(std::set<expr*> s);
+            unsigned findMaxP(std::vector<expr*> v);
+            /*
+             * cut the same prefix and suffix
+             */
+            void optimizeEquality(
+                    expr* lhs,
+                    expr* rhs,
+                    ptr_vector<expr> &new_lhs,
+                    ptr_vector<expr> &new_rhs);
+            std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
+                bool is_importantVar(
+                    expr* nn,
+                    std::set<expr*> eqc_roots,
+                    int &len);
+            void print_all_assignments();
+            void print_guessed_literals();
+            std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
+            std::map<expr*, std::set<expr*>> construct_eq_combination(
+                    std::map<expr*, std::set<expr*>> &causes,
+                    std::set<std::pair<expr*, int>> importantVars);
+                std::set<expr*> extend_object(
+                    expr* object,
+                    std::map<expr*, std::set<expr*>> &combinations,
+                    std::map<expr*, std::set<expr*>> &causes,
+                    std::set<expr*> parents,
+                    std::set<std::pair<expr*, int>> importantVars);
+        bool can_propagate() override;
+        void propagate() override;
+        expr* queryTheoryArithCore(expr* n, model_generator& mg);
+        expr* queryTheoryArray(expr* n, model_generator& mg);
+        void init_model(model_generator& m) override;
+        void finalize_model(model_generator& mg) override;
+
+        void handle_equality(expr * lhs, expr * rhs);
+        /*
+         * strArgmt::solve_concat_eq_str()
+         * Solve concatenations of the form:
+         *   const == Concat(const, X)
+         *   const == Concat(X, const)
+         */
+        void solve_concat_eq_str(expr * concat, expr * str);
+        // previously Concat() in strTheory.cpp
+        // Evaluates the concatenation (n1 . n2) with respect to
+        // the current equivalence classes of n1 and n2.
+        // Returns a constant string expression representing this concatenation
+        // if one can be determined, or NULL if this is not possible.
+        expr * eval_concat(expr * n1, expr * n2);
+        void group_terms_by_eqc(expr * n, std::set<expr*> & concats, std::set<expr*> & vars, std::set<expr*> & consts);
+        expr * simplify_concat(expr * node);
+
+        /*
+         * Add an axiom of the form:
+         * (lhs == rhs) -> ( Length(lhs) == Length(rhs) )
+         */
+        void instantiate_str_eq_length_axiom(enode * lhs, enode * rhs);
+
+        // Check that a string's length can be 0 iff it is the empty string.
+        void check_eqc_empty_string(expr * lhs, expr * rhs);
+
+        /*
+         * Check whether n1 and n2 could be equal.
+         * Returns true if n1 could equal n2 (maybe),
+         * and false if n1 is definitely not equal to n2 (no).
+         */
+        bool can_two_nodes_eq(expr * n1, expr * n2);
+        bool can_concat_eq_str(expr * concat, zstring& str);
+        bool can_concat_eq_concat(expr * concat1, expr * concat2);
+        expr * getMostLeftNodeInConcat(expr * node);
+        expr * getMostRightNodeInConcat(expr * node);
+
+        /*
+         * Check equality among equivalence class members of LHS and RHS
+         * to discover an incorrect LHS == RHS.
+         * For example, if we have y2 == "str3"
+         * and the equivalence classes are
+         * { y2, (Concat ce m2) }
+         * { "str3", (Concat abc x2) }
+         * then y2 can't be equal to "str3".
+         * Then add an assertion: (y2 == (Concat ce m2)) AND ("str3" == (Concat abc x2)) -> (y2 != "str3")
+         */
+        bool new_eq_check(expr * lhs, expr * rhs);
+            void propagate_const_str(expr * lhs, expr * rhs, zstring value);
+            void propagate_non_const(expr_ref_vector litems, expr * concat, expr * new_concat);
+        void check_regex_in(expr * nn1, expr * nn2);
+            void check_regex_in_lhs_rhs(expr * nn1, expr * nn2);
+                expr* construct_concat_overapprox(expr* nn, expr_ref_vector & litems);
+        void propagate_contain_in_new_eq(expr * n1, expr * n2);
+        void check_contain_by_eqc_val(expr * varNode, expr * constNode);
+        void check_contain_by_substr(expr * varNode, expr_ref_vector & willEqClass);
+        bool in_contain_idx_map(expr * n);
+        void check_contain_by_eq_nodes(expr * n1, expr * n2);
+        /*
+        * Decide whether n1 and n2 are already in the same equivalence class.
+        * This only checks whether the core considers them to be equal;
+        * they may not actually be equal.
+        */
+        bool in_same_eqc(expr * n1, expr * n2);
+
+        expr * collect_eq_nodes(expr * n, expr_ref_vector & eqcSet);
+
+        /*
+        * Add axioms that are true for any string variable:
+        * 1. Length(x) >= 0
+        * 2. Length(x) == 0 <=> x == ""
+        * If the term is a string constant, we can assert something stronger:
+        *    Length(x) == strlen(x)
+        */
+        void instantiate_basic_string_axioms(enode * str);
+        /*
+        * Instantiate an axiom of the following form:
+        * Length(Concat(x, y)) = Length(x) + Length(y)
+        */
+        void instantiate_concat_axiom(enode * cat);
+        void instantiate_axiom_prefixof(enode * e);
+        void instantiate_axiom_suffixof(enode * e);
+        void instantiate_axiom_contains(enode * e);
+        void instantiate_axiom_charAt(enode * e);
+        void instantiate_axiom_indexof(enode * e);
+        void instantiate_axiom_indexof_extended(enode * _e);
+        void instantiate_axiom_substr(enode * e);
+        void instantiate_axiom_replace(enode * e);
+        void instantiate_axiom_regexIn(enode * e);
+
+        app * mk_fresh_const(char const* name, sort* s);
+        app * mk_strlen(expr * e);
+        expr * mk_string(zstring const& str);
+        expr * mk_string(const char * str);
+        app * mk_str_var(std::string name);
+        expr * mk_concat(expr * n1, expr * n2);
+        expr * mk_concat_const_str(expr * n1, expr * n2);
+        app * mk_int(int n);
+        app * mk_int(rational & q);
+        app * mk_contains(expr * haystack, expr * needle);
+        app * mk_indexof(expr * haystack, expr * needle);
+        app * mk_int_var(std::string name);
+        app * mk_regex_rep_var();
+        expr * mk_regexIn(expr * str, expr * regexp);
+        app * mk_unroll(expr * n, expr * bound);
+        app * mk_unroll_bound_var();
+        app * mk_str_to_re(expr *);
+        app * mk_arr_var(std::string name);
+
+        void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
+        expr * get_eqc_value(expr * n, bool & hasEqcValue);
+        expr * z3str2_get_eqc_value(expr * n , bool & hasEqcValue);
+        expr * get_eqc_next(expr * n);
+
+        theory_var get_var(expr * n) const;
+        app * get_ast(theory_var v);
+        zstring get_std_regex_str(expr * regex);
+        bool get_len_value(expr* e, rational& val);
+        bool get_arith_value(expr* e, rational& val) const;
+        bool lower_bound(expr* _e, rational& lo) const;
+        bool upper_bound(expr* _e, rational& hi) const;
+        bool upper_num_bound(expr* e, rational& hi) const;
+        bool lower_num_bound(expr* e, rational& hi) const;
+        void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
+        /*
+         * Collect constant strings (from left to right) in an AST node.
+         */
+        void get_const_str_asts_in_node(expr * node, expr_ref_vector & astList);
+        /*
+        * Collect constant strings (from left to right) in an AST node.
+        */
+        void get_const_regex_str_asts_in_node(expr * node, expr_ref_vector & astList);
+
+        /*
+         * Collect important vars in AST node
+         */
+        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList);
+        eautomaton* get_automaton(expr* re);
+
+        void track_variable_scope(expr * var);
+        expr * rewrite_implication(expr * premise, expr * conclusion);
+        void assert_implication(expr * premise, expr * conclusion);
+
+        enode* ensure_enode(expr* e);
+        bool search_started;
+        th_rewriter      m_rewrite;
+        seq_rewriter m_seq_rewrite;
+        arith_util m_autil;
+        array_util m_arrayUtil;
+        seq_util u;
+        expr_ref_vector m_trail; // trail for generated terms
+        th_union_find m_find;
+        th_trail_stack m_trail_stack;
+
+        std::map<int, obj_hashtable<expr> > internal_variable_scope_levels;
+        obj_pair_map<expr, expr, expr*> concat_astNode_map;
+
+        std::map<std::pair<expr*, zstring>, expr*> regex_in_bool_map;
+        obj_map<expr, std::set<zstring> > regex_in_var_reg_str_map;
+
+        scoped_ptr_vector<eautomaton> m_automata;
+        ptr_vector<eautomaton> regex_automata;
+        obj_hashtable<expr> regex_terms;
+        obj_map<expr, ptr_vector<expr> > regex_terms_by_string; // S --> [ (str.in.re S *) ]
+
+        // hashtable of all exprs for which we've already set up term-specific axioms --
+        // this prevents infinite recursive descent with respect to axioms that
+        // include an occurrence of the term for which axioms are being generated
+        obj_hashtable<expr> axiomatized_terms;
+        obj_hashtable<expr> variable_set;
+        obj_hashtable<expr> internal_variable_set;
+        obj_hashtable<expr> regex_variable_set;
+
+        expr_ref_vector m_delayed_axiom_setup_terms;
+
+        ptr_vector<enode> m_basicstr_axiom_todo;
+        svector<std::pair<enode*,enode*> > m_str_eq_todo;
+        ptr_vector<enode> m_concat_axiom_todo;
+        ptr_vector<enode> m_string_constant_length_todo;
+        ptr_vector<enode> m_concat_eval_todo;
+        expr_ref_vector m_delayed_assertions_todo;
+
+        // enode lists for library-aware/high-level string terms (e.g. substr, contains)
+        ptr_vector<enode> m_library_aware_axiom_todo;
+        obj_hashtable<expr> input_var_in_len;
+        expr_ref_vector string_int_conversion_terms;
+        obj_hashtable<expr> string_int_axioms;
+
+        expr_ref_vector m_persisted_axiom_todo;
+
+        expr_ref_vector contains_map;
+
+        theory_str_contain_pair_bool_map_t contain_pair_bool_map;
+        obj_map<expr, std::set<std::pair<expr*, expr*> > > contain_pair_idx_map;
+        obj_map<enode, std::pair<enode*,enode*>> contain_split_map;
+        unsigned m_fresh_id;
+        string_map stringConstantCache;
+        unsigned long totalCacheAccessCount;
+
+        obj_map<expr, eautomaton*>     m_re2aut;
+        re2automaton                   m_mk_aut;
+        expr_ref_vector                m_res;
+
+        /*
+         * If DisableIntegerTheoryIntegration is set to true,
+         * ALL calls to the integer theory integration methods
+         * (get_arith_value, get_len_value, lower_bound, upper_bound)
+         * will ignore what the arithmetic solver believes about length terms,
+         * and will return no information.
+         *
+         * This reduces performance significantly, but can be useful to enable
+         * if it is suspected that string-integer integration, or the arithmetic solver itself,
+         * might have a bug.
+         *
+         * The default behaviour of Z3str2 is to set this to 'false'.
+         */
+        bool opt_DisableIntegerTheoryIntegration;
+
+        /*
+         * If ConcatOverlapAvoid is set to true,
+         * the check to simplify Concat = Concat in handle_equality() will
+         * avoid simplifying wrt. pairs of Concat terms that will immediately
+         * result in an overlap. (false = Z3str2 behaviour)
+         */
+        bool opt_ConcatOverlapAvoid;
+
+
+        // under approximation vars
+        const int CONNECTINGSIZE = 300;
+        static const int QCONSTMAX = 2;
+        static const int QMAX = 2;
+        static const int PMAX = 2;
+        const std::string FLATPREFIX = "__flat_";
+        int noFlatVariables = 0;
+
+
+        std::map<expr*, int> varPieces;
+        std::map<expr*, int> currVarPieces;
+        std::set<std::string> generatedEqualities;
+
+        std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
+        std::set<zstring> constSet;
+
+        std::map<expr*, std::vector<expr*>> lenMap;
+        std::map<expr*, std::vector<expr*>> iterMap;
+        std::map<expr*, std::set<expr*>> appearanceMap;
+        std::map<expr*, std::set<expr*>> notContainMap;
+        std::map<expr*, std::set<expr*>> backwardDep;
+        std::map<expr*, expr*> arrMap;
+        int connectingSize;
+        char defaultChar = 'a';
+        UnderApproxState uState;
+    private:
+        void assert_axiom(expr *e);
+        void dump_assignments();
+        const bool is_theory_str_term(expr *e) const;
+        decl_kind get_decl_kind(expr *e) const;
+        str::word_term get_word_term(expr *e) const;
+        str::state build_state_from_memo() const;
+        const bool block_dpllt_assignment_from_memo();
+        void set_up_axioms(expr * ex);
     };
 
-    typedef trail_stack<theory_str> th_trail_stack;
-    typedef union_find<theory_str> th_union_find;
-
-    typedef map<rational, expr*, obj_hash<rational>, default_eq<rational> > rational_map;
-    struct zstring_hash_proc {
-        unsigned operator()(zstring const & s) const {
-            return string_hash(s.encode().c_str(), static_cast<unsigned>(s.length()), 17);
-        }
-    };
-    typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> > string_map;
-
-protected:
-    theory_str_params const & m_params;
-
-    /*
-     * Setting EagerStringConstantLengthAssertions to true allows some methods,
-     * in particular internalize_term(), to add
-     * length assertions about relevant string constants.
-     * Note that currently this should always be set to 'true', or else *no* length assertions
-     * will be made about string constants.
-     */
-    bool opt_EagerStringConstantLengthAssertions;
-
-    /*
-     * If VerifyFinalCheckProgress is set to true, continuing after final check is invoked
-     * without asserting any new axioms is considered a bug and will throw an exception.
-     */
-    bool opt_VerifyFinalCheckProgress;
-
-    /*
-     * This constant controls how eagerly we expand unrolls in unbounded regex membership tests.
-     */
-    int opt_LCMUnrollStep;
-
-    /*
-     * If NoQuickReturn_IntegerTheory is set to true,
-     * integer theory integration checks that assert axioms
-     * will not return from the function after asserting their axioms.
-     * The default behaviour of Z3str2 is to set this to 'false'. This may be incorrect.
-     */
-    bool opt_NoQuickReturn_IntegerTheory;
-
-    /*
-     * If DisableIntegerTheoryIntegration is set to true,
-     * ALL calls to the integer theory integration methods
-     * (get_arith_value, get_len_value, lower_bound, upper_bound)
-     * will ignore what the arithmetic solver believes about length terms,
-     * and will return no information.
-     *
-     * This reduces performance significantly, but can be useful to enable
-     * if it is suspected that string-integer integration, or the arithmetic solver itself,
-     * might have a bug.
-     *
-     * The default behaviour of Z3str2 is to set this to 'false'.
-     */
-    bool opt_DisableIntegerTheoryIntegration;
-
-    /*
-     * If DeferEQCConsistencyCheck is set to true,
-     * expensive calls to new_eq_check() will be deferred until final check,
-     * at which time the consistency of *all* string equivalence classes will be validated.
-     */
-    bool opt_DeferEQCConsistencyCheck;
-
-    /*
-     * If CheckVariableScope is set to true,
-     * pop_scope_eh() and final_check_eh() will run extra checks
-     * to determine whether the current assignment
-     * contains references to any internal variables that are no longer in scope.
-     */
-    bool opt_CheckVariableScope;
-
-    /*
-     * If ConcatOverlapAvoid is set to true,
-     * the check to simplify Concat = Concat in handle_equality() will
-     * avoid simplifying wrt. pairs of Concat terms that will immediately
-     * result in an overlap. (false = Z3str2 behaviour)
-     */
-    bool opt_ConcatOverlapAvoid;
-
-    bool search_started;
-    arith_util m_autil;
-    seq_util u;
-    int sLevel;
-
-    bool finalCheckProgressIndicator;
-
-    expr_ref_vector m_trail; // trail for generated terms
-
-    str_value_factory * m_factory;
-
-    re2automaton m_mk_aut;
-
-    // Unique identifier appended to unused variables to ensure that model construction
-    // does not introduce equalities when they weren't enforced.
-    unsigned m_unused_id;
-
-    // terms we couldn't go through set_up_axioms() with because they weren't internalized
-    expr_ref_vector m_delayed_axiom_setup_terms;
-
-    ptr_vector<enode> m_basicstr_axiom_todo;
-    svector<std::pair<enode*,enode*> > m_str_eq_todo;
-    ptr_vector<enode> m_concat_axiom_todo;
-    ptr_vector<enode> m_string_constant_length_todo;
-    ptr_vector<enode> m_concat_eval_todo;
-    expr_ref_vector m_delayed_assertions_todo;
-
-    // enode lists for library-aware/high-level string terms (e.g. substr, contains)
-    ptr_vector<enode> m_library_aware_axiom_todo;
-
-    // list of axioms that are re-asserted every time the scope is popped
-    expr_ref_vector m_persisted_axioms;
-    expr_ref_vector m_persisted_axiom_todo;
-
-    // hashtable of all exprs for which we've already set up term-specific axioms --
-    // this prevents infinite recursive descent with respect to axioms that
-    // include an occurrence of the term for which axioms are being generated
-    obj_hashtable<expr> axiomatized_terms;
-
-    int tmpStringVarCount;
-    int tmpXorVarCount;
-    int tmpLenTestVarCount;
-    int tmpValTestVarCount;
-    // obj_pair_map<expr, expr, std::map<int, expr*> > varForBreakConcat;
-    std::map<std::pair<expr*,expr*>, std::map<int, expr*> > varForBreakConcat;
-    bool avoidLoopCut;
-    bool loopDetected;
-    obj_map<expr, std::stack<T_cut*> > cut_var_map;
-    scoped_ptr_vector<T_cut> m_cut_allocs;
-    expr_ref m_theoryStrOverlapAssumption_term;
-
-    obj_hashtable<expr> variable_set;
-    obj_hashtable<expr> internal_variable_set;
-    obj_hashtable<expr> regex_variable_set;
-    std::map<int, obj_hashtable<expr> > internal_variable_scope_levels;
-
-    obj_hashtable<expr> internal_lenTest_vars;
-    obj_hashtable<expr> internal_valTest_vars;
-    obj_hashtable<expr> internal_unrollTest_vars;
-
-    obj_hashtable<expr> input_var_in_len;
-
-    obj_map<expr, unsigned int> fvar_len_count_map;
-    obj_map<expr, ptr_vector<expr> > fvar_lenTester_map;
-    obj_map<expr, expr*> lenTester_fvar_map;
-
-
-    obj_map<expr, std::map<int, svector<std::pair<int, expr*> > > > fvar_valueTester_map;
-
-    obj_map<expr, expr*> valueTester_fvar_map;
-
-    obj_map<expr, int_vector> val_range_map;
-
-    // This can't be an expr_ref_vector because the constructor is wrong,
-    // we would need to modify the allocator so we pass in ast_manager
-    obj_map<expr, std::map<std::set<expr*>, ptr_vector<expr> > > unroll_tries_map;
-    obj_map<expr, expr*> unroll_var_map;
-    obj_pair_map<expr, expr, expr*> concat_eq_unroll_ast_map;
-
-    expr_ref_vector contains_map;
-
-    theory_str_contain_pair_bool_map_t contain_pair_bool_map;
-    obj_map<expr, std::set<std::pair<expr*, expr*> > > contain_pair_idx_map;
-
-    // TBD: do a curried map for determinism.
-    std::map<std::pair<expr*, zstring>, expr*> regex_in_bool_map;
-    obj_map<expr, std::set<zstring> > regex_in_var_reg_str_map;
-
-    // regex automata
-    scoped_ptr_vector<eautomaton> m_automata;
-    ptr_vector<eautomaton> regex_automata;
-    obj_hashtable<expr> regex_terms;
-    obj_map<expr, ptr_vector<expr> > regex_terms_by_string; // S --> [ (str.in.re S *) ]
-    obj_map<expr, svector<regex_automaton_under_assumptions> > regex_automaton_assumptions; // RegEx --> [ aut+assumptions ]
-    obj_map<expr, nfa> regex_nfa_cache; // Regex term --> NFA
-    obj_hashtable<expr> regex_terms_with_path_constraints; // set of string terms which have had path constraints asserted in the current scope
-    obj_hashtable<expr> regex_terms_with_length_constraints; // set of regex terms which had had length constraints asserted in the current scope
-    obj_map<expr, expr*> regex_term_to_length_constraint; // (str.in.re S R) -> (length constraint over S wrt. R)
-    obj_map<expr, ptr_vector<expr> > regex_term_to_extra_length_vars; // extra length vars used in regex_term_to_length_constraint entries
-
-    // keep track of the last lower/upper bound we saw for each string term
-    // so we don't perform duplicate work
-    obj_map<expr, rational> regex_last_lower_bound;
-    obj_map<expr, rational> regex_last_upper_bound;
-
-    // each counter maps a (str.in.re) expression to an integer.
-    // use helper functions regex_inc_counter() and regex_get_counter() to access
-    obj_map<expr, unsigned> regex_length_attempt_count;
-    obj_map<expr, unsigned> regex_fail_count;
-    obj_map<expr, unsigned> regex_intersection_fail_count;
-
-    obj_map<expr, ptr_vector<expr> > string_chars; // S --> [S_0, S_1, ...] for character terms S_i
-
-    svector<char> char_set;
-    std::map<char, int>  charSetLookupTable;
-    int           charSetSize;
-
-    obj_pair_map<expr, expr, expr*> concat_astNode_map;
-
-    // all (str.to-int) and (int.to-str) terms
-    expr_ref_vector string_int_conversion_terms;
-    obj_hashtable<expr> string_int_axioms;
-
-    // used when opt_FastLengthTesterCache is true
-    rational_map lengthTesterCache;
-    // used when opt_FastValueTesterCache is true
-    string_map valueTesterCache;
-
-    string_map stringConstantCache;
-    unsigned long totalCacheAccessCount;
-    unsigned long cacheHitCount;
-    unsigned long cacheMissCount;
-
-    unsigned m_fresh_id;
-
-    // cache mapping each string S to Length(S)
-    obj_map<expr, app*> length_ast_map;
-
-    th_trail_stack m_trail_stack;
-    th_union_find m_find;
-    theory_var get_var(expr * n) const;
-    expr * get_eqc_next(expr * n);
-    app * get_ast(theory_var i);
-
-    // binary search heuristic data
-    struct binary_search_info {
-        rational lowerBound;
-        rational midPoint;
-        rational upperBound;
-        rational windowSize;
-
-        binary_search_info() : lowerBound(rational::zero()), midPoint(rational::zero()),
-                upperBound(rational::zero()), windowSize(rational::zero()) {}
-        binary_search_info(rational lower, rational mid, rational upper, rational windowSize) :
-            lowerBound(lower), midPoint(mid), upperBound(upper), windowSize(windowSize) {}
-
-        void calculate_midpoint() {
-            midPoint = floor(lowerBound + ((upperBound - lowerBound) / rational(2)) );
-        }
-    };
-    // maps a free string var to a stack of active length testers.
-    // can use binary_search_trail to record changes to this object
-    obj_map<expr, ptr_vector<expr> > binary_search_len_tester_stack;
-    // maps a length tester var to the *active* search window
-    obj_map<expr, binary_search_info> binary_search_len_tester_info;
-    // maps a free string var to the first length tester to be (re)used
-    obj_map<expr, expr*> binary_search_starting_len_tester;
-    // maps a length tester to the next length tester to be (re)used if the split is "low"
-    obj_map<expr, expr*> binary_search_next_var_low;
-    // maps a length tester to the next length tester to be (re)used if the split is "high"
-    obj_map<expr, expr*> binary_search_next_var_high;
-
-    // finite model finding data
-    // maps a finite model tester var to a list of variables that will be tested
-    obj_map<expr, ptr_vector<expr> > finite_model_test_varlists;
-protected:
-    void assert_axiom(expr * e);
-    void assert_implication(expr * premise, expr * conclusion);
-    expr * rewrite_implication(expr * premise, expr * conclusion);
-
-    expr * mk_string(zstring const& str);
-    expr * mk_string(const char * str);
-
-    app * mk_strlen(expr * e);
-    expr * mk_concat(expr * n1, expr * n2);
-    expr * mk_concat_const_str(expr * n1, expr * n2);
-    app * mk_contains(expr * haystack, expr * needle);
-    app * mk_indexof(expr * haystack, expr * needle);
-    app * mk_fresh_const(char const* name, sort* s);
-
-    literal mk_literal(expr* _e);
-    app * mk_int(int n);
-    app * mk_int(rational & q);
-
-    void check_and_init_cut_var(expr * node);
-    void add_cut_info_one_node(expr * baseNode, int slevel, expr * node);
-    void add_cut_info_merge(expr * destNode, int slevel, expr * srcNode);
-    bool has_self_cut(expr * n1, expr * n2);
-
-    // for ConcatOverlapAvoid
-    bool will_result_in_overlap(expr * lhs, expr * rhs);
-
-    void track_variable_scope(expr * var);
-    app * mk_str_var(std::string name);
-    app * mk_int_var(std::string name);
-    app * mk_nonempty_str_var();
-    app * mk_internal_xor_var();
-    expr * mk_internal_valTest_var(expr * node, int len, int vTries);
-    app * mk_regex_rep_var();
-    app * mk_unroll_bound_var();
-    app * mk_unroll_test_var();
-    void add_nonempty_constraint(expr * s);
-
-    void instantiate_concat_axiom(enode * cat);
-    void try_eval_concat(enode * cat);
-    void instantiate_basic_string_axioms(enode * str);
-    void instantiate_str_eq_length_axiom(enode * lhs, enode * rhs);
-
-    void instantiate_axiom_CharAt(enode * e);
-    void instantiate_axiom_prefixof(enode * e);
-    void instantiate_axiom_suffixof(enode * e);
-    void instantiate_axiom_Contains(enode * e);
-    void instantiate_axiom_Indexof(enode * e);
-    void instantiate_axiom_Indexof_extended(enode * e);
-    void instantiate_axiom_LastIndexof(enode * e);
-    void instantiate_axiom_Substr(enode * e);
-    void instantiate_axiom_Replace(enode * e);
-    void instantiate_axiom_str_to_int(enode * e);
-    void instantiate_axiom_int_to_str(enode * e);
-
-    void add_persisted_axiom(expr * a);
-
-    expr * mk_RegexIn(expr * str, expr * regexp);
-    void instantiate_axiom_RegexIn(enode * e);
-    app * mk_unroll(expr * n, expr * bound);
-    void process_unroll_eq_const_str(expr * unrollFunc, expr * constStr);
-    void unroll_str2reg_constStr(expr * unrollFunc, expr * eqConstStr);
-    void process_concat_eq_unroll(expr * concat, expr * unroll);
-
-    // regex automata and length-aware regex
-    void solve_regex_automata();
-    unsigned estimate_regex_complexity(expr * re);
-    unsigned estimate_regex_complexity_under_complement(expr * re);
-    unsigned estimate_automata_intersection_difficulty(eautomaton * aut1, eautomaton * aut2);
-    bool check_regex_length_linearity(expr * re);
-    bool check_regex_length_linearity_helper(expr * re, bool already_star);
-    expr_ref infer_all_regex_lengths(expr * lenVar, expr * re, expr_ref_vector & freeVariables);
-    void check_subterm_lengths(expr * re, integer_set & lens);
-    void find_automaton_initial_bounds(expr * str_in_re, eautomaton * aut);
-    bool refine_automaton_lower_bound(eautomaton * aut, rational current_lower_bound, rational & refined_lower_bound);
-    bool refine_automaton_upper_bound(eautomaton * aut, rational current_upper_bound, rational & refined_upper_bound);
-    expr_ref generate_regex_path_constraints(expr * stringTerm, eautomaton * aut, rational lenVal, expr_ref & characterConstraints);
-    void aut_path_add_next(u_map<expr*>& next, expr_ref_vector& trail, unsigned idx, expr* cond);
-    expr_ref aut_path_rewrite_constraint(expr * cond, expr * ch_var);
-    void regex_inc_counter(obj_map<expr, unsigned> & counter_map, expr * key);
-    unsigned regex_get_counter(obj_map<expr, unsigned> & counter_map, expr * key);
-
-    void set_up_axioms(expr * ex);
-    void handle_equality(expr * lhs, expr * rhs);
-
-    app * mk_value_helper(app * n);
-    expr * get_eqc_value(expr * n, bool & hasEqcValue);
-    expr * z3str2_get_eqc_value(expr * n , bool & hasEqcValue);
-    bool in_same_eqc(expr * n1, expr * n2);
-    expr * collect_eq_nodes(expr * n, expr_ref_vector & eqcSet);
-
-    bool get_arith_value(expr* e, rational& val) const;
-    bool get_len_value(expr* e, rational& val);
-    bool lower_bound(expr* _e, rational& lo);
-    bool upper_bound(expr* _e, rational& hi);
-
-    bool can_two_nodes_eq(expr * n1, expr * n2);
-    bool can_concat_eq_str(expr * concat, zstring& str);
-    bool can_concat_eq_concat(expr * concat1, expr * concat2);
-    bool check_concat_len_in_eqc(expr * concat);
-    void check_eqc_empty_string(expr * lhs, expr * rhs);
-    void check_eqc_concat_concat(std::set<expr*> & eqc_concat_lhs, std::set<expr*> & eqc_concat_rhs);
-    bool check_length_consistency(expr * n1, expr * n2);
-    bool check_length_const_string(expr * n1, expr * constStr);
-    bool check_length_eq_var_concat(expr * n1, expr * n2);
-    bool check_length_concat_concat(expr * n1, expr * n2);
-    bool check_length_concat_var(expr * concat, expr * var);
-    bool check_length_var_var(expr * var1, expr * var2);
-    void check_contain_in_new_eq(expr * n1, expr * n2);
-    void check_contain_by_eqc_val(expr * varNode, expr * constNode);
-    void check_contain_by_substr(expr * varNode, expr_ref_vector & willEqClass);
-    void check_contain_by_eq_nodes(expr * n1, expr * n2);
-    bool in_contain_idx_map(expr * n);
-    void compute_contains(std::map<expr*, expr*> & varAliasMap,
-            std::map<expr*, expr*> & concatAliasMap, std::map<expr*, expr *> & varConstMap,
-            std::map<expr*, expr*> & concatConstMap, std::map<expr*, std::map<expr*, int> > & varEqConcatMap);
-    expr * dealias_node(expr * node, std::map<expr*, expr*> & varAliasMap, std::map<expr*, expr*> & concatAliasMap);
-    void get_grounded_concats(unsigned depth,
-                              expr* node, std::map<expr*, expr*> & varAliasMap,
-                              std::map<expr*, expr*> & concatAliasMap, std::map<expr*, expr*> & varConstMap,
-                              std::map<expr*, expr*> & concatConstMap, std::map<expr*, std::map<expr*, int> > & varEqConcatMap,
-                              std::map<expr*, std::map<std::vector<expr*>, std::set<expr*> > > & groundedMap);
-    void print_grounded_concat(expr * node, std::map<expr*, std::map<std::vector<expr*>, std::set<expr*> > > & groundedMap);
-    void check_subsequence(expr* str, expr* strDeAlias, expr* subStr, expr* subStrDeAlias, expr* boolVar,
-            std::map<expr*, std::map<std::vector<expr*>, std::set<expr*> > > & groundedMap);
-    bool is_partial_in_grounded_concat(const std::vector<expr*> & strVec, const std::vector<expr*> & subStrVec);
-
-    void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
-    expr * simplify_concat(expr * node);
-
-    void simplify_parent(expr * nn, expr * eq_str);
-
-    void simplify_concat_equality(expr * lhs, expr * rhs);
-    void solve_concat_eq_str(expr * concat, expr * str);
-
-    void infer_len_concat_equality(expr * nn1, expr * nn2);
-    bool infer_len_concat(expr * n, rational & nLen);
-    void infer_len_concat_arg(expr * n, rational len);
-
-    bool is_concat_eq_type1(expr * concatAst1, expr * concatAst2);
-    bool is_concat_eq_type2(expr * concatAst1, expr * concatAst2);
-    bool is_concat_eq_type3(expr * concatAst1, expr * concatAst2);
-    bool is_concat_eq_type4(expr * concatAst1, expr * concatAst2);
-    bool is_concat_eq_type5(expr * concatAst1, expr * concatAst2);
-    bool is_concat_eq_type6(expr * concatAst1, expr * concatAst2);
-
-    void process_concat_eq_type1(expr * concatAst1, expr * concatAst2);
-    void process_concat_eq_type2(expr * concatAst1, expr * concatAst2);
-    void process_concat_eq_type3(expr * concatAst1, expr * concatAst2);
-    void process_concat_eq_type4(expr * concatAst1, expr * concatAst2);
-    void process_concat_eq_type5(expr * concatAst1, expr * concatAst2);
-    void process_concat_eq_type6(expr * concatAst1, expr * concatAst2);
-
-    void print_cut_var(expr * node, std::ofstream & xout);
-
-    void generate_mutual_exclusion(expr_ref_vector & exprs);
-    void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
-
-    bool new_eq_check(expr * lhs, expr * rhs);
-    void group_terms_by_eqc(expr * n, std::set<expr*> & concats, std::set<expr*> & vars, std::set<expr*> & consts);
-
-    int ctx_dep_analysis(std::map<expr*, int> & strVarMap, std::map<expr*, int> & freeVarMap,
-            std::map<expr*, std::set<expr*> > & unrollGroupMap, std::map<expr*, std::map<expr*, int> > & var_eq_concat_map);
-    void trace_ctx_dep(std::ofstream & tout,
-            std::map<expr*, expr*> & aliasIndexMap,
-            std::map<expr*, expr*> & var_eq_constStr_map,
-            std::map<expr*, std::map<expr*, int> > & var_eq_concat_map,
-            std::map<expr*, std::map<expr*, int> > & var_eq_unroll_map,
-            std::map<expr*, expr*> & concat_eq_constStr_map,
-            std::map<expr*, std::map<expr*, int> > & concat_eq_concat_map,
-            std::map<expr*, std::set<expr*> > & unrollGroupMap);
-
-    bool term_appears_as_subterm(expr * needle, expr * haystack);
-    void classify_ast_by_type(expr * node, std::map<expr*, int> & varMap,
-            std::map<expr*, int> & concatMap, std::map<expr*, int> & unrollMap);
-    void classify_ast_by_type_in_positive_context(std::map<expr*, int> & varMap,
-            std::map<expr*, int> & concatMap, std::map<expr*, int> & unrollMap);
-
-    expr * mk_internal_lenTest_var(expr * node, int lTries);
-    expr * gen_len_val_options_for_free_var(expr * freeVar, expr * lenTesterInCbEq, zstring lenTesterValue);
-    void process_free_var(std::map<expr*, int> & freeVar_map);
-    expr * gen_len_test_options(expr * freeVar, expr * indicator, int tries);
-    expr * gen_free_var_options(expr * freeVar, expr * len_indicator,
-            zstring len_valueStr, expr * valTesterInCbEq, zstring valTesterValueStr);
-    expr* gen_val_options(expr * freeVar, expr * len_indicator, expr * val_indicator,
-            zstring lenStr, int tries);
-    void print_value_tester_list(svector<std::pair<int, expr*> > & testerList);
-    bool get_next_val_encode(int_vector & base, int_vector & next);
-    zstring gen_val_string(int len, int_vector & encoding);
-
-    // binary search heuristic
-    expr * binary_search_length_test(expr * freeVar, expr * previousLenTester, zstring previousLenTesterValue);
-    expr_ref binary_search_case_split(expr * freeVar, expr * tester, binary_search_info & bounds, literal_vector & case_split_lits);
-
-    bool free_var_attempt(expr * nn1, expr * nn2);
-    void more_len_tests(expr * lenTester, zstring lenTesterValue);
-    void more_value_tests(expr * valTester, zstring valTesterValue);
-
-    expr * get_alias_index_ast(std::map<expr*, expr*> & aliasIndexMap, expr * node);
-    expr * getMostLeftNodeInConcat(expr * node);
-    expr * getMostRightNodeInConcat(expr * node);
-    void get_var_in_eqc(expr * n, std::set<expr*> & varSet);
-    void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
-    void get_const_str_asts_in_node(expr * node, expr_ref_vector & constList);
-    expr * eval_concat(expr * n1, expr * n2);
-
-    bool finalcheck_str2int(app * a);
-    bool finalcheck_int2str(app * a);
-
-    // strRegex
-
-    void get_eqc_allUnroll(expr * n, expr * &constStr, std::set<expr*> & unrollFuncSet);
-    void get_eqc_simpleUnroll(expr * n, expr * &constStr, std::set<expr*> & unrollFuncSet);
-    void gen_assign_unroll_reg(std::set<expr*> & unrolls);
-    expr * gen_assign_unroll_Str2Reg(expr * n, std::set<expr*> & unrolls);
-    expr * gen_unroll_conditional_options(expr * var, std::set<expr*> & unrolls, zstring lcmStr);
-    expr * gen_unroll_assign(expr * var, zstring lcmStr, expr * testerVar, int l, int h);
-    void reduce_virtual_regex_in(expr * var, expr * regex, expr_ref_vector & items);
-    void check_regex_in(expr * nn1, expr * nn2);
-    zstring get_std_regex_str(expr * r);
-
-    void dump_assignments();
-    void initialize_charset();
-
-    void check_variable_scope();
-    void recursive_check_variable_scope(expr * ex);
-
-    void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
-    bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
-    void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
-    bool propagate_length_within_eqc(expr * var);
-
-    // TESTING
-    void refresh_theory_var(expr * e);
-
-    expr_ref set_up_finite_model_test(expr * lhs, expr * rhs);
-    void finite_model_test(expr * v, expr * c);
-
-public:
-    theory_str(ast_manager & m, theory_str_params const & params);
-    ~theory_str() override;
-
-    char const * get_name() const override { return "seq"; }
-    void display(std::ostream & out) const override;
-
-    bool overlapping_variables_detected() const { return loopDetected; }
-
-    th_trail_stack& get_trail_stack() { return m_trail_stack; }
-    void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
-    void after_merge_eh(theory_var r1, theory_var r2, theory_var v1, theory_var v2) { }
-    void unmerge_eh(theory_var v1, theory_var v2) {}
-protected:
-    bool internalize_atom(app * atom, bool gate_ctx) override;
-    bool internalize_term(app * term) override;
-    virtual enode* ensure_enode(expr* e);
-    theory_var mk_var(enode * n) override;
-
-    void new_eq_eh(theory_var, theory_var) override;
-    void new_diseq_eh(theory_var, theory_var) override;
-
-    theory* mk_fresh(context*) override { return alloc(theory_str, get_manager(), m_params); }
-    void init(context * ctx) override;
-    void init_search_eh() override;
-    void add_theory_assumptions(expr_ref_vector & assumptions) override;
-    lbool validate_unsat_core(expr_ref_vector & unsat_core) override;
-    void relevant_eh(app * n) override;
-    void assign_eh(bool_var v, bool is_true) override;
-    void push_scope_eh() override;
-    void pop_scope_eh(unsigned num_scopes) override;
-    void reset_eh() override;
-
-    bool can_propagate() override;
-    void propagate() override;
-
-    final_check_status final_check_eh() override;
-    virtual void attach_new_th_var(enode * n);
-
-    void init_model(model_generator & m) override;
-    model_value_proc * mk_value(enode * n, model_generator & mg) override;
-    void finalize_model(model_generator & mg) override;
-};
-
-};
+}
 
 #endif /* _THEORY_STR_H_ */
