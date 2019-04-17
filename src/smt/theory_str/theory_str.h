@@ -84,12 +84,15 @@ namespace smt {
             static bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool unequalable(const word_term& w1, const word_term& w2, const std::map<element, size_t>& lb ) ;
+            static void update_next_and_previous_element_maps(const word_term& , std::map<element,element>&, std::map<element,element>& ) ;
+
         private:
             std::list<element> m_elements;
         public:
             word_term merge_list_of_elements(const std::list<element>&) const;
             word_term() = default;
             word_term(std::initializer_list<element> list);
+            word_term(const std::list<element>& list);
             bool successfully_initialized_element_iterator(std::list<element>::iterator &first,
                                                            std::list<element>::iterator &second) const;
             bool get_next_two_elements(std::list<element>::iterator& first, std::list<element>::iterator& second) const;
@@ -281,8 +284,8 @@ namespace smt {
             void count_variable_occurrences();
             bool quadratic_after_add_this_term(const word_term&);
             bool has_non_quadratic_var(const word_term& wt);
-            word_term find_alternative_term(const word_term&,const word_term&);
-            void merge_list_of_elements(const std::list<element>&);
+            word_term find_alternative_term(const word_term&, const word_term&);
+            static void merge_list_of_elements(std::set<word_equation>&, const std::list<element>&);
         public:
             explicit state(memberships::sptr m) : m_memberships{std::move(m)}, m_strategy{state::transform_strategy::dynamic_empty_var_detection} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }

@@ -107,7 +107,9 @@ namespace smt {
         word_term::word_term(std::initializer_list<element> list) {
             m_elements.insert(m_elements.begin(), list.begin(), list.end());
         }
-
+        word_term::word_term(const std::list<element>& list){
+            m_elements.insert(m_elements.begin(), list.begin(), list.end());
+        }
         std::size_t word_term::count_const() const {
             static const auto& is_const = std::bind(&element::typed, _1, element::t::CONST);
             return (std::size_t) std::count_if(m_elements.begin(), m_elements.end(), is_const);
@@ -1859,110 +1861,117 @@ namespace smt {
     }
 
 
+    void str::word_term::update_next_and_previous_element_maps(const word_term& w,
+            std::map<element,element> &next, std::map<element,element> &previous){
+        for (size_t index = 0; index < w.length() - 1; index++) {
+            if (next.count(w.get(index))) {
+                if(next.at(w.get(index)) != w.get(index + 1) ) {
+                    next.at(w.get(index)) = str::element::null();
+                }
+            } else {
+                next.insert({w.get(index),w.get(index + 1)});
+            }
+        }
+        for (size_t index = 1; index < w.length(); index++) {
+            if (previous.count(w.get(index))) {
+                if(previous.at(w.get(index)) != w.get(index - 1) ) {
+                    previous.at(w.get(index)) = str::element::null();
+                }
+            } else {
+                previous.insert({w.get(index),w.get(index - 1)});
+            }
+        }
+    }
 
 
     void str::state::merge_elements(){
-        std::map<element,element> merge_map;
+        std::map<element,element> next;
+        std::map<element,element> previous;
+        std::set<word_equation> m_all_wes(m_eq_wes);
+        m_all_wes.insert(m_diseq_wes.begin(),m_diseq_wes.end());
 
-        for(const word_equation& word_eq:m_eq_wes) {
-            const word_term &lhs = word_eq.lhs();
-            const word_term &rhs = word_eq.rhs();
 
-            for (size_t index = 0; index < lhs.length() - 1; index++) {
-                if (merge_map.find(lhs.get(index)) != merge_map.end()) {
-                    if(merge_map.find(lhs.get(index))->second != lhs.get(index + 1) ) {
-                        merge_map.erase(lhs.get(index));
-                        merge_map.insert({lhs.get(index), str::element::null()});
-                    }
-                } else {
-                    merge_map.insert({lhs.get(index),lhs.get(index + 1)});
-                }
-            }
-            for (size_t index = 0; index < rhs.length() - 1; index++) {
-                if (merge_map.find(rhs.get(index)) != merge_map.end()) {
-                    if(merge_map.find(rhs.get(index))->second != rhs.get(index + 1) ) {
-                        merge_map.erase(rhs.get(index));
-                        merge_map.insert({rhs.get(index), str::element::null()});
-                    }
-                } else {
-                    merge_map.insert({rhs.get(index),rhs.get(index + 1)});
-                }
-            }
-
-        }
-
-        for(const word_equation& word_eq:m_diseq_wes) {
-            const word_term &lhs = word_eq.lhs();
-            const word_term &rhs = word_eq.rhs();
-
-            for (size_t index = 0; index < lhs.length() - 1; index++) {
-                if (merge_map.find(lhs.get(index)) != merge_map.end()) {
-                    if(merge_map.find(lhs.get(index))->second != lhs.get(index + 1) ) {
-                        merge_map.erase(lhs.get(index));
-                        merge_map.insert({lhs.get(index), str::element::null()});
-                    }
-                } else {
-                    merge_map.insert({lhs.get(index),lhs.get(index + 1)});
-                }
-            }
-            for (size_t index = 0; index < rhs.length() - 1; index++) {
-                if (merge_map.find(rhs.get(index)) != merge_map.end()) {
-                    if(merge_map.find(rhs.get(index))->second != rhs.get(index + 1) ) {
-                        merge_map.erase(rhs.get(index));
-                        merge_map.insert({rhs.get(index), str::element::null()});
-                    }
-                } else {
-                    merge_map.insert({rhs.get(index),rhs.get(index + 1)});
-                }
-            }
-
+        for(const word_equation& word_eq:m_all_wes) {
+            word_term::update_next_and_previous_element_maps(word_eq.lhs(),next,previous);
+            word_term::update_next_and_previous_element_maps(word_eq.rhs(),next,previous);
         }
         std::set<element> in_tail;
-        for(auto& p:merge_map) {
-            if(p.second!=element::null()) in_tail.insert(p.second);
-            std::cout<<"["<<p.first<<p.second<<"]"<<std::endl;
+
+
+        std::map<element,element> merge_map(next);
+        for(auto& p:next){
+            if((!previous.count(p.second)) || (previous.at(p.second)==element::null())){
+                merge_map.erase(p.first);
+            }
         }
 
-
+        for(auto& p:merge_map) {
+            in_tail.insert(p.second);
+        }
 
         for(auto& p:merge_map){
-            if(p.second!=element::null() && in_tail.find(p.first)==in_tail.end()){
+            if(!in_tail.count(p.first)){//p is potentially the head of a seq. of elements to be merged
                 std::list<element> to_merge;
+
                 element to_append=p.first;
                 do{
                     to_merge.push_back(to_append);
                     to_append = merge_map.at(to_append);
-                }while(merge_map.find(to_append)!=merge_map.end());
+                }while(merge_map.count(to_append));
                 if(to_append!=element::null()) to_merge.push_back(to_append);
 
                 std::cout << "[";
                 for(auto e:to_merge) std::cout << e;
-                std::cout << "]";
+                std::cout << "]"<<std::endl;
 
                 STRACE("str", tout << "[";);
                 for(auto e:to_merge) STRACE("str", tout << e;);
                 STRACE("str", tout << "]";);
-                merge_list_of_elements(to_merge);
+                merge_list_of_elements(m_eq_wes,to_merge);
+                merge_list_of_elements(m_diseq_wes,to_merge);
             }
         }
     };
 
     str::word_term str::word_term::merge_list_of_elements(const std::list<element>& to_merge) const{
-
-
+        element merged(to_merge);
+        std::list<element> ret;
+        for(int index=0;index<length();index++){
+            if(get(index)==to_merge.front()){
+                ret.push_back(merged);
+                index+=(to_merge.size()-1);
+            }else{
+                ret.push_back(get(index));
+            }
+        }
+        word_term merged_wt(ret);
+        return merged_wt;
     }
     str::word_equation str::word_equation::merge_list_of_elements(const std::list<element>& to_merge) const{
 
-        return word_equation::null();
+
+        return {lhs().merge_list_of_elements(to_merge),rhs().merge_list_of_elements(to_merge)};
+    }
+
+
+    void str::state::merge_list_of_elements(std::set<word_equation>& w, const std::list<element>& to_merge) {
+        std::set<word_equation> to_add,to_remove;
+        for(const word_equation& word_eq:w) {
+            word_equation new_word_eq=word_eq.merge_list_of_elements(to_merge);
+            if(new_word_eq != word_equation::null()){
+                to_add.insert(new_word_eq);
+                to_remove.insert(word_eq);
+            }
+        }
+        for(auto& rm_word_eq:to_remove) w.erase(rm_word_eq);
+        for(auto& add_word_eq:to_add) w.insert(add_word_eq);
     }
 
     str::element::element(const std::list<element>& list):m_type{element::t::VAR}{
-        m_value=list.front().m_value;
-        m_shortname=list.front().m_shortname;
-        m_expr.push_back(list.front().m_expr.front());
 
-        for(std::list<element>::const_iterator it=++list.begin(); it != list.end(); ++it){
-            if(m_type==t::VAR){
+        for(std::list<element>::const_iterator it=list.begin(); it != list.end(); ++it){
+
+            if(it->m_type==t::VAR){
                 m_shortname = m_shortname + it->m_shortname;
             }else{
                 m_shortname = m_shortname + it->m_value.encode();
@@ -1970,31 +1979,6 @@ namespace smt {
             m_value = m_value + it->m_value;
             m_expr.push_back(it->m_expr.front());
         }
-    }
-    void str::state::merge_list_of_elements(const std::list<element>& to_merge) {
-        std::set<word_equation> to_add,to_remove;
-        for(const word_equation& word_eq:m_eq_wes) {
-            word_equation new_word_eq=word_eq.merge_list_of_elements(to_merge);
-            if(new_word_eq != word_equation::null()){
-                to_add.insert(new_word_eq);
-                to_remove.insert(word_eq);
-            }
-        }
-        for(auto& rm_word_eq:to_remove) m_eq_wes.erase(rm_word_eq);
-        for(auto& add_word_eq:to_add) m_eq_wes.insert(add_word_eq);
-
-        to_add.clear();
-        to_remove.clear();
-        for(const word_equation& word_eq:m_diseq_wes) {
-            word_equation new_word_eq=word_eq.merge_list_of_elements(to_merge);
-            if(new_word_eq != word_equation::null()){
-                to_add.insert(new_word_eq);
-                to_remove.insert(word_eq);
-            }
-        }
-        for(auto& rm_word_eq:to_remove) m_diseq_wes.erase(rm_word_eq);
-        for(auto& add_word_eq:to_add) m_diseq_wes.insert(add_word_eq);
-
     }
 
     final_check_status theory_str::final_check_eh() {
@@ -2011,7 +1995,7 @@ namespace smt {
         root.remove_single_variable_word_term();
         std::cout << "root built:\n" << root <<std::endl;
         root.merge_elements();
-
+        std::cout << "root merged:\n" << root <<std::endl;
 
         if(root.word_eqs().size()==0) return FC_DONE;
         STRACE("str", tout << "root built:\n" << root << '\n';);
