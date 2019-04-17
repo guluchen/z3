@@ -213,7 +213,7 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level;
-        int mful_scope_level;
+        std::vector<int> mful_scope_levels;
         const theory_str_params& m_params;
         scoped_vector<str::expr_pair> m_we_expr_memo;
         scoped_vector<str::expr_pair> m_wi_expr_memo;
@@ -466,19 +466,25 @@ namespace smt {
             std::set<std::pair<expr*, int>> importantVars;
             int level = -1;
             int z3_level = -1;
-            std::vector<expr*> assertingConstraints;
-            UnderApproxState(){
+
+            expr_ref_vector assertingConstraints;
+            UnderApproxState(ast_manager &m) : assertingConstraints(m){
 
             }
 
-            UnderApproxState(int _z3_level, int _level,
+            UnderApproxState(ast_manager &m, int _z3_level, int _level,
                             std::map<expr*, std::set<expr*>> _eq_combination,
-                            std::set<std::pair<expr*, int>> _importantVars): z3_level(_z3_level), level(_level), eq_combination(_eq_combination), importantVars(_importantVars){
-                assertingConstraints.clear();
+                            std::set<std::pair<expr*, int>> _importantVars):
+                            z3_level(_z3_level),
+                            level(_level),
+                            eq_combination(_eq_combination),
+                            importantVars(_importantVars),
+                            assertingConstraints(m) {
+                assertingConstraints.reset();
             }
 
-            UnderApproxState clone(){
-                UnderApproxState tmp(z3_level, level, eq_combination, importantVars);
+            UnderApproxState clone(ast_manager &m){
+                UnderApproxState tmp(m, z3_level, level, eq_combination, importantVars);
                 tmp.addAssertingConstraints(assertingConstraints);
                 return tmp;
             }
@@ -489,7 +495,7 @@ namespace smt {
                 level = -1;
                 eq_combination.clear();
                 importantVars.clear();
-                assertingConstraints.clear();
+                assertingConstraints.reset();
             }
 
             UnderApproxState&  operator=(const UnderApproxState& other){
@@ -497,18 +503,20 @@ namespace smt {
                 level = other.level;
                 eq_combination = other.eq_combination;
                 importantVars = other.importantVars;
-                assertingConstraints = other.assertingConstraints;
+                assertingConstraints.reset();
+                for (int i = 0; i < other.assertingConstraints.size(); ++i)
+                    assertingConstraints.push_back(other.assertingConstraints[i]);
 
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << other.eq_combination.size() << " --> " << eq_combination.size() << std::endl;);
                 return *this;
             }
 
-            void addAssertingConstraints(std::vector<expr*> _assertingConstraints){
-                for (const auto& e : _assertingConstraints)
-                    assertingConstraints.push_back(e);
+            void addAssertingConstraints(expr_ref_vector _assertingConstraints){
+                for (int i = 0; i < _assertingConstraints.size(); ++i)
+                    assertingConstraints.push_back(_assertingConstraints.get(i));
             }
 
-            void addAssertingConstraints(expr* assertingConstraint){
+            void addAssertingConstraints(expr_ref assertingConstraint){
                 assertingConstraints.push_back(assertingConstraint);
             }
 

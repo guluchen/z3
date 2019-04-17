@@ -324,7 +324,7 @@ namespace smt {
     */
     void context::internalize(expr * n, bool gate_ctx) {
         TRACE("internalize", tout << "internalizing:\n" << mk_pp(n, m_manager) << "\n";);
-        TRACE("internalize_bug", tout << "internalizing:\n" << mk_bounded_pp(n, m_manager) << "\n";);
+        TRACE("internalize_bug", tout << "internalizing:\n" << mk_bounded_pp(n, m_manager)  << ", gate_ctx: " << gate_ctx << "\n";);
         if (is_var(n)) {
             throw default_exception("Formulas should not contain unbound variables");
         }
@@ -355,6 +355,7 @@ namespace smt {
         if (m_manager.is_not(n) && gate_ctx) {
             // a boolean variable does not need to be created if n a NOT gate is in
             // the context of a gate.
+            TRACE("internalize_bug", tout << "not case \n";);
             internalize(to_app(n)->get_arg(0), true);
             return;
         }
