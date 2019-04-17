@@ -21,6 +21,8 @@
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
 #include "smt/theory_str/affine_program.h"
+#include "util/dependency.h"
+#include "util/union_find.h"
 
 namespace smt {
 
@@ -42,10 +44,11 @@ namespace smt {
             static std::set<element> variables;
             element::t m_type;
             zstring m_value;
-            expr* m_expr;
+            std::list<expr*> m_expr;
             string m_shortname;
         public:
-            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {
+            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v} {
+                m_expr.push_back(e);
                 if(m_type==t::VAR){
                     if(variables.find(*this)==variables.end()){
                         m_shortname = "V"+std::to_string(var_num);
@@ -56,10 +59,11 @@ namespace smt {
                     }
                 }
             }
+            element(const std::list<element>&);
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
             const string& shortname() const { return m_shortname; }
-            expr* origin_expr() const { return m_expr; }
+            expr* origin_expr() const { return m_expr.front(); }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -83,8 +87,13 @@ namespace smt {
         private:
             std::list<element> m_elements;
         public:
+            word_term merge_list_of_elements(const std::list<element>&) const;
             word_term() = default;
             word_term(std::initializer_list<element> list);
+            bool successfully_initialized_element_iterator(std::list<element>::iterator &first,
+                                                           std::list<element>::iterator &second) const;
+            bool get_next_two_elements(std::list<element>::iterator& first, std::list<element>::iterator& second) const;
+
             std::size_t length() const { return m_elements.size(); }
             std::size_t count_const() const;
             std::size_t minimal_model_length(const std::map<element, size_t>& lb) const {
@@ -101,6 +110,16 @@ namespace smt {
             std::set<element> variables() const;
             const std::list<element>& content() const { return m_elements; }
             const element& head() const;
+
+            element get(size_t index ) const {
+                if (length() > index)
+                {
+                    std::list<element>::const_iterator it = std::next(m_elements.begin(), index);
+                    return {*it};
+                }
+                else return element::null();
+            };
+
             bool empty() const { return m_elements.empty(); }
             bool has_constant() const;
             bool has_variable() const;
@@ -125,11 +144,13 @@ namespace smt {
             word_term m_lhs;
             word_term m_rhs;
         public:
-           ;
+
             word_equation(const word_term& lhs, const word_term& rhs);
             element::pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
             std::size_t count_var(const element& e) const;
             std::set<element> variables() const;
+
+            word_equation merge_list_of_elements(const std::list<element>&) const;
             const word_term& lhs() const { return m_lhs; }
             const word_term& rhs() const { return m_rhs; }
             const element& definition_var() const;
@@ -246,6 +267,8 @@ namespace smt {
             };
 
         private:
+            std::map<element, std::pair<element,element>> merged_element_map;
+
             state::transform_strategy m_strategy;
 
             std::set<word_equation> m_eq_wes;
@@ -259,6 +282,7 @@ namespace smt {
             bool quadratic_after_add_this_term(const word_term&);
             bool has_non_quadratic_var(const word_term& wt);
             word_term find_alternative_term(const word_term&,const word_term&);
+            void merge_list_of_elements(const std::list<element>&);
         public:
             explicit state(memberships::sptr m) : m_memberships{std::move(m)}, m_strategy{state::transform_strategy::dynamic_empty_var_detection} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
@@ -269,6 +293,9 @@ namespace smt {
             const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
             var_relation var_rel_graph() const;
+            void merge_elements();
+            bool always_occur_together(const element& e1, const element& e2);
+
             const transform_strategy get_strategy() const { return m_strategy; }
             void set_strategy(transform_strategy st) { m_strategy=st; }
             bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
@@ -404,7 +431,10 @@ namespace smt {
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
+
     private:
+        literal mk_eq_empty(expr* n, bool phase = true);
+        expr_ref mk_len(expr* s) const { return expr_ref(m_util_s.str.mk_length(s), get_manager()); }
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         bool is_regex_sort(expr *e) const;
@@ -412,6 +442,27 @@ namespace smt {
         expr_ref mk_sub(expr *a, expr *b);
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
                            expr *e4 = nullptr, sort *sort = nullptr);
+        bool is_tail(expr* s, expr* i, expr* l);
+        void add_tail_axiom(expr* e, expr* s) ;
+        void mk_decompose(expr* e, expr_ref& head, expr_ref& tail);
+        expr_ref mk_nth(expr* s, expr* idx);
+        bool is_skolem(symbol const& s, expr* e) const;
+        expr_ref mk_concat(expr* e1, expr* e2) { return expr_ref(m_util_s.str.mk_concat(e1, e2), get_manager()); }
+        literal mk_seq_eq(expr* a, expr* b);
+        void add_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal, literal l4 = null_literal, literal l5 = null_literal);
+        bool is_drop_last(expr* s, expr* i, expr* l);
+        void add_drop_last_axiom(expr* e, expr* s);
+        expr_ref mk_last(expr* s);
+        void add_extract_prefix_axiom(expr* e, expr* s, expr* l);
+        literal mk_simplified_literal(expr * _e);
+        bool is_extract_prefix0(expr* s, expr* i, expr* l);
+        bool is_extract_suffix(expr* s, expr* i, expr* l);
+        void add_extract_suffix_axiom(expr* e, expr* s, expr* i);
+        enode* ensure_enode(expr* e);
+        bool is_eq(expr* e, expr*& a, expr*& b) const;
+
+
+
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
         str::word_term mk_word_term(expr *e) const;
@@ -422,7 +473,9 @@ namespace smt {
         void handle_substr(expr *e);
         void handle_index_of(expr *e);
         void handle_prefix(expr *e);
+        void handle_not_prefix(expr *e);
         void handle_suffix(expr *e);
+        void handle_not_suffix(expr *e);
         void handle_contains(expr *e);
         void handle_in_re(expr *e, bool is_true);
         void set_conflict(const literal_vector& ls);

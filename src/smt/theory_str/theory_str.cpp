@@ -895,9 +895,9 @@ namespace smt {
 
         bool state::operator==(const state& other) const {
             return m_strategy == other.m_strategy &&
-                   m_eq_wes == other.m_eq_wes &&
-                   m_diseq_wes == other.m_diseq_wes &&
-                   *m_memberships == *other.m_memberships;
+                   m_eq_wes == other.m_eq_wes ;//&&
+                   //m_diseq_wes == other.m_diseq_wes &&
+                   //*m_memberships == *other.m_memberships;
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
@@ -1183,11 +1183,12 @@ namespace smt {
             for (const auto& h : g.heads()) {
                 automaton::sptr lhs = m->get(h);
                 automaton::sptr rhs = derive_var_membership(g, m, h);
-                if(!lhs) continue;
+                if(!lhs) {
+                    if(rhs->is_empty()) return false;
+                    else continue;
+                }
                 if (lhs->intersect_with(rhs)->is_empty()) return false;
 
-//                if ((!lhs && rhs->is_empty()) ) return false;
-//                if (lhs->intersect_with(rhs)->is_empty()) return false;
             }
             return true;
         }
@@ -1477,7 +1478,6 @@ namespace smt {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init_search_eh\n";);
         context& ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
-        std::cout << "init_search_eh" << std::endl;  // test_hlin
         for (unsigned i = 0; i < nFormulas; ++i) {
             expr * ex = ctx.get_asserted_formula(i);
             string_theory_propagation(ex);
@@ -1643,6 +1643,7 @@ namespace smt {
         ast_manager& m = get_manager();
         STRACE("str", tout << "assign: bool_var #" << v << " is " << is_true << ", "
                            << mk_pp(get_context().bool_var2expr(v), m) << '\n';);
+
         context& ctx = get_context();
         expr *e = ctx.bool_var2expr(v);
         expr *e1 = nullptr, *e2 = nullptr;
@@ -1680,12 +1681,37 @@ namespace smt {
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);
-        } else {
+        } else if (is_eq(e, e1, e2)) {
+            if (is_true) {
+                enode* n1 = ensure_enode(e1);
+                enode* n2 = ensure_enode(e2);
+                if (n1->get_root() == n2->get_root()) {
+                    return;
+                }
+                ctx.mark_as_relevant(n1);
+                ctx.mark_as_relevant(n2);
+                new_eq_eh(n1->get_th_var(get_id()), n2->get_th_var(get_id()));
+            }
+        }else {
             TRACE("str", tout << "unhandled literal " << mk_pp(e, m) << "\n";);
             UNREACHABLE();
         }
     }
 
+    enode* theory_str::ensure_enode(expr* e) {
+        context& ctx = get_context();
+        if (!ctx.e_internalized(e)) {
+            ctx.internalize(e, false);
+        }
+        enode* n = ctx.get_enode(e);
+        ctx.mark_as_relevant(n);
+        return n;
+    }
+
+    bool theory_str::is_eq(expr* e, expr*& a, expr*& b) const {
+        return is_skolem(symbol("seq.eq"), e) &&
+               (a = to_app(e)->get_arg(0), b = to_app(e)->get_arg(1), true);
+    }
     void theory_str::new_eq_eh(theory_var x, theory_var y) {
         ast_manager& m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
@@ -1825,6 +1851,152 @@ namespace smt {
         }
     }
 
+    bool str::word_term::successfully_initialized_element_iterator(std::list<element>::iterator &first,
+                                                                   std::list<element>::iterator &second) const{
+
+
+
+    }
+
+
+
+
+    void str::state::merge_elements(){
+        std::map<element,element> merge_map;
+
+        for(const word_equation& word_eq:m_eq_wes) {
+            const word_term &lhs = word_eq.lhs();
+            const word_term &rhs = word_eq.rhs();
+
+            for (size_t index = 0; index < lhs.length() - 1; index++) {
+                if (merge_map.find(lhs.get(index)) != merge_map.end()) {
+                    if(merge_map.find(lhs.get(index))->second != lhs.get(index + 1) ) {
+                        merge_map.erase(lhs.get(index));
+                        merge_map.insert({lhs.get(index), str::element::null()});
+                    }
+                } else {
+                    merge_map.insert({lhs.get(index),lhs.get(index + 1)});
+                }
+            }
+            for (size_t index = 0; index < rhs.length() - 1; index++) {
+                if (merge_map.find(rhs.get(index)) != merge_map.end()) {
+                    if(merge_map.find(rhs.get(index))->second != rhs.get(index + 1) ) {
+                        merge_map.erase(rhs.get(index));
+                        merge_map.insert({rhs.get(index), str::element::null()});
+                    }
+                } else {
+                    merge_map.insert({rhs.get(index),rhs.get(index + 1)});
+                }
+            }
+
+        }
+
+        for(const word_equation& word_eq:m_diseq_wes) {
+            const word_term &lhs = word_eq.lhs();
+            const word_term &rhs = word_eq.rhs();
+
+            for (size_t index = 0; index < lhs.length() - 1; index++) {
+                if (merge_map.find(lhs.get(index)) != merge_map.end()) {
+                    if(merge_map.find(lhs.get(index))->second != lhs.get(index + 1) ) {
+                        merge_map.erase(lhs.get(index));
+                        merge_map.insert({lhs.get(index), str::element::null()});
+                    }
+                } else {
+                    merge_map.insert({lhs.get(index),lhs.get(index + 1)});
+                }
+            }
+            for (size_t index = 0; index < rhs.length() - 1; index++) {
+                if (merge_map.find(rhs.get(index)) != merge_map.end()) {
+                    if(merge_map.find(rhs.get(index))->second != rhs.get(index + 1) ) {
+                        merge_map.erase(rhs.get(index));
+                        merge_map.insert({rhs.get(index), str::element::null()});
+                    }
+                } else {
+                    merge_map.insert({rhs.get(index),rhs.get(index + 1)});
+                }
+            }
+
+        }
+        std::set<element> in_tail;
+        for(auto& p:merge_map) {
+            if(p.second!=element::null()) in_tail.insert(p.second);
+            std::cout<<"["<<p.first<<p.second<<"]"<<std::endl;
+        }
+
+
+
+        for(auto& p:merge_map){
+            if(p.second!=element::null() && in_tail.find(p.first)==in_tail.end()){
+                std::list<element> to_merge;
+                element to_append=p.first;
+                do{
+                    to_merge.push_back(to_append);
+                    to_append = merge_map.at(to_append);
+                }while(merge_map.find(to_append)!=merge_map.end());
+                if(to_append!=element::null()) to_merge.push_back(to_append);
+
+                std::cout << "[";
+                for(auto e:to_merge) std::cout << e;
+                std::cout << "]";
+
+                STRACE("str", tout << "[";);
+                for(auto e:to_merge) STRACE("str", tout << e;);
+                STRACE("str", tout << "]";);
+                merge_list_of_elements(to_merge);
+            }
+        }
+    };
+
+    str::word_term str::word_term::merge_list_of_elements(const std::list<element>& to_merge) const{
+
+
+    }
+    str::word_equation str::word_equation::merge_list_of_elements(const std::list<element>& to_merge) const{
+
+        return word_equation::null();
+    }
+
+    str::element::element(const std::list<element>& list):m_type{element::t::VAR}{
+        m_value=list.front().m_value;
+        m_shortname=list.front().m_shortname;
+        m_expr.push_back(list.front().m_expr.front());
+
+        for(std::list<element>::const_iterator it=++list.begin(); it != list.end(); ++it){
+            if(m_type==t::VAR){
+                m_shortname = m_shortname + it->m_shortname;
+            }else{
+                m_shortname = m_shortname + it->m_value.encode();
+            }
+            m_value = m_value + it->m_value;
+            m_expr.push_back(it->m_expr.front());
+        }
+    }
+    void str::state::merge_list_of_elements(const std::list<element>& to_merge) {
+        std::set<word_equation> to_add,to_remove;
+        for(const word_equation& word_eq:m_eq_wes) {
+            word_equation new_word_eq=word_eq.merge_list_of_elements(to_merge);
+            if(new_word_eq != word_equation::null()){
+                to_add.insert(new_word_eq);
+                to_remove.insert(word_eq);
+            }
+        }
+        for(auto& rm_word_eq:to_remove) m_eq_wes.erase(rm_word_eq);
+        for(auto& add_word_eq:to_add) m_eq_wes.insert(add_word_eq);
+
+        to_add.clear();
+        to_remove.clear();
+        for(const word_equation& word_eq:m_diseq_wes) {
+            word_equation new_word_eq=word_eq.merge_list_of_elements(to_merge);
+            if(new_word_eq != word_equation::null()){
+                to_add.insert(new_word_eq);
+                to_remove.insert(word_eq);
+            }
+        }
+        for(auto& rm_word_eq:to_remove) m_diseq_wes.erase(rm_word_eq);
+        for(auto& add_word_eq:to_add) m_diseq_wes.insert(add_word_eq);
+
+    }
+
     final_check_status theory_str::final_check_eh() {
         using namespace str;
 //        print_ctx(get_context());  // test_hlin
@@ -1836,8 +2008,12 @@ namespace smt {
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
-
         root.remove_single_variable_word_term();
+        std::cout << "root built:\n" << root <<std::endl;
+        root.merge_elements();
+
+
+        if(root.word_eqs().size()==0) return FC_DONE;
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
@@ -1992,13 +2168,13 @@ namespace smt {
         using namespace str;
         state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
         STRACE("str", tout << "[Build State]\nmembership todo:\n";);
-        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
-        for (const auto& m : m_membership_todo) {
-            SASSERT(is_const_fun(m.first));
-            zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
-            result.add_membership({element::t::VAR, name, m.first}, m.second);
-            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
-        }
+//        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
+//        for (const auto& m : m_membership_todo) {
+//            SASSERT(is_const_fun(m.first));
+//            zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
+//            result.add_membership({element::t::VAR, name, m.first}, m.second);
+//            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
+//        }
         STRACE("str", tout << "word equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
@@ -2125,7 +2301,18 @@ namespace smt {
         ctx.mk_th_axiom(get_id(), 1, &l);
         STRACE("str", ctx.display_literal_verbose(tout << "[Assert]\n", l) << '\n';);
     }
-
+    void theory_str::add_axiom(literal l1, literal l2, literal l3, literal l4, literal l5) {
+        context& ctx = get_context();
+        literal_vector lits;
+        if (l1 == true_literal || l2 == true_literal || l3 == true_literal || l4 == true_literal || l5 == true_literal) return;
+        if (l1 != null_literal && l1 != false_literal) { ctx.mark_as_relevant(l1); lits.push_back(l1); }
+        if (l2 != null_literal && l2 != false_literal) { ctx.mark_as_relevant(l2); lits.push_back(l2); }
+        if (l3 != null_literal && l3 != false_literal) { ctx.mark_as_relevant(l3); lits.push_back(l3); }
+        if (l4 != null_literal && l4 != false_literal) { ctx.mark_as_relevant(l4); lits.push_back(l4); }
+        if (l5 != null_literal && l5 != false_literal) { ctx.mark_as_relevant(l5); lits.push_back(l5); }
+        TRACE("str", ctx.display_literals_verbose(tout << "assert:\n", lits); tout << "\n";);
+        ctx.mk_th_axiom(get_id(), lits.size(), lits.c_ptr());
+    }
     void theory_str::add_clause(std::initializer_list<literal> ls) {
         context& ctx = get_context();
         literal_vector lv;
@@ -2200,7 +2387,22 @@ namespace smt {
         ast_manager& m = get_manager();
         expr *s = nullptr, *i = nullptr, *l = nullptr;
         VERIFY(m_util_s.str.is_extract(e, s, i, l));
-
+        if (is_tail(s, i, l)) {
+            add_tail_axiom(e, s);
+            return;
+        }
+        if (is_drop_last(s, i, l)) {
+            add_drop_last_axiom(e, s);
+            return;
+        }
+        if (is_extract_prefix0(s, i, l)) {
+            add_extract_prefix_axiom(e, s, l);
+            return;
+        }
+        if (is_extract_suffix(s, i, l)) {
+            add_extract_suffix_axiom(e, s, i);
+            return;
+        }
         expr_ref x(mk_skolem(symbol("m_substr_left"), s, i), m);
         expr_ref ls(m_util_s.str.mk_length(s), m);
         expr_ref lx(m_util_s.str.mk_length(x), m);
@@ -2226,6 +2428,153 @@ namespace smt {
         add_clause({ls_le_i, mk_eq(le, zero, false)});
         add_clause({~ls_le_0, mk_eq(le, zero, false)});
     }
+/*
+  0 <= i <= len(s) => s = xe & i = len(x)
+ */
+    void theory_str::add_extract_suffix_axiom(expr* e, expr* s, expr* i) {
+        ast_manager& m = get_manager();
+        expr_ref x(mk_skolem(symbol("seq.p.suffix"), s, i), m);
+        expr_ref lx(m_util_s.str.mk_length(x), m);
+        expr_ref ls(m_util_s.str.mk_length(s), m);
+        expr_ref zero(m_util_a.mk_int(0), m);
+        expr_ref xe = mk_concat(x, e);
+        literal i_ge_0 = mk_simplified_literal(m_util_a.mk_ge(i, zero));
+        literal i_le_s = mk_simplified_literal(m_util_a.mk_le(mk_sub(i, ls), zero));
+        add_axiom(~i_ge_0, ~i_le_s, mk_seq_eq(s, xe));
+        add_axiom(~i_ge_0, ~i_le_s, mk_eq(i, lx, false));
+    }
+    bool theory_str::is_tail(expr* s, expr* i, expr* l) {
+        ast_manager& m = get_manager();
+        rational i1;
+        if (!m_util_a.is_numeral(i, i1) || !i1.is_one()) {
+            return false;
+        }
+        expr_ref l2(m), l1(l, m);
+        l2 = m_util_a.mk_sub(m_util_s.str.mk_length(s), m_util_a.mk_int(1));
+        m_rewrite(l1);
+        m_rewrite(l2);
+        return l1 == l2;
+    }
+    void theory_str::add_tail_axiom(expr* e, expr* s) {
+        ast_manager& m = get_manager();
+        expr_ref head(m), tail(m);
+        mk_decompose(s, head, tail);
+        add_axiom(mk_eq_empty(s), mk_seq_eq(s, mk_concat(head, e)));
+    }
+    void theory_str::mk_decompose(expr* e, expr_ref& head, expr_ref& tail) {
+        ast_manager& m = get_manager();
+        expr* e1 = nullptr, *e2 = nullptr;
+        zstring s;
+        if (m_util_s.str.is_empty(e)) {
+            head = m_util_s.str.mk_unit(mk_nth(e, m_util_a.mk_int(0)));
+            tail = e;
+        }
+        else if (m_util_s.str.is_string(e, s)) {
+            head = m_util_s.str.mk_unit(m_util_s.str.mk_char(s, 0));
+            tail = m_util_s.str.mk_string(s.extract(1, s.length()-1));
+        }
+        else if (m_util_s.str.is_unit(e)) {
+            head = e;
+            tail = m_util_s.str.mk_empty(m.get_sort(e));
+        }
+        else if (m_util_s.str.is_concat(e, e1, e2) && m_util_s.str.is_unit(e1)) {
+            head = e1;
+            tail = e2;
+        }
+        else if (is_skolem(symbol("seq.tail"), e)) {
+            rational r;
+            app* a = to_app(e);
+            expr* s = a->get_arg(0);
+            VERIFY (m_util_a.is_numeral(a->get_arg(1), r));
+            expr* idx = m_util_a.mk_int(r.get_unsigned() + 1);
+            head = m_util_s.str.mk_unit(mk_nth(s, idx));
+            tail = mk_skolem(symbol("seq.tail"), s, idx);
+        }
+        else {
+            head = m_util_s.str.mk_unit(mk_nth(e, m_util_a.mk_int(0)));
+            tail = mk_skolem(symbol("seq.tail"), e, m_util_a.mk_int(0));
+        }
+    }
+    expr_ref theory_str::mk_nth(expr* s, expr* idx) {
+        ast_manager& m = get_manager();
+        sort* char_sort = nullptr;
+        VERIFY(m_util_s.is_seq(m.get_sort(s), char_sort));
+        return mk_skolem(symbol("seq.nth"), s, idx, nullptr, nullptr, char_sort);
+    }
+    bool theory_str::is_skolem(symbol const& s, expr* e) const {
+        return m_util_s.is_skolem(e) && to_app(e)->get_decl()->get_parameter(0).get_symbol() == s;
+    }
+    literal theory_str::mk_seq_eq(expr* a, expr* b) {
+        SASSERT(m_util_s.is_seq(a));
+        ast_manager& m = get_manager();
+        return mk_literal(mk_skolem(symbol("seq.eq"), a, b, nullptr, nullptr, m.mk_bool_sort()));
+    }
+    bool theory_str::is_drop_last(expr* s, expr* i, expr* l) {
+        ast_manager& m = get_manager();
+        rational i1;
+        if (!m_util_a.is_numeral(i, i1) || !i1.is_zero()) {
+            return false;
+        }
+        expr_ref l2(m), l1(l, m);
+        l2 = m_util_a.mk_sub(m_util_s.str.mk_length(s), m_util_a.mk_int(1));
+        m_rewrite(l1);
+        m_rewrite(l2);
+        return l1 == l2;
+    }
+    void theory_str::add_drop_last_axiom(expr* e, expr* s) {
+        add_axiom(mk_eq_empty(s), mk_seq_eq(s, mk_concat(e, m_util_s.str.mk_unit(mk_last(s)))));
+    }
+    expr_ref theory_str::mk_last(expr* s) {
+        ast_manager& m = get_manager();
+        zstring str;
+        if (m_util_s.str.is_string(s, str) && str.length() > 0) {
+            return expr_ref(m_util_s.str.mk_char(str, str.length()-1), m);
+        }
+        sort* char_sort = nullptr;
+        VERIFY(m_util_s.is_seq(m.get_sort(s), char_sort));
+        return mk_skolem(symbol("seq.last"), s, nullptr, nullptr, nullptr, char_sort);
+    }
+    bool theory_str::is_extract_prefix0(expr* s, expr* i, expr* l) {
+        rational i1;
+        return m_util_a.is_numeral(i, i1) && i1.is_zero();
+    }
+    bool theory_str::is_extract_suffix(expr* s, expr* i, expr* l) {
+        ast_manager& m = get_manager();
+        expr_ref len(m_util_a.mk_add(l, i), m);
+        m_rewrite(len);
+        return m_util_s.str.is_length(len, l) && l == s;
+    }
+
+
+/*
+  0 <= l <= len(s) => s = ey & l = len(e)
+  len(s) < l => s = e
+ */
+    void theory_str::add_extract_prefix_axiom(expr* e, expr* s, expr* l) {
+        ast_manager& m = get_manager();
+
+        TRACE("seq", tout << mk_pp(e, m) << " " << mk_pp(s, m) << " " << mk_pp(l, m) << "\n";);
+        expr_ref le(m_util_s.str.mk_length(e), m);
+        expr_ref ls(m_util_s.str.mk_length(s), m);
+        expr_ref ls_minus_l(mk_sub(ls, l), m);
+        expr_ref y(mk_skolem(symbol("seq.post"), s, ls_minus_l), m);
+        expr_ref zero(m_util_a.mk_int(0), m);
+        expr_ref ey = mk_concat(e, y);
+        literal l_ge_0 = mk_simplified_literal(m_util_a.mk_ge(l, zero));
+        literal l_le_s = mk_simplified_literal(m_util_a.mk_le(mk_sub(l, ls), zero));
+        add_axiom(~l_ge_0, ~l_le_s, mk_seq_eq(s, ey));
+        add_axiom(~l_ge_0, ~l_le_s, mk_eq(l, le, false));
+        add_axiom(~l_ge_0, ~l_le_s, mk_eq(ls_minus_l, m_util_s.str.mk_length(y), false));
+        add_axiom(l_le_s, mk_eq(e, s, false));
+    }
+
+    literal theory_str::mk_simplified_literal(expr * _e) {
+        ast_manager& m = get_manager();
+        expr_ref e(_e, m);
+        m_rewrite(e);
+        return mk_literal(e);
+    }
+
 
     void theory_str::handle_index_of(expr *e) {
         ast_manager& m = get_manager();
@@ -2297,6 +2646,45 @@ namespace smt {
         add_clause({mk_eq(y, xs, false)});
     }
 
+    // e = not_prefix(x, y), check if x is not a prefix of y
+    void theory_str::handle_not_prefix(expr *e) {
+
+    }
+    // e = not_suffix(x, y), check if x is not a suffix of y
+    void theory_str::handle_not_suffix(expr *e) {
+
+    }
+
+
+    literal theory_str::mk_eq_empty(expr* _e, bool phase) {
+        context& ctx = get_context();
+        ast_manager& m = get_manager();
+
+        expr_ref e(_e, m);
+        SASSERT(m_util_s.is_seq(e));
+        expr_ref emp(m);
+        zstring s;
+        if (m_util_s.str.is_empty(e)) {
+            return true_literal;
+        }
+        expr_ref_vector concats(m);
+        m_util_s.str.get_concat(e, concats);
+        for (auto c : concats) {
+            if (m_util_s.str.is_unit(c)) {
+                return false_literal;
+            }
+            if (m_util_s.str.is_string(c, s) && s.length() > 0) {
+                return false_literal;
+            }
+        }
+        emp = m_util_s.str.mk_empty(m.get_sort(e));
+
+        literal lit = mk_eq(e, emp, false);
+        ctx.force_phase(phase?lit:~lit);
+        ctx.mark_as_relevant(lit);
+        return lit;
+    }
+
     // e = suffix(x, y), check if x is a suffix of y
     void theory_str::handle_suffix(expr *e) {
         ast_manager& m = get_manager();
@@ -2315,11 +2703,19 @@ namespace smt {
         expr *x = nullptr, *y = nullptr;
         VERIFY(m_util_s.str.is_contains(e, x, y));
 
-        expr_ref p = mk_skolem(symbol("m_contains_left"), x, y);
-        expr_ref s = mk_skolem(symbol("m_contains_right"), x, y);
-        expr_ref pys(m_util_s.str.mk_concat(m_util_s.str.mk_concat(p, y), s), m);
+        if(m_util_s.str.is_string(y) && is_const_fun(x)){
+            expr* re = m_util_s.re.mk_to_re(y);
+            expr* all_seq=m_util_s.re.mk_full_seq(m.get_sort(re));
+            re = m_util_s.re.mk_concat(all_seq, re);
+            re = m_util_s.re.mk_concat(re, all_seq);
+            m_membership_todo.push_back({{x, m}, {re,m}});
+        }else{
+            expr_ref p = mk_skolem(symbol("m_contains_left"), x, y);
+            expr_ref s = mk_skolem(symbol("m_contains_right"), x, y);
+            expr_ref pys(m_util_s.str.mk_concat(m_util_s.str.mk_concat(p, y), s), m);
 
-        add_clause({mk_eq(x, pys, false)});
+            add_clause({mk_eq(x, pys, false)});
+        }
     }
 
     void theory_str::handle_in_re(expr *const e, const bool is_true) {
