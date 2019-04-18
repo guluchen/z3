@@ -1067,6 +1067,16 @@ namespace smt {
         return false;
     }
 
+    bool theory_str::isRegexVar(expr* n, expr* &regexExpr){
+        for (const auto& we: membership_memo) {
+            if (we.first == n){
+                regexExpr = we.second;
+                return true;
+            }
+        }
+        return false;
+    }
+
     std::set<expr*> theory_str::getDependency(expr* n){
         std::set<expr*> ret;
 
@@ -1278,27 +1288,29 @@ namespace smt {
             expr_ref_vector eqn2(m);
             collect_eq_nodes(n2, eqn2);
 
-            for (const auto c2 : eqc_concat_rhs){
-                expr* n3 = to_app(c2)->get_arg(0);
-                expr* n4 = to_app(c2)->get_arg(1);
-                if (eqn1.contains(n3)){
-                    expr_ref_vector litems(m);
-                    litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                    litems.push_back(ctx.mk_eq_atom(n1, n3));
+            for (const auto c2 : eqc_concat_rhs)
+                if (c1 != c2) {
+                    expr *n3 = to_app(c2)->get_arg(0);
+                    expr *n4 = to_app(c2)->get_arg(1);
+                    if (eqn1.contains(n3)) {
+                        expr_ref_vector litems(m);
+                        litems.push_back(ctx.mk_eq_atom(lhs, rhs));
+                        litems.push_back(ctx.mk_eq_atom(n1, n3));
 
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, ctx.mk_eq_atom(n2, n4));
+                        expr_ref implyL(mk_and(litems), m);
+                        assert_implication(implyL, ctx.mk_eq_atom(n2, n4));
+                    }
+
+                    if (eqn2.contains(n4)) {
+                        expr_ref_vector litems(m);
+                        litems.push_back(ctx.mk_eq_atom(lhs, rhs));
+                        litems.push_back(ctx.mk_eq_atom(n2, n4));
+
+                        expr_ref implyL(mk_and(litems), m);
+                        assert_implication(implyL, ctx.mk_eq_atom(n1, n3));
+                    }
+
                 }
-
-                if (eqn2.contains(n4)){
-                    expr_ref_vector litems(m);
-                    litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                    litems.push_back(ctx.mk_eq_atom(n2, n4));
-
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, ctx.mk_eq_atom(n1, n3));
-                }
-            }
         }
     }
 
@@ -3435,7 +3447,7 @@ namespace smt {
 
             if (prev_level >= uState.level && (
                     (mful_scope_levels.size() > 0 && (int)mful_scope_levels[mful_scope_levels.size() - 1] < uState.level) ||
-                            mful_scope_levels.size() == 0 && uState.level > 0)){
+                            (mful_scope_levels.size() == 0 && uState.level > 0))){
                 STRACE("str", tout << __FUNCTION__ << " " << mful_scope_levels.size() << " vs " << uState.level << std::endl;);
                 uState.reset();
             }
@@ -3551,6 +3563,7 @@ namespace smt {
         std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, importantVars);
 
         const str::state &root = build_state_from_memo();
+ 
         bool axiomAdded = underapproximation(eq_combination, causes, importantVars, root);
         if (axiomAdded) {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << "/" << uState.level << ")" << connectingSize << std::endl;);
@@ -4444,7 +4457,6 @@ namespace smt {
 
     bool theory_str::fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens){
         bool unassigned = true;
-        ast_manager & m = get_manager();
         for (const auto& var : variable_set) {
             rational lenVal;
             if (!get_len_value(var, lenVal)){
@@ -5017,7 +5029,7 @@ namespace smt {
         for (const auto& com : eq_combination){
             STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
-            STRACE("str", tout << "\t\t" << mk_pp(e, m) << std::endl;);
+                STRACE("str", tout << "\t\t" << mk_pp(e, m) << std::endl;);
         }
 
         UnderApproxState state(m, m_scope_level, mful_scope_levels.size(), eq_combination, importantVars);
@@ -5331,12 +5343,10 @@ namespace smt {
         }
         for (const auto& we: non_membership_memo) {
             allStrExprs.insert(we.first);
-            allStrExprs.insert(we.second);
         }
 
         for (const auto& we: membership_memo) {
             allStrExprs.insert(we.first);
-            allStrExprs.insert(we.second);
         }
 
         // create all tmp vars
@@ -5403,12 +5413,10 @@ namespace smt {
         }
         for (const auto& we: non_membership_memo) {
             allStrExprs.insert(we.first);
-            allStrExprs.insert(we.second);
         }
 
         for (const auto& we: membership_memo) {
             allStrExprs.insert(we.first);
-            allStrExprs.insert(we.second);
         }
 
         // create all tmp vars
@@ -5608,12 +5616,13 @@ namespace smt {
                 continue;
 
             if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
                 for (const auto& element: it->second) {
                     if (element == it->first){
                         continue;
                     }
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(it->first, m)<< " vs " << mk_pp(element, m) << std::endl;);
                     ptr_vector<expr> lhs;
                     ptr_vector<expr> rhs;
                     optimizeEquality(it->first, element, lhs, rhs);
@@ -5653,6 +5662,18 @@ namespace smt {
                             assert_axiom(createEqualOperator(causes[it->first], m.mk_false()));
                         }
                         assertedConstraints.reset();
+                    }
+                }
+
+                expr* regexExpr;
+                if (isRegexVar(it->first, regexExpr)){
+                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(it->first, m) << " = " << mk_pp(regexExpr, m) << " " << getStdRegexStr(regexExpr) << std::endl;);
+                    std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parseRegexComponents(underApproxRegex(getStdRegexStr(regexExpr)))));
+                    for (const auto& v : regexElements){
+                        for (const auto& s : v) {
+                            STRACE("str", tout << s << " --- ";);
+                        }
+                        STRACE("str", tout << std::endl;);
                     }
                 }
             }
@@ -5770,6 +5791,398 @@ namespace smt {
     }
 
     /*
+     * a b c (abc)* --> abc (abc)*
+     */
+    std::vector<std::vector<zstring>> theory_str::combineConstStr(std::vector<std::vector<zstring>> regexElements){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+        std::vector<std::vector<zstring>> results;
+        for (unsigned i = 0; i < regexElements.size(); ++i) {
+            std::vector<zstring> tmp;
+            bool isRegex_prev = true;
+            for (unsigned j = 0; j < regexElements[i].size(); ++j) {
+                if (isRegex_prev == false) {
+                    isRegex_prev = isRegexStr(regexElements[i][j]) || isUnionStr(regexElements[i][j]);
+                    if (isRegex_prev == false) {
+                        zstring tmpStr = tmp[tmp.size() - 1];
+                        zstring newStr = regexElements[i][j];
+                        tmp[tmp.size() - 1] = zstring("\"") + tmpStr.extract(1, tmpStr.length() - 2) + newStr.extract(1, newStr.length() - 2) + "\"";
+                    }
+                    else
+                        tmp.emplace_back(regexElements[i][j]);
+                }
+                else {
+                    isRegex_prev = isRegexStr(regexElements[i][j]) || isUnionStr(regexElements[i][j]);
+                    tmp.emplace_back(regexElements[i][j]);
+                }
+            }
+            results.emplace_back(tmp);
+        }
+        return results;
+    }
+
+    bool theory_str::isRegexStr(zstring str){
+        return str.contains(")*") || str.contains(")+");
+    }
+
+    bool theory_str::isUnionStr(zstring str){
+        return str.contains("|");
+    }
+
+    /*
+     * remove duplication
+     */
+    std::vector<std::vector<zstring>> theory_str::refineVectors(std::vector<std::vector<zstring>> list){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+        std::vector<std::vector<zstring>> result;
+        if (list.size() < 1000) {
+            bool duplicated[1000];
+            memset(duplicated, false, sizeof duplicated);
+            for (unsigned i = 0; i < list.size(); ++i)
+                if (!duplicated[i])
+                    for (unsigned j = i + 1; j < list.size(); ++j)
+                        if (!duplicated[j]) {
+                            if (equalStrVector(list[i], list[j])) {
+                                duplicated[j] = true;
+                            }
+                        }
+
+            for (unsigned int i = 0 ; i < list.size(); ++i)
+                if (!duplicated[i])
+                    result.emplace_back(list[i]);
+        }
+        else
+            result = list;
+
+        for (unsigned i = 0; i < result.size(); ++i)
+            for (unsigned j = 0; j < result[i].size(); ++j)
+                if (result[i][j][0] != '(')
+                    result[i][j] = zstring("\"") + result[i][j] + "\"";
+        return result;
+    }
+
+    /*
+     *
+     */
+    bool theory_str::equalStrVector(std::vector<zstring> a, std::vector<zstring> b){
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (unsigned i = 0; i < a.size(); ++i)
+            if (a[i] != b[i]) {
+                return false;
+            }
+        return true;
+    }
+
+    /*
+     *
+     */
+    std::vector<std::vector<zstring>> theory_str::parseRegexComponents(zstring str){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
+        if (str.length() == 0)
+            return {};
+
+        std::vector<std::vector<zstring>> result;
+
+        std::vector<zstring> components = collectAlternativeComponents(str);
+        if (components.size() > 1){
+            for (const auto& c : components) {
+                std::vector<std::vector<zstring>> tmp = parseRegexComponents(c);
+                for (const auto& comp : tmp)
+                    result.emplace_back(comp);
+            }
+            bool merge = true;
+            zstring tmp;
+            for (const auto& s : result)
+                if (s.size() > 0 && isRegexStr(s[0])){
+                    merge = false;
+                    break;
+                }
+                else if (s.size() > 0)
+                    tmp = tmp + "|" + s[0];
+
+            if (merge == true) {
+                tmp = tmp.extract(1, tmp.length() - 1);
+                return {{tmp}};
+            }
+            else
+                return result;
+        }
+
+        int leftParentheses = str.indexof('(', 0);
+        if (leftParentheses == -1)
+            return {{str}};
+
+        /* abc(def)* */
+        if (leftParentheses != 0) {
+            zstring header = str.extract(0, leftParentheses);
+            std::vector<std::vector<zstring>> rightComponents = parseRegexComponents(str.extract(leftParentheses, str.length() - leftParentheses));
+            for (unsigned int i = 0; i < rightComponents.size(); ++i) {
+                std::vector<zstring> tmp = {header};
+                tmp.insert(tmp.end(), rightComponents[i].begin(), rightComponents[i].end());
+                result.emplace_back(tmp);
+            }
+            return result;
+        }
+
+        int rightParentheses = findCorrespondRightParentheses(leftParentheses, str);
+        if (rightParentheses < 0) {
+            SASSERT (false);
+        }
+        else if (rightParentheses == (int)str.length() - 1){
+            /* (a) */
+            removeExtraParentheses(str);
+            return parseRegexComponents(str);
+        }
+        else if (rightParentheses == (int)str.length() - 2 && (str[str.length() - 1] == '*' || str[str.length() - 1] == '+')){
+            /* (a)* */
+            optimizeFlatAutomaton(str);
+            return {{str}};
+        }
+
+        else {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
+            int pos = rightParentheses;
+            zstring left, right;
+            if (str[rightParentheses + 1] == '*' || str[rightParentheses + 1] == '+'){
+                pos++;
+                left = str.extract(leftParentheses, pos - leftParentheses + 1);
+                right = str.extract(pos + 1, str.length() - pos - 1);
+            }
+            else if (str[pos] != '|' || str[pos] != '~') {
+                left = str.extract(leftParentheses + 1, pos - leftParentheses - 1);
+                right = str.extract(pos + 1, str.length() - pos - 1);
+            }
+            else {
+                SASSERT (false);
+                /* several options ab | cd | ef */
+            }
+
+            if (str[pos] != '|' || str[pos] != '~') {
+                std::vector<std::vector<zstring>> leftComponents = parseRegexComponents(left);
+                std::vector<std::vector<zstring>> rightComponents = parseRegexComponents(right);
+                if (leftComponents.size() > 0) {
+                    if (rightComponents.size() > 0) {
+                        for (int i = 0; i < std::min(10, (int)leftComponents.size()); ++i)
+                            for (int j = 0; j < std::min(10, (int)rightComponents.size()); ++j) {
+                                std::vector<zstring> tmp;
+                                tmp.insert(tmp.end(), leftComponents[i].begin(), leftComponents[i].end());
+                                tmp.insert(tmp.end(), rightComponents[j].begin(), rightComponents[j].end());
+                                result.emplace_back(tmp);
+                            }
+                    }
+                    else {
+                        result.insert(result.end(), leftComponents.begin(), leftComponents.end());
+                    }
+                }
+                else {
+                    if (rightComponents.size() > 0) {
+                        result.insert(result.end(), rightComponents.begin(), rightComponents.end());
+                    }
+                }
+
+                return result;
+            }
+        }
+        return {};
+    }
+
+    /**
+     * (abc|cde|ghi)*
+     */
+    void theory_str::optimizeFlatAutomaton(zstring &s){
+        zstring org = s;
+        zstring tmp = s.extract(1, s.length() - 3);
+        std::set<zstring> ret = extendComponent(tmp);
+        SASSERT(ret.size() > 0);
+        s = "";
+        for (const auto& it: ret){
+            s = s + "|" + it;
+        }
+
+        if (org[org.length() - 1] == '*')
+            s = zstring("(") + s.extract(1, s.length() - 1) + ")*";
+        else if (org[org.length() - 1] == '+')
+            s = zstring("(") + s.extract(1, s.length() - 1) + ")+";
+        else {
+            SASSERT(false);
+        }
+    }
+
+    /*
+     * (a)|(b | c) --> {a, b, c}
+     */
+    std::set<zstring> theory_str::extendComponent(zstring s){
+        std::vector<zstring> components = collectAlternativeComponents(s);
+        if (components.size() > 0) {
+            if (components.size() == 1)
+                return {components[0]};
+            std::set<zstring> ret;
+            for (unsigned int i = 0 ; i < components.size(); ++i) {
+                removeExtraParentheses(components[i]);
+                std::set<zstring> tmp = extendComponent(components[i]);
+                ret.insert(tmp.begin(), tmp.end());
+            }
+            return ret;
+        }
+        else
+            SASSERT(false);
+        return {};
+    }
+
+    /*
+     * (a) | (b) --> {a, b}
+     */
+    std::vector<zstring> theory_str::collectAlternativeComponents(zstring str){
+        std::vector<zstring> result;
+        int counter = 0;
+        unsigned startPos = 0;
+        for (unsigned j = 0; j < str.length(); ++j) {
+            if (str[j] == ')'){
+                counter--;
+            }
+            else if (str[j] == '('){
+                counter++;
+            }
+            else if ((str[j] == '|' || str[j] == '~') && counter == 0) {
+                result.push_back(str.extract(startPos, j - startPos));
+                startPos = j + 1;
+            }
+        }
+        if (startPos != 0)
+            result.push_back(str.extract(startPos, str.length() - startPos));
+        else {
+            return {str};
+        }
+
+        return result;
+    }
+
+
+    /*
+     *
+     */
+    int theory_str::findCorrespondRightParentheses(int leftParentheses, zstring str){
+        SASSERT (str[leftParentheses] == '(');
+        int counter = 1;
+        for (unsigned j = leftParentheses + 1; j < str.length(); ++j) {
+            if (str[j] == ')'){
+                counter--;
+                if (counter == 0){
+                    return j;
+                }
+            }
+            else if (str[j] == '('){
+                counter++;
+            }
+        }
+        return -1;
+    }
+
+    /*
+     * (a) --> a
+     */
+    void theory_str::removeExtraParentheses(zstring &s){
+        while (s[0] == '(' && findCorrespondRightParentheses(0, s) == (int)s.length() - 1)
+            s = s.extract(1, s.length() - 2);
+    }
+
+    /*
+     *
+     */
+    zstring theory_str::underApproxRegex(zstring str){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
+        /* remove all star-in-star */
+        for (unsigned int i = 0 ; i < str.length(); ++i) {
+            if (str[i] == '('){
+                int counter = 1;
+                bool hasStar = false;
+                for (unsigned j = i + 1; j < str.length(); ++j) {
+                    if (str[j] == ')'){
+                        counter--;
+                        if (counter == 0 && j + 1 < str.length() && str[j + 1] == '*' && hasStar == true) {
+                            str = str.extract(0, j + 1) + str.extract(j + 2, str.length() - j - 2);
+                            return underApproxRegex(str);
+                        }
+                        else if (counter == 0){
+                            break;
+                        }
+                    }
+                    else if (str[j] == '('){
+                        counter++;
+                    }
+                    else if (str[j] == '*')
+                        hasStar = true;
+                }
+            }
+        }
+        return str;
+    }
+
+    /*
+     *
+     */
+    zstring theory_str::getStdRegexStr(expr* regex) {
+
+        ast_manager &m = get_manager();
+        context & ctx = get_context();
+        if (u.re.is_to_re(regex)) {
+            expr* arg0 = to_app(regex)->get_arg(0);
+            zstring value;
+            u.str.is_string(arg0, value);
+            return value;
+        } else if (u.re.is_concat(regex)) {
+            expr* arg0 = to_app(regex)->get_arg(0);
+            expr* arg1 = to_app(regex)->get_arg(1);
+            zstring reg1Str = getStdRegexStr(arg0);
+            zstring reg2Str = getStdRegexStr(arg1);
+            return zstring("(") + reg1Str + ")(" + reg2Str + ")";
+        } else if (u.re.is_union(regex)) {
+            expr* arg0 = to_app(regex)->get_arg(0);
+            expr* arg1 = to_app(regex)->get_arg(1);
+            zstring reg1Str = getStdRegexStr(arg0);
+            zstring reg2Str = getStdRegexStr(arg1);
+            return  zstring("(") + reg1Str + ")~(" + reg2Str + ")";
+        } else if (u.re.is_star(regex)) {
+            expr* arg0 = to_app(regex)->get_arg(0);
+            zstring reg1Str = getStdRegexStr(arg0);
+            return zstring("(") + reg1Str + ")*";
+        } else if (u.re.is_range(regex)) {
+            expr* arg0 = to_app(regex)->get_arg(0);
+            expr* arg1 = to_app(regex)->get_arg(1);
+            zstring start;
+            zstring finish;
+            u.str.is_string(arg0, start);
+            u.str.is_string(arg1, finish);
+
+            SASSERT(start.length() == 1);
+            SASSERT(finish.length() == 1);
+            zstring ret;
+            for (unsigned i = start[0]; i <= (unsigned)finish[0]; ++i)
+                ret = ret + "~" + (char)i;
+            return ret.extract(1, ret.length() - 1);
+        }
+        else if (u.re.is_full_seq(regex)){
+            std::set<char> tobeEncoded = {'?', '\\', '|', '"', '(', ')', '~', '&', '\'', '+', '%', '#', '*'};
+            zstring tmp;
+            for (int i = 32; i <= 126; ++i)
+                if (tobeEncoded.find((char)i) == tobeEncoded.end())
+                    tmp = tmp + "(" + (char)i + ")~";
+            return zstring("(") + tmp.extract(0, tmp.length() - 1) + ")*";
+        }
+        else if (u.re.is_full_char(regex)){
+            std::set<char> tobeEncoded = {'?', '\\', '|', '"', '(', ')', '~', '&', '\'', '+', '%', '#', '*'};
+            zstring tmp;
+            for (int i = 32; i <= 126; ++i)
+                if (tobeEncoded.find((char)i) == tobeEncoded.end())
+                    tmp = tmp + "(" + (char)i + ")~";
+            return tmp.extract(0, tmp.length() - 1);
+        } else
+            SASSERT(false);
+        return nullptr;
+    }
+
+    /*
      *
      */
     expr* theory_str::constraintsIfEmpty(
@@ -5790,7 +6203,7 @@ namespace smt {
             std::vector<std::pair<expr*, int>> rhs_elements,
             std::map<expr*, int> connectedVariables,
             int p){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << lhs << " == " << rhs << std::endl;);
         std::string tmp01;
         std::string tmp02;
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
@@ -5876,7 +6289,6 @@ namespace smt {
         for (unsigned i = 0; i < possibleCases.size(); ++i) {
 
             if (passNotContainMapReview(possibleCases[i], lhs_elements, rhs_elements) && passSelfConflict(possibleCases[i], lhs_elements, rhs_elements)) {
-//                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
                 expr* tmp = generateSMT(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_str, rhs_str, lhs_elements, rhs_elements, connectedVariables);
 
                 if (tmp != NULL) {
@@ -6272,7 +6684,6 @@ namespace smt {
     expr* theory_str::generateConstraint00(
             std::pair<expr*, int> a,
             std::string l_r_hs){
-        ast_manager &m = get_manager();
         return createEqualOperator(m_autil.mk_int(0), getExprVarFlatSize(a));
     }
 
@@ -8216,22 +8627,6 @@ namespace smt {
        return zstring("");
     }
 
-
-    bool theory_str::isUnionStr(expr* a){
-        // TODO
-        return false;
-    }
-
-    bool theory_str::isUnionStr(zstring a){
-        // TODO
-        return false;
-    }
-
-    std::set<zstring > theory_str::extendComponent(zstring  s){
-        // TODO
-        return {};
-    }
-
     /*
 	 * (a|b|c)*_xxx --> range <a, c>
 	 */
@@ -8246,14 +8641,6 @@ namespace smt {
     std::pair<int, int> theory_str::collectCharRange(expr* a){
         // TODO
         return std::make_pair(0, 0);
-    }
-
-    /*
-    * (a) | (b) --> {a, b}
-    */
-    std::vector<zstring> theory_str::collectAlternativeComponents(zstring  s){
-        // TODO
-        return {};
     }
 
     bool theory_str::feasibleSplit_const(
@@ -8510,7 +8897,6 @@ namespace smt {
      *
      */
     app* theory_str::createModOperator(expr* x, expr* y){
-        context & ctx   = get_context();
         app* tmp = m_autil.mk_mod(x, y);
         return tmp;
     }
@@ -8532,7 +8918,6 @@ namespace smt {
     app* theory_str::createAddOperator(expr_ref_vector adds){
         if (adds.size() == 0)
             return m_autil.mk_int(0);
-        context & ctx   = get_context();
         app* tmp = m_autil.mk_add(adds.size(), adds.c_ptr());
         return tmp;
     }
@@ -8663,7 +9048,6 @@ namespace smt {
      */
     app* theory_str::createSelectOperator(expr* x, expr* y){
         ptr_vector<expr> sel_args;
-        ast_manager &m = get_manager();
         sel_args.push_back(x);
         sel_args.push_back(y);
         context & ctx   = get_context();
@@ -9115,16 +9499,8 @@ namespace smt {
             }
             else {
                 // check if it is a regex var
-                bool isRegexVar = false;
-                for (const auto& we: membership_memo) {
-                    if (we.first == list[k]){
-                        isRegexVar = true;
-                        elements.emplace_back(we.second, REGEX_CODE);
-                        break;
-                    }
-                }
-
-                if (!isRegexVar) {
+                expr* regexExpr;
+                if (isImportant(list[k]) || !isRegexVar(list[k], regexExpr)) {
                     if (currVarPieces.find(list[k]) == currVarPieces.end())
                         currVarPieces[list[k]] = 0;
                     for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QMAX; ++j) { /* split variables into QMAX parts */
@@ -9141,6 +9517,9 @@ namespace smt {
                         reuseInternalVar(list[k]);
                     }
                     currVarPieces[list[k]] += QMAX;
+                }
+                else {
+                    elements.emplace_back(regexExpr, REGEX_CODE);
                 }
             }
         }
@@ -11638,7 +12017,6 @@ namespace smt {
     void theory_str::init_model(model_generator& mg) {
         STRACE("str", tout << "initializing model..." << std::endl;);
         ast_manager& m = get_manager();
-        context& ctx = get_context();
         std::map<expr*, rational> varLen;
 
         // prepare backwardDep
@@ -11656,7 +12034,6 @@ namespace smt {
     void theory_str::finalize_model(model_generator& mg) {
         STRACE("str", tout << "finalizing model..." << std::endl;);
         ast_manager& m = get_manager();
-        context& ctx = get_context();
         std::map<expr*, rational> varLen;
 
         for (const auto& n : variable_set){

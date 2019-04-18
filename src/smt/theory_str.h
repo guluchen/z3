@@ -644,7 +644,7 @@ namespace smt {
                                 } else SASSERT(false);
                             }
                         } else {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": NOT important" << std::endl;);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m)  << ": NOT important" << std::endl;);
                             if (len_int != -1) {
                                 zstring strValue;
                                 // non root var
@@ -727,7 +727,6 @@ namespace smt {
                                                tout << __LINE__ << " " << __FUNCTION__
                                                     << mk_pp(node, m)
                                                     << std::endl;);
-//                                        SASSERT(false);
                                     }
                                 } else {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
@@ -735,6 +734,10 @@ namespace smt {
                                     std::vector<int> val;
                                     for (int i = 0; i < len_int; ++i)
                                         val.push_back(-1);
+
+                                    if (th.u.str.is_concat(node))
+                                        constructStr(mg, node, m_root2value, val);
+
                                     for (const auto &eq : th.uState.eq_combination[node]) {
                                         constructStr(mg, eq, m_root2value, val);
                                     }
@@ -1048,9 +1051,11 @@ namespace smt {
          */
         app * mk_value_helper(app * n, model_generator& mg);
         model_value_proc *mk_value(enode *n, model_generator& mg) override;
-            bool isImportant(expr* n);
-            bool isImportant(expr* n, int &val);
-            std::set<expr*> getDependency(expr* n);
+        bool isImportant(expr* n);
+        bool isImportant(expr* n, int &val);
+        bool isRegexVar(expr* n, expr* &regexExpr);
+        std::set<expr*> getDependency(expr* n);
+
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         void new_eq_eh(theory_var, theory_var) override;
@@ -1170,6 +1175,53 @@ namespace smt {
             bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
+
+                /*
+                 * a b c (abc)* --> abc (abc)*
+                 */
+                std::vector<std::vector<zstring>> combineConstStr(std::vector<std::vector<zstring>> regexElements);
+                    bool isRegexStr(zstring str);
+                    bool isUnionStr(zstring str);
+                /*
+                 * remove duplication
+                 */
+                std::vector<std::vector<zstring>> refineVectors(std::vector<std::vector<zstring>> list);
+                    /*
+                    *
+                    */
+                    bool equalStrVector(std::vector<zstring> a, std::vector<zstring> b);
+
+                /*
+                *
+                */
+                std::vector<std::vector<zstring>> parseRegexComponents(zstring str);
+                    /**
+                     * (abc|cde|ghi)*
+                     */
+                    void optimizeFlatAutomaton(zstring &s);
+
+                    /*
+                    * (a)|(b | c) --> {a, b, c}
+                    */
+                    std::set<zstring> extendComponent(zstring s);
+
+                    /*
+                    * (a) | (b) --> {a, b}
+                    */
+                    std::vector<zstring> collectAlternativeComponents(zstring str);
+
+                    /*
+                    *
+                    */
+                    int findCorrespondRightParentheses(int leftParentheses, zstring str);
+
+                    /*
+                    * (a) --> a
+                    */
+                    void removeExtraParentheses(zstring &s);
+
+                zstring underApproxRegex(zstring str);
+                zstring getStdRegexStr(expr* regex);
             /*
              *
              */
@@ -1459,15 +1511,6 @@ namespace smt {
                 zstring parse_regex_content(expr* a);
 
                 zstring parse_regex_full_content(expr* a);
-
-
-                bool isUnionStr(expr* a);
-
-                bool isUnionStr(zstring a);
-
-                std::set<zstring > extendComponent(zstring  s);
-
-                std::vector<zstring> collectAlternativeComponents(zstring  s);
 
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
