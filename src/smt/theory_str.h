@@ -1176,6 +1176,12 @@ namespace smt {
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
 
+                std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
+                /*
+                * (abc)*__XXX -> abc
+                */
+                zstring parse_regex_content(zstring str);
+                zstring parse_regex_content(expr* str);
                 /*
                  * a b c (abc)* --> abc (abc)*
                  */
@@ -1508,10 +1514,6 @@ namespace smt {
                         std::vector<std::vector<int> > &allPossibleSplits
                 );
 
-                zstring parse_regex_content(expr* a);
-
-                zstring parse_regex_full_content(expr* a);
-
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
@@ -1675,6 +1677,16 @@ namespace smt {
                     expr* rhs,
                     ptr_vector<expr> &new_lhs,
                     ptr_vector<expr> &new_rhs);
+
+            /*
+             * cut the same prefix and suffix
+             */
+            void optimizeEquality(
+                    expr* lhs,
+                    std::vector<expr*> rhs,
+                    ptr_vector<expr> &new_lhs,
+                    ptr_vector<expr> &new_rhs);
+
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
                 bool is_importantVar(
                     expr* nn,
