@@ -25,7 +25,6 @@
 
 namespace smt {
 
-
     class theory_str : public theory {
         int m_scope_level = 0;
 

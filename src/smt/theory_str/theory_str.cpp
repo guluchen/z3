@@ -15,7 +15,6 @@
 
 namespace smt {
 
-
     namespace {
         bool IN_CHECK_FINAL = false;
     }
