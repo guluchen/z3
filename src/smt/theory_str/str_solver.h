@@ -244,6 +244,33 @@ namespace smt {
             automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
 
+//        class solver;  // details below
+//
+//        class length_constraint {
+//        public:
+//            struct coeff {
+//                std::map<std::string,int> m_coeffs;
+//                coeff() = default;
+//                coeff(std::map<std::string,int> coeffs) { m_coeffs = coeffs; }
+//                int get_coeff(std::string name) { if (m_coeffs.find(name) != m_coeffs.end()) return m_coeffs[name]; else return 0; }
+//                void combine(std::map<std::string,int> coeffs);
+//                void update(std::string& name, int num) { m_coeffs[name] = num; }
+//                void addition(std::string& name, int num) { m_coeffs[name] = get_coeff(name) + num; }
+//                void negation() { for (auto e : m_coeffs) { m_coeffs[e.first] = -e.second; } }
+//            };
+//        private:
+////            std::map<std::string,expr*> m_origin_strlen_expr;
+//            std::set<coeff> m_path_cond;
+//            std::map<std::string,coeff> m_len_cons;
+//            void propagate_len_cons(std::string name, coeff& tgt_coeff);
+//        public:
+//            std::set<coeff>& get_path_cond() { return m_path_cond; }
+//            std::map<std::string,coeff>& get_len_cons() { return m_len_cons; }
+//            length_constraint(solver::action ac);
+////            coeff& get_len_cons_of_var(std::string name) { return m_len_cons[name]; }
+////            void apply_transform(solver::action ac);
+//        };
+
         class state {
         public:
             using cref = std::reference_wrapper<const state>;
