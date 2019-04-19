@@ -23,6 +23,9 @@
 #include "smt/theory_str/affine_program.h"
 #include "util/dependency.h"
 #include "util/union_find.h"
+#include "util/scoped_ptr_vector.h"
+#include "util/trail.h"
+#include "smt/smt_arith_value.h"
 
 namespace smt {
 
@@ -38,6 +41,7 @@ namespace smt {
                 std::size_t operator()(const element& e) const;
             };
             static const element& null();
+            static const element& multiple();
 
         private:
             static size_t var_num;
@@ -47,6 +51,7 @@ namespace smt {
             std::list<expr*> m_expr;
             string m_shortname;
         public:
+
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v} {
                 m_expr.push_back(e);
                 if(m_type==t::VAR){
@@ -83,7 +88,7 @@ namespace smt {
             static word_term from_variable(const zstring& name, expr* e);
             static bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
-            static bool unequalable(const word_term& w1, const word_term& w2, const std::map<element, size_t>& lb ) ;
+            static bool unequalable(const word_term& w1, const word_term& w2, const std::set<element>&  ) ;
             static void update_next_and_previous_element_maps(const word_term& , std::map<element,element>&, std::map<element,element>& ) ;
 
         private:
@@ -99,13 +104,13 @@ namespace smt {
 
             std::size_t length() const { return m_elements.size(); }
             std::size_t count_const() const;
-            std::size_t minimal_model_length(const std::map<element, size_t>& lb) const {
+            std::size_t minimal_model_length(const std::set<element>& non_emp_var) const {
                 size_t length=0;
 
                 for(auto& e:m_elements) {
                     if (e.typed(element::t::CONST)) length++;
-                    else if (e.typed(element::t::VAR) && lb.find(e) != lb.end())
-                        length += lb.find(e)->second;
+                    else if (e.typed(element::t::VAR) && non_emp_var.count(e))
+                        length ++;
                 }
                 return length;
             }
@@ -159,7 +164,7 @@ namespace smt {
             const element& definition_var() const;
             const word_term& definition_body() const;
             bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
-            bool unsolvable(const std::map<element, size_t>& lb = std::map<element, size_t>()) const;
+            bool unsolvable(const std::set<element>&  = std::set<element>()) const;
             bool in_definition_form() const;
             bool check_heads(const element::t& lht, const element::t& rht) const;
             word_equation trim_prefix() const;
@@ -264,7 +269,7 @@ namespace smt {
             struct hash {
                 std::size_t operator()(const state& s) const;
             };
-            std::map<element, size_t> m_lower_bound;
+            std::set<element> m_non_empty_var;
             enum class transform_strategy {
                 allow_empty_var, not_allow_empty_var, dynamic_empty_var_detection
             };
@@ -301,7 +306,7 @@ namespace smt {
 
             const transform_strategy get_strategy() const { return m_strategy; }
             void set_strategy(transform_strategy st) { m_strategy=st; }
-            bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
+            bool is_non_empty_var(const element& v) const {return m_non_empty_var.count(v);}
             bool in_definition_form() const;
             bool eq_classes_inconsistent() const;
             bool diseq_inconsistent() const;
@@ -407,9 +412,42 @@ namespace smt {
         seq_util m_util_s;
         str::automaton_factory::sptr m_aut_imp;
 
+        bool search_started;
+        typedef union_find<theory_str> th_union_find;
+        typedef trail_stack<theory_str> th_trail_stack;
+        unsigned m_fresh_id;
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
         scoped_vector<str::expr_pair> m_membership_todo;
+        scoped_vector<str::element> m_non_empty_var;
+        scoped_vector<expr_ref> m_block_todo;
+        ptr_vector<enode> m_basicstr_axiom_todo;
+        ptr_vector<enode> m_concat_axiom_todo;
+        ptr_vector<enode> m_concat_eval_todo;
+        ptr_vector<enode> m_library_aware_axiom_todo;
+        obj_hashtable<expr> input_var_in_len;
+        expr_ref_vector string_int_conversion_terms;
+        obj_hashtable<expr> variable_set;
+        expr_ref_vector m_delayed_axiom_setup_terms;
+        svector<std::pair<enode*,enode*> > m_str_eq_todo;
+        expr_ref_vector m_persisted_axiom_todo;
+        expr_ref_vector m_delayed_assertions_todo;
+        obj_hashtable<expr> axiomatized_terms;
+        obj_pair_map<expr, expr, expr*> concat_astNode_map;
+        obj_map<expr, std::set<std::pair<expr*, expr*> > > contain_pair_idx_map;
+        obj_pair_map<expr, expr, expr*> contain_pair_bool_map;
+        expr_ref_vector contains_map;
+        obj_map<enode, std::pair<enode*,enode*>> contain_split_map;
+        expr_ref_vector m_trail; // trail for generated terms
+        obj_hashtable<expr> internal_variable_set;
+        std::map<std::pair<expr*, zstring>, expr*> regex_in_bool_map;
+        obj_map<expr, std::set<zstring> > regex_in_var_reg_str_map;
+        obj_hashtable<expr> regex_terms;
+        obj_map<expr, ptr_vector<expr> > regex_terms_by_string; // S --> [ (str.in.re S *) ]
+        th_union_find m_find;
+        th_trail_stack m_trail_stack;
+        std::map<int, obj_hashtable<expr> > internal_variable_scope_levels;
+        obj_hashtable<expr> regex_variable_set;
     public:
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
@@ -434,35 +472,57 @@ namespace smt {
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
+        void instantiate_basic_string_axioms(enode * str);
+        /*
+        * Instantiate an axiom of the following form:
+        * Length(Concat(x, y)) = Length(x) + Length(y)
+        */
+        void instantiate_concat_axiom(enode * cat);
+        void instantiate_axiom_prefixof(enode * e);
+        void instantiate_axiom_suffixof(enode * e);
+        void instantiate_axiom_contains(enode * e);
+        void instantiate_axiom_charAt(enode * e);
+        void instantiate_axiom_indexof(enode * e);
+        void instantiate_axiom_indexof_extended(enode * _e);
+        void instantiate_axiom_substr(enode * e);
+        void instantiate_axiom_replace(enode * e);
+        void instantiate_axiom_regexIn(enode * e);
+
+        app * mk_strlen(expr * e);
+        expr * mk_string(zstring const& str);
+        expr * mk_string(const char * str);
+        expr * mk_concat(expr * n1, expr * n2);
+        expr * mk_concat_const_str(expr * n1, expr * n2);
+        app * mk_int(int n);
+        app * mk_int(rational & q);
+        app * mk_contains(expr * haystack, expr * needle);
+        app * mk_indexof(expr * haystack, expr * needle);
+        app * mk_regex_rep_var();
+        expr * mk_regexIn(expr * str, expr * regexp);
+        app * mk_unroll(expr * n, expr * bound);
+        app * mk_unroll_bound_var();
+        app * mk_str_var(std::string name);
+        app * mk_int_var(std::string name);
+        app * mk_fresh_const(char const* name, sort* s);
+
+        void track_variable_scope(expr * var);
+        expr * rewrite_implication(expr * premise, expr * conclusion);
+        void assert_implication(expr * premise, expr * conclusion);
+        theory_var get_var(expr * n) const;
+        app * get_ast(theory_var v);
+        expr * get_eqc_value(expr * n, bool & hasEqcValue);
+        void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
+        th_trail_stack& get_trail_stack() { return m_trail_stack; }
+
 
     private:
-        literal mk_eq_empty(expr* n, bool phase = true);
-        expr_ref mk_len(expr* s) const { return expr_ref(m_util_s.str.mk_length(s), get_manager()); }
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         bool is_regex_sort(expr *e) const;
-        bool is_const_fun(expr *e) const;
         expr_ref mk_sub(expr *a, expr *b);
-        expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
-                           expr *e4 = nullptr, sort *sort = nullptr);
-        bool is_tail(expr* s, expr* i, expr* l);
-        void add_tail_axiom(expr* e, expr* s) ;
-        void mk_decompose(expr* e, expr_ref& head, expr_ref& tail);
-        expr_ref mk_nth(expr* s, expr* idx);
-        bool is_skolem(symbol const& s, expr* e) const;
-        expr_ref mk_concat(expr* e1, expr* e2) { return expr_ref(m_util_s.str.mk_concat(e1, e2), get_manager()); }
-        literal mk_seq_eq(expr* a, expr* b);
-        void add_axiom(literal l1, literal l2 = null_literal, literal l3 = null_literal, literal l4 = null_literal, literal l5 = null_literal);
-        bool is_drop_last(expr* s, expr* i, expr* l);
-        void add_drop_last_axiom(expr* e, expr* s);
-        expr_ref mk_last(expr* s);
-        void add_extract_prefix_axiom(expr* e, expr* s, expr* l);
-        literal mk_simplified_literal(expr * _e);
-        bool is_extract_prefix0(expr* s, expr* i, expr* l);
-        bool is_extract_suffix(expr* s, expr* i, expr* l);
-        void add_extract_suffix_axiom(expr* e, expr* s, expr* i);
+
+        zstring get_std_regex_str(expr * regex);
         enode* ensure_enode(expr* e);
-        bool is_eq(expr* e, expr*& a, expr*& b) const;
 
 
 
@@ -470,28 +530,16 @@ namespace smt {
         bool_var mk_bool_var(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
-        void add_axiom(expr *e);
+        void assert_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);
-        void handle_char_at(expr *e);
-        void handle_substr(expr *e);
-        void handle_index_of(expr *e);
-        void handle_prefix(expr *e);
-        void handle_not_prefix(expr *e);
-        void handle_suffix(expr *e);
-        void handle_not_suffix(expr *e);
-        void handle_contains(expr *e);
-        void handle_in_re(expr *e, bool is_true);
+
         void set_conflict(const literal_vector& ls);
         void block_curr_assignment();
         void dump_assignments() const;
-        void string_theory_propagation(expr * ex);
-        void propagate_concat_axiom(enode * cat);
-        void propagate_basic_string_axioms(enode * str);
         bool lenc_check_sat(expr *e);
         bool check_counter_system_lenc(str::solver& solver);
-        void print_ast(expr *e);
-        void print_ctx(context& ctx);
-        bool mini_check_sat(expr *e);
+
+        void set_up_axioms(expr * ex);
     };
 
 }
