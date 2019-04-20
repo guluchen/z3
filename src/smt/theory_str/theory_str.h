@@ -28,6 +28,7 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level = 0;
+
         const theory_str_params& m_params;
         th_rewriter m_rewrite;
         arith_util m_util_a;

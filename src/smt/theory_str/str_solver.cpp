@@ -179,10 +179,11 @@ namespace smt {
         void str::word_term::update_next_and_previous_element_maps(const word_term& w,
                                                                    std::map<element,element> &next, std::map<element,element> &previous){
             if(w.length()==0) return;
-            next.insert({w.get(w.length()-1),str::element::null()});
-            previous.insert({w.get(0),str::element::null()});
+            if(w.get(w.length()-1).type()!=element::t::VAR) next.insert({w.get(w.length()-1),str::element::null()});
+            if(w.get(0).type()!=element::t::VAR) previous.insert({w.get(0),str::element::null()});
 
             for (size_t index = 0; index < w.length() - 1; index++) {
+                if(w.get(index).type()!=element::t::VAR) continue;
                 if (next.count(w.get(index))) {
                     if(next.at(w.get(index)) != w.get(index + 1) ) {
                         next.at(w.get(index)) = str::element::multiple();
@@ -191,11 +192,12 @@ namespace smt {
                     if(w.get(index + 1).type()==element::t::VAR)
                         next.insert({w.get(index),w.get(index + 1)});
                     else
-                        next.insert({w.get(index),element::null()});
+                        next.insert({w.get(index),element::multiple()});
                     //std::cout<<"just added "<<index<<" to next: "<<w.get(index)<<","<<w.get(index + 1)<<std::endl;
                 }
             }
             for (size_t index = 1; index < w.length(); index++) {
+                if(w.get(index).type()!=element::t::VAR) continue;
                 if (previous.count(w.get(index))) {
                     if(previous.at(w.get(index)) != w.get(index - 1) ) {
                         previous.at(w.get(index)) = str::element::multiple();
@@ -204,7 +206,7 @@ namespace smt {
                     if(w.get(index - 1).type()==element::t::VAR) {
                         previous.insert({w.get(index), w.get(index - 1)});
                     }else{
-                        previous.insert({w.get(index), element::null()});
+                        previous.insert({w.get(index), element::multiple()});
                     }
                 }
             }
@@ -1344,7 +1346,9 @@ namespace smt {
                 word_term::update_next_and_previous_element_maps(word_eq.rhs(),next,previous);
             }
             std::set<element> in_tail;
-
+            for(auto& p:previous) {
+                if (on_screen) std::cout << "prev: " << p.first << "," << p.second << std::endl;
+            }
 
             std::map<element,element> merge_map(next);
             for(auto& p:next){
