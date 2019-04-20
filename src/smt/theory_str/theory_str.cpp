@@ -1827,7 +1827,6 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         using namespace str;
-//        print_ctx(get_context());  // test_hlin
         if (m_word_eq_todo.empty()) return FC_DONE;
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
@@ -1836,8 +1835,8 @@ namespace smt {
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
-
         root.remove_single_variable_word_term();
+        if(root.word_eqs().size()==0) return FC_DONE;
         STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference()) {
             block_curr_assignment();
@@ -2043,24 +2042,30 @@ namespace smt {
         while (updated) {
             updated = false;
             for(auto &eq:m_eq_wes){
-                const element* source;
-                const word_term* target;
+                element source =element::null();
+                word_term target;
 
                 if (eq.lhs().length() == 1 && eq.lhs().has_variable() && m_memberships->get(eq.lhs().head())== nullptr ) {
-                    source= &eq.lhs().head();
-                    target= &eq.rhs();
+                    source = eq.lhs().head();
+                    target = eq.rhs();
                     updated =true;
                 } else if (eq.rhs().length() == 1 && eq.rhs().has_variable() && m_memberships->get(eq.rhs().head())== nullptr) {
-                    source= &eq.rhs().head();
-                    target= &eq.lhs();
+                    source = eq.rhs().head();
+                    target = eq.lhs();
                     updated =true;
                 }
                 if(updated){
                     for (auto &eq2:m_eq_wes) {
-                        word_equation eq3 = eq2.replace(*source, *target);
+                        word_equation eq3 = eq2.replace(source, target);
                         if (eq3.lhs() != eq3.rhs()) updated_result.insert(eq3);
                     }
                     m_eq_wes = updated_result;
+                    updated_result.clear();
+                    for (auto &eq2:m_diseq_wes) {
+                        word_equation eq3 = eq2.replace(source, target);
+                        updated_result.insert(eq3);
+                    }
+                    m_diseq_wes = updated_result;
                     updated_result.clear();
                     break;
                 }
