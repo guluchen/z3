@@ -473,6 +473,9 @@ namespace smt {
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         void instantiate_basic_string_axioms(enode * str);
+        bool is_const_fun(expr *const e) const;
+
+
         /*
         * Instantiate an axiom of the following form:
         * Length(Concat(x, y)) = Length(x) + Length(y)
@@ -513,6 +516,7 @@ namespace smt {
         expr * get_eqc_value(expr * n, bool & hasEqcValue);
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         th_trail_stack& get_trail_stack() { return m_trail_stack; }
+        static bool ignore_membership;
 
 
     private:

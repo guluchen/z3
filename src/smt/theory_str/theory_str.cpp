@@ -14,6 +14,7 @@
 
 
 namespace smt {
+    bool theory_str::ignore_membership=false;
 
     namespace str {
         size_t element::var_num=0;
@@ -595,10 +596,12 @@ namespace smt {
             for (const auto& we : s.m_eq_wes) {
                 result += word_equation_hash(we);
             }
-            for (const auto& we : s.m_diseq_wes) {
-                result += word_equation_hash(we);
+            if(!theory_str::ignore_membership) {
+                for (const auto& we : s.m_diseq_wes) {
+                    result += word_equation_hash(we);
+                }
+                result += s.m_memberships->hash();
             }
-            result += s.m_memberships->hash();
             return result;
         }
 
@@ -902,8 +905,10 @@ namespace smt {
         bool state::operator==(const state& other) const {
             return m_strategy == other.m_strategy &&
                    m_eq_wes == other.m_eq_wes ;//&&
-                   //m_diseq_wes == other.m_diseq_wes &&
-                   //*m_memberships == *other.m_memberships;
+                   m_diseq_wes == other.m_diseq_wes &&
+                   (theory_str::ignore_membership?
+                   true:(*m_memberships == *other.m_memberships));
+
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
@@ -1051,6 +1056,12 @@ namespace smt {
         }
 
         bool solver::record_graph::contains(const state& s) const {
+//            STRACE("str", tout<<"[check contains]\n"<<s<<std::endl;);
+//
+//
+//            for(auto& c : m_backward_def){
+//                STRACE("str", tout<<"[state]\n"<<c.first<<std::endl;);
+//            }
             return m_backward_def.find(s) != m_backward_def.end();
         }
 
@@ -1061,7 +1072,8 @@ namespace smt {
         }
 
         void solver::record_graph::add_move(move&& m, const state& s) {
-            SASSERT(contains(m.m_from) && contains(s));
+            SASSERT(contains(m.m_from));
+            SASSERT(contains(s));
             m_backward_def[s].push_back(std::move(m));
         }
 
@@ -2554,9 +2566,9 @@ namespace smt {
 
     void str::word_term::update_next_and_previous_element_maps(const word_term& w,
             std::map<element,element> &next, std::map<element,element> &previous){
+        if(w.length()==0) return;
         next.insert({w.get(w.length()-1),str::element::null()});
         previous.insert({w.get(0),str::element::null()});
-        if(w.length()==0) return;
 
         for (size_t index = 0; index < w.length() - 1; index++) {
             if (next.count(w.get(index))) {
@@ -2565,6 +2577,7 @@ namespace smt {
                 }
             } else {
                 next.insert({w.get(index),w.get(index + 1)});
+                //std::cout<<"just added "<<index<<" to next: "<<w.get(index)<<","<<w.get(index + 1)<<std::endl;
             }
         }
         for (size_t index = 1; index < w.length(); index++) {
@@ -2600,14 +2613,15 @@ namespace smt {
 
         std::map<element,element> merge_map(next);
         for(auto& p:next){
-            if(on_screen) std::cout<<p.first<<","<<p.second<<std::endl;
-
+            if(on_screen) std::cout<<"next: "<<p.first<<","<<p.second<<std::endl;
             if((!previous.count(p.second)) || (previous.at(p.second)==element::multiple())){
                 merge_map.erase(p.first);
             }
         }
 
         for(auto& p:merge_map) {//those cannot be the head of a seq. of elelemnts be merged
+            if(on_screen) std::cout<<"merge: "<<p.first<<","<<p.second<<std::endl;
+
             in_tail.insert(p.second);
         }
 
@@ -2617,9 +2631,13 @@ namespace smt {
 
                 element to_append=p.first;
                 do{
+                    if(on_screen) std::cout<<to_append<<std::flush;
+
                     to_merge.push_back(to_append);
                     to_append = merge_map.at(to_append);
                 }while(merge_map.count(to_append));
+                if(on_screen) std::cout<<to_append<<std::endl;
+
                 if(to_append!=element::null()) to_merge.push_back(to_append);
 
                 merge_list_of_elements(m_eq_wes,to_merge);
@@ -2888,22 +2906,29 @@ namespace smt {
         return word_term::from_variable({ss.str().data()}, e);
     }
 
+    bool theory_str::is_const_fun(expr *const e) const {
+        return is_app(e) && to_app(e)->get_decl()->get_arity() == 0;
+    }
+
     str::state theory_str::mk_state_from_todo() {
         using namespace str;
         state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
-//        STRACE("str", tout << "[Build State]\nmembership todo:\n";);
-//        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
-//        for (const auto& m : m_membership_todo) {
-//            if(is_const_fun(m.first)) {
-//                zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
-//                result.add_membership({element::t::VAR, name, m.first}, m.second);
-//            }else{
-//                std::stringstream ss;
-//                ss << mk_pp(m.first, get_manager());
-//                result.add_membership({element::t::VAR, ss.str().data(), m.first}, m.second);
-//            }
-//            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
-//        }
+
+        STRACE("str", tout << "[Build State]\nmembership todo:\n";);
+        if(!ignore_membership) {
+            STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
+            for (const auto &m : m_membership_todo) {
+                if (is_const_fun(m.first)) {
+                    zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
+                    result.add_membership({element::t::VAR, name, m.first}, m.second);
+                } else {
+                    std::stringstream ss;
+                    ss << mk_pp(m.first, get_manager());
+                    result.add_membership({element::t::VAR, ss.str().data(), m.first}, m.second);
+                }
+                STRACE("str", tout << m.first << " is in " << m.second << '\n';);
+            }
+        }
         STRACE("str", tout << "word equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
         for (const auto& eq : m_word_eq_todo) {
@@ -3078,67 +3103,6 @@ namespace smt {
         if (refinement != nullptr) {
             assert_axiom(refinement);
         }
-    }
-    /*
-     * Returns the simplified concatenation of two expressions,
-     * where either both expressions are constant strings
-     * or one expression is the empty string.
-     * If this precondition does not hold, the function returns NULL.
-     * (note: this function was strTheory::Concat())
-     */
-    expr * theory_str::mk_concat_const_str(expr * n1, expr * n2) {
-        bool n1HasEqcValue = false;
-        bool n2HasEqcValue = false;
-        expr * v1 = get_eqc_value(n1, n1HasEqcValue);
-        expr * v2 = get_eqc_value(n2, n2HasEqcValue);
-        if (m_util_s.str.is_string(v1)) {
-            n1HasEqcValue = true;
-        }
-        if (m_util_s.str.is_string(v2)) {
-            n2HasEqcValue = true;
-        }
-        if (n1HasEqcValue && n2HasEqcValue) {
-            zstring n1_str;
-            m_util_s.str.is_string(v1, n1_str);
-            zstring n2_str;
-            m_util_s.str.is_string(v2, n2_str);
-            zstring result = n1_str + n2_str;
-            return mk_string(result);
-        } else if (n1HasEqcValue && !n2HasEqcValue) {
-            zstring n1_str;
-            m_util_s.str.is_string(v1, n1_str);
-            if (n1_str.empty()) {
-                return n2;
-            }
-        } else if (!n1HasEqcValue && n2HasEqcValue) {
-            zstring n2_str;
-            m_util_s.str.is_string(v2, n2_str);
-            if (n2_str.empty()) {
-                return n1;
-            }
-        }
-        return nullptr;
-    }
-
-    expr * theory_str::get_eqc_value(expr * n , bool & hasEqcValue) {
-        ast_manager &m = get_manager();
-        theory_var curr = get_var(n);
-        if (curr != null_theory_var) {
-            curr = m_find.find(curr);
-            theory_var first = curr;
-
-            do {
-                expr* a = get_ast(curr);
-                if (m_util_s.str.is_string(a)) {
-                    hasEqcValue = true;
-                    return a;
-                }
-                curr = m_find.next(curr);
-            }
-            while (curr != first && curr != null_theory_var);
-        }
-        hasEqcValue = false;
-        return n;
     }
     theory_var theory_str::get_var(expr * n) const {
         if (!is_app(n)) {
