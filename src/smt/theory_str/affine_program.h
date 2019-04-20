@@ -1,3 +1,6 @@
+#ifndef _AFFINE_PRG_H_
+#define _AFFINE_PRG_H_
+
 #include <functional>
 #include <list>
 #include <set>
@@ -167,3 +170,5 @@ namespace smt {
 
     }
 }
+
+#endif /* _AFFINE_PRG_H_ */
