@@ -531,7 +531,7 @@ namespace smt {
             std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
             std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
 
-            bool cs_lenc_check_res = check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = true;//check_counter_system_lenc(solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
