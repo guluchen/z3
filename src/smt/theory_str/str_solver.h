@@ -36,16 +36,18 @@ namespace smt {
                 std::size_t operator()(const element& e) const;
             };
             static const element& null();
+            static const element& multiple();
 
         private:
             static size_t var_num;
             static std::set<element> variables;
             element::t m_type;
             zstring m_value;
-            expr* m_expr;
+            std::list<expr*> m_expr;
             string m_shortname;
         public:
-            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v}, m_expr{e} {
+            element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v} {
+                m_expr.push_back(e);
                 if(m_type==t::VAR){
                     if(variables.find(*this)==variables.end()){
                         m_shortname = "V"+std::to_string(var_num);
@@ -56,10 +58,11 @@ namespace smt {
                     }
                 }
             }
+            element(const std::list<element>&);
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
             const string& shortname() const { return m_shortname; }
-            expr* origin_expr() const { return m_expr; }
+            expr* origin_expr() const { return m_expr.front(); }//TODO::need to consider all elements in m_expr
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -80,13 +83,16 @@ namespace smt {
             static bool prefix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool suffix_const_mismatched(const word_term& w1, const word_term& w2);
             static bool unequalable(const word_term& w1, const word_term& w2, const std::map<element, size_t>& lb ) ;
+            static void update_next_and_previous_element_maps(const word_term& , std::map<element,element>&, std::map<element,element>& ) ;
         private:
             std::list<element> m_elements;
         public:
             word_term() = default;
             word_term(std::initializer_list<element> list);
+            word_term(const std::list<element>& list);
             std::size_t length() const { return m_elements.size(); }
             std::size_t count_const() const;
+            word_term merge_list_of_elements(const std::list<element>&) const;
             std::size_t minimal_model_length(const std::map<element, size_t>& lb) const {
                 size_t length=0;
 
@@ -101,6 +107,7 @@ namespace smt {
             std::set<element> variables() const;
             const std::list<element>& content() const { return m_elements; }
             const element& head() const;
+            element get(size_t index ) const ;
             bool empty() const { return m_elements.empty(); }
             bool has_constant() const;
             bool has_variable() const;
@@ -134,6 +141,7 @@ namespace smt {
             const word_term& rhs() const { return m_rhs; }
             const element& definition_var() const;
             const word_term& definition_body() const;
+            word_equation merge_list_of_elements(const std::list<element>&) const;
             bool empty() const { return m_lhs.empty() && m_rhs.empty(); }
             bool unsolvable(const std::map<element, size_t>& lb = std::map<element, size_t>()) const;
             bool in_definition_form() const;
@@ -197,6 +205,8 @@ namespace smt {
         };
 
         using expr_pair = std::pair<expr_ref, expr_ref>;
+        using tvar_pair = std::pair<theory_var , theory_var >;
+
 
         class basic_memberships : public memberships {
             struct automaton_ref {
@@ -259,6 +269,7 @@ namespace smt {
             bool quadratic_after_add_this_term(const word_term&);
             bool has_non_quadratic_var(const word_term& wt);
             word_term find_alternative_term(const word_term&,const word_term&);
+            static void merge_list_of_elements(std::set<word_equation>&, const std::list<element>&);
         public:
             explicit state(memberships::sptr m) : m_memberships{std::move(m)}, m_strategy{state::transform_strategy::dynamic_empty_var_detection} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
@@ -272,6 +283,7 @@ namespace smt {
             const transform_strategy get_strategy() const { return m_strategy; }
             void set_strategy(transform_strategy st) { m_strategy=st; }
             bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
+            void merge_elements();
             bool in_definition_form() const;
             bool eq_classes_inconsistent() const;
             bool diseq_inconsistent() const;

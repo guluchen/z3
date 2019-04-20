@@ -34,6 +34,11 @@ namespace smt {
         seq_util m_util_s;
         str::automaton_factory::sptr m_aut_imp;
 
+        obj_hashtable<expr> axiomatized_terms;
+        scoped_vector<str::tvar_pair> m_word_eq_var_todo;
+        scoped_vector<str::tvar_pair> m_word_diseq_var_todo;
+
+
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
         scoped_vector<str::expr_pair> m_membership_todo;
