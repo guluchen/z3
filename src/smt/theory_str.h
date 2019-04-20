@@ -1215,6 +1215,8 @@ namespace smt {
                     * (a) | (b) --> {a, b}
                     */
                     std::vector<zstring> collectAlternativeComponents(zstring str);
+                    std::vector<zstring> collectAlternativeComponents(expr* v);
+                    void collectAlternativeComponents(expr* v, std::vector<zstring>& ret);
 
                     /*
                     *
@@ -1354,7 +1356,7 @@ namespace smt {
                         /*
                         *
                         */
-                        expr* connectedVar_atSpecificLocation(
+                        expr_ref connectedVar_atSpecificLocation(
                                 std::pair<expr*, int> a, /* const or regex */
                                 std::vector<std::pair<expr*, int>> elementNames, /* have connected var */
                                 int connectedVarPos,
@@ -1389,7 +1391,7 @@ namespace smt {
                      * constPos: position of const element
                      * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                      */
-                    expr* handle_SubConst_WithPosition_array(
+                    expr_ref handle_SubConst_WithPosition_array(
                             std::pair<expr*, int> a, // connected var
                             std::vector<std::pair<expr*, int>> elementNames,
                             std::string lhs_str, std::string rhs_str,
@@ -1403,7 +1405,7 @@ namespace smt {
                         * regexPos: position of regex element
                         * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
                         */
-                        expr* handle_Regex_WithPosition_array(
+                        expr_ref handle_Regex_WithPosition_array(
                                 std::pair<expr*, int> a, // connected var
                                 std::vector<std::pair<expr*, int>> elementNames,
                                 std::string lhs_str, std::string rhs_str,
@@ -1419,7 +1421,7 @@ namespace smt {
                         * constPos: position of const element
                         * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                         */
-                        expr* handle_Const_WithPosition_array(
+                        expr_ref handle_Const_WithPosition_array(
                                 std::pair<expr*, int> a,
                                 std::vector<std::pair<expr*, int>> elementNames,
                                 std::string lhs_str, std::string rhs_str,
@@ -1517,7 +1519,6 @@ namespace smt {
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
-                std::pair<int, int> collectCharRange(zstring a);
                 std::pair<int, int> collectCharRange(expr* a);
 
                 bool feasibleSplit_const(

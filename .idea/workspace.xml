@@ -101,13 +101,22 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="663">
-              <caret line="6154" column="22" selection-start-line="6154" selection-start-column="22" selection-end-line="6154" selection-end-column="22" />
+            <state relative-caret-position="86">
+              <caret line="8759" column="4" selection-start-line="8759" selection-start-column="4" selection-end-line="8759" selection-end-column="4" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#259938#260042#0" />
                 <element signature="e#261389#261714#0" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="275">
+              <caret line="365" column="10" selection-start-line="365" selection-start-column="10" selection-end-line="365" selection-end-column="10" />
             </state>
           </provider>
         </entry>
@@ -151,8 +160,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="322">
-              <caret line="257" column="13" selection-start-line="257" selection-start-column="13" selection-end-line="257" selection-end-column="13" />
+            <state relative-caret-position="275">
+              <caret line="205" column="21" selection-start-line="205" selection-start-column="21" selection-end-line="205" selection-end-column="21" />
             </state>
           </provider>
         </entry>
@@ -170,7 +179,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="266">
-              <caret line="1674" column="17" selection-start-line="1674" selection-start-column="17" selection-end-line="1674" selection-end-column="17" />
+              <caret line="1521" column="36" selection-start-line="1521" selection-start-column="36" selection-end-line="1521" selection-end-column="36" />
             </state>
           </provider>
         </entry>
@@ -188,16 +197,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>mk_not</find>
-      <find>isRegexVar</find>
-      <find>ctx</find>
-      <find>get_arg</find>
-      <find>***</find>
-      <find>isUnionStr</find>
-      <find>leftParentheses</find>
-      <find>constraintsIfEmpty</find>
-      <find>findCorrespondRightParentheses</find>
-      <find>parseRegexComponents</find>
       <find>removeExtraParentheses</find>
       <find>collectAlternativeComponents</find>
       <find>is_concat</find>
@@ -208,16 +207,26 @@
       <find>m_trail_stack</find>
       <find>eval_cache</find>
       <find>cache(</find>
-      <find>m_trail</find>
       <find>solution_map</find>
       <find>regex</find>
       <find>m_cache</find>
       <find>m_rep.</find>
       <find>parse_regex_content</find>
       <find>createExprFromRegexVector</find>
-      <find>extendComponent</find>
       <find>lhs</find>
       <find>to_app(</find>
+      <find>get_arg</find>
+      <find>stream</find>
+      <find>arg</find>
+      <find>flatArrayRhs</find>
+      <find>7714</find>
+      <find>handle_Regex_WithPosition_array</find>
+      <find>connectedVar_atSpecificLocation</find>
+      <find>lengthConstraint_toConnectedVarConstraint</find>
+      <find>handle_SubConst_WithPosition_array</find>
+      <find>m_trail</find>
+      <find>handle_Const_WithPosition_array</find>
+      <find>extendComponent</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -747,12 +756,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="16757000" />
+      <workItem from="1555596195940" duration="27153000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="161679000" />
+    <option name="totallyTimeSpent" value="172075000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -820,13 +829,6 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_seq_empty.h">
       <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="280">
-          <caret line="239" column="9" selection-start-line="239" selection-start-column="9" selection-end-line="239" selection-end-column="9" />
-        </state>
-      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
       <provider selected="true" editor-type-id="text-editor">
@@ -1079,13 +1081,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="322">
-          <caret line="257" column="13" selection-start-line="257" selection-start-column="13" selection-end-line="257" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="305">
@@ -1097,13 +1092,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="305">
           <caret line="30" column="21" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_array.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="675">
-          <caret line="107" column="59" selection-start-line="107" selection-start-column="52" selection-end-line="107" selection-end-column="59" />
         </state>
       </provider>
     </entry>
@@ -1128,17 +1116,38 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="275">
+          <caret line="205" column="21" selection-start-line="205" selection-start-column="21" selection-end-line="205" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="275">
+          <caret line="365" column="10" selection-start-line="365" selection-start-column="10" selection-end-line="365" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_array.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="675">
+          <caret line="107" column="59" selection-start-line="107" selection-start-column="52" selection-end-line="107" selection-end-column="59" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="266">
-          <caret line="1674" column="17" selection-start-line="1674" selection-start-column="17" selection-end-line="1674" selection-end-column="17" />
+          <caret line="1521" column="36" selection-start-line="1521" selection-start-column="36" selection-end-line="1521" selection-end-column="36" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="663">
-          <caret line="6154" column="22" selection-start-line="6154" selection-start-column="22" selection-end-line="6154" selection-end-column="22" />
+        <state relative-caret-position="86">
+          <caret line="8759" column="4" selection-start-line="8759" selection-start-column="4" selection-end-line="8759" selection-end-column="4" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#259938#260042#0" />
