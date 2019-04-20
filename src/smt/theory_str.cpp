@@ -8762,8 +8762,15 @@ namespace smt {
 	 * (a|b|c)*_xxx --> range <a, c>
 	 */
     std::pair<int, int> theory_str::collectCharRange(expr* a){
-
+        int chars[255];
+        memset(chars, 0, sizeof chars);
         return std::make_pair(0, 0);
+    }
+
+    void theory_str::collectCharRange(expr* a, int &chars[255]){
+        if (u.re.is_plus(a) || u.re.is_star(a)){
+            ...
+        }
     }
 
     bool theory_str::feasibleSplit_const(
@@ -8773,9 +8780,7 @@ namespace smt {
         /* check feasible const split */
         int pos = 0;
         for (unsigned i = 0; i < currentSplit.size(); ++i) {
-//            if (elementNames[i].second == REGEX_CODE || isUnionStr(elementNames[i].first)) {
-//            }
-            if (elementNames[i].second == REGEX_CODE) {
+            if (elementNames[i].second <= REGEX_CODE) {
             }
 
                 /* TODO: bound P */

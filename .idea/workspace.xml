@@ -83,10 +83,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -101,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="86">
-              <caret line="8759" column="4" selection-start-line="8759" selection-start-column="4" selection-end-line="8759" selection-end-column="4" />
+            <state relative-caret-position="555">
+              <caret line="8628" column="41" lean-forward="true" selection-start-line="8628" selection-start-column="41" selection-end-line="8628" selection-end-column="41" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#259938#260042#0" />
@@ -197,8 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>removeExtraParentheses</find>
-      <find>collectAlternativeComponents</find>
       <find>is_concat</find>
       <find>equalStrVector</find>
       <find>underApproxRegex</find>
@@ -225,8 +221,10 @@
       <find>lengthConstraint_toConnectedVarConstraint</find>
       <find>handle_SubConst_WithPosition_array</find>
       <find>m_trail</find>
-      <find>handle_Const_WithPosition_array</find>
       <find>extendComponent</find>
+      <find>handle_Const_WithPosition_array</find>
+      <find>collectCharRange</find>
+      <find>memset</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -756,12 +754,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="27153000" />
+      <workItem from="1555596195940" duration="28307000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="172075000" />
+    <option name="totallyTimeSpent" value="173229000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1146,8 +1144,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="86">
-          <caret line="8759" column="4" selection-start-line="8759" selection-start-column="4" selection-end-line="8759" selection-end-column="4" />
+        <state relative-caret-position="555">
+          <caret line="8628" column="41" lean-forward="true" selection-start-line="8628" selection-start-column="41" selection-end-line="8628" selection-end-column="41" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#259938#260042#0" />
