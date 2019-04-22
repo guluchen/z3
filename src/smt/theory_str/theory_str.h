@@ -36,6 +36,7 @@ namespace smt {
         str::automaton_factory::sptr m_aut_imp;
 
         obj_hashtable<expr> axiomatized_terms;
+        obj_hashtable<expr> propgated_string_theory;
         scoped_vector<str::tvar_pair> m_word_eq_var_todo;
         scoped_vector<str::tvar_pair> m_word_diseq_var_todo;
 
