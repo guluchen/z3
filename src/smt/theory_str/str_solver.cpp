@@ -671,17 +671,32 @@ namespace smt {
         }
 
         std::vector<std::vector<word_term>> state::eq_classes() const {
+            bool on_screen=false;
             std::map<word_term, std::size_t> word_class_tbl;
             std::vector<std::vector<word_term>> classes;
             for (const auto& we : m_eq_wes) {
                 const word_term& w1 = we.lhs();
                 const word_term& w2 = we.rhs();
+                if(on_screen) std::cout<<"From "<<w1<<" = "<<w2<<" we infer that ";
                 const auto& fit1 = word_class_tbl.find(w1);
                 const auto& fit2 = word_class_tbl.find(w2);
-                if (fit1 != word_class_tbl.end() && fit2 != word_class_tbl.end()) continue;
+                const auto class_id1 = fit1->second;
+                const auto class_id2 = fit2->second;
+
+                if (fit1 != word_class_tbl.end() && fit2 != word_class_tbl.end()) {
+                    if(on_screen) std::cout<<"both "<<w1<<" and "<<w2<<" should in the same class, ";
+                    if(on_screen) std::cout<<"move "<<w1<<" and its equivalent word terms from class "<<class_id1<<" to "<<class_id2<<std::endl;
+                    for(const auto& w:classes.at(class_id1)){
+                        classes.at(class_id2).push_back(w);
+                        word_class_tbl[w] = class_id2;
+                    }
+                    classes.at(class_id1).clear();
+                    continue;
+                }
                 if (fit1 == word_class_tbl.end() && fit2 == word_class_tbl.end()) {
                     classes.push_back({w1, w2});
                     const auto class_id = classes.size() - 1;
+                    if(on_screen) std::cout<<"both "<<w1<<" and "<<w2<<" are in class "<<class_id<<std::endl;
                     word_class_tbl[w1] = class_id;
                     word_class_tbl[w2] = class_id;
                     continue;
@@ -690,10 +705,12 @@ namespace smt {
                     const auto class_id = fit1->second;
                     classes.at(class_id).push_back(w2);
                     word_class_tbl[w2] = class_id;
+                    if(on_screen) std::cout<<w2<<" is in class "<<class_id<<std::endl;
                 } else {
                     const auto class_id = fit2->second;
                     classes.at(class_id).push_back(w1);
                     word_class_tbl[w1] = class_id;
+                    if(on_screen) std::cout<<w1<<" is in class "<<class_id<<std::endl;
                 }
             }
             return classes;
@@ -719,9 +736,13 @@ namespace smt {
         }
 
         bool state::eq_classes_inconsistent() const {
+            bool on_screen=false;
             const auto& unequalable = word_term::unequalable;
             for (const auto& cls : eq_classes()) {
+                if (cls.size() == 0) continue;
+                if(on_screen) std::cout<<"[Eq class start]\n";
                 if (cls.size() == 2) {
+                    if(on_screen) std::cout<<cls.at(0)<<"\n"<<cls.at(1)<<"\n";
                     if (unequalable(cls.at(0), cls.at(1), m_lower_bound)) return true;
                     continue;
                 }
@@ -732,11 +753,14 @@ namespace smt {
                     selected.reserve(2);
                     for (std::size_t i = 0; i < cls.size(); i++) {
                         if (select.at(i)) {
+                            if(on_screen) std::cout<<cls.at(i)<<"\n";
                             selected.push_back(cls.at(i));
                         }
                     }
                     if (unequalable(selected.at(0), selected.at(1), m_lower_bound)) return true;
                 } while (std::next_permutation(select.begin(), select.end()));
+                if(on_screen) std::cout<<"[Eq class end]\n";
+
             }
             return false;
         }
@@ -1602,7 +1626,8 @@ namespace smt {
 //        }
 
         std::list<solver::action> solver::transform(const state& s) const {
-            SASSERT(!s.unsolvable_by_check() && s.word_eq_num() != 0);
+            SASSERT(s.word_eq_num() != 0);
+            SASSERT(!s.unsolvable_by_check());
             // no diseq-only handling for now
             return mk_move{s, s.smallest_eq()}();
         }

@@ -157,29 +157,44 @@ namespace smt {
     }
 
     void theory_str::string_theory_propagation(expr * expr) {
-        ast_manager &m = get_manager();
-        context &ctx = get_context();
-        sort *expr_sort = m.get_sort(expr);
-        sort *str_sort = m_util_s.str.mk_string_sort();
 
-        if (expr_sort == str_sort) {
-            enode *n = ctx.get_enode(expr);
-            propagate_basic_string_axioms(n);
-            if (is_app(expr) && m_util_s.str.is_concat(to_app(expr))) {
-                propagate_concat_axiom(n);
+        if(!propgated_string_theory.contains(expr)||true) {
+            propgated_string_theory.insert(expr);
+            ast_manager &m = get_manager();
+            context &ctx = get_context();
+
+            if (!ctx.e_internalized(expr)) {
+                ctx.internalize(expr, false);
             }
-        }
-        // if expr is an application, recursively inspect all arguments
-        if (is_app(expr)) {
-            app *term = to_app(expr);
-            unsigned num_args = term->get_num_args();
-            for (unsigned i = 0; i < num_args; i++) {
-                string_theory_propagation(term->get_arg(i));
+            enode* n = ctx.get_enode(expr);
+            ctx.mark_as_relevant(n);
+
+            sort *expr_sort = m.get_sort(expr);
+            sort *str_sort = m_util_s.str.mk_string_sort();
+
+            if (expr_sort == str_sort) {
+
+                enode *n = ctx.get_enode(expr);
+                propagate_basic_string_axioms(n);
+                if (is_app(expr) && m_util_s.str.is_concat(to_app(expr))) {
+                    propagate_concat_axiom(n);
+                }
+            }
+            // if expr is an application, recursively inspect all arguments
+            if (is_app(expr)) {
+                app *term = to_app(expr);
+                unsigned num_args = term->get_num_args();
+                for (unsigned i = 0; i < num_args; i++) {
+                    string_theory_propagation(term->get_arg(i));
+                }
             }
         }
     }
 
     void theory_str::propagate_concat_axiom(enode * cat) {
+        bool on_screen=false;
+
+
         app * a_cat = cat->get_owner();
         SASSERT(m_util_s.str.is_concat(a_cat));
         ast_manager & m = get_manager();
@@ -206,6 +221,8 @@ namespace smt {
         len_x_plus_len_y = m_util_a.mk_add(len_x, len_y);
         SASSERT(len_x_plus_len_y);
 
+        if(on_screen) std::cout<<"[Concat Axiom] "<<mk_pp(a_cat,m)<<" = "<<mk_pp(a_x,m)<<" + "<<mk_pp(a_y,m)<<std::endl;
+
         // finally assert equality between the two subexpressions
         app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
         SASSERT(eq);
@@ -213,6 +230,8 @@ namespace smt {
     }
 
     void theory_str::propagate_basic_string_axioms(enode * str) {
+        bool on_screen=false;
+
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
@@ -235,6 +254,8 @@ namespace smt {
         app * a_str = str->get_owner();
 
         if (m_util_s.str.is_string(a_str)) {
+            if(on_screen) std::cout<<"[ConstStr Axiom] "<<mk_pp(a_str,m)<<std::endl;
+
             expr_ref len_str(m);
             len_str = m_util_s.str.mk_length(a_str);
             SASSERT(len_str);
@@ -250,6 +271,8 @@ namespace smt {
         } else {
             // build axiom 1: Length(a_str) >= 0
             {
+                if(on_screen) std::cout<<"[Non-Zero Axiom] "<<mk_pp(a_str,m)<<std::endl;
+
                 // build LHS
                 expr_ref len_str(m);
                 len_str = m_util_s.str.mk_length(a_str);
@@ -267,6 +290,8 @@ namespace smt {
 
             // build axiom 2: Length(a_str) == 0 <=> a_str == ""
             {
+                if(on_screen) std::cout<<"[Zero iff Empty Axiom] "<<mk_pp(a_str,m)<<std::endl;
+
                 // build LHS of iff
                 expr_ref len_str(m);
                 len_str = m_util_s.str.mk_length(a_str);
@@ -509,25 +534,26 @@ namespace smt {
         STRACE("str", tout << "root merged:\n" << root <<std::endl;);
 
 
-
         if(root.word_eqs().size()==0) return FC_DONE;
         STRACE("str", tout << "root built:\n" << root << '\n';);
-        if (root.unsolvable_by_inference()) {
+        if (root.unsolvable_by_inference() ) {
+
             block_curr_assignment();
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
-
         solver solver{std::move(root), m_aut_imp};
         if (solver.check() == result::SAT) {
+            counter_system cs = counter_system(solver);
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
             STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
             // stdout for test: print graph size then exit
             std::cout << "graph construction summary:\n";
             std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
             std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+            std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = true;//check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = false;//check_counter_system_lenc(solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
@@ -691,7 +717,7 @@ namespace smt {
 
     void theory_str::add_axiom(expr *const e) {
         if (e == nullptr || get_manager().is_true(e)) return;
-
+//        string_theory_propagation(e);
         context& ctx = get_context();
 //        SASSERT(!ctx.b_internalized(e));
         if(!ctx.b_internalized(e)){
@@ -701,7 +727,7 @@ namespace smt {
         literal l{ctx.get_literal(e)};
         ctx.mark_as_relevant(l);
         ctx.mk_th_axiom(get_id(), 1, &l);
-        STRACE("str", ctx.display_literal_verbose(tout << "[Assert]\n", l) << '\n';);
+        STRACE("str", ctx.display_literal_verbose(tout << "[Assert_e]\n", l) << '\n';);
     }
 
     void theory_str::add_clause(std::initializer_list<literal> ls) {
@@ -714,7 +740,7 @@ namespace smt {
             }
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
-        STRACE("str", ctx.display_literals_verbose(tout << "[Assert]\n", lv) << '\n';);
+        STRACE("str", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
     }
 
     /*
@@ -734,6 +760,8 @@ namespace smt {
         expr_ref x = mk_skolem(symbol("m_char_at_left"), s, i);
         expr_ref y = mk_skolem(symbol("m_char_at_right"), s, mk_sub(mk_sub(len_s, i), one));
         expr_ref xey(m_util_s.str.mk_concat(x, m_util_s.str.mk_concat(e, y)), m);
+        string_theory_propagation(xey);
+
         expr_ref len_x(m_util_s.str.mk_length(x), m);
         expr_ref emp(m_util_s.str.mk_empty(m.get_sort(e)), m);
 
@@ -790,6 +818,10 @@ namespace smt {
             expr_ref y(mk_skolem(symbol("m_substr_right"), s, ls_minus_i_l), m);
             expr_ref xe(m_util_s.str.mk_concat(x, e), m);
             expr_ref xey(m_util_s.str.mk_concat(x, e, y), m);
+
+            string_theory_propagation(xe);
+            string_theory_propagation(xey);
+
             expr_ref zero(m_util_a.mk_int(0), m);
 
             literal i_ge_0 = mk_literal(m_util_a.mk_ge(i, zero));
@@ -835,11 +867,16 @@ namespace smt {
                 expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s);
                 expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s);
                 expr_ref xsy(m_util_s.str.mk_concat(x, s, y), m);
+                string_theory_propagation(xsy);
+
+
                 expr_ref lenx(m_util_s.str.mk_length(x), m);
                 add_clause({~s_eq_empty, i_eq_0});
                 add_clause({~cnt, s_eq_empty, mk_eq(t, xsy, false)});
                 add_clause({~cnt, s_eq_empty, mk_eq(e, lenx, false)});
                 add_clause({~cnt, mk_literal(m_util_a.mk_ge(e, zero))});
+                TRACE("str", tout << "TODO: ignore tightest_prefix\n";);
+
                 // tightest_prefix(s, x);
             } else {
                 expr_ref len_t(m_util_s.str.mk_length(t), m);
@@ -852,12 +889,14 @@ namespace smt {
 
                 expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s, offset);
                 expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s, offset);
+                expr_ref xy(m_util_s.str.mk_concat(x, y), m);
+                string_theory_propagation(xy);
+
                 expr_ref indexof0(m_util_s.str.mk_index(y, s, zero), m);
                 expr_ref offset_p_indexof0(m_util_a.mk_add(offset, indexof0), m);
                 literal offset_ge_0 = mk_literal(m_util_a.mk_ge(offset, zero));
-
                 add_clause(
-                        {~offset_ge_0, offset_ge_len, mk_eq(t, m_util_s.str.mk_concat(x, y), false)});
+                        {~offset_ge_0, offset_ge_len, mk_eq(t, xy, false)});
                 add_clause(
                         {~offset_ge_0, offset_ge_len, mk_eq(m_util_s.str.mk_length(x), offset, false)});
                 add_clause({~offset_ge_0, offset_ge_len, ~mk_eq(indexof0, minus_one, false), i_eq_m1});
@@ -883,6 +922,7 @@ namespace smt {
 
                 expr_ref s = mk_skolem(symbol("m_prefix_right"), x, y);
                 expr_ref xs(m_util_s.str.mk_concat(x, s), m);
+                string_theory_propagation(xs);
                 literal not_e = mk_literal(mk_not({e, m}));
                 add_clause({not_e, mk_eq(y, xs, false)});
             }
@@ -899,11 +939,11 @@ namespace smt {
 
             expr_ref p = mk_skolem(symbol("m_suffix_left"), x, y);
             expr_ref px(m_util_s.str.mk_concat(p, x), m);
+            string_theory_propagation(px);
             literal not_e = mk_literal(mk_not({e, m}));
             add_clause({not_e, mk_eq(y, px, false)});
         }
     }
-
     // e = contains(x, y)
     void theory_str::handle_contains(expr *e) {
         if(!axiomatized_terms.contains(e)||false) {
@@ -911,10 +951,13 @@ namespace smt {
             ast_manager &m = get_manager();
             expr *x = nullptr, *y = nullptr;
             VERIFY(m_util_s.str.is_contains(e, x, y));
-
             expr_ref p = mk_skolem(symbol("m_contains_left"), x, y);
             expr_ref s = mk_skolem(symbol("m_contains_right"), x, y);
             expr_ref pys(m_util_s.str.mk_concat(m_util_s.str.mk_concat(p, y), s), m);
+
+            string_theory_propagation(pys);
+//            expr_ref not_e(m.mk_not(e),m);
+//            add_axiom(m.mk_or(not_e, m.mk_eq(y, pys)));
             literal not_e = mk_literal(mk_not({e, m}));
             add_clause({not_e, mk_eq(x, pys, false)});
         }
