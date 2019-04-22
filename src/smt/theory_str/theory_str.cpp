@@ -527,8 +527,8 @@ namespace smt {
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
-        STRACE("str", tout << "root original:\n" << root <<std::endl;);
-        root.remove_single_variable_word_term();
+//        STRACE("str", tout << "root original:\n" << root <<std::endl;);
+//        root.remove_single_variable_word_term();
         STRACE("str", tout << "root removed single var:\n" << root <<std::endl;);
         root.merge_elements();
         STRACE("str", tout << "root merged:\n" << root <<std::endl;);

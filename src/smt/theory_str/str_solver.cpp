@@ -680,17 +680,22 @@ namespace smt {
                 if(on_screen) std::cout<<"From "<<w1<<" = "<<w2<<" we infer that ";
                 const auto& fit1 = word_class_tbl.find(w1);
                 const auto& fit2 = word_class_tbl.find(w2);
-                const auto class_id1 = fit1->second;
-                const auto class_id2 = fit2->second;
+
 
                 if (fit1 != word_class_tbl.end() && fit2 != word_class_tbl.end()) {
+                    const auto class_id1 = fit1->second;
+                    const auto class_id2 = fit2->second;
                     if(on_screen) std::cout<<"both "<<w1<<" and "<<w2<<" should in the same class, ";
-                    if(on_screen) std::cout<<"move "<<w1<<" and its equivalent word terms from class "<<class_id1<<" to "<<class_id2<<std::endl;
-                    for(const auto& w:classes.at(class_id1)){
-                        classes.at(class_id2).push_back(w);
-                        word_class_tbl[w] = class_id2;
+                    if(class_id1==class_id2) {
+                        if(on_screen) std::cout<<"and both of them are alreday in the same class "<<class_id1<<std::endl;
+                    }else{
+                        if(on_screen) std::cout<<"move "<<w1<<" and its equivalent word terms from class "<<class_id1<<" to "<<class_id2<<std::endl;
+                        for(const auto& w:classes.at(class_id1)){
+                            classes.at(class_id2).push_back(w);
+                            word_class_tbl[w] = class_id2;
+                        }
+                        classes.at(class_id1).clear();
                     }
-                    classes.at(class_id1).clear();
                     continue;
                 }
                 if (fit1 == word_class_tbl.end() && fit2 == word_class_tbl.end()) {

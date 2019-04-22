@@ -21,7 +21,6 @@
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 
-#pragma GCC diagnostic ignored "-Wunused-local-typedef"
 #include <fst/fstlib.h>
 #include <fst/script/print.h>
 
