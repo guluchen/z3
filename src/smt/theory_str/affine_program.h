@@ -62,8 +62,8 @@ namespace smt {
             void add_init_state(const cs_state s) { init.insert(s); };
             void set_final_state(const cs_state s) { final = s; }  // Note: no check of number of states
             bool add_transition(const cs_state s, const cs_assign &assign, const cs_state s_to);  // add one transition
-            bool add_var_expr(const std::string &str, expr* var_exp, const std::string& str_short);
-            const std::map<std::string,std::pair<expr*,std::string>> &get_var_expr() const { return var_expr; };
+            bool add_var_expr(const std::string &str, const std::list<expr*> exprs, const std::string& str_short);
+            const std::map<std::string,std::pair<std::list<expr*>,std::string>> &get_var_expr() const { return var_expr; };
             const unsigned long get_num_states() const { return num_states; };
             const cs_relation &get_relations() const { return relation; };
             void print_counter_system() const;  // printout
@@ -71,7 +71,7 @@ namespace smt {
             bool is_dag();
         private:
             // private attributes
-            std::map<std::string,std::pair<expr*,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3 together with their short names
+            std::map<std::string,std::pair<std::list<expr*>,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3 together with their short names
             unsigned long num_states;
             std::set<cs_state> init;  // initial (success) states
             cs_state final;           // final state (root of word equation)
@@ -122,7 +122,7 @@ namespace smt {
         private: // private attributes
             ap_manager_t *man;
             ap_var_t *variables;
-            std::map<std::string,std::pair<expr*,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3
+            std::map<std::string,std::pair<std::list<expr*>,std::string>> var_expr;  // var names appeared mapped to their internal expressions in z3
             ap_environment_t *env;
             unsigned long num_states;
             unsigned long num_vars;
@@ -139,10 +139,10 @@ namespace smt {
             ap_manager_t* get_ap_manager() { return man; };
             void print_apron_counter_system();
             node& get_final_node() { return nodes[final]; };  // use it like a const method.
-            const std::map<std::string,std::pair<expr*,std::string>>& get_var_expr() { return var_expr; };  // use it like a const method.
+            const std::map<std::string,std::pair<std::list<expr*>,std::string>>& get_var_expr() { return var_expr; };  // use it like a const method.
         };
 
-        class length_constraint {
+        class ap_length_constraint {
         public:
             enum class lcons_type {
                 EQ = 0,    // =
@@ -150,19 +150,19 @@ namespace smt {
             };
             class len_cons {
                 lcons_type m_type;
-                std::map<std::string,std::pair<expr*,long int>> m_var_expr_coeff;
+                std::map<std::string,std::pair<std::list<expr*>,long int>> m_var_expr_coeff;
                 long int m_cst;
             public:
                 len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
-                        const std::map<std::string,std::pair<expr*,std::string>>& var_expr);
+                        const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr);
                 void pretty_print(ast_manager& ast_man);
                 expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
             };
         private:
             std::list<len_cons> m_cons;
         public:
-            length_constraint(ap_manager_t *ap_man, ap_abstract1_t* ap_abs_ptr,
-                   const std::map<std::string,std::pair<expr*,std::string>>& var_expr);
+            ap_length_constraint(ap_manager_t *ap_man, ap_abstract1_t* ap_abs_ptr,
+                   const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr);
             void pretty_print(ast_manager& ast_man);
             expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
             bool empty() { return m_cons.empty(); };

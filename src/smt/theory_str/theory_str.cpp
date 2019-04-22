@@ -476,7 +476,7 @@ namespace smt {
         STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
         // make length constraints from the result of abstraction interpretation
         STRACE("str", tout << "generating length constraints..." << std::endl;);
-        length_constraint lenc = length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
+        ap_length_constraint lenc = ap_length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
                                                    ap_cs.get_var_expr());
         lenc.pretty_print(get_manager());
         if (!lenc.empty()) {

@@ -62,7 +62,7 @@ namespace smt {
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
             const string& shortname() const { return m_shortname; }
-            expr* origin_expr() const { return m_expr.front(); }//TODO::need to consider all elements in m_expr
+            const std::list<expr*>& origin_expr() const { return m_expr; }//TODO::need to consider all elements in m_expr
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }

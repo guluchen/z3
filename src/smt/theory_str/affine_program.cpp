@@ -16,9 +16,9 @@ namespace smt {
             return false;
         }
 
-        bool counter_system::add_var_expr(const std::string &str, expr *var_exp, const std::string& str_short) {
+        bool counter_system::add_var_expr(const std::string &str, std::list<expr*> exprs, const std::string& str_short) {
             if (var_expr.count(str)==0) {
-                var_expr.insert({str,{var_exp,str_short}});
+                var_expr.insert({str,{exprs,str_short}});
                 return true;
             }
             return false;
@@ -170,8 +170,17 @@ namespace smt {
 
         void counter_system::print_var_expr(ast_manager &m) {
             STRACE("str", tout << "[var_name <--> expr] in counter system: " << std::endl;);
-            for (const auto& e: var_expr) {
-                STRACE("str", tout << "[ " << e.first << " ] <--> [ " << mk_pp(e.second.first,m) << " ]" << std::endl;);
+            std::stringstream tmp_str;
+            for (const auto& ve: var_expr) {
+                if (ve.second.first.size() > 1) {  // concat of variables
+                    for (auto& e : ve.second.first) {
+                        tmp_str << mk_pp(e, m);
+                    }
+                    STRACE("str", tout << "[ " << ve.first << " ] <--> [ " << tmp_str.str() << " ]" << std::endl;);
+                }
+                else {
+                    STRACE("str", tout << "[ " << ve.first << " ] <--> [ " << mk_pp(ve.second.first.front(),m) << " ]" << std::endl;);
+                }
             }
         }
 
@@ -318,8 +327,8 @@ namespace smt {
             return mpz_get_si(&c->val.scalar->val.mpq->_mp_num);
         }
 
-        length_constraint::len_cons::len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
-                const std::map<std::string,std::pair<expr*,std::string>>& var_expr) {
+        ap_length_constraint::len_cons::len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
+                const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr) {
             ap_constyp_t *ap_constyp;
             ap_coeff_t *ap_cst, *ap_coeff;
             ap_environment_name_of_dim_t *name_of_dim;
@@ -365,9 +374,19 @@ namespace smt {
             ap_environment_name_of_dim_free(name_of_dim);
         }
 
-        void length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
-            for (const auto& e : m_var_expr_coeff) {
-                STRACE("str", tout << "(" << e.second.second << ")*" << mk_pp(e.second.first,ast_man) << " + ";);
+        void ap_length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
+            std::stringstream tmp_str;
+            for (const auto& ve : m_var_expr_coeff) {
+                if (ve.second.first.size() > 1) {  // concat of variables
+                    tmp_str << "(concat";
+                    for (auto& e : ve.second.first) {
+                        tmp_str << " " << mk_pp(e, ast_man);
+                    }
+                    STRACE("str", tout << "(" << ve.second.second << ")*" << tmp_str.str() << " + ";);
+                }
+                else {
+                    STRACE("str", tout << "(" << ve.second.second << ")*" << mk_pp(ve.second.first.front(), ast_man) << " + ";);
+                }
             }
             STRACE("str", tout << m_cst;);
             switch (m_type) {
@@ -383,22 +402,41 @@ namespace smt {
             STRACE("str", tout << std::endl;);
         }
 
-        void length_constraint::pretty_print(ast_manager &ast_man) {
+        void ap_length_constraint::pretty_print(ast_manager &ast_man) {
             STRACE("str", tout << "total linear constraints: " << m_cons.size() << '\n';);
             for (auto& e : m_cons) {
                 e.pretty_print(ast_man);
             }
         }
 
-        expr* length_constraint::len_cons::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
+        expr* ap_length_constraint::len_cons::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
             expr* ret = ap_util_a.mk_int(m_cst);
+            expr* var_len_exp = nullptr;
+
+            for (const auto& ve : m_var_expr_coeff) {
+                int i = 1;
+                if (ve.second.first.size() > 1) {  // addition of variable lengths if more than one expression
+                    for (auto& e : ve.second.first) {
+                        if (i==1) {
+                            var_len_exp = ap_util_s.str.mk_length(e);
+                        }
+                        else {
+                            var_len_exp = ap_util_a.mk_add(var_len_exp, ap_util_s.str.mk_length(e));
+                        }
+                        i++;
+                    }
+                }
+//                else {
+//                    var_len_exp = ap_util_s.str.mk_length(ve.second.first.front());
+//                }
+            }
+
             for (const auto& e : m_var_expr_coeff) {
                 if (e.second.second == 1) {
-                    ret = ap_util_a.mk_add(ret, ap_util_s.str.mk_length(e.second.first));
+                    ret = ap_util_a.mk_add(ret, var_len_exp);
                 }
                 else {
-                    ret = ap_util_a.mk_add(ret, ap_util_a.mk_mul(ap_util_a.mk_int(e.second.second),
-                                                                 ap_util_s.str.mk_length(e.second.first)));
+                    ret = ap_util_a.mk_add(ret, ap_util_a.mk_mul(ap_util_a.mk_int(e.second.second), var_len_exp));
                 }
             }
             switch (m_type) {
@@ -414,7 +452,7 @@ namespace smt {
             return ret;
         }
 
-        expr* length_constraint::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
+        expr* ap_length_constraint::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
             if (empty()) {
                 std::cout << "ERROR: empty length constraint! export nothing..." << std::endl;
                 return nullptr;
@@ -433,8 +471,8 @@ namespace smt {
             return ret;
         }
 
-        length_constraint::length_constraint(ap_manager_t *ap_man, ap_abstract1_t *ap_abs_ptr,
-                const std::map<std::string,std::pair<expr*,std::string>>& var_expr) {
+        ap_length_constraint::ap_length_constraint(ap_manager_t *ap_man, ap_abstract1_t *ap_abs_ptr,
+                const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr) {
             ap_lincons1_array_t cons_arr = ap_abstract1_to_lincons_array(ap_man, ap_abs_ptr);
             size_t len_cons_arr = ap_lincons1_array_size(&cons_arr);
             ap_lincons1_t ap_cons;
