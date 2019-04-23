@@ -1006,127 +1006,135 @@ namespace smt {
             return os << std::flush;
         }
 
-//        void length_constraint::propagate_len_cons(std::string name, coeff &tgt_coeff) {
-//            if (m_path_cond.size() == 0) return;  // nothing to propagate
-//            for (auto& e : m_path_cond) {
-//                if (e.m_coeffs.find(name) != e.m_coeffs.end()) {
-//                    for (auto& t : tgt_coeff.m_coeffs) {
-//                        if (e.m_coeffs.find(t.first) != e.m_coeffs.end()) {
-//                            e.m_coeffs[t.first] = t.second;
-//                        }
-//                        else {
-//                            e.m_coeffs[t.first] += 1;
-//                        }
-//                    }
-//                }
-//            }
-//
-//        }
-//
-//        length_constraint::length_constraint(solver::action ac) {
-//            // initialize by copy assignment
-//            m_path_cond = ac.first.m_from.get().get_length_constraint().get_path_cond();
-//            m_len_cons = ac.first.m_from.get().get_length_constraint().get_path_cond();
-//
-//            // update constraint by case of move
-//            std::string var_name = ac.first.m_record.front().value().encode();
-//            std::string var_name_to = ac.first.m_record.back().value().encode();
-//            int const_len;
-//            coeff tmp_coeff, tmp_coeff_to;
-//            std::string empty_str = "";
-//            switch(ac.first.m_type) {
-//                case solver::move::t::TO_EMPTY:
-//                    // add path condition: len var = 0
-//                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        m_path_cond.emplace(tmp_coeff);
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff.negation();
-//                        m_path_cond.emplace(tmp_coeff);
-//                    }
-//                    else {
-//                        m_path_cond.emplace(coeff({{var_name, 1}}));
-//                        m_path_cond.emplace(coeff({{var_name, -1}}));
-//                    }
-//                    // update length constraint of each variables
-//                    // ToDo (all cases)
-//
-//                    break;
-//                case solver::move::t::TO_CONST:
-//                    // add path condition: len var = const_len
-//                    const_len = ac.first.m_record.size() - 1;
-//                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff.addition(empty_str,-const_len);
-//                        m_path_cond.emplace(tmp_coeff);
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff.negation();
-//                        tmp_coeff.addition(empty_str,const_len);
-//                        m_path_cond.emplace(tmp_coeff);
-//                    }
-//                    else {
-//                        m_path_cond.emplace(coeff({{var_name, 1},{"",-const_len}}));
-//                        m_path_cond.emplace(coeff({{var_name, -1},{"",const_len}}));
-//                    }
-//                    break;
-//                case solver::move::t::TO_VAR:
-//                    // add path condition: len var1 = len var2
-//                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
-//                        tmp_coeff_to.negation();
-//                        for (auto& e : tmp_coeff_to.get_coeff()) {
-//                            tmp_coeff.addition(e.first,-e.second);
-//                        }
-//                        m_path_cond.emplace(tmp_coeff);
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
-//                        tmp_coeff.negation();
-//                        for (auto& e : tmp_coeff_to.get_coeff()) {
-//                            tmp_coeff.addition(e.first,e.second);
-//                        }
-//                        m_path_cond.emplace(tmp_coeff);
-//                    }
-//                    else {
-//                        m_path_cond.emplace(coeff({{var_name, 1},{var_name_to,-1}}));
-//                        m_path_cond.emplace(coeff({{var_name, -1},{var_name_to,1}}));
-//                    }
-//                    break;
-//                case solver::move::t::TO_CHAR_VAR:
-//                    // add path condition: len var > 0 (len var - 1 >= 0)
-//                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff.addition(empty_str,-1);
-//                        m_path_cond.emplace(tmp_coeff);
-//                    }
-//                    else {
-//                        m_path_cond.emplace(coeff({{var_name, 1},{"",-1}}));
-//                    }
-//                    break;
-//                case solver::move::t::TO_VAR_VAR:
-//                    // add path condition: len var1 - len var2 > 0; len var2 > 0
-//                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
-//                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
-//                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
-//                        tmp_coeff_to.negation();
-//                        for (auto& e : tmp_coeff_to.get_coeff()) {
-//                            tmp_coeff.addition(e.first,-e.second);
-//                        }
-//                        tmp_coeff.addition(empty_str,-1_);
-//                        m_path_cond.emplace(tmp_coeff);
-//                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
-//                        tmp_coeff_to.addition(empty_str,-1);
-//                        m_path_cond.emplace(tmp_coeff_to);
-//                    }
-//                    else {
-//                        m_path_cond.emplace(coeff({{var_name, 1},{var_name_to,-1},{"",-1}}));
-//                        m_path_cond.emplace(coeff({{var_name_to,1},{"",-1}}));
-//                    }
-//                    break;
-//                default:
-//                SASSERT(false);
-//            }
-//        }
+        void length_constraint::append_var_expr(std::set<smt::str::element> &vars) {
+            for (const auto& e : vars) {
+                if (m_var_expr.find(e.value().encode()) != m_var_expr.end()) {
+                    m_var_expr[e.value().encode()] = e.origin_expr();
+                    m_len_cons[e.value().encode()] = coeff({{e.value().encode(),1}});  // add length constraint for this variable
+                }
+            }
+        }
+
+        length_constraint::length_constraint(std::set<element>& vars) {
+            m_var_expr = std::map<std::string,std::list<expr*>>();
+            m_path_cond = std::set<coeff>();
+            m_len_cons = std::map<std::string,coeff>();
+            append_var_expr(vars);
+        }
+
+        length_constraint::length_constraint(solver::action ac) {
+            // initialize by copy assignment
+            m_path_cond = ac.first.m_from.get().get_length_constraint().get_path_cond();
+            m_len_cons = ac.first.m_from.get().get_length_constraint().get_path_cond();
+            std::map<std::string,coeff> tmp_lenc = ac.first.m_from.get().get_length_constraint().get_path_cond();  // for propagate lenc
+
+            // update var_expr
+            append_var_expr(ac.first.m_from.get().variables());
+
+            // update constraint by case of move
+            std::string var_name = ac.first.m_record.front().value().encode();
+            std::string var_name_to = ac.first.m_record.back().value().encode();
+            int const_len;
+            coeff tmp_coeff, tmp_coeff_to;
+            std::string empty_str = "";
+            switch(ac.first.m_type) {
+                case solver::move::t::TO_EMPTY:
+                    // add path condition: len var = 0
+                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        m_path_cond.emplace(tmp_coeff);
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff.negation();
+                        m_path_cond.emplace(tmp_coeff);
+                    }
+                    else {
+                        m_path_cond.emplace(coeff({{var_name, 1}}));
+                        m_path_cond.emplace(coeff({{var_name, -1}}));
+                    }
+                    // update length constraint ( var_name -> 0)
+                    m_len_cons[var_name] = coeff();  // empty
+                    break;
+                case solver::move::t::TO_CONST:
+                    // add path condition: len var = const_len
+                    const_len = ac.first.m_record.size() - 1;
+                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff.addition(empty_str,-const_len);
+                        m_path_cond.emplace(tmp_coeff);
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff.negation();
+                        tmp_coeff.addition(empty_str,const_len);
+                        m_path_cond.emplace(tmp_coeff);
+                    }
+                    else {
+                        m_path_cond.emplace(coeff({{var_name, 1},{"",-const_len}}));
+                        m_path_cond.emplace(coeff({{var_name, -1},{"",const_len}}));
+                    }
+                    // update length constraint ( var_name -> const_len)
+                    m_len_cons[var_name] = coeff({{"", const_len}});  // only constant (const_len)
+                    break;
+                case solver::move::t::TO_VAR:
+                    // add path condition: len var1 = len var2
+                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
+                        tmp_coeff_to.negation();
+                        tmp_coeff.add_coeffs(tmp_coeff_to);
+                        m_path_cond.emplace(tmp_coeff);
+
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
+                        tmp_coeff.negation();
+                        tmp_coeff.add_coeffs(tmp_coeff_to);
+                        m_path_cond.emplace(tmp_coeff);
+                    }
+                    else {
+                        m_path_cond.emplace(coeff({{var_name, 1},{var_name_to,-1}}));
+                        m_path_cond.emplace(coeff({{var_name, -1},{var_name_to,1}}));
+                    }
+                    // update length constraint ( var_name -> var_name_to)
+                    m_len_cons[var_name] = tmp_lenc[var_name_to];  // replace by coeffs of var_name_to
+                    break;
+                case solver::move::t::TO_CHAR_VAR:
+                    // add path condition: len var > 0 (len var - 1 >= 0)
+                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff.addition(empty_str,-1);
+                        m_path_cond.emplace(tmp_coeff);
+                    }
+                    else {
+                        m_path_cond.emplace(coeff({{var_name, 1},{"",-1}}));
+                    }
+                    // update length constraint ( var_name -> var_name - 1)
+                    m_len_cons[var_name].addition(empty_str,-1);  // add -1 to constant in var_name
+                    break;
+                case solver::move::t::TO_VAR_VAR:
+                    // add path condition: len var1 - len var2 > 0; len var2 > 0
+                    if (m_len_cons.find(var_name) != m_len_cons.end()) {
+                        tmp_coeff = coeff(m_len_cons[var_name]);  // copy assignment
+                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
+                        tmp_coeff_to.negation();
+                        tmp_coeff.add_coeffs(tmp_coeff_to);
+                        tmp_coeff.addition(empty_str,-1_);
+                        m_path_cond.emplace(tmp_coeff);
+
+                        tmp_coeff_to = coeff(m_len_cons[var_name_to]);  // copy assignment
+                        tmp_coeff_to.addition(empty_str,-1);
+                        m_path_cond.emplace(tmp_coeff_to);
+                    }
+                    else {
+                        m_path_cond.emplace(coeff({{var_name, 1},{var_name_to,-1},{"",-1}}));
+                        m_path_cond.emplace(coeff({{var_name_to,1},{"",-1}}));
+                    }
+                    // update length constraint ( var_name -> var_name - var_name_to)
+                    tmp_coeff = m_len_cons[var_name_to];
+                    tmp_coeff.negation();
+                    m_len_cons[var_name].add_coeffs(tmp_coeff);  // negate then add
+                    break;
+                default:
+                SASSERT(false);
+            }
+        }
 
         solver::move solver::move::add_record(const element& e) const {
             std::vector<element> r{m_record};

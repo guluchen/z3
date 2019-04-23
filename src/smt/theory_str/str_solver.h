@@ -244,32 +244,7 @@ namespace smt {
             automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
 
-//        class solver;  // details below
-//
-//        class length_constraint {
-//        public:
-//            struct coeff {
-//                std::map<std::string,int> m_coeffs;
-//                coeff() = default;
-//                coeff(std::map<std::string,int> coeffs) { m_coeffs = coeffs; }
-//                int get_coeff(std::string name) { if (m_coeffs.find(name) != m_coeffs.end()) return m_coeffs[name]; else return 0; }
-//                void combine(std::map<std::string,int> coeffs);
-//                void update(std::string& name, int num) { m_coeffs[name] = num; }
-//                void addition(std::string& name, int num) { m_coeffs[name] = get_coeff(name) + num; }
-//                void negation() { for (auto e : m_coeffs) { m_coeffs[e.first] = -e.second; } }
-//            };
-//        private:
-////            std::map<std::string,expr*> m_origin_strlen_expr;
-//            std::set<coeff> m_path_cond;
-//            std::map<std::string,coeff> m_len_cons;
-//            void propagate_len_cons(std::string name, coeff& tgt_coeff);
-//        public:
-//            std::set<coeff>& get_path_cond() { return m_path_cond; }
-//            std::map<std::string,coeff>& get_len_cons() { return m_len_cons; }
-//            length_constraint(solver::action ac);
-////            coeff& get_len_cons_of_var(std::string name) { return m_len_cons[name]; }
-////            void apply_transform(solver::action ac);
-//        };
+        class length_constraint;  // details below
 
         class state {
         public:
@@ -288,6 +263,8 @@ namespace smt {
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
             memberships::sptr m_memberships;
+
+            length_constraint m_lenc;
 
             std::map<element, unsigned> var_occurrence;
             std::map<word_term, std::set<word_term>> eq_class_map;
@@ -332,6 +309,7 @@ namespace smt {
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
             friend std::ostream& operator<<(std::ostream& os, const state& s);
+            length_constraint& get_length_constraint() { return m_lenc; }
         };
 
         enum class result {
@@ -403,6 +381,32 @@ namespace smt {
             result split_var_empty_cases();
             std::queue<state::cref> split_first_level_var_empty();
             std::list<action> transform(const state& s) const;
+
+        };
+
+        class length_constraint {
+        public:
+            struct coeff {  // structure to maintain a map<string,int>
+                std::map<std::string,int> m_coeffs;
+                coeff() = default;
+                coeff(const std::map<std::string,int>& coeff_in) { m_coeffs = coeff_in; }
+                int get_coeff(std::string name) { if (m_coeffs.find(name) != m_coeffs.end()) return m_coeffs[name]; else return 0; }
+                void update(std::string name, int num) { m_coeffs[name] = num; }
+                void addition(std::string name, int num) { m_coeffs[name] = get_coeff(name) + num; }
+                void add_coeffs(coeff& tgt) { for (const auto& e : tgt.m_coeffs) { addition(e.first,e.second); } }
+                void negation() { for (auto e : m_coeffs) { m_coeffs[e.first] = -e.second; } }
+            };
+        private:
+            std::map<std::string,std::list<expr*>> m_var_expr;
+            std::set<coeff> m_path_cond;
+            std::map<std::string,coeff> m_len_cons;
+        public:
+            length_constraint() = default;
+            explicit length_constraint(std::set<element>& vars);  // constructor for root state
+            explicit length_constraint(solver::action ac);  // construct during transform according to action cases
+            std::set<coeff>& get_path_cond() { return m_path_cond; }
+            std::map<std::string,coeff>& get_len_cons() { return m_len_cons; }
+            void append_var_expr(std::set<element>& vars);
 
         };
 
