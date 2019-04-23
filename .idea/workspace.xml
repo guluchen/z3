@@ -83,8 +83,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="555">
-              <caret line="8628" column="41" lean-forward="true" selection-start-line="8628" selection-start-column="41" selection-end-line="8628" selection-end-column="41" />
+            <state relative-caret-position="239">
+              <caret line="2178" column="40" selection-start-line="2178" selection-start-column="34" selection-end-line="2178" selection-end-column="40" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#259938#260042#0" />
@@ -165,19 +167,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="305">
-              <caret line="115" column="17" selection-start-line="115" selection-start-column="14" selection-end-line="115" selection-end-column="17" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="266">
-              <caret line="1521" column="36" selection-start-line="1521" selection-start-column="36" selection-end-line="1521" selection-end-column="36" />
+            <state relative-caret-position="328">
+              <caret line="686" column="44" lean-forward="true" selection-start-line="686" selection-start-column="44" selection-end-line="686" selection-end-column="44" />
             </state>
           </provider>
         </entry>
@@ -185,8 +178,17 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="314">
+            <state relative-caret-position="287">
               <caret line="926" column="20" selection-start-line="926" selection-start-column="20" selection-end-line="926" selection-end-column="20" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="280">
+              <caret line="103" column="17" selection-start-line="103" selection-start-column="17" selection-end-line="103" selection-end-column="17" />
             </state>
           </provider>
         </entry>
@@ -195,24 +197,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>is_concat</find>
-      <find>equalStrVector</find>
-      <find>underApproxRegex</find>
-      <find>trail</find>
-      <find>get_trail_stack</find>
-      <find>m_trail_stack</find>
-      <find>eval_cache</find>
-      <find>cache(</find>
-      <find>solution_map</find>
-      <find>regex</find>
-      <find>m_cache</find>
-      <find>m_rep.</find>
-      <find>parse_regex_content</find>
-      <find>createExprFromRegexVector</find>
-      <find>lhs</find>
-      <find>to_app(</find>
-      <find>get_arg</find>
-      <find>stream</find>
       <find>arg</find>
       <find>flatArrayRhs</find>
       <find>7714</find>
@@ -221,10 +205,28 @@
       <find>lengthConstraint_toConnectedVarConstraint</find>
       <find>handle_SubConst_WithPosition_array</find>
       <find>m_trail</find>
-      <find>extendComponent</find>
       <find>handle_Const_WithPosition_array</find>
-      <find>collectCharRange</find>
       <find>memset</find>
+      <find>args</find>
+      <find>collectCharRange</find>
+      <find>generateSMT</find>
+      <find>generateConstraint02</find>
+      <find>unrollConnectedVariable</find>
+      <find>REGEX_CODE</find>
+      <find>extendComponent</find>
+      <find>getDependency</find>
+      <find>get_all_nodes_in_concat</find>
+      <find>1020</find>
+      <find>getStrValue</find>
+      <find>(str.++ u v)</find>
+      <find>m_dependencies</find>
+      <find>m_root2value.fin</find>
+      <find>subLen</find>
+      <find>collect_eq_nodes</find>
+      <find>backwardDep</find>
+      <find>constructStrFromArray</find>
+      <find>eq_e</find>
+      <find>automata</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -241,8 +243,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_model_generator.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_array_base.cpp" />
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
       </list>
     </option>
   </component>
@@ -754,22 +756,22 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="28307000" />
+      <workItem from="1555596195940" duration="49746000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="173229000" />
+    <option name="totallyTimeSpent" value="194668000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49887386" visible="true" weight="0.30063543" />
-      <window_info id="Structure" order="1" sideWeight="0.5011261" side_tool="true" visible="true" weight="0.30063543" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49774775" visible="true" weight="0.17156473" />
+      <window_info id="Structure" order="1" sideWeight="0.5022523" side_tool="true" visible="true" weight="0.17156473" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.32981133" />
+      <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.32981133" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
@@ -964,13 +966,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="370">
-          <caret line="189" column="18" selection-start-line="189" selection-start-column="18" selection-end-line="189" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/debug.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="472">
@@ -1072,13 +1067,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="314">
-          <caret line="926" column="20" selection-start-line="926" selection-start-column="20" selection-end-line="926" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="305">
@@ -1090,13 +1078,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="305">
           <caret line="30" column="21" selection-start-line="30" selection-start-column="8" selection-end-line="30" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="332">
-          <caret line="66" column="9" selection-start-line="66" selection-start-column="9" selection-end-line="66" selection-end-column="9" />
         </state>
       </provider>
     </entry>
@@ -1135,17 +1116,38 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="332">
+          <caret line="66" column="9" selection-start-line="66" selection-start-column="9" selection-end-line="66" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="280">
+          <caret line="103" column="17" selection-start-line="103" selection-start-column="17" selection-end-line="103" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="287">
+          <caret line="926" column="20" selection-start-line="926" selection-start-column="20" selection-end-line="926" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="1521" column="36" selection-start-line="1521" selection-start-column="36" selection-end-line="1521" selection-end-column="36" />
+        <state relative-caret-position="328">
+          <caret line="686" column="44" lean-forward="true" selection-start-line="686" selection-start-column="44" selection-end-line="686" selection-end-column="44" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="555">
-          <caret line="8628" column="41" lean-forward="true" selection-start-line="8628" selection-start-column="41" selection-end-line="8628" selection-end-column="41" />
+        <state relative-caret-position="239">
+          <caret line="2178" column="40" selection-start-line="2178" selection-start-column="34" selection-end-line="2178" selection-end-column="40" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#259938#260042#0" />

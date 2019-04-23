@@ -641,126 +641,13 @@ namespace smt {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
                                                        << std::endl;);
                                     return to_app(th.mk_string(strValue));
-                                } else SASSERT(false);
-                            }
-                        } else {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m)  << ": NOT important" << std::endl;);
-                            if (len_int != -1) {
-                                zstring strValue;
-                                // non root var
-                                bool constraint01 =
-                                        th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
-                                bool constraint02 = (th.backwardDep.find(node) != th.backwardDep.end() && th.backwardDep[node].size() > 0);
-                                if (constraint01 || constraint02) {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << std::endl;);
-                                    if (!constraint02) {
-                                        // free var
-                                        for (int i = 0; i < len_int; ++i)
-                                            strValue = strValue + th.defaultChar;
-                                        STRACE("str",
-                                               tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
-                                                    << std::endl;);
-                                        return to_app(th.mk_string(strValue));
-                                    } else {
-                                        // component var
-                                        for (const auto &ancestor : th.backwardDep[node]) {
-                                            STRACE("str",
-                                                   tout << __LINE__ << " " << __FUNCTION__
-                                                        << mk_pp(ancestor, m)
-                                                        << std::endl;);
-                                            zstring ancestorValue;
-                                            if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
-                                                            ancestorValue)) {
-                                                STRACE("str",
-                                                       tout << __LINE__ << " " << __FUNCTION__
-                                                            << mk_pp(ancestor, m)
-                                                            << std::endl;);
-                                                if (th.u.str.is_concat(ancestor)) {
-                                                    STRACE("str",
-                                                           tout << __LINE__ << " " << __FUNCTION__
-                                                                << mk_pp(ancestor, m)
-                                                                << std::endl;);
-                                                    if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
-                                                                                 len_int, strValue)) {
-                                                        STRACE("str",
-                                                               tout << __LINE__ << " " << __FUNCTION__ << ": value = "
-                                                                    << strValue
-                                                                    << std::endl;);
-                                                        return to_app(th.mk_string(strValue));
-                                                    }
-                                                }
-
-                                                {
-                                                    STRACE("str",
-                                                           tout << __LINE__ << " " << __FUNCTION__
-                                                                << mk_pp(ancestor, m)
-                                                                << std::endl;);
-                                                    // find in its eq
-                                                    if (th.uState.eq_combination.find(ancestor) !=
-                                                        th.uState.eq_combination.end()) {
-                                                        for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
-                                                            if (th.u.str.is_concat(ancestor_i)) {
-                                                                if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
-                                                                                             m_root2value, len_int,
-                                                                                             strValue)) {
-                                                                    STRACE("str",
-                                                                           tout << __LINE__ << " " << __FUNCTION__
-                                                                                << ": value = " << strValue
-                                                                                << std::endl;);
-                                                                    return to_app(th.mk_string(strValue));
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                            }
-                                            else {
-                                                STRACE("str",
-                                                       tout << __LINE__ << " " << __FUNCTION__
-                                                            << mk_pp(ancestor, m) << strValue
-                                                            << std::endl;);
-                                            }
-                                        }
-
-                                        STRACE("str",
-                                               tout << __LINE__ << " " << __FUNCTION__
-                                                    << mk_pp(node, m)
-                                                    << std::endl;);
-                                    }
-                                } else {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
-                                    // root var
-                                    std::vector<int> val;
-                                    for (int i = 0; i < len_int; ++i)
-                                        val.push_back(-1);
-
-                                    if (th.u.str.is_concat(node))
-                                        constructStr(mg, node, m_root2value, val);
-
-                                    for (const auto &eq : th.uState.eq_combination[node]) {
-                                        constructStr(mg, eq, m_root2value, val);
-                                    }
-
-                                    for (int i = 0; i < len_int; ++i)
-                                        if (val[i] == -1) {
-                                            strValue = strValue + th.defaultChar;
-                                        } else
-                                            strValue = strValue + val[i];
-
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
-                                                       << std::endl;);
-                                    return to_app(th.mk_string(strValue));
                                 }
                             }
-                            else {
-                                STRACE("str",
-                                       tout << __LINE__ << " " << __FUNCTION__
-                                            << mk_pp(node, m)
-                                            << std::endl;);
-                                SASSERT(false);
-                            }
                         }
+
+                        zstring strValue;
+                        constructAsNormal(mg, len_int, m_root2value, strValue);
+                        return to_app(th.mk_string(strValue));
                     }
                     else {
                         STRACE("str",
@@ -776,6 +663,125 @@ namespace smt {
                 }
 
                 return node;
+            }
+
+            bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+                ast_manager & m = mg.get_manager();
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m)  << ": NOT important" << std::endl;);
+                if (len_int != -1) {
+                    // non root var
+                    bool constraint01 =
+                            th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
+                    bool constraint02 = (th.backwardDep.find(node) != th.backwardDep.end() && th.backwardDep[node].size() > 0);
+                    if (constraint01 || constraint02) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << std::endl;);
+                        if (!constraint02) {
+                            // free var
+                            for (int i = 0; i < len_int; ++i)
+                                strValue = strValue + th.defaultChar;
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                                        << std::endl;);
+                            return to_app(th.mk_string(strValue));
+                        } else {
+                            // component var
+                            for (const auto &ancestor : th.backwardDep[node]) {
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__
+                                            << mk_pp(ancestor, m)
+                                            << std::endl;);
+                                zstring ancestorValue;
+                                if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
+                                                ancestorValue)) {
+                                    STRACE("str",
+                                           tout << __LINE__ << " " << __FUNCTION__
+                                                << mk_pp(ancestor, m)
+                                                << std::endl;);
+                                    if (th.u.str.is_concat(ancestor)) {
+                                        STRACE("str",
+                                               tout << __LINE__ << " " << __FUNCTION__
+                                                    << mk_pp(ancestor, m)
+                                                    << std::endl;);
+                                        if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
+                                                                     len_int, strValue)) {
+                                            STRACE("str",
+                                                   tout << __LINE__ << " " << __FUNCTION__ << ": value = "
+                                                        << strValue
+                                                        << std::endl;);
+                                            return to_app(th.mk_string(strValue));
+                                        }
+                                    }
+
+                                    {
+                                        STRACE("str",
+                                               tout << __LINE__ << " " << __FUNCTION__
+                                                    << mk_pp(ancestor, m) << " " << ancestorValue
+                                                    << std::endl;);
+                                        // find in its eq
+                                        if (th.uState.eq_combination.find(ancestor) !=
+                                            th.uState.eq_combination.end()) {
+                                            for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
+                                                if (th.u.str.is_concat(ancestor_i)) {
+                                                    if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
+                                                                                 m_root2value, len_int,
+                                                                                 strValue)) {
+                                                        STRACE("str",
+                                                               tout << __LINE__ << " " << __FUNCTION__
+                                                                    << ": value = " << strValue
+                                                                    << std::endl;);
+                                                        return to_app(th.mk_string(strValue));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                }
+                                else {
+                                    STRACE("str",
+                                           tout << __LINE__ << " " << __FUNCTION__
+                                                << mk_pp(ancestor, m) << strValue
+                                                << std::endl;);
+                                }
+                            }
+
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__
+                                        << mk_pp(node, m)
+                                        << std::endl;);
+                        }
+                    } else {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
+                        // root var
+                        std::vector<int> val;
+                        for (int i = 0; i < len_int; ++i)
+                            val.push_back(-1);
+
+                        if (th.u.str.is_concat(node))
+                            constructStr(mg, node, m_root2value, val);
+
+                        for (const auto &eq : th.uState.eq_combination[node]) {
+                            constructStr(mg, eq, m_root2value, val);
+                        }
+
+                        for (int i = 0; i < len_int; ++i)
+                            if (val[i] == -1) {
+                                strValue = strValue + th.defaultChar;
+                            } else
+                                strValue = strValue + val[i];
+
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                                           << std::endl;);
+                        return to_app(th.mk_string(strValue));
+                    }
+                }
+                else {
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << mk_pp(node, m)
+                                << std::endl;);
+                    SASSERT(false);
+                }
             }
 
             bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
@@ -805,12 +811,19 @@ namespace smt {
                         }
                     }
 
+                    bool completed = true;
                     zstring value;
                     for (int i = 0; i < vValue.size(); ++i) {
-                        if (vValue[i] <= 0 || vValue[i] >= 128)
+                        if (vValue[i] <= 0 || vValue[i] >= 128) {
                             value = value + th.defaultChar;
+                            completed = false;
+                        }
                         else
                             value = value + (char) vValue[i];
+                    }
+
+                    if (completed == false) {
+                        return false;
                     }
 
                     val = value;
@@ -877,28 +890,53 @@ namespace smt {
                 if (th.u.str.is_concat(concat)){
 
                     ptr_vector<expr> leafNodes;
-                    th.get_nodes_in_concat(concat, leafNodes);
+                    th.get_all_nodes_in_concat(concat, leafNodes);
 
                     if (leafNodes.contains(node)) {
-                        int sum = 0;
-                        // get all lens
-                        for (int i = 0; i < leafNodes.size(); ++i)
-                            if (node != leafNodes[i]) {
-                                int subLen = -1;
-                                if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, subLen)) {
-                                    sum += subLen;
-                                }
-                                else {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get len: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
-                                    SASSERT(false);
-                                }
-                            }
-
-                        SASSERT(sum + len <= concatValue.length());
-                        value = concatValue.extract(sum, len);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << std::endl;);
+                        int prefix = findPrefixLen(mg, concat, node, m_root2value);
+                        value = concatValue.extract(prefix, len);
                         return true;
                     }
                     return false;
+                }
+                return false;
+            }
+
+            int findPrefixLen(model_generator & mg, expr* concat, expr* subNode, obj_map<enode, app *> m_root2value){
+
+                if (th.u.str.is_concat(concat)){
+                    int prefix = 0;
+                    findPrefixLen(mg, concat, subNode, m_root2value, prefix);
+                    return prefix;
+                }
+                else
+                    SASSERT(false);
+
+                return -1;
+            }
+
+            bool findPrefixLen(model_generator & mg, expr* concat, expr* subNode, obj_map<enode, app *> m_root2value, int &prefix){
+                if (concat == subNode)
+                    return true;
+                if (th.u.str.is_concat(concat)){
+                    if (!findPrefixLen(mg, to_app(concat)->get_arg(0), subNode, m_root2value, prefix)) {
+                        if (!findPrefixLen(mg, to_app(concat)->get_arg(1), subNode, m_root2value, prefix))
+                            return false;
+                        else
+                            return true;
+                    }
+                    else
+                        return true;
+                }
+                else {
+                    int subLen = -1;
+                    if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
+                        prefix += subLen;
+                    }
+                    else {
+                        SASSERT(false);
+                    }
                 }
                 return false;
             }
@@ -933,7 +971,7 @@ namespace smt {
                             << mk_pp(n->get_owner(), th.get_manager())
                             << std::endl;);
                 app* val = nullptr;
-                if (m_root2value.find(n, val)) {
+                if (m_root2value.find(n->get_root(), val)) {
                     rational valInt;
                     if (th.m_autil.is_numeral(val, valInt)) {
                         value = valInt.get_int32();
@@ -975,7 +1013,7 @@ namespace smt {
                             << mk_pp(n->get_owner(), th.get_manager())
                             << std::endl;);
                 app* val = nullptr;
-                if (m_root2value.find(n, val)) {
+                if (m_root2value.find(n->get_root(), val)) {
                     rational valInt;
                     if (th.m_autil.is_numeral(val, valInt)) {
                         value = valInt.get_int32();
@@ -1000,7 +1038,7 @@ namespace smt {
 
             bool getStrValue(enode* n, obj_map<enode, app *> m_root2value, zstring &value){
                 app* val = nullptr;
-                if (m_root2value.find(n, val)) {
+                if (m_root2value.find(n->get_root(), val)) {
                     zstring valStr;
                     if (th.u.str.is_string(val, valStr)) {
                         value = valStr;
@@ -1519,7 +1557,8 @@ namespace smt {
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
-                std::pair<int, int> collectCharRange(expr* a);
+                std::vector<std::pair<int, int>> collectCharRange(expr* a);
+                void collectCharRange(expr* a, bool chars[255]);
 
                 bool feasibleSplit_const(
                         zstring str,
@@ -1822,6 +1861,7 @@ namespace smt {
         app * mk_arr_var(std::string name);
 
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
+        void get_all_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         expr * get_eqc_value(expr * n, bool & hasEqcValue);
         expr * z3str2_get_eqc_value(expr * n , bool & hasEqcValue);
         expr * get_eqc_next(expr * n);
