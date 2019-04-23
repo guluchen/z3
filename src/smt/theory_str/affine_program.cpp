@@ -426,18 +426,6 @@ namespace smt {
                         i++;
                     }
                 }
-//                else {
-//                    var_len_exp = ap_util_s.str.mk_length(ve.second.first.front());
-//                }
-            }
-
-            for (const auto& e : m_var_expr_coeff) {
-                if (e.second.second == 1) {
-                    ret = ap_util_a.mk_add(ret, var_len_exp);
-                }
-                else {
-                    ret = ap_util_a.mk_add(ret, ap_util_a.mk_mul(ap_util_a.mk_int(e.second.second), var_len_exp));
-                }
             }
             switch (m_type) {
                 case lcons_type::EQ:

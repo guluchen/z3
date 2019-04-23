@@ -553,7 +553,8 @@ namespace smt {
             std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = false;//check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = false;
+            check_counter_system_lenc(solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
