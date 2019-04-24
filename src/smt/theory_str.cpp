@@ -2256,7 +2256,7 @@ namespace smt {
         expr * constStr = (constStr_1 != nullptr) ? constStr_1 : constStr_2;
 
         if (constStr == nullptr) {
-            check_regex_in_lhs_rhs(nn1, nn2); 
+            check_regex_in_lhs_rhs(nn1, nn2);
         } else {
             STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(nn1, m)  << std::endl;);
             // check string vs regex
@@ -9987,29 +9987,25 @@ namespace smt {
         for (const auto& nn : eqc_roots) {
             expr_ref_vector eqList(m);
             expr *value = collect_eq_nodes(nn, eqList);
-            bool imp = false;
-            int maxLen = 0;
-            for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it) {
-                if (!u.str.is_string(*it)) {
-                    expr_ref_vector eqNodes(m);
-                    expr *valueConst = collect_eq_nodes(*it, eqNodes);
-                    if (valueConst != nullptr)
-                        continue;
-
+            if (value == nullptr) {
+                bool imp = false;
+                int maxLen = 0;
+                for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it) {
                     int len = -1;
                     if (is_importantVar(*it, eqc_roots, len)) {
-                        STRACE("str", tout << __LINE__ << "\t "<< mk_pp(*it, m) << ": " << len << std::endl;);
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(*it, m) << ": " << len << std::endl;);
                         imp = true;
                         maxLen = (maxLen == -1 || len == -1) ? -1 : (maxLen < len ? len : maxLen);
                     }
                 }
-            }
 
-            if (imp)
-                for (expr_ref_vector::iterator itor = eqList.begin(); itor != eqList.end(); ++itor){
-                    STRACE("str", tout << __LINE__ << "\t \t"<< mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
-                    result.insert(std::pair<expr*, int>(*itor, maxLen));
-                }
+                if (imp)
+                    for (expr_ref_vector::iterator itor = eqList.begin(); itor != eqList.end(); ++itor) {
+                        STRACE("str",
+                               tout << __LINE__ << "\t \t" << mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
+                        result.insert(std::pair<expr *, int>(*itor, maxLen));
+                    }
+            }
         }
 
         TRACE("str", tout << __FUNCTION__ << std::endl;);
@@ -10032,13 +10028,6 @@ namespace smt {
             int &len){
         ast_manager &m = get_manager();
         len = -1;
-        for (const auto& reg : non_membership_memo)
-            if (reg.first.get() == nn)
-                return true;
-
-        for (const auto& reg : membership_memo)
-            if (reg.first.get() == nn)
-                return true;
 
         for (const auto& we : m_wi_expr_memo){
             if (we.first.get() == nn){
@@ -10222,7 +10211,7 @@ namespace smt {
         for (const auto& node : eqc_roots){
             if (combinations.find(node) == combinations.end()){
                 std::set<expr*> parents;
-                extend_object(node, combinations, causes, parents, importantVars);
+                extend_object(ctx.get_enode(node)->get_root()->get_owner(), combinations, causes, parents, importantVars);
             }
         }
 
@@ -10255,7 +10244,7 @@ namespace smt {
 
         ast_manager &m = get_manager();
         context& ctx = get_context();
-        TRACE("str", tout << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
         if (parents.size() > 0) {
             for (const auto &p : parents)
                 STRACE("str", tout << " --> " << mk_pp(p, m););
@@ -10330,8 +10319,8 @@ namespace smt {
                 }
                 // get lhs
                 STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " == " << mk_pp(*it, m) << std::endl;);
-                expr* arg0 = to_app(*it)->get_arg(0);
-                expr* arg1 = to_app(*it)->get_arg(1);
+                expr* arg0 = ctx.get_enode(to_app(*it)->get_arg(0))->get_root()->get_owner();
+                expr* arg1 = ctx.get_enode(to_app(*it)->get_arg(1))->get_root()->get_owner();
                 
                 STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
                 std::set<expr *> eqLhs;
@@ -10384,25 +10373,6 @@ namespace smt {
                     }
                 }
 
-                // check if value of lhs is empty
-//                if (eqLhs.size() == 1){
-//                    zstring val;
-//                    if (u.str.is_string(*(eqLhs.begin()), val)){
-//                        if (val.length() == 0)
-//                            eqConcat.insert(eqRhs.begin(), eqRhs.end());
-//                    }
-//                }
-//
-//                // check if value of rhs is empty
-//                if (eqRhs.size() == 1 && eqConcat.size() == 0){
-//                    zstring val;
-//                    if (u.str.is_string(*(eqRhs.begin()), val)){
-//                        if (val.length() == 0)
-//                            eqConcat.insert(eqLhs.begin(), eqLhs.end());
-//                    }
-//                }
-//
-//                if (eqConcat.size() == 0) // both LHS and RHS are not empty
                 for (const auto &l : eqLhs)
                     for (const auto &r : eqRhs) {
                         zstring val_lhs, val_rhs;
@@ -10428,42 +10398,9 @@ namespace smt {
                                 eqConcat.insert(tmp);
                             }
                             else {
-
-                                // combining const
-//                                ptr_vector<expr> lVector;
-//                                if (u.str.is_concat(l))
-//                                    get_nodes_in_concat(l, lVector);
-//                                else
-//                                    lVector.push_back(l);
-//
-//                                ptr_vector<expr> rVector;
-//                                if (u.str.is_concat(r))
-//                                    get_nodes_in_concat(r, rVector);
-//                                else
-//                                    rVector.push_back(r);
-//
-//                                zstring val_l;
-//                                zstring val_r;
-//                                if (u.str.is_string(lVector[lVector.size() - 1], val_l) &&
-//                                        u.str.is_string(rVector[0], val_r)) {
-//                                    lVector[lVector.size() - 1] = mk_string(val_l + val_r);
-//                                    for (int i = 1; i < rVector.size(); ++i)
-//                                        lVector.push_back(rVector[i]);
-//
-//                                    expr *tmp = lVector[0];
-//                                    for (int i = 1; i < lVector.size(); ++i) {
-//                                        tmp = u.str.mk_concat(tmp, lVector[i]);
-//                                        m_trail.push_back(tmp);
-//                                    }
-//
-//                                    eqConcat.insert(tmp);
-//                                }
-//                                else
-                                    {
-                                    expr *tmp = u.str.mk_concat(l, r);
-                                    m_trail.push_back(tmp);
-                                    eqConcat.insert(tmp);
-                                }
+                                expr *tmp = u.str.mk_concat(l, r);
+                                m_trail.push_back(tmp);
+                                eqConcat.insert(tmp);
                             }
                         }
                     }
@@ -10471,18 +10408,20 @@ namespace smt {
         }
 
         // continuing refining
-        for (const auto& nn : eqConcat){
-            STRACE("str", tout << __LINE__ << " refining concat " << mk_pp(nn, m) << std::endl;);
-            expr_ref_vector tmp(m);
-            get_const_regex_str_asts_in_node(nn, tmp);
-            if (tmp.size() != 0)
-                result.insert(nn);
-            else {
-                get_important_asts_in_node(nn, importantVars, tmp);
+        for (const auto& nn : eqConcat)
+            if (!is_app(nn) || u.str.is_concat(nn))
+            {
+                STRACE("str", tout << __LINE__ << " refining concat " << mk_pp(nn, m) << std::endl;);
+                expr_ref_vector tmp(m);
+                get_const_regex_str_asts_in_node(nn, tmp);
                 if (tmp.size() != 0)
                     result.insert(nn);
+                else {
+                    get_important_asts_in_node(nn, importantVars, tmp);
+                    if (tmp.size() != 0)
+                        result.insert(nn);
+                }
             }
-        }
 
         if (result.size() == 0)
             result.emplace(object);

@@ -464,6 +464,7 @@ namespace smt {
         public:
             std::map<expr*, std::set<expr*>> eq_combination;
             std::set<std::pair<expr*, int>> importantVars;
+
             int level = -1;
             int z3_level = -1;
 
@@ -565,6 +566,7 @@ namespace smt {
             app*                            node;
             enode*                          arr_node;
             bool                            importantVar;
+            expr*                           regex;
             int                             len;
         public:
 
