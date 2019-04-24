@@ -1803,7 +1803,7 @@ namespace smt {
             void propagate_non_const(expr_ref_vector litems, expr * concat, expr * new_concat);
         void check_regex_in(expr * nn1, expr * nn2);
             void check_regex_in_lhs_rhs(expr * nn1, expr * nn2);
-                expr* construct_concat_overapprox(expr* nn, expr_ref_vector & litems);
+                expr* construct_overapprox(expr* nn, expr_ref_vector & litems);
         void propagate_contain_in_new_eq(expr * n1, expr * n2);
         void check_contain_by_eqc_val(expr * varNode, expr * constNode);
         void check_contain_by_substr(expr * varNode, expr_ref_vector & willEqClass);

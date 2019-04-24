@@ -2162,63 +2162,33 @@ namespace smt {
         }
         else {
 
-            // TODO propagation
-            expr* overApproxConcat = construct_concat_overapprox(new_concat, litems);
+            expr_ref_vector litems_lhs(m);
+            expr* lhs = construct_overapprox(new_concat, litems_lhs);
+            if (lhs == nullptr)
+                return;
             for (expr_ref_vector::iterator itor = eqConcatList.begin(); itor != eqConcatList.end(); itor++) {
-                if (regex_in_var_reg_str_map.contains(*itor)) {
-                    STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(*itor, m) << std::endl;);
+                expr_ref_vector litems_rhs(m);
+                expr* rhs = construct_overapprox(*itor, litems_rhs);
+                if (rhs == nullptr)
+                    return;
+                expr *intersection = u.re.mk_inter(rhs, lhs);
+                m_trail.push_back(intersection);
 
-                    for (std::set<zstring>::iterator strItor = regex_in_var_reg_str_map[*itor].begin();
-                            strItor != regex_in_var_reg_str_map[*itor].end(); strItor++) {
-                        zstring regStr = *strItor;
-                        std::pair<expr *, zstring> key1 = std::make_pair(*itor, regStr);
-                        if (regex_in_bool_map.find(key1) != regex_in_bool_map.end()) {
-                            expr *boolVar = regex_in_bool_map[key1]; // actually the RegexIn term
-                            app *a_regexIn = to_app(boolVar);
-                            expr *regexTerm = a_regexIn->get_arg(1);
-                            expr *intersection = u.re.mk_inter(regexTerm, overApproxConcat);
-                            m_trail.push_back(intersection);
+                eautomaton *au01 = get_automaton(intersection);
+                bool matchRes = !au01->is_empty();
+                STRACE("str", tout << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(rhs, m) << " : "
+                                   << (matchRes ? "yes: " : "no: ") << std::endl;);
+                if (!matchRes) {
+                    if (*itor != concat)
+                        litems_lhs.push_back(ctx.mk_eq_atom(concat, *itor));
 
-                            eautomaton *au01 = get_automaton(intersection);
-                            bool matchRes = !au01->is_empty();
-                            STRACE("str", tout << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(regexTerm, m) << " : "
-                                               << (matchRes ? "yes: " : "no: ") << regStr << std::endl;);
+                    for (int i = 0; i < litems_lhs.size(); ++i)
+                        litems_rhs.push_back(litems_lhs[i].get());
 
-                            if (!matchRes) {
-                                litems.push_back(boolVar);
-                                if (*itor != concat)
-                                    litems.push_back(ctx.mk_eq_atom(concat, *itor));
-
-                                expr_ref implyL(mk_and(litems), m);
-                                STRACE("str", tout << "assert: " << mk_ismt2_pp(mk_not(implyL), m) << std::endl;);
-                                assert_axiom(mk_not(implyL));
-                                litems.pop_back();
-                                if (*itor != concat)
-                                    litems.pop_back();
-                            }
-
-                        }
-                    }
-                }
-                else {
-                    expr* eqNode = construct_concat_overapprox(*itor, litems);
-                    expr *intersection = u.re.mk_inter(eqNode, overApproxConcat);
-                    m_trail.push_back(intersection);
-
-                    eautomaton *au01 = get_automaton(intersection);
-                    bool matchRes = !au01->is_empty();
-                    STRACE("str", tout << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(eqNode, m) << " : "
-                                       << (matchRes ? "yes: " : "no: ") << std::endl;);
-                    if (!matchRes) {
-                        if (*itor != concat)
-                            litems.push_back(ctx.mk_eq_atom(concat, *itor));
-
-                        expr_ref implyL(mk_and(litems), m);
-                        STRACE("str", tout << "assert: " << mk_ismt2_pp(mk_not(implyL), m) << std::endl;);
-                        assert_axiom(mk_not(implyL));
-                        if (*itor != concat)
-                            litems.pop_back();
-                    }
+                    for (int i = 0; i < litems.size(); ++i)
+                        litems_rhs.push_back(litems[i].get());
+                    expr_ref implyL(mk_and(litems_rhs), m);
+                    assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(concat, new_concat)));
                 }
 
                 // upward propagation
@@ -2286,42 +2256,25 @@ namespace smt {
         expr * constStr = (constStr_1 != nullptr) ? constStr_1 : constStr_2;
 
         if (constStr == nullptr) {
-            check_regex_in_lhs_rhs(nn1, nn2);
-            check_regex_in_lhs_rhs(nn2, nn1);
+            check_regex_in_lhs_rhs(nn1, nn2); 
         } else {
             STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(nn1, m)  << std::endl;);
             // check string vs regex
-            expr_ref_vector::iterator itor = eqNodeSet.begin();
-            for (; itor != eqNodeSet.end(); itor++) {
+            expr* lhs = u.re.mk_to_re(constStr);
+            for (expr_ref_vector::iterator itor = eqNodeSet.begin(); itor != eqNodeSet.end(); itor++) {
                 if (regex_in_var_reg_str_map.contains(*itor)) {
-                    STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(*itor, m)  << std::endl;);
-                    std::set<zstring>::iterator strItor = regex_in_var_reg_str_map[*itor].begin();
-                    for (; strItor != regex_in_var_reg_str_map[*itor].end(); strItor++) {
-                        zstring regStr = *strItor;
-                        STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(*itor, m) << ": " << regStr << std::endl;);
-                        zstring constStrValue;
-                        u.str.is_string(constStr, constStrValue);
-                        std::pair<expr*, zstring> key1 = std::make_pair(*itor, regStr);
-                        if (regex_in_bool_map.find(key1) != regex_in_bool_map.end()) {
-                            expr * boolVar = regex_in_bool_map[key1]; // actually the RegexIn term
-                            app * a_regexIn = to_app(boolVar);
-                            expr * regexTerm = a_regexIn->get_arg(1);
+                    expr_ref_vector litems(m);
+                    expr* rhs = construct_overapprox(*itor, litems);
+                    if (rhs == nullptr)
+                        return;
+                    expr *intersection = u.re.mk_inter(rhs, lhs);
+                    m_trail.push_back(intersection);
 
-
-                            expr* tmp = u.re.mk_to_re(constStr);
-                            expr *intersection = u.re.mk_inter(regexTerm, tmp);
-                            m_trail.push_back(intersection);
-
-                            eautomaton *au01 = get_automaton(intersection);
-                            bool matchRes = !au01->is_empty();
-                            STRACE("str", tout << mk_ismt2_pp(nn1, m) << " = " << mk_ismt2_pp(nn2, m) << " : " << (matchRes ? "yes: " : "no: ") << regStr << std::endl;);
-                            expr_ref implyL(ctx.mk_eq_atom(*itor, constStr), m);
-                            if (matchRes) {
-                                assert_implication(implyL, boolVar);
-                            } else {
-                                assert_implication(implyL, mk_not(m, boolVar));
-                            }
-                        }
+                    eautomaton *au01 = get_automaton(intersection);
+                    bool matchRes = !au01->is_empty();
+                    expr_ref implyL(ctx.mk_eq_atom(*itor, constStr), m);
+                    if (!matchRes) {
+                        assert_implication(mk_and(litems), mk_not(implyL));
                     }
                 }
             }
@@ -2331,7 +2284,7 @@ namespace smt {
     void theory_str::check_regex_in_lhs_rhs(expr * nn1, expr * nn2) {
         context &ctx = get_context();
         ast_manager &m = get_manager();
-        TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(nn1, m) << " == " << mk_ismt2_pp(nn2, m) << std::endl;);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(nn1, m) << " == " << mk_ismt2_pp(nn2, m) << std::endl;);
 
         // how to get regex_sort?
         sort *regex_sort = nullptr;
@@ -2340,7 +2293,6 @@ namespace smt {
             app *a_regexIn = to_app(tmp);
             expr *regexTerm = a_regexIn->get_arg(1);
             regex_sort = m.get_sort(regexTerm);
-            TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(regexTerm, m) << std::endl;);
         }
 
         if (regex_sort == nullptr)
@@ -2355,50 +2307,37 @@ namespace smt {
 
         // check all LHS concat vs RHS regex
         for (expr_ref_vector::iterator itor01 = eqNodeSet01.begin(); itor01 != eqNodeSet01.end(); itor01++) {
-            if (u.str.is_concat(to_app(*itor01))) {
-                // check if concat has any const/regex
-                expr_ref_vector litems(m);
-                expr* lhs = construct_concat_overapprox(*itor01, litems);
+            // check if concat has any const/regex
+            expr_ref_vector litems(m);
+            expr* lhs = construct_overapprox(*itor01, litems);
+            if (lhs == nullptr)
+                return;
+            TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
+            for (expr_ref_vector::iterator itor02 = eqNodeSet02.begin(); itor02 != eqNodeSet02.end(); itor02++)
+                if (regex_in_var_reg_str_map.contains(*itor02)) {
+                    expr_ref_vector litems_rhs(m);
+                    expr* rhs_over = construct_overapprox(*itor02, litems_rhs);
+                    if (rhs_over == nullptr)
+                        return;
+                    expr *intersection = u.re.mk_inter(rhs_over, lhs);
+                    m_trail.push_back(intersection);
+                    eautomaton *au01 = get_automaton(intersection);
+                    bool matchRes = !au01->is_empty();
+                    if (!matchRes) {
+                        if (*itor01 != nn1)
+                            litems_rhs.push_back(ctx.mk_eq_atom(nn1, *itor01));
 
-                for (expr_ref_vector::iterator itor02 = eqNodeSet02.begin(); itor02 != eqNodeSet02.end(); itor02++)
-                    if (regex_in_var_reg_str_map.contains(*itor02)) {
-                        std::set<zstring>::iterator strItor = regex_in_var_reg_str_map[*itor02].begin();
-                        for (; strItor != regex_in_var_reg_str_map[*itor02].end(); strItor++) {
-                            zstring regStr = *strItor;
-                            std::pair<expr *, zstring> key1 = std::make_pair(*itor02, regStr);
-                            if (regex_in_bool_map.find(key1) != regex_in_bool_map.end()) {
-                                expr *boolVar = regex_in_bool_map[key1]; // actually the RegexIn term
-                                app *a_regexIn = to_app(boolVar);
-                                expr *regexTerm = a_regexIn->get_arg(1);
-                                expr *intersection = u.re.mk_inter(regexTerm, lhs);
-                                m_trail.push_back(intersection);
+                        for (int i = 0; i < litems.size(); ++i)
+                            litems_rhs.push_back(litems[i].get());
 
-                                eautomaton *au01 = get_automaton(intersection);
-                                bool matchRes = !au01->is_empty();
-                                STRACE("str", tout << mk_ismt2_pp(nn1, m) << " = " << mk_ismt2_pp(nn2, m) << " : "
-                                                   << (matchRes ? "yes: " : "no: ") << regStr << std::endl;);
-
-                                if (!matchRes) {
-                                    litems.push_back(boolVar);
-                                    if (*itor01 != nn1)
-                                        litems.push_back(ctx.mk_eq_atom(nn1, *itor01));
-
-                                    expr_ref implyL(mk_and(litems), m);
-                                    assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(nn1, nn2)));
-
-                                    litems.pop_back();
-                                    if (*itor01 != nn1)
-                                        litems.pop_back();
-                                }
-
-                            }
-                        }
+                        expr_ref implyL(mk_and(litems_rhs), m);
+                        assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(nn1, nn2)));
                     }
-            }
+                }
         }
     }
 
-    expr* theory_str::construct_concat_overapprox(expr* nn, expr_ref_vector & litems){
+    expr* theory_str::construct_overapprox(expr* nn, expr_ref_vector & litems){
         context &ctx = get_context();
         ast_manager &m = get_manager();
 
@@ -2447,28 +2386,41 @@ namespace smt {
                     // if it has languages, take the 1st one
                     bool tmpFound = false;
                     if (regex_in_var_reg_str_map.contains(el)) {
-                        std::set<zstring>::iterator strItor = regex_in_var_reg_str_map[el].begin();
-                        for (; strItor != regex_in_var_reg_str_map[el].end(); strItor++) {
-                            zstring regStr = *strItor;
-                            std::pair<expr *, zstring> key1 = std::make_pair(el, regStr);
-                            if (regex_in_bool_map.find(key1) != regex_in_bool_map.end()) {
-                                expr *boolVar = regex_in_bool_map[key1]; // actually the RegexIn term
-                                app *a_regexIn = to_app(boolVar);
-                                expr *regexTerm = a_regexIn->get_arg(1);
-                                lhs = u.re.mk_concat(lhs, regexTerm);
-                                m_trail.push_back(lhs);
-                                tmpFound = true;
-                                lastIsSigmaStar = false;
-                                litems.push_back(boolVar);
-                                break;
+                        expr* tmp = nullptr;
+                        expr_ref_vector tmpList(m);
+                        for (const auto& we: membership_memo) {
+                            if (we.first.get() == el) {
+                                tmp = tmp == nullptr ? we.second.get() : u.re.mk_inter(we.second.get(), tmp);
+                                tmpList.push_back(u.re.mk_in_re(we.first.get(), we.second.get()));
+                                STRACE("str", tout << __LINE__ << ": " << mk_ismt2_pp(tmp, m) << std::endl;);
                             }
                         }
-                        if (!tmpFound) {
-                            if (!lastIsSigmaStar) {
-                                lhs = u.re.mk_concat(lhs, u.re.mk_full_seq(regex_sort));
-                                m_trail.push_back(lhs);
+
+                        for (const auto& we: non_membership_memo) {
+                            if (we.first.get() == el) {
+                                tmp = tmp == nullptr ? u.re.mk_complement(we.second.get()) : u.re.mk_inter( u.re.mk_complement(we.second.get()), tmp);
+                                tmpList.push_back(mk_not(m, u.re.mk_in_re(we.first.get(), we.second.get())));
+                                STRACE("str", tout << __LINE__ << ": " << mk_ismt2_pp(tmp, m) << std::endl;);
                             }
-                            lastIsSigmaStar = true;
+                        }
+                        STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(nn, m) << " empty " << std::endl;);
+                        eautomaton *au01 = get_automaton(tmp);
+                        STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(nn, m) << " empty " << std::endl;);
+                        bool empty = au01->is_empty();
+                        STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(nn, m) << " empty " << std::endl;);
+
+                        if (empty) {
+                            expr_ref implyL(mk_and(tmpList), m);
+                            assert_implication(implyL, m.mk_false());
+                            return nullptr;
+                        }
+                        else {
+                            for (int i = 0; i < tmpList.size(); ++i)
+                                litems.push_back(tmpList[i].get());
+                            lhs = u.re.mk_concat(lhs, tmp);
+                            STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
+                            m_trail.push_back(lhs);
+                            lastIsSigmaStar = false;
                         }
                     } else {
                         if (!lastIsSigmaStar) {
@@ -11352,7 +11304,7 @@ namespace smt {
         }
         axiomatized_terms.insert(ex);
 
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+        TRACE("str", tout << __LINE__ << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
         {
             zstring regexStr = get_std_regex_str(ex->get_arg(1));
