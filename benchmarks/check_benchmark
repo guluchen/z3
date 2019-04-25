@@ -81,7 +81,7 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         fp.write(f'{log_str}\n')
 
         # record errors for debug
-        if res == 'error':
+        if res == 'error' or res == 'exception':
             print(f'ERROR_REPORT: {out_err}')
             fp_err.write(f'{log_str}\n{out_err}\n\n')
 
