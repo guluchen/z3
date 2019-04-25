@@ -23,9 +23,8 @@
 #include "smt/theory_str/affine_program.h"
 
 namespace smt {
-
+    class theory_str;
     namespace str {
-
         class element {
         public:
             using pair = std::pair<element, element>;
@@ -243,6 +242,103 @@ namespace smt {
             ptr mk_ptr(basic_memberships* m) const;
             automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
+        class length_constraints {
+        private:
+
+            class constraint {
+            public:
+                //maintains a map m_coeffs that represents the inequality SUM_{A in Dom(m_coeffs)} m_coeffs[A]*A >= 0
+                enum class t {
+                    EXPR, GE
+                };
+                static const element& constant(){
+                    return element::null();
+                }
+                constraint(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type;}
+                constraint(const element& var) { m_coeffs.insert({var,1}); type=t::EXPR;}
+                constraint() { m_coeffs.insert({constant(),0}); type=t::GE;}//for initial path constraint
+
+                constraint& operator=(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type; return *this; }
+                expr_ref get_expr(ast_manager& m) const;
+                void neg() {for (auto e : m_coeffs) { m_coeffs[e.first] = -e.second;} }
+                void add(const constraint& tgt) {  for (const auto& e : tgt.m_coeffs) { add(e.first, e.second); } }
+                void minus(const constraint& tgt) { for (const auto& e : tgt.m_coeffs) { add(e.first, -e.second); } }
+                constraint& set_type(t type){this->type=type;return *this;}
+                bool operator<(const constraint& other) const {
+                    if (type < other.type) return true;
+                    if (type > other.type) return false;
+                    return m_coeffs < other.m_coeffs;
+                }
+                std::ostream& print(std::ostream& os) const{
+                    bool is_zero=true;
+                    for(auto e_it = m_coeffs.begin();e_it != m_coeffs.end();++e_it){
+                        if(e_it->second!=0) {
+                            if (e_it->first == element::null()) {
+                                os << e_it->second;
+                            } else if (e_it->second==1){
+                                os << e_it->first;
+                            }else{
+                                os<<e_it->second<<"*"<<e_it->first;
+                            }
+                            is_zero=false;
+                            if(std::next(e_it) != m_coeffs.end()){
+                                os<<" + ";
+                            }
+                        }
+                    }
+                    if(is_zero) os<<0;
+                    if(type==t::GE){
+                        os<<" >= 0";
+                    }
+                    return os;
+                };
+                void add(element name, int num) { m_coeffs[name] = get_coeff(name) + num; }
+
+            private:
+                t type;
+                std::map<element,int> m_coeffs;
+                int get_coeff(element name) { if (m_coeffs.count(name)>0) return m_coeffs[name]; else return 0; }
+                void update(element name, int num) { m_coeffs[name] = num; }
+            };
+
+            std::set<constraint> m_path_cond;
+            std::map<element,constraint> m_len_cons;
+        public:
+
+            length_constraints() = default;
+            length_constraints(const std::set<element>& vars);  // constructor for root state
+            length_constraints(const length_constraints& other){
+                m_path_cond=other.m_path_cond;
+                m_len_cons=other.m_len_cons;
+            };  // copy constructor
+
+            expr_ref get_path_cond(ast_manager& m) const;
+            expr_ref get_len_cons(const element& e, ast_manager& m) const;
+            length_constraints assign_prefix(const element& var, const element& ch) const;
+            length_constraints assign_as(const element& var, const element& as_var) const;
+            length_constraints assign_const(const element& var, const word_term& tgt) const;
+            length_constraints assign_empty(const element& var, const element& non_zero_var) const;
+            length_constraints assign_empty_all(const std::set<element>& vars) const;
+            length_constraints assign_prefix_var(const element& var, const element& prefix) const;
+
+            void merge_list_of_elements(const std::list<element>&);
+
+            std::ostream& print_path_cond(std::ostream& os) const {
+                for(auto& p:m_path_cond){
+                    p.print(os)<<std::endl;
+                }
+                return os;
+            }
+            std::ostream& print_len_cons(std::ostream& os) const {
+                for(auto& lc:m_len_cons){
+                    os<<lc.first<<"_cur = ";
+                    lc.second.print(os)<<std::endl;
+                }
+                return os;
+            }
+            friend std::ostream& operator<<(std::ostream& os, const length_constraints& s);
+
+        };
 
         class state {
         public:
@@ -261,6 +357,7 @@ namespace smt {
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
             memberships::sptr m_memberships;
+            length_constraints m_length;
 
             std::map<element, unsigned> var_occurrence;
             std::map<word_term, std::set<word_term>> eq_class_map;
@@ -275,12 +372,15 @@ namespace smt {
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
+
             memberships::sptr get_memberships() const { return m_memberships; }
             const std::set<word_equation>& word_eqs() const { return m_eq_wes; }
             const word_equation& smallest_eq() const;
             const word_equation& only_one_eq_left() const;
             var_relation var_rel_graph() const;
             const transform_strategy get_strategy() const { return m_strategy; }
+            void initialize_length_constraint(const std::set<element>& var) { m_length={var}; }
+
             void set_strategy(transform_strategy st) { m_strategy=st; }
             bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
             void merge_elements();
@@ -302,9 +402,11 @@ namespace smt {
             state assign_as(const element& var, const element& as_var) const;
             std::list<state> assign_prefix(const element& var, const element& ch) const;
             std::list<state> assign_prefix_var(const element& var, const element& prefix) const;
+            void set_length(const length_constraints& lc);
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
             friend std::ostream& operator<<(std::ostream& os, const state& s);
+            bool is_reachable(ast_manager& m, context& ctx, theory_str& th) const;
         };
 
         enum class result {
@@ -315,7 +417,7 @@ namespace smt {
         public:
             struct move {
                 enum class t {
-                    TO_EMPTY,
+                    TO_EMPTY = 0,
                     TO_CONST,
                     TO_VAR,
                     TO_VAR_VAR,
@@ -351,6 +453,7 @@ namespace smt {
                 const std::unordered_map<state,std::list<move>,state::hash>& access_map() const {return m_backward_def;}
             };
         private:
+            std::list<state> m_unchecked_leaves;
             result m_status = result::UNKNOWN;
             record_graph m_records;
             state::cref m_rec_root;
@@ -361,7 +464,12 @@ namespace smt {
             explicit solver(state&& root, automaton_factory::sptr af);
             bool in_status(const result& t) const { return m_status == t; }
             bool should_explore_all() const;
+
+            bool unfinished();
+            void resume();
+            std::list<state> get_last_leaf_states();
             result check();
+
             const record_graph& get_graph() const { return m_records; };
             const std::list<state::cref>& get_success_leaves() const { return m_rec_success_leaves; };
             const state::cref get_root() const { return m_rec_root; };
@@ -380,6 +488,22 @@ namespace smt {
         };
 
     }
+
+    class seq_expr_solver : public expr_solver {
+        kernel m_kernel;
+        ast_manager m;
+    public:
+        seq_expr_solver(ast_manager& m, smt_params& fp):
+                m(m),m_kernel(m, fp){}
+
+        lbool check_sat(expr* e) override {
+            m_kernel.push();
+            m_kernel.assert_expr(e);
+            lbool r = m_kernel.check();
+            m_kernel.pop(1);
+            return r;
+        }
+    };
 
 }
 

@@ -205,10 +205,13 @@ namespace smt {
         }
 
         lbool zaut::symbol_solver::check_sat(expr *const e) {
+            STRACE("str", tout << __LINE__ << " enter " << __FILE__<<":"<< __func__ << std::endl;);
+
             m_kernel.push();
             m_kernel.assert_expr(e);
             const lbool r = m_kernel.check();
             m_kernel.pop(1);
+            STRACE("str", tout << __LINE__ << " leave " << __FILE__<<":"<< __func__ << std::endl;);
             return r;
         }
 

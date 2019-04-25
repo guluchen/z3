@@ -147,16 +147,19 @@ namespace smt {
 
 
     void theory_str::init_search_eh() {
-        STRACE("str", tout << "init_search_eh\n";);
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
         context& ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
         for (unsigned i = 0; i < nFormulas; ++i) {
             expr * ex = ctx.get_asserted_formula(i);
                 string_theory_propagation(ex);
         }
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+
     }
 
     void theory_str::string_theory_propagation(expr * expr) {
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
 
         if(!propgated_string_theory.contains(expr)||true) {
             propgated_string_theory.insert(expr);
@@ -189,9 +192,13 @@ namespace smt {
                 }
             }
         }
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+
     }
 
     void theory_str::propagate_concat_axiom(enode * cat) {
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+
         bool on_screen=false;
 
 
@@ -221,12 +228,14 @@ namespace smt {
         len_x_plus_len_y = m_util_a.mk_add(len_x, len_y);
         SASSERT(len_x_plus_len_y);
 
-        if(on_screen) std::cout<<"[Concat Axiom] "<<mk_pp(a_cat,m)<<" = "<<mk_pp(a_x,m)<<" + "<<mk_pp(a_y,m)<<std::endl;
+        if(on_screen) std::cout<<"[Concat Axiom] "<<mk_pp(len_xy,m)<<" = "<<mk_pp(len_x,m)<<" + "<<mk_pp(len_y,m)<<std::endl;
 
         // finally assert equality between the two subexpressions
         app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
         SASSERT(eq);
         add_axiom(eq);
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+
     }
 
     void theory_str::propagate_basic_string_axioms(enode * str) {
@@ -527,22 +536,32 @@ namespace smt {
         state&& root = mk_state_from_todo();
         STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
-//        STRACE("str", tout << "root original:\n" << root <<std::endl;);
+        STRACE("str", tout << "root original:\n" << root <<std::endl;);
 //        root.remove_single_variable_word_term();
-        STRACE("str", tout << "root removed single var:\n" << root <<std::endl;);
+//        STRACE("str", tout << "root removed single var:\n" << root <<std::endl;);
         root.merge_elements();
         STRACE("str", tout << "root merged:\n" << root <<std::endl;);
 
 
         if(root.word_eqs().size()==0) return FC_DONE;
-        STRACE("str", tout << "root built:\n" << root << '\n';);
         if (root.unsolvable_by_inference() ) {
-
+        STRACE("str", tout << "proved unsolvable by inference\n";);
             block_curr_assignment();
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
         solver solver{std::move(root), m_aut_imp};
+        while(solver.unfinished()){
+            solver.resume();
+            std::list<smt::str::state> to_check=solver.get_last_leaf_states();
+            for(auto& s:to_check){
+               if(s.is_reachable(get_manager(),get_context(),*this)){
+                   std::cout<<"Leaf node reachable: \n"<<s<<std::endl;
+                   return FC_DONE;
+               }
+            }
+        }
+
         if (solver.check() == result::SAT) {
             counter_system cs = counter_system(solver);
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
@@ -553,14 +572,14 @@ namespace smt {
             std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = false;
-            check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = true;
+            //check_counter_system_lenc(solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
             if (cs_lenc_check_res) {
                 IN_CHECK_FINAL = false;
-                return FC_DONE;
+                return FC_GIVEUP;
             }  // will leave this if block if lenc_check_sat returns false
         }
         block_curr_assignment();
@@ -712,26 +731,40 @@ namespace smt {
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
         }
 
+        result.initialize_length_constraint(result.variables());
         result.remove_useless_diseq();
         return result;
     }
 
     void theory_str::add_axiom(expr *const e) {
-        if (e == nullptr || get_manager().is_true(e)) return;
-//        string_theory_propagation(e);
-        context& ctx = get_context();
-//        SASSERT(!ctx.b_internalized(e));
-        if(!ctx.b_internalized(e)){
-            ctx.internalize(e, false);
+
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+        STRACE("str", tout << " number of asserted axiom " << axiomatized_terms.size() << std::endl;);
+        for(auto& axiom:axiomatized_terms){
+            STRACE("str", tout << " asserted axiom " << axiom << std::endl;);
         }
-        ctx.internalize(e, false);
-        literal l{ctx.get_literal(e)};
-        ctx.mark_as_relevant(l);
-        ctx.mk_th_axiom(get_id(), 1, &l);
-        STRACE("str", ctx.display_literal_verbose(tout << "[Assert_e]\n", l) << '\n';);
+        STRACE("str", tout << "add_axiom: " <<e<< std::endl;);
+
+        if(!axiomatized_terms.contains(e)||false) {
+            axiomatized_terms.insert(e);
+            if (e == nullptr || get_manager().is_true(e)) return;
+//        string_theory_propagation(e);
+            context &ctx = get_context();
+//        SASSERT(!ctx.b_internalized(e));
+            if (!ctx.b_internalized(e)) {
+                ctx.internalize(e, false);
+            }
+            ctx.internalize(e, false);
+            literal l{ctx.get_literal(e)};
+            ctx.mark_as_relevant(l);
+            ctx.mk_th_axiom(get_id(), 1, &l);
+            STRACE("str", ctx.display_literal_verbose(tout << "[Assert_e]\n", l) << '\n';);
+        }
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
 
     void theory_str::add_clause(std::initializer_list<literal> ls) {
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
         context& ctx = get_context();
         literal_vector lv;
         for (const auto& l : ls) {
@@ -742,6 +775,7 @@ namespace smt {
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
         STRACE("str", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
 
     /*

@@ -113,7 +113,10 @@ namespace smt {
             class symbol_solver : public expr_solver {
                 kernel m_kernel;
             public:
-                symbol_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {}
+                symbol_solver(ast_manager& m, smt_params& p) : m_kernel{m, p} {
+                    STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+                    STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+                }
                 lbool check_sat(expr *e) override;
             };
             struct dependency_ref {

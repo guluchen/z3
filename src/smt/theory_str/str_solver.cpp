@@ -179,8 +179,25 @@ namespace smt {
         void str::word_term::update_next_and_previous_element_maps(const word_term& w,
                                                                    std::map<element,element> &next, std::map<element,element> &previous){
             if(w.length()==0) return;
-            if(w.get(w.length()-1).type()!=element::t::VAR) next.insert({w.get(w.length()-1),str::element::null()});
-            if(w.get(0).type()!=element::t::VAR) previous.insert({w.get(0),str::element::null()});
+            if(w.get(w.length()-1).type()==element::t::VAR) {
+                if(next.count(w.get(w.length()-1))){
+                    if(next.at(w.get(w.length()-1)) != str::element::null() ) {
+                        next.at(w.get(w.length()-1)) = str::element::multiple();
+                    }
+                }else {
+                    next.insert({w.get(w.length() - 1), str::element::null()});
+                }
+            };
+            if(w.get(0).type()==element::t::VAR){
+                if(previous.count(w.get(0))){
+                    if(previous.at(w.get(0)) != str::element::null() ) {
+                        previous.at(w.get(0)) = str::element::multiple();
+                    }
+                }else {
+                    previous.insert({w.get(0),str::element::null()});
+                }
+
+            }
 
             for (size_t index = 0; index < w.length() - 1; index++) {
                 if(w.get(index).type()!=element::t::VAR) continue;
@@ -638,6 +655,172 @@ namespace smt {
             return std::accumulate(as.begin(), as.end(), empty, mk_union)->determinize();
         }
 
+        expr_ref length_constraints::constraint::get_expr(ast_manager& m) const{//TODO: test if it fits the invariant of Z3
+            STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+            bool on_screen =false;
+            seq_util m_util_s(m);
+            arith_util m_util_a(m);
+            expr_ref ret(m);
+            for(auto & conf:m_coeffs){
+                if(on_screen) std::cout<<conf.second<<"*"<<conf.first<<std::endl;
+                if(conf.first!=element::null()) {
+                    expr_ref length(m);
+                    for (auto &e:conf.first.origin_expr()) {
+                        if (!length) length = {m_util_s.str.mk_length(e), m};
+                        else length = {m_util_a.mk_add(length, m_util_s.str.mk_length(e)), m};
+                    }
+                    expr_ref const_mul_var_length{m_util_a.mk_mul(m_util_a.mk_int(conf.second), length), m};
+
+
+                    if (!ret) ret = const_mul_var_length;
+                    else ret = {m_util_a.mk_add(ret, const_mul_var_length), m};
+                }else{
+                    if (!ret) ret = {m_util_a.mk_int(conf.second),m};
+                    else ret = {m_util_a.mk_add(ret, m_util_a.mk_int(conf.second)), m};
+                }
+            }
+
+            if(type==t::GE){
+                ret = {m_util_a.mk_ge(ret, m_util_a.mk_int(0))};
+            }
+            STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+            return ret;
+        }
+
+        length_constraints::length_constraints(const std::set<element>& vars){
+            for(auto& var:vars){
+                m_len_cons.insert({var,{var}});
+            }
+            m_path_cond.insert({});
+        }
+
+        expr_ref length_constraints::get_path_cond(ast_manager& m) const{
+            bool on_screen=true;
+            STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+
+            expr_ref ret(m);
+            for(auto& c:m_path_cond){
+                if(on_screen) std::cout<<"[Path Condition]"<<mk_pp(c.get_expr(m),m)<<std::endl;
+
+                if(!ret){ret=c.get_expr(m);}
+                else {ret = {m.mk_and(ret,c.get_expr(m)),m};}
+            }
+            STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+            return ret;
+        }
+        expr_ref length_constraints::get_len_cons(const element& e, ast_manager& m) const{
+            if(m_len_cons.count(e)>0){
+                return m_len_cons.at(e).get_expr(m);
+            }else{
+                return {m.mk_true(),m};
+            }
+
+        }
+        length_constraints length_constraints::assign_prefix(const element& x, const element& a) const{
+            //x -> a.x
+            length_constraints ret(*this);
+            SASSERT(m_len_cons.count(x)>0);
+            ret.m_len_cons.at(x).add(constraint::constant(), -1);
+            constraint ex = ret.m_len_cons.at(x);
+
+            ret.m_path_cond.insert(ex.set_type(constraint::t::GE));//set m_len_cons[x]>0
+            return ret;
+        };
+        length_constraints length_constraints::assign_as(const element& x, const element& y) const{
+            // x -> y
+            length_constraints ret(*this);
+            SASSERT(m_len_cons.count(x)>0);
+            SASSERT(m_len_cons.count(y)>0);
+            constraint ex_minus_ey = ret.m_len_cons.at(x);
+            ex_minus_ey.minus(ret.m_len_cons.at(y));
+            constraint ey_minus_ex = ret.m_len_cons.at(y);
+            ey_minus_ex.minus(ret.m_len_cons.at(x));
+
+            ret.m_len_cons.at(x) = ret.m_len_cons.at(y);
+            ret.m_path_cond.insert(ey_minus_ex.set_type(constraint::t::GE));//set m_len_cons[y]>=m_len_cons[x]
+            ret.m_path_cond.insert(ex_minus_ey.set_type(constraint::t::GE));//set m_len_cons[x]>=m_len_cons[y]
+
+            return ret;
+        };
+        length_constraints length_constraints::assign_const(const element& x, const word_term& tgt) const{
+            // x -> string(tgt)
+            length_constraints ret(*this);
+            SASSERT(m_len_cons.count(x)>0);
+            constraint ex_minus_len_tgt = ret.m_len_cons.at(x);
+            ex_minus_len_tgt.add(constraint::constant(), -tgt.length());
+            constraint len_tgt_minus_ex = ret.m_len_cons.at(x);
+            len_tgt_minus_ex.neg();
+            len_tgt_minus_ex.add(constraint::constant(), tgt.length());
+            ret.m_len_cons.at(x).minus(ret.m_len_cons.at(x));
+            ret.m_len_cons.at(x).add(constraint::constant(), tgt.length());
+            ret.m_path_cond.insert(ex_minus_len_tgt.set_type(constraint::t::GE));//set m_len_cons[x] >= |tgt|
+            ret.m_path_cond.insert(len_tgt_minus_ex.set_type(constraint::t::GE));//set m_len_cons[x] >= |tgt|
+
+            return ret;
+        };
+        length_constraints length_constraints::assign_empty(const element& x, const element& non_zero_var) const{
+            // x -> epsilon
+
+            length_constraints ret(*this);
+
+            SASSERT(m_len_cons.count(x)>0);
+            constraint neg_ex = ret.m_len_cons.at(x);
+            constraint ex = ret.m_len_cons.at(x);
+            neg_ex.neg();
+            ret.m_len_cons.at(x).minus(ret.m_len_cons.at(x));
+            ret.m_path_cond.insert(ex.set_type(constraint::t::GE));//set m_len_cons[x] >= 0
+            ret.m_path_cond.insert(neg_ex.set_type(constraint::t::GE));//set -m_len_cons[x] >= 0
+            return ret;
+        }
+        length_constraints length_constraints::assign_empty_all(const std::set<element>& vars) const{
+            // no constraint on all variables
+            length_constraints ret(*this);
+
+            for(auto& v:vars){
+                ret = ret.assign_empty(v,v);
+            }
+            return ret;
+        };
+        length_constraints length_constraints::assign_prefix_var(const element& y, const element& x) const{
+            // x ->yx
+            length_constraints ret(*this);
+            SASSERT(m_len_cons.count(x)>0);
+            SASSERT(m_len_cons.count(y)>0);
+            constraint ex_miuns_ey = ret.m_len_cons.at(x);
+            ex_miuns_ey.minus(ret.m_len_cons.at(y));
+            constraint ey = ret.m_len_cons.at(y);
+
+            ret.m_len_cons.at(x).minus(ret.m_len_cons.at(y));
+
+            ret.m_path_cond.insert(ex_miuns_ey.set_type(constraint::t::GE));//set m_len_cons[x]-m_len_cons[y]>=0
+            ret.m_path_cond.insert(ey.set_type(constraint::t::GE));//set m_len_cons[y]>=0
+            return ret;
+        };
+
+        void length_constraints::merge_list_of_elements(const std::list<element>& to_merge) {
+            SASSERT(m_path_cond.size()==0);
+            element merged(to_merge);
+            constraint sum;
+            sum.set_type(constraint::t::EXPR);
+            for(auto& e:to_merge){
+                SASSERT(m_len_cons.count(e)>0);
+                sum.add(m_len_cons[e]);
+                m_len_cons.erase(e);
+            }
+            m_len_cons.insert({merged,sum});
+
+
+        };
+
+        std::ostream& operator<<(std::ostream& os, const length_constraints& lc) {
+            lc.print_len_cons(os);
+            lc.print_path_cond(os);
+
+            return os;
+        }
+
+
+
         std::size_t state::hash::operator()(const state& s) const {
             static const auto word_equation_hash{word_equation::hash{}};
             std::size_t result{22447};
@@ -718,6 +901,14 @@ namespace smt {
                     if(on_screen) std::cout<<w1<<" is in class "<<class_id<<std::endl;
                 }
             }
+            for(auto& c: classes){
+                if(on_screen)  std::cout<<"[class] ";
+                for(auto& t: c){
+                    if(on_screen)  std::cout<<"["<<t<<"]";
+                }
+                if(on_screen)  std::cout<<std::endl;
+            }
+
             return classes;
         }
 
@@ -849,6 +1040,10 @@ namespace smt {
             m_memberships->set(var, re);
         }
 
+        void state::set_length(const length_constraints& lc){
+            m_length=lc;
+        }
+
         state state::assign_empty(const element& var, const element& non_zero_var) const {
             SASSERT(var.typed(element::t::VAR));
 
@@ -862,6 +1057,8 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.remove(var));
             }
+            result.set_length(m_length.assign_empty(var,non_zero_var));
+
             return result;
         }
 
@@ -884,6 +1081,8 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.remove_all(vars));
             }
+            result.set_length(m_length.assign_empty_all(vars));
+
             return result;
         }
 
@@ -902,6 +1101,8 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.replace(var, tgt));
             }
+            result.set_length(m_length.assign_const(var,tgt));
+
             return result;
         }
 
@@ -919,6 +1120,8 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.replace(var, {as_var}));
             }
+            result.set_length(m_length.assign_as(var,as_var));
+
             return result;
         }
 
@@ -945,8 +1148,10 @@ namespace smt {
                 for (const auto& wine : wines) {
                     s.add_word_diseq(wine);
                 }
+                s.set_length(m_length.assign_prefix(var,ch));
                 result.emplace_back(std::move(s));
             }
+
             return result;
         }
 
@@ -973,11 +1178,25 @@ namespace smt {
                 for (const auto& wine : wines) {
                     s.add_word_diseq(wine);
                 }
+                s.set_length(m_length.assign_prefix_var(var,prefix));
                 result.emplace_back(std::move(s));
             }
             return result;
         }
+        bool state::is_reachable(ast_manager& m, context& ctx, theory_str& th) const {
+            STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+            bool on_screen=true;
+            expr_ref to_check= m_length.get_path_cond(m);
+            if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
+//            for(auto& v:variables()){
+//                to_check=m.mk_and(to_check,m_length.get_len_cons(v,m));
+//            }
 
+            seq_expr_solver csolver(m, ctx.get_fparams());
+            lbool chk_res = csolver.check_sat(to_check);
+            STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+            return chk_res;
+        };
         bool state::operator==(const state& other) const {
             return m_strategy == other.m_strategy &&
                    m_eq_wes == other.m_eq_wes &&
@@ -1002,6 +1221,9 @@ namespace smt {
                 os << "not (" << we << ")\n";
             }
             os << s.m_memberships<<std::endl;
+
+            s.m_length.print_path_cond(os);
+            s.m_length.print_len_cons(os);
 
             return os << std::flush;
         }
@@ -1151,7 +1373,7 @@ namespace smt {
         }
 
         solver::solver(state&& root, automaton_factory::sptr af)
-                : m_rec_root{m_records.add_state(std::move(root))}, m_aut_maker{std::move(af)} {
+                : m_rec_root{m_records.add_state(std::move(root))}, m_aut_maker{std::move(af)}{
             m_pending.push(m_rec_root);
         }
 
@@ -1159,18 +1381,21 @@ namespace smt {
             return true;
         }
 
-        result solver::check() {
-            if (in_status(result::SAT)) return m_status;
-            SASSERT(m_pending.size() == 1);
-            if (!check_linear_membership(m_pending.top())) return m_status = result::UNSAT;
+        void solver::resume(){
+            m_unchecked_leaves.clear();
+            if (m_pending.size() == 1 && !check_linear_membership(m_pending.top())) return;
             STRACE("str", tout << "[Check SAT]\n";);
-            while (!m_pending.empty()) {
+            while (!m_pending.empty()&&m_unchecked_leaves.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
 
+                string action_type_string[5] = {"TO_EMPTY","TO_CONST","TO_VAR","TO_VAR_VAR","TO_CHAR_VAR"};
 
                 STRACE("str", tout << "from:\n" << curr_s << '\n';);
                 for (auto& action : transform(curr_s)) {
+                    STRACE("str", tout <<action_type_string[static_cast<int>(action.first.m_type)]<<" ";);
+
+
                     if (m_records.contains(action.second)) {
                         m_records.add_move(std::move(action.first), action.second);
                         STRACE("str", tout << "already visited:\n" << action.second << '\n';);
@@ -1187,7 +1412,9 @@ namespace smt {
                         var_relation&& var_rel = s.var_rel_graph();
                         if (var_rel.is_straight_line() &&
                             check_straight_line_membership(var_rel, s.get_memberships())) {
-                            if (finish_after_found(s)) return m_status;
+                            STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
+                            m_rec_success_leaves.emplace_back(s);
+                            m_unchecked_leaves.emplace_back(s);
                             continue;
                         }
                     }
@@ -1212,8 +1439,27 @@ namespace smt {
 
             }
 
+        }
+
+        bool solver::unfinished(){
+            if(m_pending.empty()){
+                m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
+            }
+            if (in_status(result::UNKNOWN)) return true;
+            else return false;
+        }
+
+        std::list<state> solver::get_last_leaf_states(){
+            return m_unchecked_leaves;
+        }
+
+
+        result solver::check() {
+
             return m_status = m_rec_success_leaves.empty() ? result::UNSAT : result::SAT;
         }
+
+
         string element::abbreviation_to_fullname(){
             string ret;
             for(auto& var:element::variables){
@@ -1315,15 +1561,9 @@ namespace smt {
             return true;
         }
 
-        bool solver::finish_after_found(const state& s) {
-            STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
-            m_rec_success_leaves.emplace_back(s);
-            if (!should_explore_all()) {
-                m_status = result::SAT;
-                return true;
-            }
-            return false;
-        }
+
+
+
 
         const state& solver::add_sibling_ext_record(const state& s, state&& sib, const element& v) {
             const state& added = m_records.add_state(std::move(sib));
@@ -1410,6 +1650,9 @@ namespace smt {
 
                     merge_list_of_elements(m_eq_wes,to_merge);
                     merge_list_of_elements(m_diseq_wes,to_merge);
+
+                    m_length.merge_list_of_elements(to_merge);
+
 //               TODO: update membership constraints for merged elements
 //                element merged(to_merge);
 //                m_memberships
