@@ -329,7 +329,7 @@ public:
         family_id    m_fid;
     public:
         re(seq_util& u): m(u.m), m_fid(u.m_fid) {}
-
+        family_id get_family_id() const { return m_fid; }
         sort* mk_re(sort* seq) { parameter param(seq); return m.mk_sort(m_fid, RE_SORT, 1, &param); }
 
         app* mk_to_re(expr* s) { return m.mk_app(m_fid, OP_SEQ_TO_RE, 1, &s); }

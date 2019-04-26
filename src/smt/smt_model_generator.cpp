@@ -307,7 +307,7 @@ namespace smt {
                       enode * n = curr.get_enode();
                       SASSERT(n->get_root() == n);
                       sort * s = m_manager.get_sort(n->get_owner());
-                      tout << curr << " " << mk_pp(s, m_manager);
+                      tout << curr << " " << mk_pp(n->get_owner(), m_manager) << " " << mk_pp(s, m_manager);
                       tout << " is_fresh: " << root2proc[n]->is_fresh() << "\n";
                   }
               });

@@ -570,20 +570,22 @@ namespace smt {
             int                             len;
         public:
 
-            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, enode* arr_node, int len = -1):
+            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, enode* arr_node, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
                     importantVar(importantVar),
                     arr_node(arr_node),
+                    regex(regex),
                     len(len){
             }
 
-            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, int len = -1):
+            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
                     importantVar(importantVar),
+                    regex(regex),
                     len(len){
             }
 
@@ -647,6 +649,15 @@ namespace smt {
                             }
                         }
 
+                        if (regex != nullptr) {
+                            zstring strValue;
+                            if (constructFromRegex(mg, len_int, m_root2value, strValue)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
+                                                   << std::endl;);
+                                return to_app(th.mk_string(strValue));
+                            }
+                        }
+
                         zstring strValue;
                         constructAsNormal(mg, len_int, m_root2value, strValue);
                         return to_app(th.mk_string(strValue));
@@ -665,6 +676,98 @@ namespace smt {
                 }
 
                 return node;
+            }
+
+            bool constructFromRegex(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+                ast_manager & m = mg.get_manager();
+                std::vector<zstring> elements = collectAlternativeComponents(regex);
+                if (th.u.re.is_union(regex)) {
+                    SASSERT(elements.size() > 0);
+                    for (int i = 0; i < elements.size(); ++i) {
+                        if (elements[i].length() == len_int){
+                            strValue = elements[i];
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+                else if (th.u.re.is_to_re(regex)) {
+                    SASSERT(elements.size() == 1);
+                    SASSERT(elements[0].length() == len_int);
+                    strValue = elements[0];
+                    return true;
+                }
+                else if (th.u.re.is_star(regex) || th.u.re.is_plus(regex)) {
+                    zstring valueStr("");
+                    for (int i = 0; i < elements.size(); ++i) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << elements[i] << std::endl;);
+                    }
+                    if (createStringWithLength(elements, valueStr, len_int)) {
+                        strValue = valueStr;
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+            }
+
+            bool createStringWithLength(std::vector<zstring> elements, zstring &currentStr, int remainLength){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": currentStr: "  << currentStr << std::endl;);
+                if (remainLength == 0)
+                    return true;
+
+                for (const auto& s : elements) {
+                    if (s.length() <= remainLength) {
+                        int x = remainLength / s.length();
+                        int bak_len = currentStr.length();
+                        for (int j = 0; j < x; ++j)
+                            currentStr  = currentStr + s;
+
+                        if (remainLength % s.length() == 0) {
+                            return true;
+                        }
+                        else {
+                            int tmpRemainLength = remainLength % s.length();
+                            while (currentStr.length() > bak_len) {
+                                if (createStringWithLength(elements, currentStr, tmpRemainLength)) {
+                                    return true;
+                                } else {
+                                    currentStr = currentStr.extract(0, currentStr.length() - s.length());
+                                    tmpRemainLength += s.length();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            std::vector<zstring> collectAlternativeComponents(expr* v){
+                std::vector<zstring> result;
+                collectAlternativeComponents(v, result);
+                return result;
+            }
+
+
+            void collectAlternativeComponents(expr* v, std::vector<zstring>& ret){
+                if (th.u.re.is_to_re(v)){
+                    expr* arg0 = to_app(v)->get_arg(0);
+                    zstring tmpStr;
+                    th.u.str.is_string(arg0, tmpStr);
+                    ret.push_back(tmpStr);
+                }
+                else if (th.u.re.is_union(v)){
+                    expr* arg0 = to_app(v)->get_arg(0);
+                    collectAlternativeComponents(arg0, ret);
+                    expr* arg1 = to_app(v)->get_arg(1);
+                    collectAlternativeComponents(arg1, ret);
+                }
+                else if (th.u.re.is_star(v) || th.u.re.is_plus(v)) {
+                    expr* arg0 = to_app(v)->get_arg(0);
+                    collectAlternativeComponents(arg0, ret);
+                }
+                else
+                SASSERT(false);
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
@@ -845,7 +948,7 @@ namespace smt {
 
                     int sum = 0;
                     for (int i = 0; i < leafNodes.size(); ++i){
-                        if (th.isImportant(leafNodes[i]) || th.u.str.is_string(leafNodes[i])){
+                        if (th.isImportant(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.isRegexVar(leafNodes[i])){
                             zstring leafVal;
 
                             if (getStrValue(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
@@ -1094,6 +1197,8 @@ namespace smt {
         bool isImportant(expr* n);
         bool isImportant(expr* n, int &val);
         bool isRegexVar(expr* n, expr* &regexExpr);
+        bool isRegexVar(expr* n);
+        bool isRegexConcat(expr* n);
         std::set<expr*> getDependency(expr* n);
 
         void add_theory_assumptions(expr_ref_vector& assumptions) override;

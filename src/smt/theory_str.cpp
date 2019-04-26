@@ -29,6 +29,23 @@ namespace smt {
 
         using namespace std::placeholders;
 
+        class seq_expr_solver : public expr_solver {
+            kernel m_kernel;
+        public:
+            seq_expr_solver(ast_manager& m, smt_params& fp):
+                    m_kernel(m, fp)
+            {}
+
+            lbool check_sat(expr* e) override {
+                m_kernel.push();
+                m_kernel.assert_expr(e);
+                lbool r = m_kernel.check();
+                m_kernel.pop(1);
+                IF_VERBOSE(11, verbose_stream() << "is " << r << " " << mk_pp(e, m_kernel.m()) << "\n");
+                return r;
+            }
+        };
+
         const element& element::null() {
             static const element e{element_t::NONE, ""};
             return e;
@@ -921,17 +938,24 @@ namespace smt {
                 leafNodes.push_back(n->get_owner());
 
             for (int i = 0; i < leafNodes.size(); ++i) {
-                expr *value = queryTheoryArithCore(mk_strlen(leafNodes[i]), mg);
-                if (value != nullptr) {
-                    rational tmp;
-                    if (m_autil.is_numeral(value, tmp))
-                        vLen = vLen + tmp;
-                    STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": " << mk_pp(value, m) << " --> " << vLen
-                                       << std::endl;);
+                STRACE("str", tout << __LINE__ << " get len value :  " << mk_pp(leafNodes[i], m) << std::endl;);
+                zstring valueStr;
+                if (u.str.is_string(leafNodes[i], valueStr)) {
+                    vLen = vLen + valueStr.length();
                 }
                 else {
-                    vLen = -1;
-                    break;
+                    expr *value = queryTheoryArithCore(mk_strlen(leafNodes[i]), mg);
+                    if (value != nullptr) {
+                        rational tmp;
+                        if (m_autil.is_numeral(value, tmp))
+                            vLen = vLen + tmp;
+                        STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": "
+                                           << mk_pp(value, m) << " --> " << vLen
+                                           << std::endl;);
+                    } else {
+                        vLen = -1;
+                        break;
+                    }
                 }
             }
         }
@@ -943,25 +967,21 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
-            SASSERT(get_context().is_relevant(n));
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
             string_value_proc * result = nullptr;
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                               << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
 
             expr* importantNode = nullptr;
+            expr* regex = nullptr;
+            isRegexVar(owner.get(), regex);
             if (isImportant(owner.get()) && !u.str.is_concat(owner.get())) {
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
 
-//                if (!ctx.e_internalized(arrMap[owner.get()]))
-//                    ctx.internalize(arrMap[owner.get()], false);
-
                 enode* arrNode = ctx.get_enode(arrMap[owner.get()]);
 
-                result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, vLen.get_int32());
+                result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int32());
                 importantNode = owner.get();
             }
             else {
@@ -972,25 +992,18 @@ namespace smt {
                 collect_eq_nodes(owner.get(), eqSet);
                 for (int i = 0; i < eqSet.size(); ++i) {
                     if (isImportant(eqSet[i].get()) && !u.str.is_concat(eqSet[i].get())) {
-                        STRACE("str", tout << __LINE__ << "eq element: " << mk_pp(arrMap[eqSet[i].get()], m) << " (sort "
-                                           << mk_ismt2_pp(m.get_sort(arrMap[eqSet[i].get()]), m) << ")" << std::endl;);
-
-//                        if (!ctx.e_internalized(arrMap[eqSet[i].get()]))
-//                            ctx.internalize(arrMap[eqSet[i].get()], false);
 
                         enode* arrNode = ctx.get_enode(arrMap[eqSet[i].get()]);
                         result = alloc(string_value_proc, *this, s, n->get_owner(), true,
-                                       arrNode, vLen.get_int32());
+                                       arrNode, regex, vLen.get_int32());
                         found = true;
                         importantNode = eqSet[i].get();
                         break;
                     }
-                    STRACE("str", tout << __LINE__ << "eq element: " << mk_pp(eqSet[i].get(), m) << " (sort "
-                                       << mk_ismt2_pp(m.get_sort(eqSet[i].get()), m) << ")" << std::endl;);
                 }
 
                 if (!found) {
-                    result = alloc(string_value_proc, *this, s, n->get_owner(), false, vLen.get_int32());
+                    result = alloc(string_value_proc, *this, s, n->get_owner(), false, regex, vLen.get_int32());
                 }
             }
 
@@ -1017,23 +1030,30 @@ namespace smt {
                     result->add_entry(ctx.get_enode(nn));
                 }
             }
+            else if (isRegexVar(owner.get())){
+                result->add_entry(ctx.get_enode(mk_strlen(owner.get())));
+            }
             else {
                 // normal node
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 // all all lens
-                for (const auto& nn : dep) {
-                    if (isImportant(nn)) {
-                        result->add_entry(ctx.get_enode(nn));
+                for (const auto& nn : dep)
+                    if (ctx.e_internalized(nn)){
+                        STRACE("str", tout << __LINE__ << " " << mk_pp(nn, m) << std::endl;);
+                        if (isImportant(nn) || isRegexVar(nn)) {
+                            result->add_entry(ctx.get_enode(nn));
+                        }
+                        // add sublen
+                        result->add_entry(ctx.get_enode(mk_strlen(nn)));
                     }
-                    // add sublen
-                    result->add_entry(ctx.get_enode(mk_strlen(nn)));
-                }
 
                 // add its ancestors
-                for (const auto& nn : backwardDep[owner]) {
-                    result->add_entry(ctx.get_enode(nn));
-                }
+                for (const auto& nn : backwardDep[owner])
+                    if (ctx.e_internalized(nn)){
+                        STRACE("str", tout << __LINE__ << " " << mk_pp(nn, m) << std::endl;);
+                        result->add_entry(ctx.get_enode(nn));
+                    }
             }
 
             if (!u.str.is_concat(owner)) {
@@ -1075,6 +1095,26 @@ namespace smt {
         return false;
     }
 
+    bool theory_str::isRegexVar(expr* n){
+        for (const auto& we: membership_memo) {
+            if (we.first == n){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool theory_str::isRegexConcat(expr* n){
+        ptr_vector<expr> argVec;
+        get_nodes_in_concat(n, argVec);
+        for (int i = 0; i < argVec.size(); ++i)
+            if (!u.str.is_string(argVec[i]) && !isRegexVar(argVec[i])) {
+                return false;
+            }
+
+        return true;
+    }
+
     std::set<expr*> theory_str::getDependency(expr* n){
         std::set<expr*> ret;
 
@@ -1093,28 +1133,23 @@ namespace smt {
             }
         }
 
-        if (uState.eq_combination.find(n) != uState.eq_combination.end()) {
-            for (const auto& nn : uState.eq_combination[n]) {
-                if (u.str.is_concat(nn)) {
-                    ptr_vector<expr> argVec;
-                    get_all_nodes_in_concat(nn, argVec);
+        for (int j = 0; j < eq.size(); ++j) {
+            if (uState.eq_combination.find(eq[j].get()) != uState.eq_combination.end()) {
+                for (const auto &nn : uState.eq_combination[eq[j].get()]) {
+                    if (u.str.is_concat(nn)) {
+                        ptr_vector<expr> argVec;
+                        get_all_nodes_in_concat(nn, argVec);
 
-                    for (int i = 0; i < argVec.size(); ++i) {
-                        if (!eq.contains(argVec[i]))
-                            ret.insert(argVec[i]);
-                        else {
+                        for (int i = 0; i < argVec.size(); ++i) {
+                            if (!eq.contains(argVec[i]))
+                                ret.insert(argVec[i]);
                         }
+                    } else {
+                        if (!eq.contains(nn))
+                            ret.insert(nn);
                     }
                 }
-
-                else {
-                    if (!eq.contains(nn))
-                        ret.insert(nn);
-                }
             }
-        }
-        else {
-
         }
         return ret;
     }
@@ -2351,7 +2386,7 @@ namespace smt {
         }
 
         if (regex_sort == nullptr)
-            nullptr;
+            return nullptr;
 
         ptr_vector<expr> childrenVector;
         get_nodes_in_concat(nn, childrenVector);
@@ -5772,29 +5807,64 @@ namespace smt {
             if (isRegexStr(v[i])){
                 if (v[i][v[i].length() - 1] == '*'){
                     zstring tmp = parse_regex_content(v[i]);
-                    ret.push_back(u.re.mk_star(u.re.mk_to_re(u.str.mk_string(tmp))));
+
+                    if (!isUnionStr(tmp)) {
+                        ret.push_back(u.re.mk_star(u.re.mk_to_re(u.str.mk_string(tmp))));
+                    }
+                    else {
+                        std::vector<zstring> tmpVectorStr = collectAlternativeComponents(tmp);
+                        std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
+                        expr * args[tmpVectorExpr.size()];
+                        for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                            args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
+                        }
+                        expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
+                        ret.push_back(u.re.mk_star(tmp));
+                        STRACE("str", tout << __LINE__ <<  " tmp = " << mk_pp(tmp, m) << std::endl;);
+                    }
                 }
                 else if (v[i][v[i].length() - 1] == '+'){
                     zstring tmp = parse_regex_content(v[i]);
-                    ret.push_back(u.re.mk_plus(u.re.mk_to_re(u.str.mk_string(tmp))));
+                    if (!isUnionStr(tmp)) {
+                        ret.push_back(u.re.mk_plus(u.re.mk_to_re(u.str.mk_string(tmp))));
+                    }
+                    else {
+                        std::vector<zstring> tmpVectorStr = collectAlternativeComponents(tmp);
+                        std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
+                        expr * args[tmpVectorExpr.size()];
+                        for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                            args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
+                        }
+                        expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
+                        ret.push_back(u.re.mk_plus(tmp));
+                        STRACE("str", tout << __LINE__ <<  " tmp = " << mk_pp(tmp, m) << std::endl;);
+                    }
                 }
                 else {
                     SASSERT(false);
                 }
             }
             else if (isUnionStr(v[i])){
-                zstring tmp = v[i].extract(1, v[i].length() - 2);
+                zstring tmp = v[i];
+                if (tmp.length() > 0 && tmp[0] == '"')
+                    tmp = tmp.extract(1, tmp.length() - 2);
                 STRACE("str", tout << __LINE__ <<  " tmp = " << tmp << std::endl;);
                 std::vector<zstring> tmpV = collectAlternativeComponents(tmp);
-                expr* tmpE = nullptr;
-                for (int i = 0; i < tmpV.size(); ++i) {
-                    expr* e = u.re.mk_to_re(u.str.mk_string(tmpV[i]));
-                    tmpE = tmpE == nullptr? e : u.re.mk_union(tmpE, e);
+                std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpV);
+                expr * args[tmpVectorExpr.size()];
+                for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                    args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
                 }
+                expr* tmpE = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
+
                 ret.push_back(tmpE);
             }
             else {
-                ret.push_back(u.str.mk_string(v[i].extract(1, v[i].length() - 2)));
+                zstring tmp = v[i];
+                if (tmp.length() > 0 && tmp[0] == '"')
+                    tmp = tmp.extract(1, tmp.length() - 2);
+                STRACE("str", tout << __LINE__ <<  " tmp = " << tmp << std::endl;);
+                ret.push_back(u.str.mk_string(tmp));
             }
         }
         return ret;
@@ -6116,6 +6186,10 @@ namespace smt {
             collectAlternativeComponents(arg0, ret);
             expr* arg1 = to_app(v)->get_arg(1);
             collectAlternativeComponents(arg1, ret);
+        }
+        else if (u.re.is_star(v) || u.re.is_plus(v)) {
+            expr* arg0 = to_app(v)->get_arg(0);
+            collectAlternativeComponents(arg0, ret);
         }
         else
             SASSERT(false);
@@ -9631,7 +9705,25 @@ namespace smt {
     std::vector<std::pair<expr*, int>> theory_str::createEquality(ptr_vector<expr> list){
         std::vector<expr*> l;
         for (unsigned i = 0; i < list.size(); ++i)
-            l.push_back(list[i]);
+            if (!regex_in_var_reg_str_map.contains(list[i])){
+                l.push_back(list[i]);
+            }
+            else {
+                expr* regexExpr = nullptr;
+                for (const auto& we: membership_memo) {
+                    if (we.first.get() == list[i]) {
+                        regexExpr = we.second.get() ;
+                        break;
+                    }
+                }
+
+                std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parseRegexComponents(underApproxRegex(getStdRegexStr(regexExpr)))));
+                if (regexElements.size() > 0) {
+                    std::vector<expr*> elements = createExprFromRegexVector(regexElements[i]);
+                    for (int j = 0; j < elements.size(); ++i)
+                        l.push_back(elements[i]);
+                }
+            }
         return createEquality(l);
     }
 
@@ -9675,8 +9767,6 @@ namespace smt {
                 }
                 elements.emplace_back(list[k], REGEX_CODE - currVarPieces[list[k]]);
                 currVarPieces[list[k]] += 1;
-
-
             }
             else {
                 // check if it is a regex var
@@ -9700,6 +9790,7 @@ namespace smt {
                     currVarPieces[list[k]] += QMAX;
                 }
                 else {
+                    SASSERT(false);
                     elements.emplace_back(regexExpr, REGEX_CODE);
                 }
             }
@@ -10033,22 +10124,21 @@ namespace smt {
             if (we.first.get() == nn){
                 zstring value;
                 if (u.str.is_string(we.second.get(), value)) {
-                    len = value.length();
+                    len = len > value.length() ? len : value.length();
                     STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\"" << std::endl;);
                 }
-                if (len != 0)
-                    return true;
             }
             else if (we.second.get() == nn){
                 zstring value;
                 if (u.str.is_string(we.first.get(), value)) {
-                    len = value.length();
+                    len = len > value.length() ? len : value.length();
                     STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << std::endl;);
                 }
-                if (len != 0)
-                    return true;
             }
         }
+
+        if (len > 0)
+            return true;
 
         len = -1;
         STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
@@ -10254,7 +10344,7 @@ namespace smt {
         std::set<expr*> result;
         expr_ref_vector eqNodeSet(m);
         expr* constValue = collect_eq_nodes(object, eqNodeSet);
-        expr* variable = nullptr;
+        object = ctx.get_enode(object)->get_root()->get_owner();
 
 
         if (constValue != nullptr) {
@@ -10264,8 +10354,6 @@ namespace smt {
                 expr_ref tmp(ctx.mk_eq_atom(object, constValue), m);
                 ctx.internalize(tmp, false);
                 causes[object].insert(tmp);
-
-                STRACE("str", tout << __LINE__ << " constaaaaaa " << mk_pp(tmp, m) << std::endl;);
             }
         }
 
@@ -10298,14 +10386,7 @@ namespace smt {
             }
             else if (u.str.is_concat(*it) && *it == object)
                 refined_eqNodeSet.push_back(*it);
-
-            else {
-                variable = *it;
-            }
         }
-
-        if (variable != nullptr)
-            object = variable;
 
         for (expr_ref_vector::iterator it = refined_eqNodeSet.begin(); it != refined_eqNodeSet.end(); ++it) {
             if (u.str.is_concat(*it)) {
@@ -11265,6 +11346,83 @@ namespace smt {
                 regex_terms_by_string.insert(str, ptr_vector<expr>());
             }
             regex_terms_by_string[str].push_back(ex);
+
+            std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parseRegexComponents(underApproxRegex(getStdRegexStr(regex)))));
+            int boundLen = 100000;
+
+            expr_ref_vector ors(m);
+            for (const auto& v : regexElements) {
+                int tmpLen = 0;
+                std::vector<expr*> elements = createExprFromRegexVector(v);
+                expr* concat = nullptr;
+                for (int i  = 0; i < elements.size(); ++i) {
+                    zstring tmpStr;
+                    if (u.str.is_string(elements[i], tmpStr)) {
+                        tmpLen += tmpStr.length();
+                        concat = concat == nullptr ? elements[i] : u.str.mk_concat(concat, elements[i]);
+                    }
+                    else if (u.re.is_plus(elements[i]) || u.re.is_union(elements[i])) {
+                        std::vector<zstring> tmpVector = collectAlternativeComponents(elements[i]);
+                        if (tmpVector.size() > 0) {
+                            int minLen = tmpVector[0].length();
+                            for (const auto &s : tmpVector) {
+                                minLen = minLen < s.length() ? minLen : s.length();
+                            }
+                            tmpLen += minLen;
+                        }
+
+                        expr* tmp = mk_str_var(v[i].encode());
+                        expr* tmp_in_re = u.re.mk_in_re(tmp, elements[i]);
+                        assert_axiom(tmp_in_re);
+                        concat = concat == nullptr ? tmp : u.str.mk_concat(concat, tmp);
+
+//                        if (!regex_in_var_reg_str_map.contains(tmp)) {
+//                            regex_in_var_reg_str_map.insert(tmp, std::set<zstring>());
+//                        }
+//                        regex_in_var_reg_str_map[tmp].insert(v[i]);
+//
+//                        if (!regex_terms_by_string.contains(tmp)) {
+//                            regex_terms_by_string.insert(tmp, ptr_vector<expr>());
+//                        }
+//                        regex_terms_by_string[tmp].push_back(tmp_in_re);
+                    }
+                    else if (u.re.is_star(elements[i])) {
+                        expr* tmp = mk_str_var(v[i].encode());
+                        expr* tmp_in_re = u.re.mk_in_re(tmp, elements[i]);
+                        assert_axiom(tmp_in_re);
+                        concat = concat == nullptr ? tmp : u.str.mk_concat(concat, tmp);
+//                        if (!regex_in_var_reg_str_map.contains(tmp)) {
+//                            regex_in_var_reg_str_map.insert(tmp, std::set<zstring>());
+//                        }
+//                        regex_in_var_reg_str_map[tmp].insert(v[i]);
+//
+//                        if (!regex_terms_by_string.contains(tmp)) {
+//                            regex_terms_by_string.insert(tmp, ptr_vector<expr>());
+//                        }
+//                        regex_terms_by_string[tmp].push_back(tmp_in_re);
+                    }
+                    else if (u.re.is_full_char(elements[i])) {
+                        expr* tmp = mk_str_var(v[i].encode());
+                        assert_axiom(createEqualOperator(mk_strlen(tmp), mk_int(1)));
+                        concat = concat == nullptr ? tmp : u.str.mk_concat(concat, tmp);
+                    }
+                    else if (u.re.is_full_seq(elements[i])){
+                        expr* tmp = mk_str_var(v[i].encode());
+                        concat = concat == nullptr ? tmp : u.str.mk_concat(concat, tmp);
+                    }
+                    ensure_enode(concat);
+                    ensure_enode(mk_strlen(concat));
+                }
+
+                boundLen = boundLen < tmpLen ? boundLen : tmpLen;
+
+                ors.push_back(createEqualOperator(str.get(), concat));
+            }
+
+            if (!(regexElements.size() == 1 && regexElements[0].size() == 1))
+                assert_implication(ex, createOrOperator(ors));
+
+            assert_implication(ex, createGreaterEqOperator(mk_strlen(str.get()), mk_int(boundLen)));
             // stop setting up axioms here, we do this differently
             return;
         }
@@ -11274,10 +11432,10 @@ namespace smt {
         //  - str: string term appearing in ex
         //  - regex: regex term appearing in ex
         //  ex ::= (str.in.re str regex)
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
         if (u.re.is_to_re(regex)) {
-            TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
             expr_ref rxStr(regex->get_arg(0), m);
             // want to assert 'expr IFF (str == rxStr)'
@@ -11285,10 +11443,10 @@ namespace smt {
             expr_ref finalAxiom(m.mk_iff(ex, rhs), m);
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
-            TRACE("str",
-                  tout << "set up Str2Reg: (RegexIn " << mk_pp(str, m) << " " << mk_pp(regex, m) << ")" << std::endl;);
+            STRACE("str",
+                  tout << __LINE__ << " "  << "set up Str2Reg: (RegexIn " << mk_pp(str, m) << " " << mk_pp(regex, m) << ")" << std::endl;);
         } else if (u.re.is_concat(regex)) {
-            TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
             expr_ref var1(mk_regex_rep_var(), m);
             expr_ref var2(mk_regex_rep_var(), m);
@@ -11307,7 +11465,7 @@ namespace smt {
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
         } else if (u.re.is_union(regex)) {
-            TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
             expr_ref var1(mk_regex_rep_var(), m);
             expr_ref var2(mk_regex_rep_var(), m);
@@ -11374,7 +11532,7 @@ namespace smt {
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
         } else {
-            TRACE("str", tout << "ERROR: unknown regex expression " << mk_pp(regex, m) << "!" << std::endl;);
+            STRACE("str", tout << __LINE__ << " "  << "ERROR: unknown regex expression " << mk_pp(regex, m) << "!" << std::endl;);
             NOT_IMPLEMENTED_YET();
         }
     }
@@ -12250,12 +12408,11 @@ namespace smt {
         // prepare backwardDep
         for (const auto& n : uState.eq_combination) {
             std::set<expr*> dep = getDependency(n.first);
-            STRACE("str", tout << __LINE__ << " " << mk_pp(n.first, m) << std::endl;);
-            for (const auto& nn : dep) {
-                STRACE("str", tout << __LINE__ << " \t" << mk_pp(nn, m) << std::endl;);
-                if (!isImportant(nn) || isImportant(n.first))
-                    backwardDep[nn].insert(n.first);
-            }
+            for (const auto& nn : dep)
+                if (!u.str.is_string(nn)){
+                    if ((!isImportant(nn) && !isRegexVar(nn) && !isRegexConcat(nn)) || isImportant(n.first))
+                        backwardDep[nn].insert(n.first);
+                }
         }
 
         for (const auto& e: backwardDep) {
