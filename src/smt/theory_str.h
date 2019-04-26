@@ -710,6 +710,7 @@ namespace smt {
                     else
                         return false;
                 }
+                return false;
             }
 
             bool createStringWithLength(std::vector<zstring> elements, zstring &currentStr, int remainLength){

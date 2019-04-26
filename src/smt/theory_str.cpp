@@ -6397,7 +6397,6 @@ namespace smt {
 
         /* because of "general" functions, we need to refine arrangements */
         std::vector<Arrangment> possibleCases;
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << mk_pp(lhs_elements[0].first, m) << std::endl;);
 
         std::string firstVar = expr2str(lhs_elements[0].first);
         if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == QMAX)||
@@ -6426,6 +6425,7 @@ namespace smt {
         for (unsigned i = 0; i < possibleCases.size(); ++i) {
 
             if (passNotContainMapReview(possibleCases[i], lhs_elements, rhs_elements) && passSelfConflict(possibleCases[i], lhs_elements, rhs_elements)) {
+                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
                 expr* tmp = generateSMT(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_str, rhs_str, lhs_elements, rhs_elements, connectedVariables);
 
                 if (tmp != NULL) {
@@ -6553,7 +6553,7 @@ namespace smt {
                             std::vector<std::pair<expr*, int>> rhs_elements,
                             std::map<expr*, int> connectedVariables){
         ast_manager &m = get_manager();
-
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
         expr_ref_vector result_element(m);
 
         bool checkLeft[lhs_elements.size()];
@@ -6581,6 +6581,7 @@ namespace smt {
                             break;
                     j--;
                     /* select optimization mode */
+                    STRACE("str", tout << __LINE__ <<  " before optimizing mode: " << std::endl;);
                     int optimizing = canBeOptimized_LHS(i, startPos, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
                     STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
 
@@ -6659,7 +6660,7 @@ namespace smt {
                     result_element.push_back(tmp);
                 }
             }
-
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
         /* do the right */
         for (unsigned i = 0; i < right_arr.size(); ++i)
             if (!checkRight[i]){
@@ -7107,11 +7108,21 @@ namespace smt {
             /* collect */
             /* only handle the case of splitting const string into two parts*/
             expr_ref_vector addElements(m);
-            for (unsigned i = 0 ; i < elementNames.size(); ++i){
-                addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
+            for (unsigned i = 0 ; i < elementNames.size(); ++i)
+                if (elementNames[i].second <= REGEX_CODE) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << std::endl;);
+                    expr_ref tmp(getExprVarFlatSize(elementNames[i]), m);
+                    addElements.push_back(tmp.get());
+                }
+                else {
+                    zstring tmpValue;
+                    if (u.str.is_string(elementNames[i].first, tmpValue) && tmpValue.length() == 1)
+                        addElements.push_back(mk_int(1));
+                    else
+                        addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
                                                              getExprVarFlatIter(elementNames[i])));
-            }
-
+                }
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             expr_ref adding(createAddOperator(addElements), m);
 
             expr_ref len_lhs(m);
@@ -7122,7 +7133,7 @@ namespace smt {
             result.push_back(createEqualOperator(len_lhs, adding));
 
             int splitType = findSplitType(elementNames, connectedVariables);
-
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << splitType << std::endl;);
             /*
              * 0: No const, No connected var
              * 1: const		No connected var
@@ -7266,6 +7277,7 @@ namespace smt {
             bool optimizing,
             int pMax){
         ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         int totalLength = 0;
         for (unsigned j = 0; j < split.size(); ++j)
             if (split[j] > 0 && split[j] != MINUSZERO)
@@ -7629,8 +7641,10 @@ namespace smt {
         addElements.reset();
         splitPos = 0;
         zstring content;
-        if (a.second == REGEX_CODE)
+        if (a.second <= REGEX_CODE)
             content = parse_regex_content(a.first);
+        else
+            u.str.is_string(a.first, content);
 
         for (unsigned i = 0; i < elementNames.size(); ++i){
             if (elementNames[i].second >= 0) /* not const */ {
@@ -7642,12 +7656,12 @@ namespace smt {
                 if (addElements.size() > 0){ /* create a sum for previous elements */
                     if (split[splitPos] == MINUSZERO) {
                         /* looping */
-                        SASSERT(a.second == REGEX_CODE);
+                        SASSERT(a.second <= REGEX_CODE);
                         strAnd.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(createAddOperator(addElements), m_autil.mk_int(content.length()))));
                     }
                     else if (split[splitPos] < 0) {
                         /* looping */
-                        SASSERT(a.second == REGEX_CODE);
+                        SASSERT(a.second <= REGEX_CODE);
                         strAnd.push_back(createEqualOperator(createModOperator(createAddOperator(addElements), m_autil.mk_int(content.length())), m_autil.mk_int(std::abs(split[splitPos]))));
                     }
                     else {
@@ -7656,6 +7670,7 @@ namespace smt {
                     splitPos++;
                     addElements.reset();
                 }
+
                 STRACE("str", tout << __LINE__ <<  " const|regex = const + ...: work as usual" << std::endl;);
                 if (elementNames[i].second % QCONSTMAX == -1 && i < elementNames.size() - 1) {
                     zstring value;
@@ -7681,8 +7696,8 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  " const|regex = const + ...: work as usual" << std::endl;);
                     if (split[splitPos] == MINUSZERO) {
                         /* looping at 0 */
-                        SASSERT(elementNames[i].second == REGEX_CODE);
-                        SASSERT(a.second == REGEX_CODE);
+                        SASSERT(elementNames[i].second <= REGEX_CODE);
+                        SASSERT(a.second <= REGEX_CODE);
                         strAnd.push_back(createEqualOperator(
                                 m_autil.mk_int(0),
                                 createModOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(content.length()))));
@@ -7690,8 +7705,8 @@ namespace smt {
                     }
                     else if (split[splitPos] < 0) {
                         /* looping */
-                        SASSERT(elementNames[i].second == REGEX_CODE);
-                        SASSERT(a.second == REGEX_CODE);
+                        SASSERT(elementNames[i].second <= REGEX_CODE);
+                        SASSERT(a.second <= REGEX_CODE);
                         strAnd.push_back(createEqualOperator(
                                 createModOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(content.length())),
                                 m_autil.mk_int(std::abs(split[splitPos++]))));
@@ -7706,12 +7721,12 @@ namespace smt {
             /* create a sum for previous elements */
             if (split[splitPos] == MINUSZERO) {
                 /* looping */
-                SASSERT(a.second == REGEX_CODE);
+                SASSERT(a.second <= REGEX_CODE);
                 strAnd.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(createAddOperator(addElements), m_autil.mk_int(content.length()))));
             }
             else if (split[splitPos] < 0) {
                 /* looping */
-                SASSERT(a.second == REGEX_CODE);
+                SASSERT(a.second <= REGEX_CODE);
                 strAnd.push_back(createEqualOperator(
                         createModOperator(createAddOperator(addElements), m_autil.mk_int(content.length())),
                         m_autil.mk_int(std::abs(split[splitPos]))));
@@ -8581,7 +8596,7 @@ namespace smt {
         SASSERT(lhs.second < 0);
         zstring value;
         u.str.is_string(lhs.first, value);
-        if (lhs.second == REGEX_CODE) /* regex */ {
+        if (lhs.second <= REGEX_CODE) /* regex */ {
 //            std::vector<int> curr;
 //            std::string regexContent = parse_regex_content(lhs.first);
 //            collectAllPossibleSplits_regex(0, regexContent, 10, alias, curr, allPossibleSplits);
@@ -8612,14 +8627,173 @@ namespace smt {
             SASSERT(false);
         }
 
-        /* print test */
-//        __debugPrint(logFile, "%d *** %s *** ", __LINE__, __FUNCTION__);
-//        for (unsigned int i = 0; i < allPossibleSplits.size(); ++i){
-//            splitPrintTest(allPossibleSplits[i], "Accepted");
-//        }
-
         return allPossibleSplits;
     }
+
+//    void theory_str::collectAllPossibleSplits_regex(
+//            int pos,
+//            std::string str, /* regex */
+//            int pMax,
+//            std::vector<std::pair<std::string, int> > elementNames,
+//            std::vector<int> currentSplit,
+//            std::vector<std::vector<int> > &allPossibleSplits) {
+//
+//        /* reach end */
+//        if (currentSplit.size() == elementNames.size() &&
+//            (pos == 0 || pos == MINUSZERO)) {
+//
+//            allPossibleSplits.emplace_back(currentSplit);
+//            return;
+//        }
+//        else if (currentSplit.size() >= elementNames.size()) {
+//            return;
+//        }
+//
+//        unsigned int regexLen = str.length();
+//        if (isRegexAll(str) || isRegexChar(str))
+//            regexLen = 1;
+//        /* special case for const: regex = .* const .* */
+//        if (elementNames[currentSplit.size()].second == -1 && QCONSTMAX == 1) {
+//            /* compare text, check whether the string can start from the location pos in text */
+//            if (const_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos)) {
+//                currentSplit.emplace_back(elementNames[currentSplit.size()].first.length());
+//                collectAllPossibleSplits_regex((pos + elementNames[currentSplit.size() - 1].first.length()) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                currentSplit.pop_back();
+//            }
+//        }
+//
+//            /* special case for const tail, when we know the length of const head */
+//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == 0 &&
+//                 elementNames[currentSplit.size()].second < 0 &&
+//                 elementNames[currentSplit.size()].second > REGEX_CODE &&
+//                 currentSplit.size() > 0) /* tail, not the first */ {
+//            assert (elementNames[currentSplit.size() - 1].second - 1 == elementNames[currentSplit.size()].second);
+//            int length = elementNames[currentSplit.size()].first.length() - currentSplit[currentSplit.size() - 1]; /* this part gets all const string remaining */
+//
+//            currentSplit.emplace_back(length);
+//            collectAllPossibleSplits_regex((pos + length) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//            currentSplit.pop_back();
+//        }
+//
+//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == 0 &&
+//                 elementNames[currentSplit.size()].second < 0 &&
+//                 elementNames[currentSplit.size()].second > REGEX_CODE &&
+//                 currentSplit.size() == 0) /* tail, first */ {
+//            /* find all possible start points */
+//            std::vector<int> tail = tail_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos);
+//            for (unsigned i = 0 ; i < tail.size(); ++i) {
+//                currentSplit.emplace_back(tail[i]);
+//                collectAllPossibleSplits_regex((pos + tail[i]) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                currentSplit.pop_back();
+//            }
+//        }
+//
+//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+//                 elementNames[currentSplit.size()].second < 0 &&
+//                 elementNames[currentSplit.size()].second > REGEX_CODE &&
+//                 currentSplit.size() + 1 == elementNames.size() &&
+//                 QCONSTMAX == 2) /* head, the last element */ {
+//            /* find all possible start points */
+//            std::vector<int> head = head_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos);
+//            for (unsigned i = 0 ; i < head.size(); ++i) {
+//                currentSplit.emplace_back(head[i]);
+//                collectAllPossibleSplits_regex((pos + head[i]) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                currentSplit.pop_back();
+//            }
+//        }
+//
+//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+//                 elementNames[currentSplit.size()].second < 0 &&
+//                 elementNames[currentSplit.size()].second > REGEX_CODE &&
+//                 currentSplit.size() + 1 < elementNames.size() &&
+//                 QCONSTMAX == 2) /* head, not the last element */ {
+//            /* check full string */
+//            bool canProcess;
+//            if (isUnionStr(str))
+//                canProcess = true;
+//            else
+//                canProcess = const_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos);
+//            if (elementNames[currentSplit.size() + 1].second == elementNames[currentSplit.size()].second - 1){
+//                if (canProcess) {
+//                    for (unsigned i = 1 ; i <= elementNames[currentSplit.size()].first.length(); ++i) { /* cannot be empty */
+//                        currentSplit.emplace_back(i);
+//                        currentSplit.emplace_back(elementNames[currentSplit.size()].first.length() - i);
+//                        collectAllPossibleSplits_regex((pos + elementNames[currentSplit.size()].first.length()) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                        currentSplit.pop_back();
+//                        currentSplit.pop_back();
+//                    }
+//                }
+//            }
+//            else {
+//                /* this const only has 1 part */
+//                if (canProcess) {
+//                    for (unsigned i = 1 ; i <= elementNames[currentSplit.size()].first.length(); ++i) { /* cannot be empty */
+//                        currentSplit.emplace_back(i);
+//                        collectAllPossibleSplits_regex((pos + i) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                        currentSplit.pop_back();
+//                    }
+//                }
+//            }
+//        }
+//
+//        else if (elementNames[currentSplit.size()].second == REGEX_CODE) /* regex */ {
+//            std::string content = parse_regex_content(elementNames[currentSplit.size()].first);
+//            int contentLength = (int)content.length();
+//
+//            std::vector<std::string> components = {content};
+//            if (isUnionStr(content)) {
+//                components = collectAlternativeComponents(content);
+//                for (const auto& s : components)
+//                    contentLength = std::min(contentLength, (int)s.length());
+//            }
+//            std::vector<int> regexPos = regex_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos);
+//            /* loop ? */
+//            bool loop = false;
+//            if (regexPos.size() > 0 &&
+//                regexPos[regexPos.size() - 1] * contentLength % regexLen == 0) {
+//                loop = true;
+//            }
+//            __debugPrint(logFile, "%d loop = %d, regexPos size = %ld, contentLength = %d\n", __LINE__, loop ? 1 : 0, regexPos.size(), contentLength);
+//
+//            if (regexPos.size() == 0) {
+//                currentSplit.emplace_back(0);
+//                collectAllPossibleSplits_regex(pos, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                currentSplit.pop_back();
+//            }
+//            else {
+//                if (loop == true) /* assign value < 0 */
+//                    for (unsigned i = 0 ; i < regexPos.size(); ++i) {
+//                        /* because of loop, do not care about 0 iteration */
+//                        int tmp = (contentLength * regexPos[i]) % regexLen;
+//                        if (tmp == 0)
+//                            currentSplit.emplace_back(MINUSZERO);
+//                        else
+//                            currentSplit.emplace_back(-tmp);
+//                        collectAllPossibleSplits_regex((pos + contentLength * regexPos[i]) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                        currentSplit.pop_back();
+//                    }
+//                else
+//                    for (unsigned i = 0 ; i < regexPos.size(); ++i) { /* assign value >= 0 */
+//                        int tmp = (pos + contentLength * regexPos[i]) % regexLen;
+//                        currentSplit.emplace_back(contentLength * regexPos[i]);
+//                        collectAllPossibleSplits_regex(tmp, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                        currentSplit.pop_back();
+//                    }
+//            }
+//        }
+//
+//        else {
+//            for (unsigned i = 0; i < regexLen; ++i) { /* assign value < 0 because it can iterate many times */
+//                int length = i;
+//                if (length == 0)
+//                    currentSplit.emplace_back(MINUSZERO);
+//                else
+//                    currentSplit.emplace_back(- length);
+//                collectAllPossibleSplits_regex((pos + length) % regexLen, str, pMax, elementNames, currentSplit, allPossibleSplits);
+//                currentSplit.pop_back();
+//            }
+//        }
+//    }
 
     /*
 	 * textLeft: length of string
@@ -8637,11 +8811,13 @@ namespace smt {
             std::vector<int> currentSplit,
             std::vector<std::vector<int> > &allPossibleSplits
     ) {
-        SASSERT(pos <= (int) str.length());
+
         /* reach end */
         if (currentSplit.size() == elementNames.size()){
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << std::endl;);
             if (pos == (int)str.length() &&
                 feasibleSplit_const(str, elementNames, currentSplit)) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << std::endl;);
                 allPossibleSplits.emplace_back(currentSplit);
             }
             else {
@@ -8650,12 +8826,13 @@ namespace smt {
         }
 
         unsigned textLeft = str.length() - pos;
-        zstring value;
-        if (!u.str.is_string(elementNames[currentSplit.size()].first, value))
-            return;
-
+        zstring value("");
+        u.str.is_string(elementNames[currentSplit.size()].first, value);
+        if (value.length() > 0)
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << " " << value << " " << elementNames[currentSplit.size()].second << std::endl;);
         /* special case for const: leng = leng */
-        if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 && (QCONSTMAX == 1 || value.length() == 1)) {
+        if (QCONSTMAX == 1 || value.length() == 1) {
+            STRACE("str", tout << __LINE__ << " checking str: " << value << std::endl;);
             if (value.length() <= textLeft) {
                 zstring constValue = str.extract(pos, value.length());
 
@@ -8667,18 +8844,16 @@ namespace smt {
             }
         }
 
-            /* const head */
+        /* const head */
         else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+                elementNames[currentSplit.size()].second < 0 &&
+                elementNames[currentSplit.size()].second > REGEX_CODE &&
                  QCONSTMAX == 2) {
+            STRACE("str", tout << __LINE__ << " checking str: " << value << std::endl;);
             if (value.length() <= textLeft) {
                 std::set<zstring> values;
-                if (isUnionStr(value)){
-                    values = extendComponent(value);
-                }
-                else
-                    values.emplace(value);
-//				__debugPrint(logFile, "%d %s -> values size = %ld\n", __LINE__, elementNames[currentSplit.size()].first.c_str(),
-//						values.size());
+                values.insert(value);
+
                 for (const auto& v : values) {
                     zstring constValue = str.extract(pos, v.length());
                     if (constValue == v) {
@@ -8702,12 +8877,7 @@ namespace smt {
                  QCONSTMAX == 2) /* const */ {
             SASSERT (elementNames[currentSplit.size() - 1].second % QCONSTMAX == -1);
             std::set<zstring> values;
-            if (isUnionStr(value)){
-                values = extendComponent(value);
-            }
-            else
-                values.emplace(value);
-
+            values.insert(value);
             for (const auto& v : values) {
                 zstring constValue = str.extract(pos - currentSplit[currentSplit.size() - 1], v.length());
                 unsigned length = (unsigned)v.length() - currentSplit[currentSplit.size() - 1]; /* this part gets all const string remaining */
@@ -8751,55 +8921,41 @@ namespace smt {
         else {
             SASSERT(!(elementNames[currentSplit.size()].second < 0 && elementNames[currentSplit.size()].second > REGEX_CODE));
 
-//            std::string regexContent = "";
-//            RegEx re;
-//            bool canCompile = false;
-//            if (elementNames[currentSplit.size()].second == REGEX_CODE) /* regex */ {
-//                regexContent = parse_regex_full_content(elementNames[currentSplit.size()].first);
-//                if (regexContent.find('|') != std::string::npos) {
-//                    SASSERT(regexContent.find('&') == std::string::npos);
-//                    re.Compile(regexContent);
-//                    canCompile = true;
-//                }
-//                else
-//                    regexContent = parse_regex_content(elementNames[currentSplit.size()].first);
-//            }
-//
-//            for (unsigned i = 0; i <= textLeft; ++i) {
-//                unsigned length = i;
-//                if (elementNames[currentSplit.size()].second == REGEX_CODE) /* regex */ {
-//                    zstring regexValue = str.extract(pos, length);
-//                    if (canCompile == true) {
-//                        if (re.MatchAll(regexValue) == true) {
-//                            currentSplit.emplace_back(length);
-//                            collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit, allPossibleSplits);
-//                            currentSplit.pop_back();
-//                        }
-//                    }
-//                    else {
-//                        /* manually doing matching regex */
-//                        zstring tmp = "";
-//                        if (value.indexof('+', 0) != -1)
-//                            tmp = regexContent;
-//                        else
-//                            SASSERT(value.indexof('*', 0) != -1);
-//                        while(tmp.length() < regexValue.length())
-//                            tmp += regexContent;
-//                        STRACE("str", tout << __LINE__ << " matching " << tmp << " --- " << regexValue << std::endl;);
-//
-//                        if (tmp == regexValue) {
-//                            currentSplit.emplace_back(length);
-//                            collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit, allPossibleSplits);
-//                            currentSplit.pop_back();
-//                        }
-//                    }
-//                }
-//                else {
-//                    currentSplit.emplace_back(length);
-//                    collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit, allPossibleSplits);
-//                    currentSplit.pop_back();
-//                }
-//            }
+            std::string regexContent = "";
+            expr* re = nullptr;
+            isRegexVar(elementNames[currentSplit.size()].first, re);
+            if (currentSplit.size() + 1 == elementNames.size() && elementNames[currentSplit.size()].second >= 0) {
+                currentSplit.emplace_back(textLeft);
+                collectAllPossibleSplits_const(pos + textLeft, str, pMax, elementNames, currentSplit, allPossibleSplits);
+                currentSplit.pop_back();
+            }
+            else {
+                for (unsigned i = 0; i <= textLeft; ++i) {
+                    unsigned length = i;
+                    if (elementNames[currentSplit.size()].second <= REGEX_CODE) /* regex */ {
+
+                        SASSERT(re);
+                        zstring regexValue = str.extract(pos, length);
+                        expr *intersection = u.re.mk_inter(re, u.re.mk_to_re(u.str.mk_string(regexValue)));
+                        eautomaton *au01 = get_automaton(intersection);
+                        bool matchRes = !au01->is_empty();
+                        if (matchRes) {
+                            STRACE("str",
+                                   tout << __LINE__ << " matched: " << regexValue << " " << mk_pp(re, get_manager())
+                                        << std::endl;);
+                            currentSplit.emplace_back(length);
+                            collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit,
+                                                           allPossibleSplits);
+                            currentSplit.pop_back();
+                        }
+                    } else {
+                        currentSplit.emplace_back(length);
+                        collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit,
+                                                       allPossibleSplits);
+                        currentSplit.pop_back();
+                    }
+                }
+            }
         }
     }
 
@@ -8867,18 +9023,17 @@ namespace smt {
             zstring str,
             std::vector<std::pair<expr*, int> > elementNames,
             std::vector<int> currentSplit){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << std::endl;);
         /* check feasible const split */
         int pos = 0;
         for (unsigned i = 0; i < currentSplit.size(); ++i) {
             if (elementNames[i].second <= REGEX_CODE) {
             }
 
-                /* TODO: bound P */
             else if (elementNames[i].second < 0) { /* const */
                 zstring value;
                 u.str.is_string(elementNames[i].first, value);
                 if (currentSplit[i] > (int)value.length()) {
-//                    __debugPrint(logFile, "%d %s (%ld), part %d -- %d\n", __LINE__, elementNames[i].first.c_str(), elementNames[i].first.length(), elementNames[i].second, currentSplit[i]);
                 }
                 SASSERT ((int)value.length() >= currentSplit[i]);
 
@@ -9737,7 +9892,7 @@ namespace smt {
         for (unsigned k = 0; k < list.size(); ++k) {
             zstring content;
             if (u.str.is_string(list[k], content)) {
-                if (content.length() > 0) /* const string */ {
+                if (content.length() > 1) /* const string */ {
                     if (currVarPieces.find(list[k]) == currVarPieces.end())
                         currVarPieces[list[k]] = 0;
                     for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QCONSTMAX; ++j) { /* split variables into QMAX parts */
@@ -9754,8 +9909,10 @@ namespace smt {
                     }
                     currVarPieces[list[k]] += QCONSTMAX;
                 }
+                else if (content.length() == 1)
+                    elements.emplace_back(std::make_pair(list[k], -1));
             }
-            else if (u.re.is_star(list[k]) || u.re.is_plus(list[k]) || u.re.is_union(list[k])){
+            else if (u.re.is_star(list[k]) || u.re.is_plus(list[k]) || u.re.is_union(list[k]) || (isRegexVar(list[k]) && !isImportant(list[k]))){
                 if (varPieces.find(list[k]) == varPieces.end() ||
                     (currVarPieces.find(list[k]) != currVarPieces.end() &&
                      currVarPieces[list[k]] >= varPieces[list[k]])){
@@ -9770,29 +9927,22 @@ namespace smt {
             }
             else {
                 // check if it is a regex var
-                expr* regexExpr;
-                if (isImportant(list[k]) || !isRegexVar(list[k], regexExpr)) {
-                    if (currVarPieces.find(list[k]) == currVarPieces.end())
-                        currVarPieces[list[k]] = 0;
-                    for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QMAX; ++j) { /* split variables into QMAX parts */
-                        elements.emplace_back(std::make_pair(list[k], j));
-                    }
+                if (currVarPieces.find(list[k]) == currVarPieces.end())
+                    currVarPieces[list[k]] = 0;
+                for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QMAX; ++j) { /* split variables into QMAX parts */
+                    elements.emplace_back(std::make_pair(list[k], j));
+                }
 
-                    if (varPieces.find(list[k]) == varPieces.end() ||
-                        (currVarPieces.find(list[k]) != currVarPieces.end() &&
-                         currVarPieces[list[k]] >= varPieces[list[k]])) {
-                        createInternalVar(list[k]);
-                        varPieces[list[k]] += QMAX;
-                    }
-                    else {
-                        reuseInternalVar(list[k]);
-                    }
-                    currVarPieces[list[k]] += QMAX;
+                if (varPieces.find(list[k]) == varPieces.end() ||
+                    (currVarPieces.find(list[k]) != currVarPieces.end() &&
+                     currVarPieces[list[k]] >= varPieces[list[k]])) {
+                    createInternalVar(list[k]);
+                    varPieces[list[k]] += QMAX;
                 }
                 else {
-                    SASSERT(false);
-                    elements.emplace_back(regexExpr, REGEX_CODE);
+                    reuseInternalVar(list[k]);
                 }
+                currVarPieces[list[k]] += QMAX;
             }
         }
         return elements;
