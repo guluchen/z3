@@ -41,6 +41,11 @@ def contains_error_msg(text: str) -> bool:
 def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str, silent: bool, trace_dir: str):
     fp = open(log_file, 'a')
     fp_err = open(log_file + '.err', 'a')
+
+    if tool_name == 'trau':
+        if "PyEx" in benchmark_files[0]:
+            command[2] = 'cvc4'
+
     for file in benchmark_files:
         shell_command = command + [file]
         time_start = time.time()
