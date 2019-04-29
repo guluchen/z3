@@ -28,7 +28,8 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level = 0;
-
+        static bool is_main_branch;
+        static bool is_over_approximation;
         const theory_str_params& m_params;
         th_rewriter m_rewrite;
         arith_util m_util_a;
@@ -45,6 +46,8 @@ namespace smt {
         scoped_vector<str::expr_pair> m_word_diseq_todo;
         scoped_vector<str::expr_pair> m_membership_todo;
     public:
+        char const * get_name() const override { return "trau"; }
+
         theory_str(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
         theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
@@ -70,7 +73,10 @@ namespace smt {
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
                            expr *e4 = nullptr, sort *sort = nullptr);
+        void add_axiom(expr *e);
+
     private:
+        bool main_branch=false;
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         bool is_regex_sort(expr *e) const;
@@ -81,7 +87,6 @@ namespace smt {
         bool_var mk_bool_var(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
-        void add_axiom(expr *e);
         void add_clause(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
         void handle_substr(expr *e);

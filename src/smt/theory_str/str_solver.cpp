@@ -669,8 +669,12 @@ namespace smt {
                         if (!length) length = {m_util_s.str.mk_length(e), m};
                         else length = {m_util_a.mk_add(length, m_util_s.str.mk_length(e)), m};
                     }
-                    expr_ref const_mul_var_length{m_util_a.mk_mul(m_util_a.mk_int(conf.second), length), m};
-
+                    expr_ref const_mul_var_length{m};
+                    if(conf.second==1){
+                        const_mul_var_length=length;
+                    }else {
+                        const_mul_var_length={m_util_a.mk_mul(m_util_a.mk_int(conf.second), length), m};
+                    }
 
                     if (!ret) ret = const_mul_var_length;
                     else ret = {m_util_a.mk_add(ret, const_mul_var_length), m};
@@ -695,7 +699,7 @@ namespace smt {
         }
 
         expr_ref length_constraints::get_path_cond(ast_manager& m) const{
-            bool on_screen=true;
+            bool on_screen=false;
             STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
 
             expr_ref ret(m);
@@ -781,7 +785,7 @@ namespace smt {
             }
             return ret;
         };
-        length_constraints length_constraints::assign_prefix_var(const element& y, const element& x) const{
+        length_constraints length_constraints::assign_prefix_var(const element& x, const element& y) const{
             // x ->yx
             length_constraints ret(*this);
             SASSERT(m_len_cons.count(x)>0);
@@ -1188,14 +1192,25 @@ namespace smt {
             bool on_screen=true;
             expr_ref to_check= m_length.get_path_cond(m);
             if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
-//            for(auto& v:variables()){
-//                to_check=m.mk_and(to_check,m_length.get_len_cons(v,m));
-//            }
 
-            seq_expr_solver csolver(m, ctx.get_fparams());
+            seq_expr_solver csolver(m, ctx.get_fparams(),ctx);
+            expr_ref_vector Assigns(m),Literals(m);
+            ctx.get_guessed_literals(Literals);
+            ctx.get_assignments(Assigns);
+            for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
+                csolver.assert_expr(ctx.get_asserted_formula(i));
+            }
+//            for (auto & e : Assigns){
+//                csolver.assert_expr(e);
+//            }
+//            for (auto & e : Literals){
+//                csolver.assert_expr(e);
+//            }
             lbool chk_res = csolver.check_sat(to_check);
+
+            if(on_screen) std::cout<<"[is_reachable]"<<(chk_res==lbool::l_true)<<std::endl;
             STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
-            return chk_res;
+            return chk_res==lbool::l_true;
         };
         bool state::operator==(const state& other) const {
             return m_strategy == other.m_strategy &&
@@ -1381,44 +1396,56 @@ namespace smt {
             return true;
         }
 
-        void solver::resume(){
+        void solver::resume(ast_manager& m, context& ctx, theory_str& th){
             m_unchecked_leaves.clear();
             if (m_pending.size() == 1 && !check_linear_membership(m_pending.top())) return;
-            STRACE("str", tout << "[Check SAT]\n";);
             while (!m_pending.empty()&&m_unchecked_leaves.empty()) {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
 
                 string action_type_string[5] = {"TO_EMPTY","TO_CONST","TO_VAR","TO_VAR_VAR","TO_CHAR_VAR"};
 
-                STRACE("str", tout << "from:\n" << curr_s << '\n';);
+                STRACE("strg", tout << "from:\n" << curr_s << '\n';);
                 for (auto& action : transform(curr_s)) {
-                    STRACE("str", tout <<action_type_string[static_cast<int>(action.first.m_type)]<<" ";);
+                    STRACE("strg", tout <<action_type_string[static_cast<int>(action.first.m_type)]<<" ";);
 
 
                     if (m_records.contains(action.second)) {
                         m_records.add_move(std::move(action.first), action.second);
-                        STRACE("str", tout << "already visited:\n" << action.second << '\n';);
+                        STRACE("strg", tout << "already visited:\n" << action.second << '\n';);
                         continue;
                     }
+
+//                    if (!action.second.is_reachable(m,ctx,th)) {
+//                        STRACE("strg", tout << "not reachable:\n" << action.second << '\n';);
+//                        continue;
+//                    }
+
                     const state& s = m_records.add_state(std::move(action.second));
                     m_records.add_move(std::move(action.first), s);
                     if (s.unsolvable_by_inference()) {
-                        STRACE("str", tout << "failed:\n" << s << '\n';);
+                        STRACE("strg", tout << "failed:\n" << s << '\n';);
                         continue;
                     }
 
-                    if (s.in_definition_form()) {
-                        var_relation&& var_rel = s.var_rel_graph();
-                        if (var_rel.is_straight_line() &&
-                            check_straight_line_membership(var_rel, s.get_memberships())) {
-                            STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
-                            m_rec_success_leaves.emplace_back(s);
-                            m_unchecked_leaves.emplace_back(s);
-                            continue;
-                        }
-                    }
+//                    if (s.in_definition_form()) {
+//                        var_relation&& var_rel = s.var_rel_graph();
+//                        if (var_rel.is_straight_line() &&
+//                            check_straight_line_membership(var_rel, s.get_memberships())) {
+//                            STRACE("str", tout << "[Success Leaf]\n" << s << '\n';);
+//                            m_rec_success_leaves.emplace_back(s);
+//                            m_unchecked_leaves.emplace_back(s);
+//                            continue;
+//                        }
+//                    }
 
+
+                    if (s.word_eq_num() == 0 ) {
+                        STRACE("strg", tout << "[Success Leaf]\n" << s << '\n';);
+                        m_rec_success_leaves.emplace_back(s);
+                        m_unchecked_leaves.emplace_back(s);
+                        continue;
+                    }
 
 //                    const word_equation& only_one_left = s.only_one_eq_left();
 //                    if (only_one_left && only_one_left.in_definition_form()) {
@@ -1431,7 +1458,7 @@ namespace smt {
 //                        STRACE("str", tout << "failed:\n" << s << '\n';);
 //                        continue;
 //                    }
-                    STRACE("str", tout << "to:\n" << s << '\n';);
+                    STRACE("strg", tout << "to:\n" << s << '\n';);
 
                     if(s.word_eq_num() != 0)
                         m_pending.push(s);

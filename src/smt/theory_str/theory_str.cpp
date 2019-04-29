@@ -14,7 +14,8 @@
 
 
 namespace smt {
-
+    bool theory_str::is_main_branch=true;
+    bool theory_str::is_over_approximation=false;
 
     namespace {
         bool IN_CHECK_FINAL = false;
@@ -112,16 +113,16 @@ namespace smt {
         std::cout << "~~~~~~ from get_asserted_formulas ~~~~~~\n";
         for (unsigned i = 0; i < nFormulas; ++i) {
             expr * ex = ctx.get_asserted_formula(i);
-            std::cout << mk_pp(ex,get_manager()) << std::endl;
+            std::cout << mk_pp(ex,get_manager()) << " relevant? "<<ctx.is_relevant(ex)<<std::endl;
         }
         std::cout << "~~~~~~ from get_guessed_literals ~~~~~~\n";
         for (auto & e : Literals){
-            std::cout << mk_pp(e,get_manager()) << std::endl;
+            std::cout << mk_pp(e,get_manager()) << " relevant? "<<ctx.is_relevant(e)<< std::endl;
         }
         std::cout << "~~~~~~ from get_assignments ~~~~~~\n";
         for (auto & e : Assigns){
 //            print_ast(e);
-            std::cout << mk_pp(e,get_manager()) << std::endl;
+            std::cout << mk_pp(e,get_manager()) << " relevant? "<<ctx.is_relevant(e) << std::endl;
         }
         std::cout << "~~~~~ print ctx end ~~~~~~~~~\n";
     }
@@ -184,7 +185,7 @@ namespace smt {
                 }
             }
             // if expr is an application, recursively inspect all arguments
-            if (is_app(expr)) {
+            if (is_app(expr)&&!m_util_s.str.is_length(expr)) {
                 app *term = to_app(expr);
                 unsigned num_args = term->get_num_args();
                 for (unsigned i = 0; i < num_args; i++) {
@@ -359,18 +360,21 @@ namespace smt {
                 handle_prefix(e);
             } else {
                 TRACE("str", tout << "TODO: not prefix\n";);
+                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_suffix(e, e1, e2)) {
             if (is_true) {
                 handle_suffix(e);
             } else {
                 TRACE("str", tout << "TODO: not suffix\n";);
+                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_contains(e, e1, e2)) {
             if (is_true) {
                 handle_contains(e);
             } else {
                 TRACE("str", tout << "TODO: not contains " << mk_pp(e, m) << "\n";);
+                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);
@@ -527,8 +531,21 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
+        if(is_main_branch){
+            main_branch=true;
+            is_main_branch=false;
+        }
+
+
+        if(!main_branch) return FC_DONE;
         using namespace str;
-        if (m_word_eq_todo.empty()) return FC_DONE;
+        if (m_word_eq_todo.empty()) {
+            if (is_over_approximation)
+                return FC_GIVEUP;
+            else
+                return FC_DONE;
+        }
+
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
 
@@ -543,7 +560,12 @@ namespace smt {
         STRACE("str", tout << "root merged:\n" << root <<std::endl;);
 
 
-        if(root.word_eqs().size()==0) return FC_DONE;
+        if(root.word_eqs().size()==0){
+            if (!is_over_approximation)
+                return FC_GIVEUP;
+            else
+                return FC_DONE;
+        }
         if (root.unsolvable_by_inference() ) {
         STRACE("str", tout << "proved unsolvable by inference\n";);
             block_curr_assignment();
@@ -552,12 +574,14 @@ namespace smt {
         }
         solver solver{std::move(root), m_aut_imp};
         while(solver.unfinished()){
-            solver.resume();
+            solver.resume(get_manager(),get_context(),*this);
             std::list<smt::str::state> to_check=solver.get_last_leaf_states();
             for(auto& s:to_check){
-               if(s.is_reachable(get_manager(),get_context(),*this)){
-                   std::cout<<"Leaf node reachable: \n"<<s<<std::endl;
-                   return FC_DONE;
+               bool reachable =  s.is_reachable(get_manager(),get_context(),*this);
+               if(reachable){
+                   STRACE("str", tout << "Leaf node reachable: \n"<<s<<std::endl;);
+                   if (!is_over_approximation)
+                       return FC_DONE;
                }
             }
         }
@@ -739,11 +763,7 @@ namespace smt {
     void theory_str::add_axiom(expr *const e) {
 
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
-        STRACE("str", tout << " number of asserted axiom " << axiomatized_terms.size() << std::endl;);
-        for(auto& axiom:axiomatized_terms){
-            STRACE("str", tout << " asserted axiom " << axiom << std::endl;);
-        }
-        STRACE("str", tout << "add_axiom: " <<e<< std::endl;);
+
 
         if(!axiomatized_terms.contains(e)||false) {
             axiomatized_terms.insert(e);
@@ -911,6 +931,7 @@ namespace smt {
                 add_clause({~cnt, s_eq_empty, mk_eq(e, lenx, false)});
                 add_clause({~cnt, mk_literal(m_util_a.mk_ge(e, zero))});
                 TRACE("str", tout << "TODO: ignore tightest_prefix\n";);
+                is_over_approximation=true;
 
                 // tightest_prefix(s, x);
             } else {
@@ -1031,6 +1052,8 @@ namespace smt {
     }
 
     void theory_str::block_curr_assignment() {
+        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+
         bool on_screen=false;
 
         if(on_screen) std::cout<<"[block] ";
@@ -1060,6 +1083,8 @@ namespace smt {
         if (refinement != nullptr) {
             add_axiom(refinement);
         }
+        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+
     }
 
     void theory_str::dump_assignments() const {

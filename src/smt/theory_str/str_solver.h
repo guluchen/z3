@@ -22,6 +22,7 @@
 #include "smt/theory_str/automata.h"
 #include "smt/theory_str/affine_program.h"
 
+
 namespace smt {
     class theory_str;
     namespace str {
@@ -281,7 +282,8 @@ namespace smt {
                                 os<<e_it->second<<"*"<<e_it->first;
                             }
                             is_zero=false;
-                            if(std::next(e_it) != m_coeffs.end()){
+                            if(std::next(e_it) != m_coeffs.end() &&
+                            (std::next(e_it)->first !=element::null() || std::next(e_it)->second !=0)){
                                 os<<" + ";
                             }
                         }
@@ -466,7 +468,7 @@ namespace smt {
             bool should_explore_all() const;
 
             bool unfinished();
-            void resume();
+            void resume(ast_manager& m, context& ctx, theory_str& th);
             std::list<state> get_last_leaf_states();
             result check();
 
@@ -488,12 +490,11 @@ namespace smt {
         };
 
     }
-
     class seq_expr_solver : public expr_solver {
         kernel m_kernel;
-        ast_manager m;
+        ast_manager& m;
     public:
-        seq_expr_solver(ast_manager& m, smt_params& fp):
+        seq_expr_solver(ast_manager& m, smt_params& fp, context& ctx):
                 m(m),m_kernel(m, fp){}
 
         lbool check_sat(expr* e) override {
@@ -502,6 +503,10 @@ namespace smt {
             lbool r = m_kernel.check();
             m_kernel.pop(1);
             return r;
+        }
+
+        void assert_expr(expr * e){
+            m_kernel.assert_expr(e);
         }
     };
 
