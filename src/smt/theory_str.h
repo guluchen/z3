@@ -651,6 +651,8 @@ namespace smt {
 
                         if (regex != nullptr) {
                             zstring strValue;
+                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
+                                return to_app(th.mk_string(strValue));
                             if (constructFromRegex(mg, len_int, m_root2value, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
                                                    << std::endl;);
@@ -790,71 +792,8 @@ namespace smt {
                                         << std::endl;);
                             return to_app(th.mk_string(strValue));
                         } else {
-                            // component var
-                            for (const auto &ancestor : th.backwardDep[node]) {
-                                STRACE("str",
-                                       tout << __LINE__ << " " << __FUNCTION__
-                                            << mk_pp(ancestor, m)
-                                            << std::endl;);
-                                zstring ancestorValue;
-                                if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
-                                                ancestorValue)) {
-                                    STRACE("str",
-                                           tout << __LINE__ << " " << __FUNCTION__
-                                                << mk_pp(ancestor, m)
-                                                << std::endl;);
-                                    if (th.u.str.is_concat(ancestor)) {
-                                        STRACE("str",
-                                               tout << __LINE__ << " " << __FUNCTION__
-                                                    << mk_pp(ancestor, m)
-                                                    << std::endl;);
-                                        if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
-                                                                     len_int, strValue)) {
-                                            STRACE("str",
-                                                   tout << __LINE__ << " " << __FUNCTION__ << ": value = "
-                                                        << strValue
-                                                        << std::endl;);
-                                            return to_app(th.mk_string(strValue));
-                                        }
-                                    }
-
-                                    {
-                                        STRACE("str",
-                                               tout << __LINE__ << " " << __FUNCTION__
-                                                    << mk_pp(ancestor, m) << " " << ancestorValue
-                                                    << std::endl;);
-                                        // find in its eq
-                                        if (th.uState.eq_combination.find(ancestor) !=
-                                            th.uState.eq_combination.end()) {
-                                            for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
-                                                if (th.u.str.is_concat(ancestor_i)) {
-                                                    if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
-                                                                                 m_root2value, len_int,
-                                                                                 strValue)) {
-                                                        STRACE("str",
-                                                               tout << __LINE__ << " " << __FUNCTION__
-                                                                    << ": value = " << strValue
-                                                                    << std::endl;);
-                                                        return to_app(th.mk_string(strValue));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                }
-                                else {
-                                    STRACE("str",
-                                           tout << __LINE__ << " " << __FUNCTION__
-                                                << mk_pp(ancestor, m) << strValue
-                                                << std::endl;);
-                                }
-                            }
-
-                            STRACE("str",
-                                   tout << __LINE__ << " " << __FUNCTION__
-                                        << mk_pp(node, m)
-                                        << std::endl;);
+                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
+                                return to_app(th.mk_string(strValue));
                         }
                     } else {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
@@ -990,6 +929,47 @@ namespace smt {
                         }
                     }
                 }
+            }
+
+            bool fetchValueFromDepGraph(model_generator & mg, obj_map<enode, app *> m_root2value, int len, zstring& value){
+                // component var
+                ast_manager & m = mg.get_manager();
+                for (const auto &ancestor : th.backwardDep[node]) {
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << mk_pp(ancestor, m)
+                                << std::endl;);
+                    zstring ancestorValue;
+                    if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
+                                    ancestorValue)) {
+                        if (th.u.str.is_concat(ancestor)) {
+                            if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
+                                                         len, value)) {
+                                return true;
+                            }
+                        }
+
+                        // find in its eq
+                        if (th.uState.eq_combination.find(ancestor) !=
+                            th.uState.eq_combination.end()) {
+                            for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
+                                if (th.u.str.is_concat(ancestor_i)) {
+                                    if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
+                                                                 m_root2value, len,
+                                                                 value)) {
+                                        STRACE("str",
+                                               tout << __LINE__ << " " << __FUNCTION__
+                                                    << ": value = " << value
+                                                    << std::endl;);
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+                return false;
             }
 
             bool fetchValueBelongToConcat(model_generator & mg, expr* concat, zstring concatValue,obj_map<enode, app *> m_root2value, int len, zstring& value){
