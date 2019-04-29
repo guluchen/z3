@@ -770,7 +770,7 @@ namespace smt {
                     collectAlternativeComponents(arg0, ret);
                 }
                 else
-                SASSERT(false);
+                    SASSERT(false);
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
@@ -905,7 +905,6 @@ namespace smt {
                                                    tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j
                                                         << " \"" << leafVal << "\" "
                                                         << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
-                                            SASSERT(val[j] == leafVal[j - sum]);
                                         }
                                     }
                                 }
@@ -1301,8 +1300,10 @@ namespace smt {
             bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
-
+                bool isInternalVar(expr* e);
+                bool isInternalRegexVar(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
+                bool isInternalRegexVar(expr* e, expr* regex);
                 /*
                 * (abc)*__XXX -> abc
                 */
@@ -1342,7 +1343,7 @@ namespace smt {
                     */
                     std::vector<zstring> collectAlternativeComponents(zstring str);
                     std::vector<zstring> collectAlternativeComponents(expr* v);
-                    void collectAlternativeComponents(expr* v, std::vector<zstring>& ret);
+                    bool collectAlternativeComponents(expr* v, std::vector<zstring>& ret);
 
                     /*
                     *

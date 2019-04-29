@@ -101,11 +101,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="461">
-              <caret line="8832" column="53" selection-start-line="8832" selection-start-column="53" selection-end-line="8832" selection-end-column="53" />
+            <state relative-caret-position="243">
+              <caret line="5623" column="105" selection-start-line="5623" selection-start-column="105" selection-end-line="5623" selection-end-column="105" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#31960#33655#0" />
+                <element signature="e#330603#330908#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -124,7 +125,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="270">
-              <caret line="1010" selection-start-line="1010" selection-end-line="1010" />
+              <caret line="1303" column="49" selection-start-line="1303" selection-start-column="49" selection-end-line="1303" selection-end-column="49" />
               <folding>
                 <element signature="e#9690#19692#1" />
                 <element signature="e#19703#24260#1" />
@@ -191,13 +192,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>mk_value</find>
-      <find>instantiate_axiom_regexIn</find>
-      <find>getDependency</find>
-      <find>construct_concat_overapprox</find>
-      <find>dep</find>
-      <find>u.re.is</find>
-      <find>constructAsNormal</find>
       <find>expr_solver</find>
       <find>615</find>
       <find>seq_expr_solver</find>
@@ -206,7 +200,6 @@
       <find>createStringWithLength</find>
       <find>object</find>
       <find>extend_object</find>
-      <find>collectAlternativeComponents</find>
       <find>isImportant(</find>
       <find>generateSMT</find>
       <find>collectAllPossibleSplits_regex</find>
@@ -219,8 +212,16 @@
       <find>collectAllPossibleSplits(</find>
       <find>initializing model...</find>
       <find>check_sat(</find>
-      <find>tmpVector</find>
       <find>collectAllPossibleSplits_const</find>
+      <find>tmpVector</find>
+      <find>allStrExprs</find>
+      <find>toConstraint_NoConnectedVar</find>
+      <find>lengthConstraint_toConnectedVarConstraint</find>
+      <find>membership_memo</find>
+      <find>generateFlatSize</find>
+      <find>createInternalVar</find>
+      <find>collectAlternativeComponents</find>
+      <find>isInternalVar</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -750,12 +751,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="119323000" />
+      <workItem from="1555596195940" duration="130889000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="264245000" />
+    <option name="totallyTimeSpent" value="275811000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="0" />
@@ -1154,7 +1155,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="270">
-          <caret line="1010" selection-start-line="1010" selection-end-line="1010" />
+          <caret line="1303" column="49" selection-start-line="1303" selection-start-column="49" selection-end-line="1303" selection-end-column="49" />
           <folding>
             <element signature="e#9690#19692#1" />
             <element signature="e#19703#24260#1" />
@@ -1164,11 +1165,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="461">
-          <caret line="8832" column="53" selection-start-line="8832" selection-start-column="53" selection-end-line="8832" selection-end-column="53" />
+        <state relative-caret-position="243">
+          <caret line="5623" column="105" selection-start-line="5623" selection-start-column="105" selection-end-line="5623" selection-end-column="105" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#31960#33655#0" />
+            <element signature="e#330603#330908#0" expanded="true" />
           </folding>
         </state>
       </provider>

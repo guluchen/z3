@@ -5320,6 +5320,7 @@ namespace smt {
                 if (!u.str.is_concat(ap))
                     allStrExprs.insert(v.first);
             }
+
             for (const auto& eq : v.second){
                 if (is_app(eq)){
                     ptr_vector<expr> exprVector;
@@ -5349,10 +5350,27 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
                     zstring val;
+                    expr* rexpr;
                     if (u.str.is_string(v, val)){
                         for (int i = 0; i < val.length(); ++i){
                             assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
                         }
+                    }
+                    else if (isRegexVar(v, rexpr)) {
+                        if (u.re.is_union(rexpr) || u.re.is_star(rexpr) || u.re.is_plus(rexpr)) {
+                            std::vector<zstring> elements;
+                            expr_ref_vector ors(m);
+                            collectAlternativeComponents(rexpr, elements);
+                            for (int i = 0; i < elements.size(); ++i) {
+                                expr_ref_vector ands(m);
+                                for (int j = 0; j < elements[i].length(); ++j){
+                                    ands.push_back(createEqualOperator(createSelectOperator(v1, mk_int(j)), mk_int(elements[i][j])));
+                                }
+                                ors.push_back(createAndOperator(ands));
+                            }
+                            assert_axiom(createOrOperator(ors));
+                        }
+
                     }
                 }
                 else if (arrMap.find(v) != arrMap.end() && !ctx.e_internalized(arrMap[v])) {
@@ -5603,7 +5621,7 @@ namespace smt {
             if (it->second.size() == 0)
                 continue;
 
-            if (importantVars.find(it->first) != importantVars.end() || u.str.is_string(it->first)){
+            if ( isInternalRegexVar(it->first) && (isImportant(it->first) || u.str.is_string(it->first))){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
                 for (const auto& element: it->second) {
@@ -5654,7 +5672,7 @@ namespace smt {
                 }
 
                 expr* regexExpr;
-                if (isRegexVar(it->first, regexExpr)){
+                if (isRegexVar(it->first, regexExpr) && !isInternalVar(it->first)){
                     STRACE("str", tout << __LINE__ <<  "  " << mk_pp(it->first, m) << " = " << mk_pp(regexExpr, m) << " " << getStdRegexStr(regexExpr) << std::endl;);
                     std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parseRegexComponents(underApproxRegex(getStdRegexStr(regexExpr)))));
                     expr_ref_vector ors(m);
@@ -5801,6 +5819,27 @@ namespace smt {
             uState.addAssertingConstraints(assertedConstraints);
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    bool theory_str::isInternalVar(expr* e){
+        std::string tmp = expr2str(e);
+        return tmp.find("!tmp") != std::string::npos;
+    }
+
+    bool theory_str::isInternalRegexVar(expr* e){
+        if (isRegexVar(e)) {
+            std::string tmp = expr2str(e);
+            return tmp.find("!tmp") != std::string::npos;
+        }
+        return false;
+    }
+
+    bool theory_str::isInternalRegexVar(expr* e, expr* regex){
+        if (isRegexVar(e, regex)) {
+            std::string tmp = expr2str(e);
+            return tmp.find("!tmp") != std::string::npos;
+        }
+        return false;
     }
 
     std::vector<expr*> theory_str::createExprFromRegexVector(std::vector<zstring> v) {
@@ -6172,12 +6211,13 @@ namespace smt {
 
     std::vector<zstring> theory_str::collectAlternativeComponents(expr* v){
         std::vector<zstring> result;
-        collectAlternativeComponents(v, result);
+        if (!collectAlternativeComponents(v, result))
+            result.clear();
         return result;
     }
 
 
-    void theory_str::collectAlternativeComponents(expr* v, std::vector<zstring>& ret){
+    bool theory_str::collectAlternativeComponents(expr* v, std::vector<zstring>& ret){
         if (u.re.is_to_re(v)){
             expr* arg0 = to_app(v)->get_arg(0);
             zstring tmpStr;
@@ -6186,16 +6226,22 @@ namespace smt {
         }
         else if (u.re.is_union(v)){
             expr* arg0 = to_app(v)->get_arg(0);
-            collectAlternativeComponents(arg0, ret);
+            if (!collectAlternativeComponents(arg0, ret))
+                return false;
             expr* arg1 = to_app(v)->get_arg(1);
-            collectAlternativeComponents(arg1, ret);
+            if (!collectAlternativeComponents(arg1, ret))
+                return false;
         }
         else if (u.re.is_star(v) || u.re.is_plus(v)) {
             expr* arg0 = to_app(v)->get_arg(0);
-            collectAlternativeComponents(arg0, ret);
+            return collectAlternativeComponents(arg0, ret);
+        }
+        else if (u.re.is_concat(v)){
+            return false;
         }
         else
             SASSERT(false);
+        return true;
     }
 
 
@@ -6795,7 +6841,6 @@ namespace smt {
                     SASSERT (false);
                         break;
                 }
-//				__debugPrint(logFile, "%d optimizing mode: %d\n", __LINE__, optimizing);
                 expr* tmp = generateConstraint01(
                         lhs_str, rhs_str,
                         lhs_elements[i],
@@ -6842,6 +6887,7 @@ namespace smt {
             std::map<expr*, int> connectedVariables,
             bool optimizing){
         ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         bool isConstA = a.second < 0;
         bool isConstB = b.second < 0;
 
@@ -6889,7 +6935,7 @@ namespace smt {
             u.str.is_string(a.first, valA);
             u.str.is_string(b.first, valB);
             if ((QCONSTMAX == 1 || optimizing) && valA != valB) /* const = const */
-                return NULL;
+                return nullptr;
             expr_ref_vector possibleCases(m);
 
             if (a.second <= REGEX_CODE && b.second % QMAX == -1){
@@ -7023,7 +7069,7 @@ namespace smt {
 
             /* create or constraint */
             if (possibleCases.size() == 0)
-                return NULL;
+                return nullptr;
             else
                 result.push_back(createOrOperator(possibleCases));
 
@@ -7031,8 +7077,6 @@ namespace smt {
         }
 
         else if (isConstA) {
-            /* size = size && it = 1*/
-            SASSERT(a.second > REGEX_CODE);
             /* record characters for some special variables */
             if (connectedVariables.find(b.first) != connectedVariables.end()){
                 std::vector<std::pair<expr*, int>> elements;
@@ -7048,8 +7092,6 @@ namespace smt {
 
         else { /* isConstB */
             /* size = size && it = 1*/
-            /* record characters for some special variables */
-            SASSERT(a.second > REGEX_CODE);
             if (connectedVariables.find(a.first) != connectedVariables.end()){
                 std::vector<std::pair<expr*, int>> elements;
                 if (optimizing) {
@@ -7310,9 +7352,11 @@ namespace smt {
             if (elementNames[i].second >= 0) /* not const */ {
                 addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
                                                              getExprVarFlatSize(elementNames[i])));
+                splitPos++;
             }
             else { /* const */
                 if (addElements.size() > 0){ /* create a sum for previous elements */
+                    splitPos--;
                     expr* constraintForConnectedVar = lengthConstraint_toConnectedVarConstraint(
                             a, /* const or regex */
                             elementNames, /* have connected var */
@@ -7376,15 +7420,33 @@ namespace smt {
                                 createModOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(content.length())),
                                 m_autil.mk_int(std::abs(split[splitPos++]))));
                     }
-                    else
+                    else {
                         strAnd.push_back(createEqualOperator(
                                 getExprVarFlatSize(elementNames[i]),
                                 m_autil.mk_int(split[splitPos++])));
+                        if (isRegexVar(elementNames[i].first)){
+                            expr_ref_vector tmp(m);
+                            tmp.push_back(elementNames[i].first);
+                            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << std::endl;);
+                            expr* constraintForConnectedVar = lengthConstraint_toConnectedVarConstraint(
+                                    a, /* const or regex */
+                                    elementNames, /* have connected var */
+                                    tmp,
+                                    i,
+                                    split[splitPos],
+                                    lhs, rhs,
+                                    connectedVariables,
+                                    optimizing,
+                                    pMax);
+                            strAnd.push_back(constraintForConnectedVar);
+                        }
+                    }
                 }
             }
         }
 
         if (addElements.size() > 0) {
+            splitPos--;
             expr* constraintForConnectedVar = lengthConstraint_toConnectedVarConstraint(
                     a, /* const or regex */
                     elementNames, /* have connected var */
@@ -7435,13 +7497,17 @@ namespace smt {
             bool optimizing,
             int pMax){
         ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         int connectedVarPos = -1;
-        int connectedVarCnt = 0;
         expr_ref_vector constraints(m);
-        for (int i = currentPos - subElements.size() + 1; i <= currentPos; ++i)
-            if (connectedVariables.find(elementNames[i].first) != connectedVariables.end()) {
+        for (int i = currentPos - subElements.size() + 1; i <= currentPos; ++i) {
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m)
+                               << std::endl;);
+            if (connectedVariables.find(elementNames[i].first) != connectedVariables.end() ||
+                isRegexVar(elementNames[i].first)) {
                 connectedVarPos = i;
-                connectedVarCnt += 1;
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m)
+                                   << std::endl;);
                 constraints.push_back(connectedVar_atSpecificLocation(
                         a, /* const or regex */
                         elementNames, /* have connected var */
@@ -7452,11 +7518,10 @@ namespace smt {
                         optimizing,
                         pMax));
             }
+        }
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        return createAndOperator(constraints);
 
-        if (connectedVarCnt == 0)
-            return nullptr;
-        else
-            return createAndOperator(constraints);
     }
 
     /*
@@ -7474,6 +7539,7 @@ namespace smt {
         bool unrollMode = pMax == PMAX;
 
         ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr_ref_vector resultParts(m);
         zstring content;
         if (a.second <= REGEX_CODE)
@@ -7481,20 +7547,22 @@ namespace smt {
         else {
             u.str.is_string(a.first, content);
         }
-        SASSERT(connectedVariables.find(elementNames[connectedVarPos].first) != connectedVariables.end());
 
         /* how many parts of that connected variable are in the const | regex */
         /* sublen = part_1 + part2 + .. */
         int partCnt = 1;
-        expr_ref subLen(find_partsOfConnectedVariablesInAVector(connectedVarPos, elementNames, partCnt), m);
+        expr_ref subLen(m);
+        if (!isRegexVar(elementNames[connectedVarPos].first))
+            subLen = find_partsOfConnectedVariablesInAVector(connectedVarPos, elementNames, partCnt);
 
         expr* prefix_rhs = leng_prefix_rhs(elementNames[connectedVarPos], rhs, unrollMode);
         expr* prefix_lhs = leng_prefix_lhs(a, elementNames, lhs, rhs, connectedVarPos, optimizing, false);
 
         expr* arrayRhs = getExprVarFlatArray(elementNames[connectedVarPos]);
         expr* arrayLhs = getExprVarFlatArray(a);
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         if (connectedVarLength >= 0 && connectedVarLength != MINUSZERO) {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
             /* sublen = connectedVarLength */
             /* at_0 = x && at_1 == y && ..*/
             int considerLength = connectedVarLength;
@@ -7508,10 +7576,12 @@ namespace smt {
             }
         }
         else {
-            SASSERT(a.second <= REGEX_CODE);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+
             /* at_0 = x && at_1 == y && ..*/
             expr* strTmp = nullptr;
             expr* len_connectedVar = getExprVarFlatSize(elementNames[connectedVarPos]);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(len_connectedVar, m) << std::endl;);
 #if 0
             sprintf(strTmp, "(forall ((i Int)) (implies (and (< i %s) (>= i 0)) (= (select %s (+ i %s)) (select %s (mod (+ i %s) %ld)))))",
 					subLen.c_str(),
@@ -7575,6 +7645,7 @@ namespace smt {
         }
 
         expr_ref ret(createAndOperator(resultParts), m);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(ret.get(), m) << std::endl;);
         return ret;
     }
 
@@ -7646,6 +7717,7 @@ namespace smt {
         else
             u.str.is_string(a.first, content);
 
+        int currentLength = 0;
         for (unsigned i = 0; i < elementNames.size(); ++i){
             if (elementNames[i].second >= 0) /* not const */ {
                 addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
@@ -7707,8 +7779,10 @@ namespace smt {
                                 createModOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(content.length())),
                                 m_autil.mk_int(std::abs(split[splitPos++]))));
                     }
-                    else
-                        strAnd.push_back(createEqualOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(split[splitPos++])));
+                    else {
+                        strAnd.push_back(createEqualOperator(getExprVarFlatSize(elementNames[i]),
+                                                             m_autil.mk_int(split[splitPos++])));
+                    }
                 }
             }
         }
@@ -9090,7 +9164,7 @@ namespace smt {
         bool havingConst = false;
         bool havingConnectedVar = false;
 
-        /* check if containing const | regex */
+        /* check if containing const */
         for (unsigned i = 0 ; i < elementNames.size(); ++i)
             if (elementNames[i].second < 0) {
                 havingConst = true;
@@ -9099,7 +9173,7 @@ namespace smt {
 
         /* check if containing connected vars */
         for (unsigned i = 0 ; i < elementNames.size(); ++i)
-            if (connectedVariables.find(elementNames[i].first) != connectedVariables.end()) {
+            if (connectedVariables.find(elementNames[i].first) != connectedVariables.end() || elementNames[i].second <= REGEX_CODE) {
                 havingConnectedVar = true;
                 break;
             }
@@ -9927,7 +10001,7 @@ namespace smt {
                 else if (content.length() == 1)
                     elements.emplace_back(std::make_pair(list[k], -1));
             }
-            else if (u.re.is_star(list[k]) || u.re.is_plus(list[k]) || u.re.is_union(list[k]) || (isRegexVar(list[k]) && !isImportant(list[k]))){
+            else if (u.re.is_star(list[k]) || u.re.is_plus(list[k]) || u.re.is_union(list[k]) || (isRegexVar(list[k]) && isImportant(list[k]))){
                 if (varPieces.find(list[k]) == varPieces.end() ||
                     (currVarPieces.find(list[k]) != currVarPieces.end() &&
                      currVarPieces[list[k]] >= varPieces[list[k]])){
@@ -10284,6 +10358,19 @@ namespace smt {
             int &len){
         ast_manager &m = get_manager();
         len = -1;
+
+        for (const auto& we : membership_memo)
+            if (we.first.get() == nn){
+                std::vector<zstring> components = collectAlternativeComponents(we.second);
+                int maxLen = 0;
+                if (components.size() > 0){
+                    for (const auto& s : components)
+                        maxLen = maxLen > s.length() ? maxLen : s.length();
+                    len = maxLen;
+                    return true;
+                }
+
+            }
 
         for (const auto& we : m_wi_expr_memo){
             if (we.first.get() == nn){
