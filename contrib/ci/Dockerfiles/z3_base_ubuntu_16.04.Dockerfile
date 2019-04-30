@@ -50,3 +50,23 @@ RUN useradd -m user && \
 USER user
 WORKDIR /home/user
 ENV ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.9/bin/llvm-symbolizer
+
+# Install Openfst and Apron
+RUN \
+    wget http://www.openfst.org/twiki/pub/FST/FstDownload/openfst-1.7.1.tar.gz && \
+    tar zxvf openfst-1.7.1.tar.gz && \
+    cd openfst-1.7.1 && \
+    ./configure && \
+    make && \
+    sudo make install
+
+RUN \
+    git clone https://github.com/antoinemine/apron.git && \
+    cd apron && \
+    ./configure && \
+    make && \
+    sudo make install
+
+# Clean up $HOME
+RUN rm -rf /home/user/*
+
