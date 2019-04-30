@@ -27,8 +27,8 @@ if [ "X${ASAN_BUILD}" = "X1" ]; then
 fi
 
 if [ "X${UBSAN_BUILD}" = "X1" ]; then
-  CXXFLAGS="${CXXFLAGS} -fsanitize=undefined"
-  CFLAGS="${CFLAGS} -fsanitize=undefined"
+  CXXFLAGS="${CXXFLAGS} -fsanitize=undefined -fuse-ld=gold"
+  CFLAGS="${CFLAGS} -fsanitize=undefined -fuse-ld=gold"
 fi
 
 if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
