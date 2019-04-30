@@ -551,13 +551,13 @@ namespace smt {
 
         if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
-        STRACE("str", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
+        STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
-        STRACE("str", tout << "root original:\n" << root <<std::endl;);
+        STRACE("strg", tout << "root original:\n" << root <<std::endl;);
 //        root.remove_single_variable_word_term();
 //        STRACE("str", tout << "root removed single var:\n" << root <<std::endl;);
         root.merge_elements();
-        STRACE("str", tout << "root merged:\n" << root <<std::endl;);
+        STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
         if(root.word_eqs().size()==0){
@@ -660,7 +660,6 @@ namespace smt {
     expr_ref
     theory_str::mk_skolem(symbol const& name, expr *e1, expr *e2, expr *e3, expr *e4, sort *sort) {
         ast_manager& m = get_manager();
-        context & ctx = get_context();
         expr *es[4] = {e1, e2, e3, e4};
         unsigned len = e4 ? 4 : (e3 ? 3 : (e2 ? 2 : 1));
 
@@ -757,6 +756,7 @@ namespace smt {
 
         result.initialize_length_constraint(result.variables());
         result.remove_useless_diseq();
+        result.initialize_model_map(result.variables());
         return result;
     }
 
@@ -813,7 +813,7 @@ namespace smt {
         expr_ref zero(m_util_a.mk_int(0), m);
         expr_ref one(m_util_a.mk_int(1), m);
         expr_ref x = mk_skolem(symbol("m_char_at_left"), s, i);
-        expr_ref y = mk_skolem(symbol("m_char_at_right"), s, mk_sub(mk_sub(len_s, i), one));
+        expr_ref y = mk_skolem(symbol("m_char_at_right"), s, i);
         expr_ref xey(m_util_s.str.mk_concat(x, m_util_s.str.mk_concat(e, y)), m);
         string_theory_propagation(xey);
 
@@ -896,13 +896,13 @@ namespace smt {
         }
     }
 
-    void theory_str::handle_index_of(expr *e) {
-        if(!axiomatized_terms.contains(e)||false) {
-            axiomatized_terms.insert(e);
+    void theory_str::handle_index_of(expr *i) {
+        if(!axiomatized_terms.contains(i)||false) {
+            axiomatized_terms.insert(i);
             ast_manager &m = get_manager();
             expr *s = nullptr, *t = nullptr, *offset = nullptr;
             rational r;
-            VERIFY(m_util_s.str.is_index(e, t, s) || m_util_s.str.is_index(e, t, s, offset));
+            VERIFY(m_util_s.str.is_index(i, t, s) || m_util_s.str.is_index(i, t, s, offset));
 
             expr_ref minus_one(m_util_a.mk_int(-1), m);
             expr_ref zero(m_util_a.mk_int(0), m);
@@ -910,8 +910,8 @@ namespace smt {
             expr_ref emp(m_util_s.str.mk_empty(m.get_sort(t)), m);
 
             literal cnt = mk_literal(m_util_s.str.mk_contains(t, s));
-            literal i_eq_m1 = mk_eq(e, minus_one, false);
-            literal i_eq_0 = mk_eq(e, zero, false);
+            literal i_eq_m1 = mk_eq(i, minus_one, false);
+            literal i_eq_0 = mk_eq(i, zero, false);
             literal s_eq_empty = mk_eq(s, emp, false);
             literal t_eq_empty = mk_eq(t, emp, false);
 
@@ -924,21 +924,22 @@ namespace smt {
                 expr_ref xsy(m_util_s.str.mk_concat(x, s, y), m);
                 string_theory_propagation(xsy);
 
-
+                // |s| = 0 => indexof(t,s,0) = 0
+                // contains(t,s) & |s| != 0 => t = xsy & indexof(t,s,0) = |x|
                 expr_ref lenx(m_util_s.str.mk_length(x), m);
                 add_clause({~s_eq_empty, i_eq_0});
                 add_clause({~cnt, s_eq_empty, mk_eq(t, xsy, false)});
-                add_clause({~cnt, s_eq_empty, mk_eq(e, lenx, false)});
-                add_clause({~cnt, mk_literal(m_util_a.mk_ge(e, zero))});
+                add_clause({~cnt, s_eq_empty, mk_eq(i, lenx, false)});
+                add_clause({~cnt, mk_literal(m_util_a.mk_ge(i, zero))});
                 TRACE("str", tout << "TODO: ignore tightest_prefix\n";);
                 is_over_approximation=true;
 
-                // tightest_prefix(s, x);
+                tightest_prefix(s, x);
             } else {
                 expr_ref len_t(m_util_s.str.mk_length(t), m);
                 literal offset_ge_len = mk_literal(m_util_a.mk_ge(mk_sub(offset, len_t), zero));
                 literal offset_le_len = mk_literal(m_util_a.mk_le(mk_sub(offset, len_t), zero));
-                literal i_eq_offset = mk_eq(e, offset, false);
+                literal i_eq_offset = mk_eq(i, offset, false);
                 add_clause({~offset_ge_len, s_eq_empty, i_eq_m1});
                 add_clause({offset_le_len, i_eq_m1});
                 add_clause({~offset_ge_len, ~offset_le_len, ~s_eq_empty, i_eq_offset});
@@ -957,7 +958,7 @@ namespace smt {
                         {~offset_ge_0, offset_ge_len, mk_eq(m_util_s.str.mk_length(x), offset, false)});
                 add_clause({~offset_ge_0, offset_ge_len, ~mk_eq(indexof0, minus_one, false), i_eq_m1});
                 add_clause({~offset_ge_0, offset_ge_len, ~mk_literal(m_util_a.mk_ge(indexof0, zero)),
-                            mk_eq(offset_p_indexof0, e, false)});
+                            mk_eq(offset_p_indexof0, i, false)});
 
                 // offset < 0 => -1 = i
                 add_clause({offset_ge_0, i_eq_m1});
@@ -965,23 +966,32 @@ namespace smt {
         }
     }
 
+    void theory_str::tightest_prefix(expr* s, expr* x) {
+//        ast_manager &m = get_manager();
+//
+//        expr_ref s1 = mk_first(s);
+//        expr_ref c  = mk_last(s);
+//        expr_ref s1c = m_util_s.str.mk_concat(s1, m_util_s.str.mk_unit(c));
+//        expr_ref emp(m_util_s.str.mk_empty(m.get_sort(s)), m);
+//        literal s_eq_emp = mk_eq_empty(s);
+//        add_axiom(s_eq_emp, mk_eq(s, s1c, false));
+//        add_axiom(s_eq_emp, ~mk_literal(m_util_s.str.mk_contains(m_util_s.str.mk_concat(x, s1), s)));
+    }
+
     // e = prefix(x, y), check if x is a prefix of y
     void theory_str::handle_prefix(expr *e) {
         if(!axiomatized_terms.contains(e)||false) {
             axiomatized_terms.insert(e);
-            if (!axiomatized_terms.contains(e) || false) {
-                axiomatized_terms.insert(e);
 
-                ast_manager &m = get_manager();
-                expr *x = nullptr, *y = nullptr;
-                VERIFY(m_util_s.str.is_prefix(e, x, y));
+            ast_manager &m = get_manager();
+            expr *x = nullptr, *y = nullptr;
+            VERIFY(m_util_s.str.is_prefix(e, x, y));
 
-                expr_ref s = mk_skolem(symbol("m_prefix_right"), x, y);
-                expr_ref xs(m_util_s.str.mk_concat(x, s), m);
-                string_theory_propagation(xs);
-                literal not_e = mk_literal(mk_not({e, m}));
-                add_clause({not_e, mk_eq(y, xs, false)});
-            }
+            expr_ref s = mk_skolem(symbol("m_prefix_right"), x, y);
+            expr_ref xs(m_util_s.str.mk_concat(x, s), m);
+            string_theory_propagation(xs);
+            literal not_e = mk_literal(mk_not({e, m}));
+            add_clause({not_e, mk_eq(y, xs, false)});
         }
     }
 

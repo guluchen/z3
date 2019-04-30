@@ -49,8 +49,6 @@ namespace smt {
         }
 
         std::ostream& operator<<(std::ostream& os, const element& s) {
-            static const auto element_hash{element::hash{}};
-
             if(s.typed(element::t::CONST))
                 os << s.value();
             else
@@ -684,8 +682,10 @@ namespace smt {
                 }
             }
 
-            if(type==t::GE){
-                ret = {m_util_a.mk_ge(ret, m_util_a.mk_int(0))};
+            if(type==t::GT){
+                ret = {m_util_a.mk_gt(ret, m_util_a.mk_int(0)), m};
+            }else if(type==t::EQ){
+                ret = {m_util_a.mk_eq(ret, m_util_a.mk_int(0)), m};
             }
             STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
             return ret;
@@ -727,7 +727,7 @@ namespace smt {
             ret.m_len_cons.at(x).add(constraint::constant(), -1);
             constraint ex = ret.m_len_cons.at(x);
 
-            ret.m_path_cond.insert(ex.set_type(constraint::t::GE));//set m_len_cons[x]>0
+            ret.m_path_cond.insert(ex.set_type(constraint::t::GT));//set m_len_cons[x]>0
             return ret;
         };
         length_constraints length_constraints::assign_as(const element& x, const element& y) const{
@@ -737,12 +737,9 @@ namespace smt {
             SASSERT(m_len_cons.count(y)>0);
             constraint ex_minus_ey = ret.m_len_cons.at(x);
             ex_minus_ey.minus(ret.m_len_cons.at(y));
-            constraint ey_minus_ex = ret.m_len_cons.at(y);
-            ey_minus_ex.minus(ret.m_len_cons.at(x));
 
             ret.m_len_cons.at(x) = ret.m_len_cons.at(y);
-            ret.m_path_cond.insert(ey_minus_ex.set_type(constraint::t::GE));//set m_len_cons[y]>=m_len_cons[x]
-            ret.m_path_cond.insert(ex_minus_ey.set_type(constraint::t::GE));//set m_len_cons[x]>=m_len_cons[y]
+            ret.m_path_cond.insert(ex_minus_ey.set_type(constraint::t::EQ));//set m_len_cons[x]=m_len_cons[y]
 
             return ret;
         };
@@ -752,13 +749,10 @@ namespace smt {
             SASSERT(m_len_cons.count(x)>0);
             constraint ex_minus_len_tgt = ret.m_len_cons.at(x);
             ex_minus_len_tgt.add(constraint::constant(), -tgt.length());
-            constraint len_tgt_minus_ex = ret.m_len_cons.at(x);
-            len_tgt_minus_ex.neg();
-            len_tgt_minus_ex.add(constraint::constant(), tgt.length());
+
             ret.m_len_cons.at(x).minus(ret.m_len_cons.at(x));
             ret.m_len_cons.at(x).add(constraint::constant(), tgt.length());
-            ret.m_path_cond.insert(ex_minus_len_tgt.set_type(constraint::t::GE));//set m_len_cons[x] >= |tgt|
-            ret.m_path_cond.insert(len_tgt_minus_ex.set_type(constraint::t::GE));//set m_len_cons[x] >= |tgt|
+            ret.m_path_cond.insert(ex_minus_len_tgt.set_type(constraint::t::EQ));//set m_len_cons[x] = |tgt|
 
             return ret;
         };
@@ -768,12 +762,9 @@ namespace smt {
             length_constraints ret(*this);
 
             SASSERT(m_len_cons.count(x)>0);
-            constraint neg_ex = ret.m_len_cons.at(x);
             constraint ex = ret.m_len_cons.at(x);
-            neg_ex.neg();
             ret.m_len_cons.at(x).minus(ret.m_len_cons.at(x));
-            ret.m_path_cond.insert(ex.set_type(constraint::t::GE));//set m_len_cons[x] >= 0
-            ret.m_path_cond.insert(neg_ex.set_type(constraint::t::GE));//set -m_len_cons[x] >= 0
+            ret.m_path_cond.insert(ex.set_type(constraint::t::EQ));//set m_len_cons[x] = 0
             return ret;
         }
         length_constraints length_constraints::assign_empty_all(const std::set<element>& vars) const{
@@ -796,8 +787,8 @@ namespace smt {
 
             ret.m_len_cons.at(x).minus(ret.m_len_cons.at(y));
 
-            ret.m_path_cond.insert(ex_miuns_ey.set_type(constraint::t::GE));//set m_len_cons[x]-m_len_cons[y]>=0
-            ret.m_path_cond.insert(ey.set_type(constraint::t::GE));//set m_len_cons[y]>=0
+            ret.m_path_cond.insert(ex_miuns_ey.set_type(constraint::t::GT));//set m_len_cons[x]-m_len_cons[y]>0
+            ret.m_path_cond.insert(ey.set_type(constraint::t::GT));//set m_len_cons[y]>0
             return ret;
         };
 
@@ -1007,7 +998,7 @@ namespace smt {
 
         void state::add_word_diseq(const word_equation& we) {
             SASSERT(we);
-
+            std::cout<<we<<std::endl;
             word_equation&& trimmed = we.trim_prefix();
             //update length bound
 
@@ -1055,6 +1046,15 @@ namespace smt {
             result.set_strategy(m_strategy);
             result.m_lower_bound=m_lower_bound;
             result.m_lower_bound[non_zero_var]=1;
+
+            result.m_model=m_model;
+            for(auto& var_wt:m_model){
+                element lhs=var_wt.first;
+                word_term rhs = var_wt.second;
+                rhs.replace(var,{});
+                result.m_model[lhs]=rhs;
+            }
+
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.remove(var));
             }
@@ -1062,6 +1062,7 @@ namespace smt {
                 result.add_word_diseq(we.remove(var));
             }
             result.set_length(m_length.assign_empty(var,non_zero_var));
+
 
             return result;
         }
@@ -1074,9 +1075,18 @@ namespace smt {
             result.set_strategy(m_strategy);
             result.m_lower_bound=m_lower_bound;
 
+            auto temp_model=m_model;
             for (std::set<element>::iterator it(vars.begin()); it != vars.end(); ++it)
             {
                 result.m_lower_bound.erase(*it);
+                for(auto& var_wt:temp_model){
+                    element lhs=var_wt.first;
+                    word_term rhs = var_wt.second;
+                    rhs.replace(*it,{});
+                    result.m_model[lhs]=rhs;
+                }
+
+                temp_model=result.m_model;
             }
 
             for (const auto& we : m_eq_wes) {
@@ -1098,6 +1108,14 @@ namespace smt {
             state result{m_memberships->assign_const(var, tgt)};
             result.set_strategy(m_strategy);
             result.m_lower_bound=m_lower_bound;
+            result.m_model=m_model;
+
+            for(auto& var_wt:m_model){
+                element lhs=var_wt.first;
+                word_term rhs = var_wt.second;
+                rhs.replace(var,tgt);
+                result.m_model[lhs]=rhs;
+            }
 
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.replace(var, tgt));
@@ -1117,6 +1135,14 @@ namespace smt {
             result.set_strategy(m_strategy);
             result.m_lower_bound=m_lower_bound;
             result.m_lower_bound[as_var]=1;
+            result.m_model=m_model;
+
+            for(auto& var_wt:m_model){
+                element lhs=var_wt.first;
+                word_term rhs = var_wt.second;
+                rhs.replace(var,{as_var});
+                result.m_model[lhs]=rhs;
+            }
 
             for (const auto& we : m_eq_wes) {
                 result.add_word_eq(we.replace(var, {as_var}));
@@ -1131,7 +1157,6 @@ namespace smt {
 
         std::list<state> state::assign_prefix(const element& var, const element& ch) const {
             SASSERT(var.typed(element::t::VAR) && ch.typed(element::t::CONST));
-
             std::list<word_equation> wes;
             for (const auto& we : m_eq_wes) {
                 wes.emplace_back(we.replace(var, {ch, var}));
@@ -1143,8 +1168,18 @@ namespace smt {
             std::list<state> result;
             for (auto& m : m_memberships->assign_prefix(var, ch)) {
                 state s{std::move(m)};
+
                 s.set_strategy(m_strategy);
                 s.m_lower_bound=m_lower_bound;
+
+                for(auto& var_wt:m_model){
+                    element lhs=var_wt.first;
+                    word_term rhs = var_wt.second;
+                    rhs.replace(var,{ch,var});
+                    s.m_model[lhs]=rhs;
+                }
+
+                if(s.m_lower_bound.count(var)>0) s.m_lower_bound[var]=0;
 
                 for (const auto& we : wes) {
                     s.add_word_eq(we);
@@ -1176,6 +1211,13 @@ namespace smt {
                 s.set_strategy(m_strategy);
                 s.m_lower_bound=m_lower_bound;
 
+                for(auto& var_wt:m_model){
+                    element lhs=var_wt.first;
+                    word_term rhs = var_wt.second;
+                    rhs.replace(var,{prefix,var});
+                    s.m_model[lhs]=rhs;
+                }
+
                 for (const auto& we : wes) {
                     s.add_word_eq(we);
                 }
@@ -1189,7 +1231,7 @@ namespace smt {
         }
         bool state::is_reachable(ast_manager& m, context& ctx, theory_str& th) const {
             STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
-            bool on_screen=true;
+            bool on_screen=false;
             expr_ref to_check= m_length.get_path_cond(m);
             if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
 
@@ -1239,6 +1281,19 @@ namespace smt {
 
             s.m_length.print_path_cond(os);
             s.m_length.print_len_cons(os);
+
+            os <<"Non-empty variables: ";
+            for(const auto& lb:s.m_lower_bound){
+                if(lb.second>0){
+                    os << lb.first<<"_cur ";
+                }
+            }
+
+            os <<"\nCurrent model: "<<std::endl;
+            for(const auto& model:s.m_model){
+                os << model.first<<" at root = the current version of "<<model.second<<std::endl;
+            }
+
 
             return os << std::flush;
         }
@@ -1409,7 +1464,7 @@ namespace smt {
                 for (auto& action : transform(curr_s)) {
                     STRACE("strg", tout <<action_type_string[static_cast<int>(action.first.m_type)]<<" ";);
 
-
+                    std::cout<<action.second<<std::endl;
                     if (m_records.contains(action.second)) {
                         m_records.add_move(std::move(action.first), action.second);
                         STRACE("strg", tout << "already visited:\n" << action.second << '\n';);
@@ -1704,7 +1759,7 @@ namespace smt {
         str::word_term str::word_term::merge_list_of_elements(const std::list<element>& to_merge) const{
             element merged(to_merge);
             std::list<element> ret;
-            for(int index=0;index<length();index++){
+            for(unsigned int index=0;index<length();index++){
                 if(get(index)==to_merge.front()){
                     ret.push_back(merged);
                     index+=(to_merge.size()-1);

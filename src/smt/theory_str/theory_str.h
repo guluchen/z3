@@ -90,7 +90,7 @@ namespace smt {
         void add_clause(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
         void handle_substr(expr *e);
-        void handle_index_of(expr *e);
+        void handle_index_of(expr *i);
         void handle_prefix(expr *e);
         void handle_suffix(expr *e);
         void handle_contains(expr *e);
@@ -102,6 +102,7 @@ namespace smt {
         void propagate_concat_axiom(enode * cat);
         void propagate_basic_string_axioms(enode * str);
         bool lenc_check_sat(expr *e);
+        void tightest_prefix(expr*,expr*);
         bool check_counter_system_lenc(str::solver& solver);
         void print_ast(expr *e);
         void print_ctx(context& ctx);

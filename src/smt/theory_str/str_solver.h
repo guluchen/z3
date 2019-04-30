@@ -250,14 +250,14 @@ namespace smt {
             public:
                 //maintains a map m_coeffs that represents the inequality SUM_{A in Dom(m_coeffs)} m_coeffs[A]*A >= 0
                 enum class t {
-                    EXPR, GE
+                    EXPR, GT, EQ
                 };
                 static const element& constant(){
                     return element::null();
                 }
                 constraint(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type;}
                 constraint(const element& var) { m_coeffs.insert({var,1}); type=t::EXPR;}
-                constraint() { m_coeffs.insert({constant(),0}); type=t::GE;}//for initial path constraint
+                constraint() { m_coeffs.insert({constant(),0}); type=t::GT;}//for initial path constraint
 
                 constraint& operator=(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type; return *this; }
                 expr_ref get_expr(ast_manager& m) const;
@@ -289,8 +289,10 @@ namespace smt {
                         }
                     }
                     if(is_zero) os<<0;
-                    if(type==t::GE){
-                        os<<" >= 0";
+                    if(type==t::GT){
+                        os<<" > 0";
+                    }else if(type==t::EQ){
+                        os<<" = 0";
                     }
                     return os;
                 };
@@ -360,7 +362,7 @@ namespace smt {
             std::set<word_equation> m_diseq_wes;
             memberships::sptr m_memberships;
             length_constraints m_length;
-
+            std::map<element, word_term> m_model;
             std::map<element, unsigned> var_occurrence;
             std::map<word_term, std::set<word_term>> eq_class_map;
             void initialize_eq_class_map();
@@ -370,7 +372,7 @@ namespace smt {
             word_term find_alternative_term(const word_term&,const word_term&);
             static void merge_list_of_elements(std::set<word_equation>&, const std::list<element>&);
         public:
-            explicit state(memberships::sptr m) : m_memberships{std::move(m)}, m_strategy{state::transform_strategy::dynamic_empty_var_detection} {}
+            explicit state(memberships::sptr m) : m_strategy{state::transform_strategy::dynamic_empty_var_detection},m_memberships{std::move(m)} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
             std::set<element> variables() const;
             std::vector<std::vector<word_term>> eq_classes() const;
@@ -382,6 +384,14 @@ namespace smt {
             var_relation var_rel_graph() const;
             const transform_strategy get_strategy() const { return m_strategy; }
             void initialize_length_constraint(const std::set<element>& var) { m_length={var}; }
+            void initialize_model_map(const std::set<element>& var) {
+                for(const auto &v:var){
+                    std::list<element> wt_content;
+                    wt_content.push_back(v);
+                    word_term wt(wt_content);
+                    m_model[v]=wt;
+                }
+            }
 
             void set_strategy(transform_strategy st) { m_strategy=st; }
             bool is_non_empty_var(const element& v) const {return m_lower_bound.find(v)!=m_lower_bound.end() && m_lower_bound.find(v)->second > 0;}
@@ -495,7 +505,7 @@ namespace smt {
         ast_manager& m;
     public:
         seq_expr_solver(ast_manager& m, smt_params& fp, context& ctx):
-                m(m),m_kernel(m, fp){}
+                m_kernel(m, fp), m(m){}
 
         lbool check_sat(expr* e) override {
             m_kernel.push();

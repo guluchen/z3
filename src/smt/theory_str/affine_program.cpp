@@ -360,7 +360,7 @@ namespace smt {
             name_of_dim = ap_environment_name_of_dim_alloc(ap_cons_ptr->env);
             m_cst = ap_coeff2int(ap_cst);
             long int num_coeff;
-            for (int j = 0; j < name_of_dim->size; j++) {
+            for (unsigned int j = 0; j < name_of_dim->size; j++) {
                 ap_coeff = ap_lincons1_coeffref(ap_cons_ptr, name_of_dim->p[j]);
                 SASSERT(ap_coeff != NULL &&
                         ap_coeff->discr == AP_COEFF_SCALAR &&
