@@ -359,15 +359,15 @@ namespace smt {
             if (is_true) {
                 handle_prefix(e);
             } else {
-                TRACE("str", tout << "TODO: not prefix\n";);
-                is_over_approximation=true;
+                handle_not_prefix(e);
+//                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_suffix(e, e1, e2)) {
             if (is_true) {
                 handle_suffix(e);
             } else {
-                TRACE("str", tout << "TODO: not suffix\n";);
-                is_over_approximation=true;
+                handle_not_suffix(e);
+ //               is_over_approximation=true;
             }
         } else if (m_util_s.str.is_contains(e, e1, e2)) {
             if (is_true) {
@@ -389,6 +389,16 @@ namespace smt {
         ast_manager& m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
+
+        if(axiomatized_eq_vars.count(std::make_pair(x,y))==0){
+            axiomatized_eq_vars.insert(std::make_pair(x,y));
+
+
+
+            literal l_eq_r = mk_eq(l,r,false);
+            literal len_l_eq_len_r = mk_eq(m_util_s.str.mk_length(l),m_util_s.str.mk_length(r),false);
+            add_clause({~l_eq_r, len_l_eq_len_r});
+        }
         m_word_eq_todo.push_back({l, r});
         STRACE("str", tout << "new_eq: " << l << " = " << r << '\n';);
     }
@@ -490,17 +500,16 @@ namespace smt {
     }
 
     bool theory_str::lenc_check_sat(expr *e) {
-        std::cout << "~~~~~ lenc_check_sat start ~~~~~~~~~\n";  // test_hlin
         str::zaut::symbol_solver csolver(get_manager(), get_context().get_fparams());
         lbool chk_res = csolver.check_sat(e);
         STRACE("str", tout << std::boolalpha << "lenc_check_sat result = " << chk_res << std::endl;);
-        std::cout << std::boolalpha << "lenc_check_sat result = " << chk_res << std::endl;
-        std::cout << "~~~~~ lenc_check_sat end ~~~~~~~~~~~\n";  // test_hlin
         return chk_res;
     }
 
     bool theory_str::check_counter_system_lenc(smt::str::solver &solver) {
         using namespace str;
+        bool on_screen=false;
+
         counter_system cs = counter_system(solver);
         cs.print_counter_system();  // STRACE output
         cs.print_var_expr(get_manager());  // STRACE output
@@ -518,8 +527,8 @@ namespace smt {
                                                    ap_cs.get_var_expr());
         lenc.pretty_print(get_manager());
         if (!lenc.empty()) {
-            expr *lenc_res = lenc.export_z3exp(m_util_a, m_util_s);
-            std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
+            expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
+            if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
             STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
             return lenc_check_sat(lenc_res);
 //            add_axiom(lenc_res);
@@ -531,6 +540,7 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
+        bool on_screen=true;
         if(is_main_branch){
             main_branch=true;
             is_main_branch=false;
@@ -554,8 +564,8 @@ namespace smt {
         STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
         STRACE("strg", tout << "root original:\n" << root <<std::endl;);
-//        root.remove_single_variable_word_term();
-//        STRACE("str", tout << "root removed single var:\n" << root <<std::endl;);
+        root.remove_single_variable_word_term();
+        STRACE("strg", tout << "root removed single var:\n" << root <<std::endl;);
         root.merge_elements();
         STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
@@ -591,13 +601,12 @@ namespace smt {
             STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
             STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
             // stdout for test: print graph size then exit
-            std::cout << "graph construction summary:\n";
-            std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
-            std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
-            std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
+            if(on_screen) std::cout << "graph construction summary:\n";
+            if(on_screen) std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
+            if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+            if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = true;
-            //check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = check_counter_system_lenc(solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
@@ -761,8 +770,9 @@ namespace smt {
     }
 
     void theory_str::add_axiom(expr *const e) {
+        STRACE("strg", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
-        STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
 
         if(!axiomatized_terms.contains(e)||false) {
@@ -780,7 +790,6 @@ namespace smt {
             ctx.mk_th_axiom(get_id(), 1, &l);
             STRACE("str", ctx.display_literal_verbose(tout << "[Assert_e]\n", l) << '\n';);
         }
-        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
 
     void theory_str::add_clause(std::initializer_list<literal> ls) {
@@ -794,6 +803,8 @@ namespace smt {
             }
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
+        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__; );
+        if(is_main_branch) STRACE("strg", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
         STRACE("str", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
         STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
@@ -995,6 +1006,52 @@ namespace smt {
         }
     }
 
+// e = prefix(x, y), check if x is not a prefix of y
+    void theory_str::handle_not_prefix(expr *e) {
+        if(!axiomatized_terms.contains(e)||false) {
+            axiomatized_terms.insert(e);
+
+            ast_manager &m = get_manager();
+            expr *x = nullptr, *y = nullptr;
+            VERIFY(m_util_s.str.is_prefix(e, x, y));
+
+            expr_ref p= mk_skolem(symbol("m_not_prefix_left"), x, y);
+            expr_ref mx= mk_skolem(symbol("m_not_prefix_midx"), x, y);
+            expr_ref my= mk_skolem(symbol("m_not_prefix_midy"), x, y);
+            expr_ref qx= mk_skolem(symbol("m_not_prefix_rightx"), x, y);
+            expr_ref qy= mk_skolem(symbol("m_not_prefix_righty"), x, y);
+
+            expr_ref len_x_gt_len_y{m_util_a.mk_gt(m_util_a.mk_sub(m_util_s.str.mk_length(x),m_util_s.str.mk_length(y)), m_util_a.mk_int(0)),m};
+
+            literal len_y_gt_len_x = mk_literal(len_x_gt_len_y);
+
+            expr_ref pmx(m_util_s.str.mk_concat(p, mx), m);
+            string_theory_propagation(pmx);
+            expr_ref pmxqx(m_util_s.str.mk_concat(pmx, qx), m);
+            string_theory_propagation(pmxqx);
+
+            expr_ref pmy(m_util_s.str.mk_concat(p, my), m);
+            string_theory_propagation(pmy);
+            expr_ref pmyqy(m_util_s.str.mk_concat(pmy, qy), m);
+            string_theory_propagation(pmyqy);
+
+            literal x_eq_pmq = mk_eq(x,pmxqx,false);
+            literal y_eq_pmq = mk_eq(y,pmyqy,false);
+
+            literal len_mx_is_one = mk_eq(m_util_a.mk_int(1), m_util_s.str.mk_length(mx),false);
+            literal len_my_is_one = mk_eq(m_util_a.mk_int(1), m_util_s.str.mk_length(my),false);
+            literal eq_mx_my = mk_eq(mx, my,false);
+
+            literal lit_e = mk_literal(e);
+            add_clause({lit_e, len_y_gt_len_x, x_eq_pmq});
+            add_clause({lit_e, len_y_gt_len_x, y_eq_pmq});
+            add_clause({lit_e, len_y_gt_len_x, len_mx_is_one});
+            add_clause({lit_e, len_y_gt_len_x, len_my_is_one});
+            add_clause({lit_e, len_y_gt_len_x, ~eq_mx_my});
+        }
+    }
+
+
     // e = suffix(x, y), check if x is a suffix of y
     void theory_str::handle_suffix(expr *e) {
         if(!axiomatized_terms.contains(e)||false) {
@@ -1010,6 +1067,54 @@ namespace smt {
             add_clause({not_e, mk_eq(y, px, false)});
         }
     }
+
+    // e = suffix(x, y), check if x is not a suffix of y
+    void theory_str::handle_not_suffix(expr *e) {
+        if(!axiomatized_terms.contains(e)||false) {
+            axiomatized_terms.insert(e);
+
+            ast_manager &m = get_manager();
+            expr *x = nullptr, *y = nullptr;
+            VERIFY(m_util_s.str.is_prefix(e, x, y));
+
+            expr_ref q= mk_skolem(symbol("m_not_suffix_right"), x, y);
+            expr_ref mx= mk_skolem(symbol("m_not_suffix_midx"), x, y);
+            expr_ref my= mk_skolem(symbol("m_not_suffix_midy"), x, y);
+            expr_ref px= mk_skolem(symbol("m_not_suffix_leftx"), x, y);
+            expr_ref py= mk_skolem(symbol("m_not_suffix_lefty"), x, y);
+
+
+
+            expr_ref len_x_gt_len_y{m_util_a.mk_gt(m_util_a.mk_sub(m_util_s.str.mk_length(x),m_util_s.str.mk_length(y)), m_util_a.mk_int(0)),m};
+
+            literal len_y_gt_len_x = mk_literal(len_x_gt_len_y);
+
+            expr_ref pxmx(m_util_s.str.mk_concat(px, mx), m);
+            string_theory_propagation(pxmx);
+            expr_ref pxmxq(m_util_s.str.mk_concat(pxmx, q), m);
+            string_theory_propagation(pxmxq);
+
+            expr_ref pymy(m_util_s.str.mk_concat(py, my), m);
+            string_theory_propagation(pymy);
+            expr_ref pymyq(m_util_s.str.mk_concat(pymy, q), m);
+            string_theory_propagation(pymyq);
+
+            literal x_eq_pmq = mk_eq(x,pxmxq,false);
+            literal y_eq_pmq = mk_eq(y,pymyq,false);
+
+            literal len_mx_is_one = mk_eq(m_util_a.mk_int(1), m_util_s.str.mk_length(mx),false);
+            literal len_my_is_one = mk_eq(m_util_a.mk_int(1), m_util_s.str.mk_length(my),false);
+            literal eq_mx_my = mk_eq(mx, my,false);
+
+            literal lit_e = mk_literal(e);
+            add_clause({lit_e, len_y_gt_len_x, x_eq_pmq});
+            add_clause({lit_e, len_y_gt_len_x, y_eq_pmq});
+            add_clause({lit_e, len_y_gt_len_x, len_mx_is_one});
+            add_clause({lit_e, len_y_gt_len_x, len_my_is_one});
+            add_clause({lit_e, len_y_gt_len_x, ~eq_mx_my});
+        }
+    }
+
     // e = contains(x, y)
     void theory_str::handle_contains(expr *e) {
         if(!axiomatized_terms.contains(e)||false) {

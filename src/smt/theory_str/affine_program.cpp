@@ -53,6 +53,7 @@ namespace smt {
         }
 
         counter_system::counter_system(const smt::str::solver &solv) {
+            bool on_screen =false;
             cs_state counter = 1;
             std::unordered_map<state::cref, cs_state, state::hash, std::equal_to<state>> mapped_states;
             std::queue<state::cref> process_queue;
@@ -151,10 +152,10 @@ namespace smt {
             for (const auto& e : mapped_states) {
                 STRACE("str", tout << "state number " << e.second << " maps to state:\n" << e.first  << '\n';);
             }
-            std::cout << "[COUNTER_SYSTEM]:\n";
-            std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
-            std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
-            std::cout << "is dag? " << std::boolalpha << is_dag() << '\n';
+            if(on_screen) std::cout << "[COUNTER_SYSTEM]:\n";
+            if(on_screen) std::cout << "#states = " << num_states << "; #transitions = " << num_trans << '\n';
+            if(on_screen) std::cout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';
+            if(on_screen) std::cout << "is dag? " << std::boolalpha << is_dag() << '\n';
             STRACE("str", tout << "[COUNTER_SYSTEM]:\n";);
             STRACE("str", tout << "#states=" << num_states << "; #transitions=" << num_trans << '\n';);
             STRACE("str", tout << "ROOT quadratic? " << std::boolalpha << solv.get_root().get().quadratic() << '\n';);
@@ -409,19 +410,22 @@ namespace smt {
             }
         }
 
-        expr* ap_length_constraint::len_cons::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
-            expr* ret = ap_util_a.mk_int(m_cst);
-            expr* var_len_exp = nullptr;
+        expr_ref ap_length_constraint::len_cons::export_z3exp(ast_manager& m) {
+            arith_util ap_util_a(m);
+            seq_util ap_util_s(m);
+
+            expr_ref ret = {ap_util_a.mk_int(m_cst),m};
+            expr_ref var_len_exp(m);
 
             for (const auto& ve : m_var_expr_coeff) {
                 int i = 1;
                 if (ve.second.first.size() > 1) {  // addition of variable lengths if more than one expression
                     for (auto& e : ve.second.first) {
                         if (i==1) {
-                            var_len_exp = ap_util_s.str.mk_length(e);
+                            var_len_exp = {ap_util_s.str.mk_length(e),m};
                         }
                         else {
-                            var_len_exp = ap_util_a.mk_add(var_len_exp, ap_util_s.str.mk_length(e));
+                            var_len_exp = {ap_util_a.mk_add(var_len_exp, ap_util_s.str.mk_length(e)),m};
                         }
                         i++;
                     }
@@ -429,10 +433,10 @@ namespace smt {
             }
             switch (m_type) {
                 case lcons_type::EQ:
-                    ret = ap_util_a.mk_eq(ret,ap_util_a.mk_int(0));
+                    ret = {ap_util_a.mk_eq(ret,ap_util_a.mk_int(0)),m};
                     break;
                 case lcons_type::SUPEQ:
-                    ret = ap_util_a.mk_ge(ret,ap_util_a.mk_int(0));
+                    ret = {ap_util_a.mk_ge(ret,ap_util_a.mk_int(0)),m};
                     break;
                 default:
                     SASSERT(false);
@@ -440,19 +444,21 @@ namespace smt {
             return ret;
         }
 
-        expr* ap_length_constraint::export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s) {
+        expr_ref ap_length_constraint::export_z3exp(ast_manager& m) {
+            arith_util ap_util_a(m);
+            expr_ref ret(m);
             if (empty()) {
                 std::cout << "ERROR: empty length constraint! export nothing..." << std::endl;
-                return nullptr;
+                return ret;
             }
-            expr* ret;
+
             bool flg = false;
             for (auto& e : m_cons) {
                 if (flg) {
-                    ret = ap_util_a.get_manager().mk_and(ret,e.export_z3exp(ap_util_a,ap_util_s));
+                    ret = {m.mk_and(ret,e.export_z3exp(m)),m};
                 }
                 else {
-                    ret = e.export_z3exp(ap_util_a,ap_util_s);
+                    ret = {e.export_z3exp(m),m};
                     flg = true;
                 }
             }

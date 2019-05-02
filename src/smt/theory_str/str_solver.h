@@ -62,7 +62,7 @@ namespace smt {
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
             const string& shortname() const { return m_shortname; }
-            const std::list<expr*>& origin_expr() const { return m_expr; }//TODO::need to consider all elements in m_expr
+            const std::list<expr*>& origin_expr() const { return m_expr; }
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -256,7 +256,13 @@ namespace smt {
                     return element::null();
                 }
                 constraint(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type;}
-                constraint(const element& var) { m_coeffs.insert({var,1}); type=t::EXPR;}
+                constraint(const element& var) {
+                    if(var.typed(element::t::VAR)){
+                        m_coeffs.insert({var,1}); type=t::EXPR;
+                    }else if(var.typed(element::t::CONST)){
+                        m_coeffs.insert({constraint::constant(),1}); type=t::EXPR;
+                    }
+                }
                 constraint() { m_coeffs.insert({constant(),0}); type=t::GT;}//for initial path constraint
 
                 constraint& operator=(const constraint & other) { m_coeffs = other.m_coeffs; type=other.type; return *this; }
@@ -324,6 +330,7 @@ namespace smt {
             length_constraints assign_empty(const element& var, const element& non_zero_var) const;
             length_constraints assign_empty_all(const std::set<element>& vars) const;
             length_constraints assign_prefix_var(const element& var, const element& prefix) const;
+            length_constraints add_equality(const element& lhs, const word_term& rhs) const;
 
             void merge_list_of_elements(const std::list<element>&);
 

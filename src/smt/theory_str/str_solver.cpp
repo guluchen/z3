@@ -369,6 +369,7 @@ namespace smt {
                 lhs.remove_head();
                 rhs.remove_head();
             }
+
             return result;
         }
 
@@ -792,8 +793,23 @@ namespace smt {
             return ret;
         };
 
+        length_constraints length_constraints::add_equality(const element& lhs, const word_term& rhs) const{
+            length_constraints ret(*this);
+            constraint len_diff(lhs);
+            len_diff.set_type(constraint::t::EQ);
+
+            for(auto& e:rhs.content()){
+                constraint len_e(e);
+                len_diff.minus(len_e);
+            }
+
+            ret.m_path_cond.insert(len_diff);
+            return ret;
+        }
+
+
+
         void length_constraints::merge_list_of_elements(const std::list<element>& to_merge) {
-            SASSERT(m_path_cond.size()==0);
             element merged(to_merge);
             constraint sum;
             sum.set_type(constraint::t::EXPR);
@@ -998,7 +1014,6 @@ namespace smt {
 
         void state::add_word_diseq(const word_equation& we) {
             SASSERT(we);
-            std::cout<<we<<std::endl;
             word_equation&& trimmed = we.trim_prefix();
             //update length bound
 
@@ -1464,7 +1479,6 @@ namespace smt {
                 for (auto& action : transform(curr_s)) {
                     STRACE("strg", tout <<action_type_string[static_cast<int>(action.first.m_type)]<<" ";);
 
-                    std::cout<<action.second<<std::endl;
                     if (m_records.contains(action.second)) {
                         m_records.add_move(std::move(action.first), action.second);
                         STRACE("strg", tout << "already visited:\n" << action.second << '\n';);
@@ -1812,14 +1826,26 @@ namespace smt {
                         updated =true;
                     }
                     if(updated){
+                        m_length=m_length.add_equality(source,target);
+
                         for (auto &eq2:m_eq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
-                            if (eq3.lhs() != eq3.rhs()) updated_result.insert(eq3);
+                            eq3=eq3.trim_prefix();
+                            if(eq3.lhs()==eq3.rhs()){
+                                eq3=eq3.trim_prefix();
+                            }
+                            if (!eq3.empty()){
+                                updated_result.insert(eq3);
+                            }
                         }
                         m_eq_wes = updated_result;
                         updated_result.clear();
                         for (auto &eq2:m_diseq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
+                            eq3=eq3.trim_prefix();
+                            if(eq3.lhs()==eq3.rhs()){
+                                eq3=eq3.trim_prefix();
+                            }
                             updated_result.insert(eq3);
                         }
                         m_diseq_wes = updated_result;

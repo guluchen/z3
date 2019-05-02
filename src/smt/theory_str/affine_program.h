@@ -156,7 +156,7 @@ namespace smt {
                 len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
                         const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr);
                 void pretty_print(ast_manager& ast_man);
-                expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
+                expr_ref export_z3exp(ast_manager&);
             };
         private:
             std::list<len_cons> m_cons;
@@ -164,7 +164,7 @@ namespace smt {
             ap_length_constraint(ap_manager_t *ap_man, ap_abstract1_t* ap_abs_ptr,
                    const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr);
             void pretty_print(ast_manager& ast_man);
-            expr* export_z3exp(arith_util &ap_util_a, seq_util &ap_util_s);
+            expr_ref export_z3exp(ast_manager& m);
             bool empty() { return m_cons.empty(); };
         };
 

@@ -38,6 +38,9 @@ namespace smt {
 
         obj_hashtable<expr> axiomatized_terms;
         obj_hashtable<expr> propgated_string_theory;
+        std::set<std::pair<int,int>> axiomatized_eq_vars;
+
+
         scoped_vector<str::tvar_pair> m_word_eq_var_todo;
         scoped_vector<str::tvar_pair> m_word_diseq_var_todo;
 
@@ -93,6 +96,8 @@ namespace smt {
         void handle_index_of(expr *i);
         void handle_prefix(expr *e);
         void handle_suffix(expr *e);
+        void handle_not_prefix(expr *e);
+        void handle_not_suffix(expr *e);
         void handle_contains(expr *e);
         void handle_in_re(expr *e, bool is_true);
         void set_conflict(const literal_vector& ls);
