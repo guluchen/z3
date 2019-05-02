@@ -5,7 +5,7 @@ Trauc is a theorem prover based on [Z3](https://github.com/Z3Prover/z3)
 
 | TravisCI |
 | -------- |
-|[![Build Status](https://travis-ci.org/spencerwuwu/benchmark-generator.png?branch=master)](https://travis-ci.org/guluchen/z3)|
+|[![Build Status](https://travis-ci.org/guluchen/z3.svg?branch=master)](https://travis-ci.org/guluchen/z3)
 
 ## Requirements
 
