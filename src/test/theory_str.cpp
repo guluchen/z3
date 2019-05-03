@@ -22,13 +22,13 @@ public:
     void testoaut(){
         expr_ref string_exp= genRandomExpr(2);
         smt::str::oaut_adaptor m_oaut_imp(m);
-        smt::str::automaton::sptr aut = m_oaut_imp.mk_from_re_expr(string_exp);
+        smt::str::automaton::sptr aut = m_oaut_imp.mk_from_re_expr(string_exp, true);
 
     }
     void testzaut(){
         expr_ref string_exp= genRandomExpr(2);
         smt::str::zaut_adaptor m_zaut_imp(m,ctx);
-        smt::str::automaton::sptr aut = m_zaut_imp.mk_from_re_expr(string_exp);
+        smt::str::automaton::sptr aut = m_zaut_imp.mk_from_re_expr(string_exp, true);
 
     }
 
@@ -37,12 +37,12 @@ public:
         smt::str::zaut_adaptor m_zaut_imp(m,ctx);
         smt::str::oaut_adaptor m_oaut_imp(m);
 
-        smt::str::automaton::sptr zaut = m_zaut_imp.mk_from_re_expr(string_exp)->determinize();
-        smt::str::automaton::sptr oaut = m_oaut_imp.mk_from_re_expr(string_exp);
+        smt::str::automaton::sptr zaut = m_zaut_imp.mk_from_re_expr(string_exp, true)->determinize();
+        smt::str::automaton::sptr oaut = m_oaut_imp.mk_from_re_expr(string_exp, true);
 
         expr_ref string_exp2= genRandomExpr(2);
-        smt::str::automaton::sptr zaut2 = m_zaut_imp.mk_from_re_expr(string_exp2)->determinize();
-        smt::str::automaton::sptr oaut2 = m_oaut_imp.mk_from_re_expr(string_exp2);
+        smt::str::automaton::sptr zaut2 = m_zaut_imp.mk_from_re_expr(string_exp2, true)->determinize();
+        smt::str::automaton::sptr oaut2 = m_oaut_imp.mk_from_re_expr(string_exp2, true);
 
 
         std::ofstream oaut_file, zaut_file, re_file;
