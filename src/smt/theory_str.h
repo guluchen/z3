@@ -1303,7 +1303,7 @@ namespace smt {
                 bool isInternalVar(expr* e);
                 bool isInternalRegexVar(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
-                bool isInternalRegexVar(expr* e, expr* regex);
+                bool isInternalRegexVar(expr* e, expr* &regex);
                 /*
                 * (abc)*__XXX -> abc
                 */
