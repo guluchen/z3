@@ -1442,6 +1442,9 @@ namespace smt {
                     int pMax,
                     std::map<expr*, int> connectedVariables,
                     bool optimizing);
+            int lcd(int x, int y);
+            bool matchRegex(expr* a, zstring b);
+            bool matchRegex(expr* a, expr* b);
             /*
              * Flat = sum (flats)
              */
@@ -1759,6 +1762,7 @@ namespace smt {
              */
             std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
             expr* getExprVarFlatArray(std::pair<expr*, int> a);
+            expr* getExprVarFlatArray(expr* e);
             /*
             * First base case
             */
@@ -2090,6 +2094,7 @@ namespace smt {
         std::map<expr*, std::set<expr*>> notContainMap;
         std::map<expr*, std::set<expr*>> backwardDep;
         std::map<expr*, expr*> arrMap;
+        std::map<std::string, expr*> arrMap_reverse;
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;

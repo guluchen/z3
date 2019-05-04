@@ -979,7 +979,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
 
-                enode* arrNode = ctx.get_enode(arrMap[owner.get()]);
+                enode* arrNode = ctx.get_enode(getExprVarFlatArray(owner.get()));
 
                 result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int32());
                 importantNode = owner.get();
@@ -993,7 +993,7 @@ namespace smt {
                 for (int i = 0; i < eqSet.size(); ++i) {
                     if (isImportant(eqSet[i].get()) && !u.str.is_concat(eqSet[i].get())) {
 
-                        enode* arrNode = ctx.get_enode(arrMap[eqSet[i].get()]);
+                        enode* arrNode = ctx.get_enode(getExprVarFlatArray(eqSet[i].get()));
                         result = alloc(string_value_proc, *this, s, n->get_owner(), true,
                                        arrNode, regex, vLen.get_int32());
                         found = true;
@@ -1013,7 +1013,7 @@ namespace smt {
             std::set<expr*> dep = getDependency(owner);
             if (importantNode != nullptr) {
                 // add array
-                result->add_entry(ctx.get_enode(arrMap[importantNode]));
+                result->add_entry(ctx.get_enode(getExprVarFlatArray(importantNode)));
 
                 std::set<expr*> depImp = getDependency(importantNode);
                 dep.insert(depImp.begin(), depImp.end());
@@ -2214,12 +2214,7 @@ namespace smt {
                 expr* rhs = construct_overapprox(*itor, litems_rhs);
                 if (rhs == nullptr)
                     return;
-                expr *intersection = u.re.mk_inter(rhs, lhs);
-                m_trail.push_back(intersection);
-                TRACE("str", tout << __LINE__ << __FUNCTION__ << ": "<< mk_pp(rhs, m) << " --- " << mk_pp(intersection, m) << std::endl;);
-
-                eautomaton *au01 = get_automaton(intersection);
-                bool matchRes = !au01->is_empty();
+                bool matchRes = matchRegex(rhs, lhs);
                 STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(rhs, m) << " : "
                                    << (matchRes ? "yes: " : "no: ") << std::endl;);
                 if (!matchRes) {
@@ -2312,12 +2307,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << __FUNCTION__ << ": " << mk_pp(rhs, m)  << std::endl;);
                     if (rhs == nullptr)
                         return;
-                    expr *intersection = u.re.mk_inter(rhs, lhs);
-                    STRACE("str", tout << __LINE__ << __FUNCTION__ << ": " << mk_pp(intersection, m)  << std::endl;);
-                    m_trail.push_back(intersection);
-
-                    eautomaton *au01 = get_automaton(intersection);
-                    bool matchRes = !au01->is_empty();
+                    bool matchRes = matchRegex(rhs, lhs);
                     expr_ref implyL(ctx.mk_eq_atom(*itor, constStr), m);
                     if (!matchRes) {
                         assert_implication(mk_and(litems), mk_not(implyL));
@@ -2365,10 +2355,7 @@ namespace smt {
                     expr* rhs_over = construct_overapprox(*itor02, litems_rhs);
                     if (rhs_over == nullptr)
                         return;
-                    expr *intersection = u.re.mk_inter(rhs_over, lhs);
-                    m_trail.push_back(intersection);
-                    eautomaton *au01 = get_automaton(intersection);
-                    bool matchRes = !au01->is_empty();
+                    bool matchRes = matchRegex(rhs_over, lhs);
                     if (!matchRes) {
                         if (*itor01 != nn1)
                             litems_rhs.push_back(ctx.mk_eq_atom(nn1, *itor01));
@@ -5091,7 +5078,7 @@ namespace smt {
 
     void theory_str::additionalHandling(){
         handle_NOTEqual();
-        handle_NOTContain();
+//        handle_NOTContain();
     }
 
     void theory_str::handle_NOTEqual(){
@@ -5103,10 +5090,19 @@ namespace smt {
                 expr* contain = nullptr;
                 if (!isContains(lhs, contain) && !isContains(rhs, contain)) {
                     STRACE("str", tout << __LINE__ <<  " not (" << wi.first << " = " << wi.second << ")\n";);
+                    ast_manager & m = get_manager();
+                    expr_ref_vector eqLhs(m);
+                    expr_ref_vector eqRhs(m);
+                    expr* constLhs = collect_eq_nodes(lhs, eqLhs);
+                    expr* constRhs = collect_eq_nodes(rhs, eqRhs);
+                    if (constLhs != nullptr && constLhs != nullptr)
+                        return;
+
                     zstring value;
-                    if (u.str.is_string(lhs, value))
+
+                    if (constLhs != nullptr && u.str.is_string(constLhs, value))
                         handle_NOTEqual_const(rhs, value);
-                    else if (u.str.is_string(rhs, value))
+                    else if (constRhs != nullptr && u.str.is_string(constRhs, value))
                         handle_NOTEqual_const(lhs, value);
                     else
                         handle_NOTEqual_var(lhs, rhs);
@@ -5127,8 +5123,8 @@ namespace smt {
 
         int len1, len2;
         if (isImportant(lhs, len1) && isImportant(rhs, len2)) {
-            expr* arrLhs = arrMap[lhs];
-            expr* arrRhs = arrMap[rhs];
+            expr* arrLhs = getExprVarFlatArray(lhs);
+            expr* arrRhs = getExprVarFlatArray(rhs);
             STRACE("str", tout << __LINE__ <<  " min len: " << std::min(len1, len2) << "\n";);
             for (int i = 0; i < std::min(len1, len2); ++i) {
                 expr_ref_vector subcases(m);
@@ -5141,13 +5137,15 @@ namespace smt {
                 subcases.push_back(mk_not(m, tmp.get()));
                 cases.push_back(createAndOperator(subcases));
             }
+
+            expr_ref notcause(createEqualOperator(lhs, rhs), m);
+
+            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
+            assert_axiom(axiom);
+            uState.addAssertingConstraints(axiom);
         }
 
-        expr_ref notcause(createEqualOperator(lhs, rhs), m);
 
-        expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
-        assert_axiom(axiom);
-        uState.addAssertingConstraints(axiom);
     }
 
     void theory_str::handle_NOTEqual_const(expr* lhs, zstring rhs){
@@ -5165,7 +5163,7 @@ namespace smt {
 
         if (isImportant(lhs)) {
             STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
-            expr* arrLhs = arrMap[lhs];
+            expr* arrLhs = getExprVarFlatArray(lhs);
 
             for (int i = 0; i < rhs.length(); ++i) {
                 expr_ref_vector subcases(m);
@@ -5174,13 +5172,13 @@ namespace smt {
                 subcases.push_back(mk_not(m, tmp));
                 cases.push_back(createAndOperator(subcases));
             }
+            STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
+            expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
+            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
+            assert_axiom(axiom);
+            uState.addAssertingConstraints(axiom);
         }
 
-        STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
-        expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
-        expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
-        assert_axiom(axiom);
-        uState.addAssertingConstraints(axiom);
     }
 
     void theory_str::handle_NOTContain(){
@@ -5219,7 +5217,7 @@ namespace smt {
         if (isImportant(lhs, bound)){
             expr_ref_vector cases(m);
             expr* lenExpr = mk_strlen(lhs);
-            expr* arr = arrMap[lhs];
+            expr* arr = getExprVarFlatArray(lhs);
             for (unsigned i = rhs.length(); i <= bound; ++i){
                 expr_ref_vector subcases(m);
                 subcases.push_back(createLessEqOperator(lenExpr, mk_int(i - 1)));
@@ -5326,6 +5324,21 @@ namespace smt {
                 app *ap = to_app(v.first);
                 if (!u.str.is_concat(ap))
                     allStrExprs.insert(v.first);
+                else {
+                    expr* tmp = ctx.get_enode(v.first)->get_root()->get_owner();
+                    if (!u.str.is_concat(tmp))
+                        allStrExprs.insert(tmp);
+                    else {
+                        expr_ref_vector eqNodes(m);
+                        collect_eq_nodes(tmp, eqNodes);
+                        for (int i = 0; i < eqNodes.size(); ++i)
+                            if (!u.str.is_concat(eqNodes[i].get())) {
+                                allStrExprs.insert(eqNodes[i].get());
+                                break;
+                            }
+                    }
+
+                }
             }
 
             for (const auto& eq : v.second){
@@ -5349,11 +5362,20 @@ namespace smt {
         for(const auto& v : allStrExprs){
 
             if (is_app(v)){
+                STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
                 app *ap = to_app(v);
                 if (!u.str.is_concat(ap) && arrMap.find(v) == arrMap.end()) {
-                    std::string flatArr = generateFlatArray(std::make_pair(v, 0), "");
-                    expr_ref v1(mk_arr_var(flatArr), m);
+                    std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                    expr_ref v1(m);
+                    if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
+                        v1 = arrMap_reverse[flatArr];
+                    }
+                    else {
+                        v1 = mk_arr_var(flatArr);
+                        arrMap_reverse[flatArr] = v1;
+                    }
                     arrMap[v] = v1;
+
                     STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
                     zstring val;
@@ -5393,6 +5415,9 @@ namespace smt {
                         }
                     }
                 }
+            }
+            else {
+                STRACE("str", tout << __LINE__ << " not making arr: " << mk_pp(v, m) << std::endl;);
             }
         }
 
@@ -5438,8 +5463,15 @@ namespace smt {
             if (is_app(v)){
                 app *ap = to_app(v);
                 if (!u.str.is_concat(ap) && arrMap.find(v) == arrMap.end()) {
-                    std::string flatArr = generateFlatArray(std::make_pair(v, 0), "");
-                    expr_ref v1(mk_arr_var(flatArr), m);
+                    std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                    expr_ref v1(m);
+                    if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
+                        v1 = arrMap_reverse[flatArr];
+                    }
+                    else {
+                        v1 = mk_arr_var(flatArr);
+                        arrMap_reverse[flatArr] = v1;
+                    }
                     arrMap[v] = v1;
                     STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
@@ -6926,7 +6958,6 @@ namespace smt {
         /* do not need AND */
         expr_ref_vector result(m);
         result.push_back(createEqualOperator(nameA, nameB));
-        result.push_back(createEqualOperator(getExprVarFlatIter(a), getExprVarFlatIter(b)));
 
         if (!isConstA && !isConstB) {
             /* size = size && it = it */
@@ -6960,93 +6991,102 @@ namespace smt {
             expr_ref_vector possibleCases(m);
 
             if (a.second <= REGEX_CODE && b.second % QMAX == -1){
-//                std::string regexContent = parse_regex_full_content(a.first);
-//                unsigned length = 0;
-//                if (regexContent[regexContent.length() - 1] == '+')
-//                    length = 1;
-//                while (length <= valB.length()) {
-//                    zstring regexValue = valB.extract(0, length);
-//                    if (re.MatchAll(regexValue) == true) {
-//                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
-//                    }
-//                    else
-//                        break;
-//                    length++;
-//                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-//                }
+                expr* regex = nullptr;
+                isRegexVar(a.first, regex);
+                unsigned length = 0;
+                if (u.re.is_plus(regex))
+                    length = 1;
+                while (length <= valB.length()) {
+                    zstring regexValue = valB.extract(0, length);
+                    if (matchRegex(regex, regexValue)) {
+                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
+                    }
+                    length++;
+                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+                }
             }
             else if (a.second <= REGEX_CODE && b.second % QMAX == 0){
-//                std::string regexContent = parse_regex_full_content(a.first);
-//                RegEx re;
-//                re.Compile(regexContent);
-//                unsigned length = 0;
-//                if (regexContent[regexContent.length() - 1] == '+')
-//                    length = 1;
-//                while (length <= valB.length()) {
-//                    zstring regexValue = valB.extract(valB.length() - length, length);
-//                    if (re.MatchAll(regexValue) == true) {
-//                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
-//                    }
-//                    else
-//                        break;
-//                    length++;
-//                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-//                }
+                expr* regex = nullptr;
+                isRegexVar(a.first, regex);
+                unsigned length = 0;
+                if (u.re.is_plus(regex))
+                    length = 1;
+                while (length <= valB.length()) {
+                    zstring regexValue = valB.extract(valB.length() - length, length);
+                    if (matchRegex(regex, regexValue)) {
+                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
+                    }
+                    length++;
+                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+                }
             }
             else if (b.second <= REGEX_CODE && a.second % QMAX == -1){
-//                std::string regexContent = parse_regex_full_content(b.first);
-//                RegEx re;
-//                re.Compile(regexContent);
-//                unsigned length = 0;
-//                if (regexContent[regexContent.length() - 1] == '+')
-//                    length = 1;
-//                while (length <= valA.length()) {
-//                    zstring regexValue = valA.extract(0, length);
-//                    if (re.MatchAll(regexValue) == true) {
-//                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
-//                    }
-//                    else
-//                        break;
-//                    length++;
-//                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-//                }
+                expr* regex = nullptr;
+                isRegexVar(a.first, regex);
+                unsigned length = 0;
+                if (u.re.is_plus(regex))
+                    length = 1;
+                while (length <= valA.length()) {
+                    zstring regexValue = valA.extract(0, length);
+                    if (matchRegex(regex, regexValue)) {
+                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
+                    }
+                    length++;
+                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+                }
             }
             else if (b.second <= REGEX_CODE && a.second % QMAX == 0){
-//                std::string regexContent = parse_regex_full_content(b.first);
-//                RegEx re;
-//                re.Compile(regexContent);
-//                unsigned length = 0;
-//                if (regexContent[regexContent.length() - 1] == '+')
-//                    length = 1;
-//                while (length <= valA.length()) {
-//                    zstring regexValue = valA.extract(valA.length() - length, length);
-//                    if (re.MatchAll(regexValue) == true) {
-//                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
-//                    }
-//                    else
-//                        break;
-//                    length++;
-//                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-//                }
+                expr* regex = nullptr;
+                isRegexVar(a.first, regex);
+                unsigned length = 0;
+                if (u.re.is_plus(regex))
+                    length = 1;
+                while (length <= valA.length()) {
+                    zstring regexValue = valA.extract(valA.length() - length, length);
+                    if (matchRegex(regex, regexValue)) {
+                        possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
+                    }
+                    length++;
+                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+                }
             }
             else if (a.second <= REGEX_CODE && b.second <= REGEX_CODE) {
-//                STRACE("str", tout << __LINE__ <<  "  might get error here" << std::endl;);
-//                std::string content01 = parse_regex_content(b.first);
-//                std::string content02 = parse_regex_content(a.first);
-//                unsigned lcdLength = lcd(content01.length(), content02.length());
-//
-//                std::string data01 = "";
-//                std::string data02 = "";
-//                while (data01.length() != lcdLength)
-//                    data01 = data01 + content01;
-//                while (data02.length() != lcdLength)
-//                    data02 = data02 + content02;
-//                if (data01.compare(data02) == 0) {
-//                    possibleCases.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(nameA, m_autil.mk_int(lcdLength))));
-//                }
-//                else {
-//                    possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(0)));
-//                }
+                expr* regexA = nullptr;
+                isRegexVar(a.first, regexA);
+                unsigned length = 0;
+                if (u.re.is_plus(regexA))
+                    length = 1;
+
+                expr* regexB = nullptr;
+                isRegexVar(b.first, regexB);
+                if (u.re.is_plus(regexB))
+                    length = 1;
+
+                if (matchRegex(regexA, regexB)) {
+                    std::vector<zstring> aComp = collectAlternativeComponents(regexA);
+                    std::vector<zstring> bComp = collectAlternativeComponents(regexB);
+
+                    int minA = 10000, minB = 10000, maxA = 0, maxB = 0;
+                    for (const auto& s : aComp) {
+                        minA = std::min(minA, (int)s.length());
+                        maxA = std::max(maxA, (int)s.length());
+                    }
+
+                    for (const auto& s : bComp) {
+                        minB = std::min(minB, (int)s.length());
+                        maxB = std::max(maxB, (int)s.length());
+                    }
+
+                    if (minA == maxA && minB == maxB) {
+                        unsigned lcdLength = lcd(minA, minB);
+                        possibleCases.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(nameA,
+                                                                                                         m_autil.mk_int(
+                                                                                                                 lcdLength))));
+                    }
+                }
+                else {
+                    possibleCases.push_back(createEqualOperator(nameA, m_autil.mk_int(0)));
+                }
             }
             else if (!optimizing) {
                 if (a.second % QMAX == -1 && b.second % QMAX  == -1) /* head vs head */ {
@@ -7126,6 +7166,35 @@ namespace smt {
         }
 
         return createAndOperator(result);
+    }
+
+    int theory_str::lcd(int x, int y) {
+        int x1 = x;
+        int y1 = y;
+        if (x < y) {
+            x1 = y;
+            y1 = x;
+        }
+
+        int r = y1;
+        while (r != 0) {
+            r = x1 % y1;
+            x1 = y1;
+            y1 = r;
+        }
+
+        return x * y / x1;
+    }
+
+    bool theory_str::matchRegex(expr* a, zstring b){
+        expr* tmp = u.re.mk_to_re(u.str.mk_string(b));
+        return matchRegex(a, tmp);
+    }
+
+    bool theory_str::matchRegex(expr* a, expr* b) {
+        expr* intersection = u.re.mk_inter(a, b);
+        eautomaton *au01 = get_automaton(intersection);
+        return !au01->is_empty();
     }
 
     /*
@@ -8077,9 +8146,7 @@ namespace smt {
 
         /* find the start position --> */
         expr_ref startLhs(leng_prefix_lhs(a, elementNames, lhs_str, rhs_str, pos, optimizing, unrollMode), m);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr_ref startRhs(leng_prefix_rhs(elementNames[pos], rhs_str, unrollMode), m);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         /* optimize length of generated string */
         expr* arrLhs = getExprVarFlatArray(a);
         expr* arrRhs = getExprVarFlatArray(elementNames[pos]);
@@ -8090,8 +8157,7 @@ namespace smt {
         expr* iterB = getExprVarFlatIter(elementNames[pos]);
 
         expr_ref_vector andConstraints(m);
-        expr* lenRhs = NULL;
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        expr* lenRhs = nullptr;
         /* combine two parts if it is possible */
         if (elementNames[pos].second % QMAX == 0 &&
             pos < (int)elementNames.size() - 1 &&
@@ -9053,9 +9119,7 @@ namespace smt {
 
                         SASSERT(re);
                         zstring regexValue = str.extract(pos, length);
-                        expr *intersection = u.re.mk_inter(re, u.re.mk_to_re(u.str.mk_string(regexValue)));
-                        eautomaton *au01 = get_automaton(intersection);
-                        bool matchRes = !au01->is_empty();
+                        bool matchRes = matchRegex(re, regexValue);
                         if (matchRes) {
                             currentSplit.emplace_back(length);
                             collectAllPossibleSplits_const(pos + length, str, pMax, elementNames, currentSplit,
@@ -9366,7 +9430,25 @@ namespace smt {
     }
 
     expr* theory_str::getExprVarFlatArray(std::pair<expr*, int> a){
-        return arrMap[a.first];
+        return getExprVarFlatArray(a.first);
+    }
+
+    expr* theory_str::getExprVarFlatArray(expr* e){
+        context & ctx   = get_context();
+        expr* root = ctx.get_enode(e)->get_root()->get_owner();
+        if (arrMap.find(root) != arrMap.end())
+            return arrMap[root];
+
+        expr_ref_vector eqNodeSet(get_manager());
+        collect_eq_nodes(root, eqNodeSet);
+        for (int i = 0; i < eqNodeSet.size(); ++i){
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(eqNodeSet[i].get(), get_manager()) << std::endl;);
+            if (arrMap.find(eqNodeSet[i].get()) != arrMap.end())
+                return arrMap[eqNodeSet[i].get()];
+        }
+
+        SASSERT(false);
+        return nullptr;
     }
 
     /*
@@ -10455,6 +10537,28 @@ namespace smt {
             int &len){
         ast_manager &m = get_manager();
         len = -1;
+        // not equal to any concat/const
+        expr_ref_vector eqList(m);
+        expr *value = collect_eq_nodes(nn, eqList);
+
+        if (value != nullptr)
+            return false;
+
+        int maxLen = 0;
+        for (int i = 0; i < eqList.size(); ++i) {
+            if (u.str.is_concat(eqList[i].get())) {
+                ptr_vector<expr> nodeList;
+                get_nodes_in_concat(eqList[i].get(), nodeList);
+                int localMax = 0;
+                for (int j = 0; j < nodeList.size(); ++j) {
+                    zstring valueStr;
+                    if (u.str.is_string(nodeList[j], valueStr)) {
+                        localMax += valueStr.length();
+                    }
+                }
+                maxLen = std::max(maxLen, localMax);
+            }
+        }
 
         for (const auto& we : membership_memo)
             if (we.first.get() == nn){
@@ -10486,53 +10590,48 @@ namespace smt {
             }
         }
         STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(nn, m) << " != " << len << std::endl;);
-        if (len > 0)
+        if (len >= maxLen && len > 0)
             return true;
 
         len = -1;
         STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 
-        // not equal to any concat/const
-        expr_ref_vector eqList(m);
-        expr *value = collect_eq_nodes(nn, eqList);
-        if (value != nullptr)
-            return false;
-        else {
-            for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it)
-                if (u.str.is_concat(*it))
-                    return false;
 
-            // now we know it is a leaf node
-            // --> check if their parents are fresh
-            int cnt = 0;
-            std::vector<expr*> parents;
-            for (const auto& n : eqc_roots){
-                if (u.str.is_concat(n)){
-                    expr* arg0 = to_app(n)->get_arg(0);
-                    expr* arg1 = to_app(n)->get_arg(1);
-                    if (arg0 == nn || arg1 == nn) {
-                        STRACE("str", tout << __FUNCTION__ << ": increase occurrences because of " << mk_pp(n, m) << std::endl;);
+        for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it)
+            if (u.str.is_concat(*it))
+                return false;
+
+        // now we know it is a leaf node
+        // --> check if their parents are fresh
+        int cnt = 0;
+        std::vector<expr*> parents;
+        for (const auto& n : eqc_roots){
+            if (u.str.is_concat(n)){
+                expr* arg0 = to_app(n)->get_arg(0);
+                expr* arg1 = to_app(n)->get_arg(1);
+                if (arg0 == nn || arg1 == nn) {
+                    STRACE("str", tout << __FUNCTION__ << ": increase occurrences because of " << mk_pp(n, m) << std::endl;);
+                    cnt++;
+                    if (arg0 == nn && arg1 == nn)
                         cnt++;
-                        if (arg0 == nn && arg1 == nn)
-                            cnt++;
-                        if (cnt == 2)
-                            break;
-                        parents.emplace_back(n);
-                    }
+                    if (cnt == 2)
+                        break;
+                    parents.emplace_back(n);
                 }
             }
-            if (cnt >= 2) {
-                STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " has > 2 occurrences" << std::endl;);
-                return true;
-            }
-            else if (cnt == 0)
-                return false;
-            else {
-                return false;
-                // should we check the parent? NO
-                // bool isParentImportant = is_importantVar(parents[0], eqc_roots);
-            }
         }
+        if (cnt >= 2) {
+            STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " has > 2 occurrences" << std::endl;);
+            return true;
+        }
+        else if (cnt == 0)
+            return false;
+        else {
+            return false;
+            // should we check the parent? NO
+            // bool isParentImportant = is_importantVar(parents[0], eqc_roots);
+        }
+
         return false;
     }
 

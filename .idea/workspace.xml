@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="5093" column="27" selection-start-line="5092" selection-start-column="22" selection-end-line="5093" selection-end-column="27" />
+            <state relative-caret-position="602">
+              <caret line="5335" column="67" selection-start-line="5335" selection-start-column="67" selection-end-line="5335" selection-end-column="67" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#31960#33655#0" />
@@ -115,8 +115,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="410">
-              <caret line="352" column="13" selection-start-line="352" selection-start-column="13" selection-end-line="352" selection-end-column="13" />
+            <state relative-caret-position="381">
+              <caret line="334" column="13" selection-start-line="334" selection-start-column="13" selection-end-line="334" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -134,7 +134,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="391">
-              <caret line="1671" column="18" selection-start-line="1671" selection-start-column="18" selection-end-line="1671" selection-end-column="18" />
+              <caret line="1955" column="28" selection-start-line="1955" selection-start-column="28" selection-end-line="1955" selection-end-column="28" />
               <folding>
                 <element signature="e#9690#19692#1" />
                 <element signature="e#19703#24260#1" />
@@ -201,19 +201,9 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>OP_RE_RANGE</find>
-      <find>is_range</find>
-      <find>subLen</find>
-      <find>connectedVarPos</find>
-      <find>tmpLen</find>
-      <find>canBeOptimized_RHS</find>
-      <find>len_connectedVar</find>
-      <find>getExprVarFlatSize</find>
-      <find>tx.mk_eq_atom(</find>
       <find>underApproxRegex</find>
       <find>createExprFromRegexVector</find>
       <find>createEquality</find>
-      <find>collect_eq_nodes</find>
       <find>isInternalRegexVar</find>
       <find>isRegexVar(</find>
       <find>connectedVar_atSpecificLocation</find>
@@ -228,9 +218,19 @@
       <find>handle_not</find>
       <find>?</find>
       <find>generateFlatSize</find>
-      <find>is_loop</find>
       <find>tmp</find>
       <find>createInternalVar</find>
+      <find>mk_arr_var</find>
+      <find>arrMap[</find>
+      <find>collect_eq_nodes</find>
+      <find>automata</find>
+      <find>eautomaton</find>
+      <find>eautomat</find>
+      <find>u.re.mk_inter(</find>
+      <find>expr* intersection =</find>
+      <find>intersection =</find>
+      <find>is_loop</find>
+      <find>-&gt;is_empty()</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -761,12 +761,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="166758000" />
+      <workItem from="1555596195940" duration="179529000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="311680000" />
+    <option name="totallyTimeSpent" value="324451000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1157,15 +1157,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="410">
-          <caret line="352" column="13" selection-start-line="352" selection-start-column="13" selection-end-line="352" selection-end-column="13" />
+        <state relative-caret-position="381">
+          <caret line="334" column="13" selection-start-line="334" selection-start-column="13" selection-end-line="334" selection-end-column="13" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
-          <caret line="1671" column="18" selection-start-line="1671" selection-start-column="18" selection-end-line="1671" selection-end-column="18" />
+          <caret line="1955" column="28" selection-start-line="1955" selection-start-column="28" selection-end-line="1955" selection-end-column="28" />
           <folding>
             <element signature="e#9690#19692#1" />
             <element signature="e#19703#24260#1" />
@@ -1175,8 +1175,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="5093" column="27" selection-start-line="5092" selection-start-column="22" selection-end-line="5093" selection-end-column="27" />
+        <state relative-caret-position="602">
+          <caret line="5335" column="67" selection-start-line="5335" selection-start-column="67" selection-end-line="5335" selection-end-column="67" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#31960#33655#0" />
