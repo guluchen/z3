@@ -644,8 +644,8 @@ namespace smt {
                                 if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
                                                        << std::endl;);
-                                    return to_app(th.mk_string(strValue));
                                 }
+                                return to_app(th.mk_string(strValue));
                             }
                         }
 
@@ -866,6 +866,8 @@ namespace smt {
                         else
                             value = value + (char) vValue[i];
                     }
+
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
 
                     if (completed == false) {
                         return false;
@@ -1274,8 +1276,7 @@ namespace smt {
             bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, std::set<expr*>> causes,
-                std::set<std::pair<expr*, int>> importantVars,
-                str::state root);
+                std::set<std::pair<expr*, int>> importantVars);
             bool underapproximation_repeat();
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void createNotContainMap();
