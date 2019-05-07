@@ -1957,6 +1957,7 @@ namespace smt {
      * Then add an assertion: (y2 == (Concat ce m2)) AND ("str3" == (Concat abc x2)) -> (y2 != "str3")
      */
     bool theory_str::new_eq_check(expr * lhs, expr * rhs) {
+        clock_t t = clock();
         context & ctx = get_context();
         ast_manager & m = get_manager();
         TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << " == " << mk_ismt2_pp(rhs, m) << std::endl;);
@@ -2010,6 +2011,7 @@ namespace smt {
                 propagate_const_str(rhs, lhs, str);
         }
         // okay, all checks here passed
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return true;
     }
 
@@ -2026,7 +2028,6 @@ namespace smt {
             expr* ts0 = it.get_key1();
             expr* ts1 = it.get_key2();
             expr* concat = it.get_value();
-            STRACE("str", tout << "Concat : "<< mk_pp(ts0, m) << " . " << mk_pp(ts1, m) << " --> " << mk_pp(concat, m) << std::endl;);
 
            if (eqRhsList.contains(ts0)){
                // x . y where x is const, then: lhs = rhs ==> concat = const
@@ -3342,15 +3343,6 @@ namespace smt {
         m_automata.reset();
         m_res.reset();
 
-        TRACE("str",
-              tout << __FUNCTION__ << ": dumping all asserted formulas:" << std::endl;
-                      unsigned nFormulas = ctx.get_num_asserted_formulas();
-                      for (unsigned i = 0; i < nFormulas; ++i) {
-                          expr *ex = ctx.get_asserted_formula(i);
-                          tout << mk_pp(ex, get_manager()) << (ctx.is_relevant(ex) ? " (rel)" : " (NOT REL)")
-                               << std::endl;
-                      }
-        );
         /*
          * Recursive descent through all asserted formulas to set up axioms.
          * Note that this is just the input structure and not necessarily things
@@ -3502,15 +3494,17 @@ namespace smt {
         }
 
         for (const auto& n : variable_set){
-            STRACE("str", tout << "var " << mk_pp(n, m););
+            STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m););
             rational vLen;
             expr_ref value(m);
             if (ctx.get_value(ctx.get_enode(n), value)){
-                STRACE("str", tout << __LINE__ << " len = " << mk_pp(value.get(), m) << std::endl;);
+                STRACE("str", tout << " value = " << mk_pp(value.get(), m););
             }
             else if (get_len_value(n, vLen)) {
-                STRACE("str", tout <<  __LINE__ << " len = " << vLen << std::endl;);
+                STRACE("str", tout << " len = " << vLen;);
             }
+
+            STRACE("str", tout << std::endl;);
         }
 
         for (const auto& v : lenMap){
@@ -3543,8 +3537,10 @@ namespace smt {
         std::set<expr*> eqc_roots = get_eqc_roots();
         std::set<std::pair<expr *, int>> importantVars = collect_important_vars(eqc_roots);
         std::map<expr*, std::set<expr*>> causes;
-        std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, importantVars);
-
+        std::set<expr*> subNodes;
+        std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, subNodes, importantVars);
+        refine_important_vars(importantVars, eq_combination);
+        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes);
         const str::state &root = build_state_from_memo();
  
         bool axiomAdded = underapproximation(eq_combination, causes, importantVars);
@@ -3569,7 +3565,6 @@ namespace smt {
             enode * root = e->get_root();
             if ((m.get_sort(root->get_owner()) == string_sort) && eqc_roots.find(root->get_owner()) == eqc_roots.end()) {
                 eqc_roots.insert(root->get_owner());
-                STRACE("str", tout << "Root equation: " << mk_pp(root->get_owner(), m) << std::endl;);
             }
         }
 
@@ -4453,6 +4448,7 @@ namespace smt {
     }
 
     bool theory_str::propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap){
+        clock_t t = clock();
         context & ctx = get_context();
         ast_manager & m = get_manager();
         expr_ref_vector assignments(m);
@@ -4470,6 +4466,7 @@ namespace smt {
 
         axiomAdded = axiomAdded || propagate_value(concatSet);
         axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
     }
 
@@ -5011,7 +5008,17 @@ namespace smt {
         for (const auto& com : eq_combination){
             STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
-                STRACE("str", tout << "\t\t" << mk_pp(e, m) << std::endl;);
+                STRACE("str",
+                        if (!u.str.is_concat(e))
+                            tout << "\t\t" << mk_pp(e, m) << std::endl;
+                        else {
+                            ptr_vector<expr> childrenVector;
+                            get_nodes_in_concat(e, childrenVector);
+                            tout << "\t\t";
+                            for (int i = 0; i < childrenVector.size(); ++i)
+                                tout << mk_pp(childrenVector[i], m)  << " ";
+                            tout << std::endl;
+                        });
         }
 
         UnderApproxState state(m, m_scope_level, mful_scope_levels.size(), eq_combination, importantVars);
@@ -10482,6 +10489,7 @@ namespace smt {
     std::set<std::pair<expr*, int>> theory_str::collect_important_vars(std::set<expr*> eqc_roots){
         ast_manager &m = get_manager();
         std::set<std::pair<expr*, int>> result;
+        std::map<expr*, int> occurrences = countOccurrences_from_root(eqc_roots);
         for (const auto& nn : eqc_roots) {
             expr_ref_vector eqList(m);
             expr *value = collect_eq_nodes(nn, eqList);
@@ -10490,7 +10498,7 @@ namespace smt {
                 int maxLen = 0;
                 for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it) {
                     int len = -1;
-                    if (is_importantVar(*it, eqc_roots, len)) {
+                    if (is_importantVar(*it, eqc_roots, occurrences, len)) {
                         STRACE("str", tout << __LINE__ << "\t " << mk_pp(*it, m) << ": " << len << std::endl;);
                         imp = true;
                         maxLen = (maxLen == -1 || len == -1) ? -1 : (maxLen < len ? len : maxLen);
@@ -10514,6 +10522,66 @@ namespace smt {
         return result;
     }
 
+    void theory_str::refine_important_vars(std::set<std::pair<expr *, int>> &importantVars, std::map<expr *, std::set<expr *>> eq_combination) {
+        std::map<expr *, int> retTmp;
+        ast_manager & m = get_manager();
+        std::set<expr*> notImportant;
+        context& ctx = get_context();
+        for (const auto& nn : importantVars) {
+            if (retTmp.find(nn.first) == retTmp.end() && notImportant.find(nn.first) == notImportant.end()) {
+                if (is_importantVar_recheck(ctx.get_enode(nn.first)->get_root()->get_owner(), eq_combination)) {
+                    expr_ref_vector eqList(m);
+                    collect_eq_nodes(nn.first, eqList);
+                    for (int i = 0; i < eqList.size(); ++i) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn.first, m) << " --> "
+                                           << mk_pp(eqList[i].get(), m) << std::endl;);
+                        retTmp[eqList[i].get()] = nn.second;
+                    }
+                }
+                else {
+                    expr_ref_vector eqList(m);
+                    collect_eq_nodes(nn.first, eqList);
+                    for (int i = 0; i < eqList.size(); ++i) {
+                        notImportant.insert(eqList[i].get());
+                    }
+                }
+            }
+        }
+
+        std::map<expr*, int> occurrences = countOccurrences_from_combination(eq_combination);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        std::set<std::pair<expr *, int>> importantVarsTmp;
+        for (const auto& v : retTmp)
+            if (notImportant.find(v.first) == notImportant.end()) {
+                if (v.second == -1) {
+                    if (occurrences.find(v.first) == occurrences.end() || occurrences[v.first] < 2) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
+                                           << std::endl;);
+                        expr_ref_vector eqList(m);
+                        collect_eq_nodes(v.first, eqList);
+                        for (int i = 0; i < eqList.size(); ++i) {
+                            notImportant.insert(eqList[i].get());
+                        }
+                    } else
+                        importantVarsTmp.insert(std::make_pair(v.first, v.second));
+                } else {
+                    importantVarsTmp.insert(std::make_pair(v.first, v.second));
+                }
+            }
+
+
+        importantVars.clear();
+        for (const auto& v : importantVarsTmp)
+            if (notImportant.find(v.first) == notImportant.end())
+                importantVars.insert(std::make_pair(v.first, v.second));
+
+
+        TRACE("str", tout << __FUNCTION__ << std::endl;);
+        for (const auto& nn : importantVars)
+            STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+        TRACE("str", tout << __FUNCTION__ << std::endl;);
+    }
+
     /**
      * true if it is disequality, (non)membership
      * @param nn
@@ -10523,6 +10591,7 @@ namespace smt {
     bool theory_str::is_importantVar(
             expr* nn,
             std::set<expr*> eqc_roots,
+            std::map<expr*, int> occurrences,
             int &len){
         ast_manager &m = get_manager();
         len = -1;
@@ -10533,57 +10602,53 @@ namespace smt {
         if (value != nullptr)
             return false;
 
-        int maxLen = 0;
-        for (int i = 0; i < eqList.size(); ++i) {
-            if (u.str.is_concat(eqList[i].get())) {
-                ptr_vector<expr> nodeList;
-                get_nodes_in_concat(eqList[i].get(), nodeList);
-                int localMax = 0;
-                for (int j = 0; j < nodeList.size(); ++j) {
-                    zstring valueStr;
-                    if (u.str.is_string(nodeList[j], valueStr)) {
-                        localMax += valueStr.length();
-                    }
-                }
-                maxLen = std::max(maxLen, localMax);
-            }
-        }
-
-        for (const auto& we : membership_memo)
-            if (we.first.get() == nn){
-                std::vector<zstring> components = collectAlternativeComponents(we.second);
-                int maxLen = 0;
-                if (components.size() > 0){
-                    for (const auto& s : components)
-                        maxLen = std::max((int)s.length(), maxLen);
-                    len = maxLen;
-                    return true;
-                }
-
-            }
-
-        for (const auto& we : m_wi_expr_memo){
-            if (we.first.get() == nn){
-                zstring value;
-                if (u.str.is_string(we.second.get(), value)) {
-                    len = std::max((int)value.length(), len);
-                    STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\"" << std::endl;);
-                }
-            }
-            else if (we.second.get() == nn){
-                zstring value;
-                if (u.str.is_string(we.first.get(), value)) {
-                    len = std::max((int)value.length(), len);
-                    STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << value.length() << std::endl;);
-                }
-            }
-        }
-        STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(nn, m) << " != " << len << std::endl;);
-        if (len >= maxLen && len > 0)
+        if (checkIfVarInUnionMembership(nn, len))
             return true;
 
+        std::vector<zstring> maxDiffStrs = collectAllInequalities(nn);
+        if (maxDiffStrs.size() > 0)
+            len = maxDiffStrs[0].length();
+
+        if (len > 0) {
+            zstring constPart = "";
+            for (int i = 0; i < eqList.size(); ++i) {
+                if (u.str.is_concat(eqList[i].get())) {
+                    STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(nn, m) << "  " << mk_pp(eqList[i].get(), m) << std::endl;);
+                    ptr_vector<expr> nodeList;
+                    get_nodes_in_concat(eqList[i].get(), nodeList);
+                    zstring constPartTmp = "";
+                    for (int j = 0; j < nodeList.size(); ++j) {
+                        zstring valueStr;
+                        bool has_eqc_value = false;
+                        expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
+                        if (has_eqc_value) {
+                            u.str.is_string(constValue, valueStr);
+                            constPartTmp = constPartTmp + valueStr;
+                        }
+                    }
+
+                    if (constPartTmp.length() > constPart.length()) {
+                        constPart = constPartTmp;
+                    }
+                }
+            }
+
+            STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(nn, m) << " != " << len << std::endl;);
+            STRACE("str", tout << __LINE__ <<  "\t " << constPart << " != " << std::endl;);
+            bool allEqual = true;
+            for (const auto& s : maxDiffStrs) {
+                if (constPart != s) {
+                    allEqual = false;
+                }
+            }
+
+            if ((len > constPart.length() || (len == constPart.length() && allEqual)))
+                return true;
+        }
+
+
         len = -1;
-        STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 
 
         for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it)
@@ -10592,36 +10657,160 @@ namespace smt {
 
         // now we know it is a leaf node
         // --> check if their parents are fresh
-        int cnt = 0;
-        std::vector<expr*> parents;
+        if (occurrences.find(nn) != occurrences.end())
+            if (occurrences[nn] >= 2) {
+                return true;
+            }
+
+        return false;
+    }
+
+    std::map<expr*, int> theory_str::countOccurrences_from_root(std::set<expr*> eqc_roots){
+        std::map<expr*, int> ret;
         for (const auto& n : eqc_roots){
             if (u.str.is_concat(n)){
                 expr* arg0 = to_app(n)->get_arg(0);
                 expr* arg1 = to_app(n)->get_arg(1);
-                if (arg0 == nn || arg1 == nn) {
-                    STRACE("str", tout << __FUNCTION__ << ": increase occurrences because of " << mk_pp(n, m) << std::endl;);
-                    cnt++;
-                    if (arg0 == nn && arg1 == nn)
-                        cnt++;
-                    if (cnt == 2)
-                        break;
-                    parents.emplace_back(n);
+                if (ret.find(arg0) != ret.end())
+                    ret[arg0]++;
+                else
+                    ret[arg0] = 1;
+                if (ret.find(arg1) != ret.end())
+                    ret[arg1]++;
+                else
+                    ret[arg1] = 1;
+            }
+        }
+        return ret;
+    }
+
+    std::map<expr*, int> theory_str::countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination) {
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        std::map<expr*, int> ret;
+        for (const auto& v : eq_combination){
+            for (const auto& e : v.second) {
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(e, nodes);
+                for (int i  = 0; i < nodes.size(); ++i)
+                    if (ret.find(nodes[i]) != ret.end())
+                        ret[nodes[i]]++;
+                    else
+                        ret[nodes[i]] = 1;
+            }
+        }
+        return ret;
+    }
+
+    bool theory_str::checkIfVarInUnionMembership(expr* nn, int &len){
+        for (const auto& we : membership_memo)
+            if (we.first.get() == nn){
+                std::vector<zstring> components = collectAlternativeComponents(we.second);
+                int maxLenTmp = 0;
+                if (components.size() > 0){
+                    for (const auto& s : components)
+                        maxLenTmp = std::max((int)s.length(), maxLenTmp);
+                    len = maxLenTmp;
+                    return true;
+                }
+            }
+        return false;
+    }
+
+    std::vector<zstring> theory_str::collectAllInequalities(expr* nn){
+        ast_manager &m = get_manager();
+        int diffLen = 0;
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
+        std::vector<zstring> maxDiffStrs;
+        for (const auto& we : m_wi_expr_memo){
+            if (we.first.get() == nn){
+                zstring value;
+                if (u.str.is_string(we.second.get(), value)) {
+                    if (diffLen < (int)value.length()) {
+                        diffLen = (int) value.length();
+                        maxDiffStrs.clear();
+                        maxDiffStrs.push_back(value);
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                           << std::endl;);
+                    }
+                    else if (diffLen == (int)value.length()) {
+                        maxDiffStrs.push_back(value);
+                    }
+                }
+            }
+            else if (we.second.get() == nn){
+                zstring value;
+                if (u.str.is_string(we.first.get(), value)) {
+                    if (diffLen < (int)value.length()) {
+                        diffLen = (int) value.length();
+                        maxDiffStrs.clear();
+                        maxDiffStrs.push_back(value);
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                           << std::endl;);
+                    }
+                    else if (diffLen == (int)value.length()) {
+                        maxDiffStrs.push_back(value);
+                    }
                 }
             }
         }
-        if (cnt >= 2) {
-            STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(nn, m) << " has > 2 occurrences" << std::endl;);
-            return true;
-        }
-        else if (cnt == 0)
-            return false;
-        else {
-            return false;
-            // should we check the parent? NO
-            // bool isParentImportant = is_importantVar(parents[0], eqc_roots);
-        }
+        return maxDiffStrs;
+    }
 
-        return false;
+    bool theory_str::is_importantVar_recheck(
+            expr* nn,
+            std::map<expr *, std::set<expr *>> combinations){
+        ast_manager &m = get_manager();
+        int diffLen = 0;
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
+        std::vector<zstring> maxDiffStrs = collectAllInequalities(nn);
+        if (maxDiffStrs.size() > 0)
+            diffLen = maxDiffStrs[0].length();
+        if (diffLen > 0) {
+            std::vector<zstring> constParts;
+            int constPartLen = 0;
+            if (combinations.find(nn) != combinations.end()) {
+                for (const auto& concat : combinations[nn]) {
+                    ptr_vector<expr> nodeList;
+                    get_nodes_in_concat(concat, nodeList);
+                    zstring constPartTmp = "";
+                    for (int j = 0; j < nodeList.size(); ++j) {
+                        zstring valueStr;
+                        bool has_eqc_value = false;
+                        expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
+                        if (has_eqc_value) {
+                            u.str.is_string(constValue, valueStr);
+                            constPartTmp = constPartTmp + valueStr;
+                        }
+                    }
+
+                    if (constPartTmp.length() > constPartLen) {
+                        constParts.clear();
+                        constParts.push_back(constPartTmp);
+                        constPartLen = (int)constPartTmp.length();
+                    }
+                    else if (constPartTmp.length() == constPartLen) {
+                        constParts.push_back(constPartTmp);
+                    }
+                }
+            }
+
+            if (constPartLen == diffLen)
+                for (const auto& s : maxDiffStrs) {
+                    bool allDiff = true;
+                    for (const auto& ss : constParts) {
+                        if (ss == s) {
+                            allDiff = false;
+                            break;
+
+                        }
+                    }
+                    if (allDiff){
+                        STRACE("str", tout << __LINE__ << "\t violate at " << s << std::endl;);
+                        return false;
+                    }
+                }
+        }
+        return true;
     }
 
 
@@ -10710,6 +10899,7 @@ namespace smt {
 
     std::map<expr*, std::set<expr*>> theory_str::construct_eq_combination(
             std::map<expr*, std::set<expr*>> &causes,
+            std::set<expr*> &subNodes,
             std::set<std::pair<expr*, int>> importantVars){
         ast_manager &m = get_manager();
         context& ctx = get_context();
@@ -10718,7 +10908,6 @@ namespace smt {
         std::map<expr*, std::set<expr*>> combinations;
         std::set<expr*> eqc_roots;
         sort* string_sort = u.str.mk_string_sort();
-        std::set<expr*> subNodes;
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
             enode * e = *it;
             enode * root = e->get_root();
@@ -10731,7 +10920,6 @@ namespace smt {
                     for (int i = 0; i < nodeList.size(); ++i)
                         subNodes.insert(nodeList[i]);
                 }
-                STRACE("str", tout << "Found root: " << mk_pp(root->get_owner(), m) << std::endl;);
             }
         }
 
@@ -10742,13 +10930,21 @@ namespace smt {
             }
         }
 
-        // refine
-        std::map<expr*, std::set<expr*>> new_combinations;
+        return refine_eq_combination(importantVars, combinations, subNodes);
+    }
+
+    std::map<expr*, std::set<expr*>> theory_str::refine_eq_combination(
+            std::set<std::pair<expr*, int>> importantVars,
+            std::map<expr*, std::set<expr*>> &combinations,
+            std::set<expr*> subNodes
+            ){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+        std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
             bool important = false;
             for (const auto& p : importantVars){
                 if (p.first == c.first){
-                    new_combinations[c.first] = c.second;
+                    ret[c.first] = c.second;
                     important = true;
                     break;
                 }
@@ -10758,7 +10954,7 @@ namespace smt {
 
                 }
         }
-        return new_combinations;
+        return ret;
     }
 
     std::set<expr*> theory_str::extend_object(
@@ -10862,8 +11058,6 @@ namespace smt {
                     rhsParents.insert(parents.begin(), parents.end());
                     rhsParents.insert(arg1);
                     eqRhs = extend_object(arg1, combinations, causes, rhsParents, importantVars);
-                    for (const auto& obj : combinations[arg1])
-                        STRACE("str", tout << __LINE__ << " " <<  mk_pp(arg1, m) << " = " << mk_pp(obj, m) << std::endl;);
                 }
                 else {
                     eqRhs.insert(arg1);
@@ -10930,7 +11124,6 @@ namespace smt {
         for (const auto& nn : eqConcat)
             if (!is_app(nn) || u.str.is_concat(nn))
             {
-                STRACE("str", tout << __LINE__ << " refining concat " << mk_pp(nn, m) << std::endl;);
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
                 if (tmp.size() != 0)
@@ -12685,7 +12878,6 @@ namespace smt {
      * Collect important vars in AST node
      */
     void theory_str::get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList) {
-        STRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(node, get_manager()) << std::endl;);
         for (const auto& p : importantVars)
             if (p.first == node) {
                 STRACE("str", tout << "\t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);

@@ -642,9 +642,10 @@ namespace smt {
                             if (len_int != -1) {
                                 zstring strValue;
                                 if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
-                                                       << std::endl;);
+
                                 }
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
+                                                   << std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                         }
@@ -868,12 +869,12 @@ namespace smt {
                     }
 
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
-
+                    val = value;
                     if (completed == false) {
                         return false;
                     }
 
-                    val = value;
+
                     return true;
                 }
 
@@ -1822,16 +1823,31 @@ namespace smt {
                     ptr_vector<expr> &new_rhs);
 
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
+            void refine_important_vars(std::set<std::pair<expr *, int>> &importantVars, std::map<expr *, std::set<expr *>> eq_combination);
+                bool checkIfVarInUnionMembership(expr* nn, int &len);
+                std::vector<zstring> collectAllInequalities(expr* nn);
                 bool is_importantVar(
                     expr* nn,
                     std::set<expr*> eqc_roots,
+                    std::map<expr*, int> occurrences,
                     int &len);
+                bool is_importantVar_recheck(
+                    expr* nn,
+                    std::map<expr *, std::set<expr *>> combinations);
+                    std::map<expr*, int> countOccurrences_from_root(std::set<expr*> eqc_roots);
+                    std::map<expr*, int> countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination);
             void print_all_assignments();
             void print_guessed_literals();
             std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
             std::map<expr*, std::set<expr*>> construct_eq_combination(
                     std::map<expr*, std::set<expr*>> &causes,
+                    std::set<expr*> &subNodes,
                     std::set<std::pair<expr*, int>> importantVars);
+                std::map<expr*, std::set<expr*>> refine_eq_combination(
+                        std::set<std::pair<expr*, int>> importantVars,
+                        std::map<expr*, std::set<expr*>> &combinations,
+                        std::set<expr*> subNodes
+                );
                 std::set<expr*> extend_object(
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,
