@@ -494,9 +494,11 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << level << std::endl;);
                 z3_level = -1;
                 level = -1;
-                eq_combination.clear();
-                importantVars.clear();
-                assertingConstraints.reset();
+            }
+
+            void assignLevel(int _z3_level, int _level){
+                z3_level = _z3_level;
+                level = _level;
             }
 
             UnderApproxState&  operator=(const UnderApproxState& other){

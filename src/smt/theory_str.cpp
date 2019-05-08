@@ -967,6 +967,7 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
+//            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -1021,7 +1022,7 @@ namespace smt {
 
                 // add subvars
                 for (const auto& nn : dep)
-                    if (ctx.e_internalized(nn)) {
+                    if (ctx.e_internalized(nn) && ctx.e_internalized(mk_strlen(nn))) {
                         // add sublen
                         result->add_entry(ctx.get_enode(mk_strlen(nn)));
                     }
@@ -1049,7 +1050,8 @@ namespace smt {
                             result->add_entry(ctx.get_enode(nn));
                         }
                         // add sublen
-                        result->add_entry(ctx.get_enode(mk_strlen(nn)));
+                        if (ctx.e_internalized(mk_strlen(nn)))
+                            result->add_entry(ctx.get_enode(mk_strlen(nn)));
                     }
 
                 // add its ancestors
@@ -1061,7 +1063,8 @@ namespace smt {
             }
 
             if (!u.str.is_concat(owner)) {
-                result->add_entry(ctx.get_enode(mk_strlen(owner)));
+                if (ctx.e_internalized(mk_strlen(owner)))
+                    result->add_entry(ctx.get_enode(mk_strlen(owner)));
             }
 
             return result;
@@ -1167,6 +1170,7 @@ namespace smt {
     }
 
     void theory_str::new_eq_eh(theory_var x, theory_var y) {
+        clock_t t = clock();
         ast_manager& m = get_manager();
         enode *const n1 = get_enode(x);
         enode *const n2 = get_enode(y);
@@ -1187,6 +1191,7 @@ namespace smt {
 
         // merge eqc **AFTER** handle_equality
         m_find.merge(x, y);
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
     void theory_str::handle_equality(expr * lhs, expr * rhs) {
@@ -1971,7 +1976,6 @@ namespace smt {
         do {
             expr * eqc_nn2 = rhs;
             do {
-                STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(eqc_nn1, m) << " and " << mk_pp(eqc_nn2, m) << " can be equal" << std::endl;);
                 // inconsistency check: value
                 if (!can_two_nodes_eq(eqc_nn1, eqc_nn2)) {
                     STRACE("str", tout << "inconsistency detected: " << mk_pp(eqc_nn1, m) << " cannot be equal to " << mk_pp(eqc_nn2, m) << std::endl;);
@@ -3494,36 +3498,17 @@ namespace smt {
         }
 
         for (const auto& n : variable_set){
-            STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m););
+
             rational vLen;
             expr_ref value(m);
             if (ctx.get_value(ctx.get_enode(n), value)){
-                STRACE("str", tout << " value = " << mk_pp(value.get(), m););
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " value = " << mk_pp(value.get(), m) << std::endl;);
             }
             else if (get_len_value(n, vLen)) {
-                STRACE("str", tout << " len = " << vLen;);
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
             }
 
-            STRACE("str", tout << std::endl;);
-        }
 
-        for (const auto& v : lenMap){
-            for (const auto& n : v.second){
-                rational v_i;
-                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m););
-                if (get_arith_value(n, v_i)) {
-                    STRACE("str", tout << " = " << v_i;);
-                }
-                else {
-                    rational v_l(-1), v_h(-1);
-
-                    if (lower_num_bound(n, v_l))
-                        STRACE("str", tout << "; low = " << v_l;);
-                    if (upper_num_bound(n, v_h))
-                        STRACE("str", tout << "; high = " << v_h;);
-                }
-                STRACE("str", tout << std::endl;);
-            }
         }
 
         for (const auto& we: non_membership_memo) {
@@ -3552,7 +3537,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
-        return FC_DONE;
     }
 
     std::set<expr*> theory_str::get_eqc_roots(){
@@ -4465,7 +4449,7 @@ namespace smt {
         }
 
         axiomAdded = axiomAdded || propagate_value(concatSet);
-        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
+//        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
     }
@@ -4496,33 +4480,29 @@ namespace smt {
             for (int i = 0; i < eqNodeSet.size(); ++i)
                 if (eqNodeSet[i].get() != *it) {
                     rational len_i;
-                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = " << mk_pp(eqNodeSet[i].get() , m) << std::endl;);
                     if (get_len_value(eqNodeSet[i].get(), len_i)) {
                         if (has_len_lhs && len_i == len_lhs) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
-                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
-                                               << "LHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " RHS ~= empty"
-                                               << std::endl;);
+
                             // left = var, right = emtpy
                             zstring empty("");
-                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+                            expr_ref_vector rhs_terms(m);
 
-                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
-                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_int(len_lhs)), m);
-                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(eqNodeSet[i].get()), mk_int(len_i)), m);
-
-                            lhs_terms.push_back(expr1);
-                            lhs_terms.push_back(expr2);
-                            lhs_terms.push_back(expr3);
-
-                            expr_ref expr4(ctx.mk_eq_atom(concat_lhs, eqNodeSet[i].get()), m);
-                            expr_ref expr5(ctx.mk_eq_atom(concat_rhs, mk_string(empty)), m);
                             if (!eqLhs.contains(eqNodeSet[i].get()))
-                                rhs_terms.push_back(expr4);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_lhs, eqNodeSet[i].get()));
                             if (!eqRhs.contains(mk_string(empty)))
-                                rhs_terms.push_back(expr5);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_rhs, mk_string(empty)));
 
                             if (rhs_terms.size() > 0) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                                   << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                                   << "LHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " RHS ~= empty"
+                                                   << std::endl;);
+                                expr_ref_vector lhs_terms(m);
+                                expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                                expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_strlen(eqNodeSet[i].get())), m);
+
+                                lhs_terms.push_back(expr1);
+                                lhs_terms.push_back(expr2);
 
                                 expr_ref lhs(mk_and(lhs_terms), m);
                                 expr_ref rhs(mk_and(rhs_terms), m);
@@ -4533,31 +4513,28 @@ namespace smt {
                         }
 
                         if (has_len_rhs && len_i == len_rhs) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
-                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
-                                               << "RHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " LHS ~= empty"
-                                               << std::endl;);
+
                             // right = var, left = emtpy
                             zstring empty("");
-                            expr_ref_vector lhs_terms(m), rhs_terms(m);
-
-                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
-                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_int(len_rhs)), m);
-                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(eqNodeSet[i].get()), mk_int(len_i)), m);
-
-                            lhs_terms.push_back(expr1);
-                            lhs_terms.push_back(expr2);
-                            lhs_terms.push_back(expr3);
-
-                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, eqNodeSet[i].get()), m);
-                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, mk_string(empty)), m);
+                            expr_ref_vector rhs_terms(m);
 
                             if (!eqRhs.contains(eqNodeSet[i].get()))
-                                rhs_terms.push_back(expr4);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_rhs, eqNodeSet[i].get()));
                             if (!eqLhs.contains(mk_string(empty)))
-                                rhs_terms.push_back(expr5);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_lhs, mk_string(empty)));
 
                             if (rhs_terms.size() > 0) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                                   << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                                   << "RHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " LHS ~= empty"
+                                                   << std::endl;);
+
+                                expr_ref_vector lhs_terms(m);
+                                expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                                expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_strlen(eqNodeSet[i].get())), m);
+
+                                lhs_terms.push_back(expr1);
+                                lhs_terms.push_back(expr2);
 
                                 expr_ref lhs(mk_and(lhs_terms), m);
                                 expr_ref rhs(mk_and(rhs_terms), m);
@@ -4574,30 +4551,27 @@ namespace smt {
                         expr *i_rhs = concat_i->get_arg(1);
                         rational len_i_lhs, len_i_rhs;
                         if (get_len_value(i_lhs, len_i_lhs) && has_len_lhs && len_i_lhs == len_lhs) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
-                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
-                                               << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
-                                               << std::endl;);
+
                             // left = left, right = right
-                            expr_ref_vector lhs_terms(m), rhs_terms(m);
-
-                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
-                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_int(len_lhs)), m);
-                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(i_lhs), mk_int(len_i_lhs)), m);
-
-                            lhs_terms.push_back(expr1);
-                            lhs_terms.push_back(expr2);
-                            lhs_terms.push_back(expr3);
-
-                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, i_rhs), m);
-                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, i_lhs), m);
+                            expr_ref_vector rhs_terms(m);
 
                             if (!eqRhs.contains(i_rhs))
-                                rhs_terms.push_back(expr4);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_rhs, i_rhs));
                             if (!eqLhs.contains(i_lhs))
-                                rhs_terms.push_back(expr5);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_lhs, i_lhs));
 
                             if (rhs_terms.size() > 0) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                                   << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                                   << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
+                                                   << std::endl;);
+
+                                expr_ref_vector lhs_terms(m);
+                                expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                                expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_strlen(i_lhs)), m);
+
+                                lhs_terms.push_back(expr1);
+                                lhs_terms.push_back(expr2);
 
                                 expr_ref lhs(mk_and(lhs_terms), m);
                                 expr_ref rhs(mk_and(rhs_terms), m);
@@ -4608,29 +4582,26 @@ namespace smt {
                         }
 
                         if (get_len_value(i_rhs, len_i_rhs) && has_len_rhs && len_i_rhs == len_rhs) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
-                                               << mk_pp(eqNodeSet[i].get(), m) << std::endl
-                                               << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
-                                               << std::endl;);
+
                             // left = left, right = right
-                            expr_ref_vector lhs_terms(m), rhs_terms(m);
+                            expr_ref_vector rhs_terms(m);
 
-                            expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
-                            expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_int(len_rhs)), m);
-                            expr_ref expr3(ctx.mk_eq_atom(mk_strlen(i_rhs), mk_int(len_i_rhs)), m);
-
-                            lhs_terms.push_back(expr1);
-                            lhs_terms.push_back(expr2);
-                            lhs_terms.push_back(expr3);
-
-                            expr_ref expr4(ctx.mk_eq_atom(concat_rhs, i_rhs), m);
-                            expr_ref expr5(ctx.mk_eq_atom(concat_lhs, i_lhs), m);
                             if (!eqRhs.contains(i_rhs))
-                                rhs_terms.push_back(expr4);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_rhs, i_rhs));
                             if (!eqLhs.contains(i_lhs))
-                                rhs_terms.push_back(expr5);
+                                rhs_terms.push_back(ctx.mk_eq_atom(concat_lhs, i_lhs));
 
                             if (rhs_terms.size() > 0) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(*it, m) << " = "
+                                                   << mk_pp(eqNodeSet[i].get(), m) << std::endl
+                                                   << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
+                                                   << std::endl;);
+                                expr_ref_vector lhs_terms(m);
+                                expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
+                                expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_strlen(i_rhs)), m);
+
+                                lhs_terms.push_back(expr1);
+                                lhs_terms.push_back(expr2);
 
                                 expr_ref lhs(mk_and(lhs_terms), m);
                                 expr_ref rhs(mk_and(rhs_terms), m);
@@ -4844,7 +4815,6 @@ namespace smt {
                         expr_ref lenValueExpr (mk_int(lenValue), m);
                         expr_ref axr(ctx.mk_eq_atom(concatlenExpr, lenValueExpr), m);
                         assert_implication(axl, axr);
-                        STRACE("str", tout <<  mk_ismt2_pp(axl, m) << std::endl << "  --->  " << std::endl <<  mk_ismt2_pp(axr, m)<< std::endl;);
                         axiomAdded = true;
                     }
                 }
@@ -5022,8 +4992,10 @@ namespace smt {
         }
 
         UnderApproxState state(m, m_scope_level, mful_scope_levels.size(), eq_combination, importantVars);
-        if (state == uState)
+        if (state == uState) {
+            uState = state;
             return false;
+        }
         else {
             uState = state;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << uState.eq_combination.size() << std::endl;);
@@ -5085,7 +5057,7 @@ namespace smt {
 
     void theory_str::additionalHandling(){
         handle_NOTEqual();
-//        handle_NOTContain();
+        handle_NOTContain();
     }
 
     void theory_str::handle_NOTEqual(){
@@ -9455,9 +9427,10 @@ namespace smt {
         collect_eq_nodes(root, eqNodeSet);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(e, get_manager()) << std::endl;);
         for (int i = 0; i < eqNodeSet.size(); ++i){
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(eqNodeSet[i].get(), get_manager()) << std::endl;);
-            if (arrMap.find(eqNodeSet[i].get()) != arrMap.end())
+            if (arrMap.find(eqNodeSet[i].get()) != arrMap.end()) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(arrMap[eqNodeSet[i].get()], get_manager()) << std::endl;);
                 return arrMap[eqNodeSet[i].get()];
+            }
         }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(e, get_manager()) << std::endl;);
         return nullptr;
@@ -10487,6 +10460,7 @@ namespace smt {
     }
 
     std::set<std::pair<expr*, int>> theory_str::collect_important_vars(std::set<expr*> eqc_roots){
+        clock_t t = clock();
         ast_manager &m = get_manager();
         std::set<std::pair<expr*, int>> result;
         std::map<expr*, int> occurrences = countOccurrences_from_root(eqc_roots);
@@ -10518,7 +10492,7 @@ namespace smt {
 
         for (const auto& nn : result)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
-
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return result;
     }
 
@@ -10901,6 +10875,7 @@ namespace smt {
             std::map<expr*, std::set<expr*>> &causes,
             std::set<expr*> &subNodes,
             std::set<std::pair<expr*, int>> importantVars){
+        clock_t t = clock();
         ast_manager &m = get_manager();
         context& ctx = get_context();
         (void) ctx;
@@ -10929,7 +10904,7 @@ namespace smt {
                 extend_object(ctx.get_enode(node)->get_root()->get_owner(), combinations, causes, parents, importantVars);
             }
         }
-
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return refine_eq_combination(importantVars, combinations, subNodes);
     }
 

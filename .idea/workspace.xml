@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="130">
-              <caret line="1959" column="28" selection-start-line="1959" selection-start-column="28" selection-end-line="1959" selection-end-column="28" />
+            <state relative-caret-position="792">
+              <caret line="970" column="53" lean-forward="true" selection-start-line="970" selection-start-column="53" selection-end-line="970" selection-end-column="53" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#31960#33655#0" />
@@ -144,11 +144,10 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="801">
-              <caret line="2114" column="26" selection-start-line="2114" selection-start-column="26" selection-end-line="2114" selection-end-column="26" />
+            <state relative-caret-position="317">
+              <caret line="462" column="14" selection-start-line="462" selection-start-column="14" selection-end-line="462" selection-end-column="14" />
               <folding>
                 <element signature="e#9690#19692#1" />
-                <element signature="e#19703#24260#1" />
               </folding>
             </state>
           </provider>
@@ -203,11 +202,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>convertEqualities</find>
-      <find>collect_eq</find>
-      <find>collectAllPossibleArrangements</find>
-      <find>equalityToSMT</find>
-      <find>mk_arr_var</find>
       <find>staticIntegerAnalysis</find>
       <find>constructAsNormal</find>
       <find>constructStr</find>
@@ -221,18 +215,23 @@
       <find>constPartLen</find>
       <find>checkIfVarInUnionMembership</find>
       <find>dumping all asserted formulas</find>
-      <find>construct_eq_combination</find>
       <find>refine_eq_combination</find>
       <find>collectAllInequalities</find>
       <find>handle_connected_connected_array</find>
       <find>get_nodes_in_concat</find>
       <find>countOccurrences_from_combination</find>
-      <find>underapproximation</find>
-      <find>is_importantVar</find>
       <find>refine_important_vars</find>
       <find>propagate_final</find>
       <find>new_eq_check</find>
       <find>time</find>
+      <find>construct_eq_combination</find>
+      <find>handle_equality</find>
+      <find>handle_eq</find>
+      <find>propagate_length</find>
+      <find>both concats are already in the same equivalence class</find>
+      <find>initUnderapprox</find>
+      <find>is_importantVar</find>
+      <find>underapproximation</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -763,12 +762,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="215834000" />
+      <workItem from="1555596195940" duration="228182000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="360756000" />
+    <option name="totallyTimeSpent" value="373104000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1166,19 +1165,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="801">
-          <caret line="2114" column="26" selection-start-line="2114" selection-start-column="26" selection-end-line="2114" selection-end-column="26" />
+        <state relative-caret-position="317">
+          <caret line="462" column="14" selection-start-line="462" selection-start-column="14" selection-end-line="462" selection-end-column="14" />
           <folding>
             <element signature="e#9690#19692#1" />
-            <element signature="e#19703#24260#1" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="130">
-          <caret line="1959" column="28" selection-start-line="1959" selection-start-column="28" selection-end-line="1959" selection-end-column="28" />
+        <state relative-caret-position="792">
+          <caret line="970" column="53" lean-forward="true" selection-start-line="970" selection-start-column="53" selection-end-line="970" selection-end-column="53" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#31960#33655#0" />
