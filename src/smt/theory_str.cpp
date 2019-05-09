@@ -2494,8 +2494,8 @@ namespace smt {
                     tout << " " << mk_pp(el, m);
                 }
                 tout << std::endl;
-                if (constStrAst == NULL) {
-                    tout << "constStrAst = NULL" << std::endl;
+                if (constStrAst == nullptr) {
+                    tout << "constStrAst = nullptr" << std::endl;
                 } else {
                     tout << "constStrAst = " << mk_pp(constStrAst, m) << std::endl;
                 }
@@ -3524,6 +3524,24 @@ namespace smt {
         std::map<expr*, std::set<expr*>> causes;
         std::set<expr*> subNodes;
         std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, subNodes, importantVars);
+
+        for (const auto& com : eq_combination){
+            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            for (const auto& e : com.second)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
+        }
+
+
         refine_important_vars(importantVars, eq_combination);
         eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes);
         const str::state &root = build_state_from_memo();
@@ -5057,7 +5075,7 @@ namespace smt {
 
     void theory_str::additionalHandling(){
         handle_NOTEqual();
-        handle_NOTContain();
+//        handle_NOTContain();
     }
 
     void theory_str::handle_NOTEqual(){
@@ -6524,6 +6542,7 @@ namespace smt {
 //                        STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
 //                    STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
+                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
                 }
                 else {
                 }
@@ -6725,26 +6744,6 @@ namespace smt {
                     result_element.push_back(tmp);
 
                 }
-                else if (left_arr[i] == EMPTYFLAT) {
-
-                    /* empty */
-                    /* some first flats can be empty */
-                    zstring value;
-                    if (u.str.is_string(lhs_elements[i].first, value) && lhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
-                        if (value.length() <= 0 ||
-                            (QCONSTMAX == 2 && i + 1 < lhs_elements.size() && left_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
-                            (QCONSTMAX == 1 && value.length() > 0)) /* const string is empty */ {
-                            return nullptr;
-                        }
-                    }
-                    checkLeft[i] = true;
-                    expr_ref tmp(generateConstraint00(lhs_elements[i], lhs_str), m);
-
-                    if (tmp == nullptr) {/* cannot happen due to const */
-                        return nullptr;
-                    }
-                    result_element.push_back(tmp);
-                }
             }
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
         /* do the right */
@@ -6815,11 +6814,39 @@ namespace smt {
                         STRACE("str", tout << __LINE__ <<  " 02 because of rhs@i: " << i << std::endl;);
                         return nullptr;
                     }
-                        STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
-                    result_element.push_back(tmp);
                     STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  mk_pp(tmp, m) << i << std::endl;);
+                    result_element.push_back(tmp);
                 }
-                else if (right_arr[i] == EMPTYFLAT) {
+            }
+
+        for (unsigned i = 0; i < left_arr.size(); ++i)
+            if (!checkLeft[i]) {
+                if (left_arr[i] == EMPTYFLAT) {
+
+                    /* empty */
+                    /* some first flats can be empty */
+                    zstring value;
+                    if (u.str.is_string(lhs_elements[i].first, value) && lhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
+                        if (value.length() <= 0 ||
+                            (QCONSTMAX == 2 && i + 1 < lhs_elements.size() && left_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
+                            (QCONSTMAX == 1 && value.length() > 0)) /* const string is empty */ {
+                            return nullptr;
+                        }
+                    }
+                    checkLeft[i] = true;
+                    expr_ref tmp(generateConstraint00(lhs_elements[i], lhs_str), m);
+
+                    if (tmp == nullptr) {/* cannot happen due to const */
+                        return nullptr;
+                    }
+                    result_element.push_back(tmp);
+                }
+            }
+
+        for (unsigned i = 0; i < right_arr.size(); ++i)
+            if (!checkRight[i]){
+                if (right_arr[i] == EMPTYFLAT) {
                     /* empty */
                     /* some first flats can be empty */
                     zstring value;
@@ -6837,6 +6864,7 @@ namespace smt {
                     result_element.push_back(tmp);
                 }
             }
+
 
         STRACE("str", tout << __LINE__ <<  " Do the rest " << std::endl;);
         /* do the rest */
@@ -7376,8 +7404,9 @@ namespace smt {
 //            }
 //            ands.push_back(createEqualOperator(getExprVarFlatIter(a), createAddOperator(adds)));
         }
-        STRACE("str", tout << __LINE__ <<  " *** " << std::endl;);
+
         expr_ref tmp(createAndOperator(result), m);
+        STRACE("str", tout << __LINE__ <<  " *** " << mk_pp(tmp, m) << std::endl;);
         return tmp.get();
     }
 
@@ -7773,6 +7802,14 @@ namespace smt {
         bool sumConst_0 = true, metVar = false;
         unsigned splitPos = 0;
         for (unsigned i = 0; i < elementNames.size(); ++i) {
+            zstring value;
+            if (u.str.is_string(elementNames[i].first, value)) {
+                if (value.length() == 1) {
+                    sumConst_0 = false;
+                    break;
+                }
+            }
+
             if (elementNames[i].second < 0) {
                 if (metVar)
                     splitPos++;
@@ -7790,6 +7827,7 @@ namespace smt {
         }
 
         if (sumConst_0 == true) {
+            STRACE("str", tout << __LINE__ <<  " const|regex = const + ...: short path" << std::endl;);
             strAnd.push_back(createEqualOperator(m_autil.mk_int(0), createAddOperator(addElements)));
             return strAnd;
         }
@@ -10884,11 +10922,10 @@ namespace smt {
         std::set<expr*> eqc_roots;
         sort* string_sort = u.str.mk_string_sort();
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
-            enode * e = *it;
-            enode * root = e->get_root();
-            if ((m.get_sort(root->get_owner()) == string_sort)) {
-                eqc_roots.insert(root->get_owner());
-                expr* exprNode = root->get_owner();
+            expr* owner = (*it)->get_root()->get_owner();
+            if ((m.get_sort(owner)) == string_sort) {
+                eqc_roots.insert(owner);
+                expr* exprNode = owner;
                 if (u.str.is_concat(exprNode)){
                     ptr_vector<expr> nodeList;
                     get_nodes_in_concat(exprNode, nodeList);
@@ -10926,7 +10963,7 @@ namespace smt {
             }
             if (!important)
                 if (subNodes.find(c.first) == subNodes.end()){
-
+                    ret[c.first] = c.second;
                 }
         }
         return ret;
@@ -11114,6 +11151,9 @@ namespace smt {
             result.emplace(object);
 
         combinations[object] = result;
+        for (const auto& e : result) {
+            STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " = " << mk_pp(e, m) << std::endl;);
+        }
         return result;
     }
 
@@ -12855,7 +12895,7 @@ namespace smt {
     void theory_str::get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList) {
         for (const auto& p : importantVars)
             if (p.first == node) {
-                STRACE("str", tout << "\t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " \t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);
                 astList.push_back(node);
                 break;
             }
