@@ -1203,6 +1203,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination);
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
             std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);

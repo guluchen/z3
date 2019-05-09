@@ -967,7 +967,6 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
-//            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -3541,12 +3540,15 @@ namespace smt {
                    });
         }
 
+        bool axiomAdded = specialHandlingForContainFamily(eq_combination);
+        if (axiomAdded)
+            return FC_CONTINUE;
 
         refine_important_vars(importantVars, eq_combination);
         eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes);
         const str::state &root = build_state_from_memo();
  
-        bool axiomAdded = underapproximation(eq_combination, causes, importantVars);
+        axiomAdded = underapproximation(eq_combination, causes, importantVars);
         if (axiomAdded) {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << "/" << uState.level << ")" << connectingSize << std::endl;);
 
@@ -3555,6 +3557,49 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
+    }
+
+    bool theory_str::specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination) {
+        clock_t t = clock();
+        ast_manager & m = get_manager();
+        expr_ref_vector ands(m);
+        for (const auto &v : eq_combination)
+            if (v.second.size() > 1) {
+                std::vector<expr *> tmpVector;
+                tmpVector.insert(tmpVector.end(), v.second.begin(), v.second.end());
+                for (int i = 0; i < tmpVector.size(); ++i) {
+                    ptr_vector<expr> nodes_i;
+                    get_nodes_in_concat(tmpVector[i], nodes_i);
+                    if (nodes_i.size() > 1) { // index, replace, contain
+                        std::string name_i = expr2str(nodes_i[0]);
+                        if (name_i.find("indexOf1") == 0 || name_i.find("replace1") == 0 || name_i.find("pre_contain") == 0 ) {
+                            expr_ref_vector eqNodes1(m), eqNodes0(m);
+                            collect_eq_nodes(nodes_i[1], eqNodes1);
+                            collect_eq_nodes(nodes_i[0], eqNodes0);
+
+                            for (int j = i + 1; j < tmpVector.size(); ++j) {
+                                ptr_vector<expr> nodes_j;
+                                get_nodes_in_concat(tmpVector[j], nodes_j);
+                                if (nodes_j.size() > 1) {
+                                    std::string name_j = expr2str(nodes_j[0]);
+                                    if (name_j.find("indexOf1") == 0 || name_j.find("replace1") == 0 ||
+                                        name_j.find("pre_contain") == 0) {
+                                        if (eqNodes1.contains(nodes_j[1]) && !eqNodes0.contains(nodes_j[0]))
+                                            ands.push_back(createEqualOperator(nodes_i[0], nodes_j[0]));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+        if (ands.size() > 0) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
+            assert_axiom(createAndOperator(ands));
+            return true;
+        }
+        else return false;
     }
 
     std::set<expr*> theory_str::get_eqc_roots(){
@@ -5075,7 +5120,7 @@ namespace smt {
 
     void theory_str::additionalHandling(){
         handle_NOTEqual();
-//        handle_NOTContain();
+        handle_NOTContain();
     }
 
     void theory_str::handle_NOTEqual(){
@@ -8011,11 +8056,13 @@ namespace smt {
                      connectedVariables.find(elementNames[i].first) != connectedVariables.end()){
                 if (elementNames[i].second % QMAX == 1 && i > 0)
                     continue;
-
+                int bound = std::max(connectedVariables[elementNames[i].first], connectedVariables[a.first]);
+                if (bound >= connectingSize)
+                    bound = std::min(connectedVariables[elementNames[i].first], connectedVariables[a.first]);
                 possibleCases.push_back(
                         handle_connected_connected_array(
                                 a, elementNames, lhs_str, rhs_str, i,
-                                connectedVariables[elementNames[i].first],
+                                std::min(connectedVariables[elementNames[i].first], connectedVariables[a.first]),
                                 optimizing,
                                 pMax));
 
@@ -9534,9 +9581,12 @@ namespace smt {
      *
      */
     app* theory_str::createAddOperator(expr_ref_vector adds){
+
         if (adds.size() == 0)
             return m_autil.mk_int(0);
+        context & ctx   = get_context();
         app* tmp = m_autil.mk_add(adds.size(), adds.c_ptr());
+        ctx.internalize(tmp, false);
         return tmp;
     }
 
@@ -11555,9 +11605,9 @@ namespace smt {
 
         TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
 
-        expr_ref ts0(mk_str_var("ts0"), m);
-        expr_ref ts1(mk_str_var("ts1"), m);
-        expr_ref ts2(mk_str_var("ts2"), m);
+        expr_ref ts0(mk_str_var("charAt0"), m);
+        expr_ref ts1(mk_str_var("charAt1"), m);
+        expr_ref ts2(mk_str_var("charAt2"), m);
 
         expr_ref cond(m.mk_and(
                 m_autil.mk_ge(arg1, mk_int(0)),
@@ -11598,16 +11648,19 @@ namespace smt {
         }
         axiomatized_terms.insert(ex);
 
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
-        std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("x1"), mk_str_var("x2"));
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+        std::pair<app*, app*> value;
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(a, m) << std::endl;);
         enode* key = ensure_enode(a);
+
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];
             value = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
         }
         else {
+            value = std::make_pair<app*, app*>(mk_str_var("indexOf1"), mk_str_var("indexOf2"));
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
         }
 
@@ -11840,8 +11893,8 @@ namespace smt {
 
         // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
         // ==> base = t0.t1 AND len(t0) = pos AND (Substr ...) = t1
-        expr_ref t0(mk_str_var("t0"), m);
-        expr_ref t1(mk_str_var("t1"), m);
+        expr_ref t0(mk_str_var("substr0"), m);
+        expr_ref t1(mk_str_var("substr1"), m);
         expr_ref case2_conclusion(m.mk_and(
                 ctx.mk_eq_atom(substrBase, mk_concat(t0,t1)),
                 ctx.mk_eq_atom(mk_strlen(t0), substrPos),
@@ -11851,9 +11904,9 @@ namespace smt {
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t2.t3.t4 AND len(t2) = pos AND len(t3) = len AND (Substr ...) = t3
 
-        expr_ref t2(mk_str_var("t2"), m);
-        expr_ref t3(mk_str_var("t3"), m);
-        expr_ref t4(mk_str_var("t4"), m);
+        expr_ref t2(mk_str_var("substr2"), m);
+        expr_ref t3(mk_str_var("substr3"), m);
+        expr_ref t4(mk_str_var("substr4"), m);
         expr_ref_vector case3_conclusion_terms(m);
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t2, mk_concat(t3, t4))));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t2), substrPos));
@@ -11890,16 +11943,18 @@ namespace smt {
         }
         axiomatized_terms.insert(expr);
 
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
-        std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("x1"), mk_str_var("x2"));
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
+        std::pair<app*, app*> value;
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(a, m) << std::endl;);
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];
             value = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
         }
         else {
+            value = std::make_pair<app*, app*>(mk_str_var("replace1"), mk_str_var("replace2"));
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
         }
 
@@ -11931,8 +11986,8 @@ namespace smt {
         }
         else {
             //  args[0]  = x3 . x4 /\ |x3| = |x1| + |args[1]| - 1 /\ ! contains(x3, args[1])
-            expr_ref x3(mk_str_var("x3"), m);
-            expr_ref x4(mk_str_var("x4"), m);
+            expr_ref x3(mk_str_var("replace3"), m);
+            expr_ref x4(mk_str_var("replace4"), m);
             expr_ref tmpLen(m_autil.mk_add(i1, mk_strlen(expr->get_arg(1)), mk_int(-1)), m);
             thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x3, x4)));
             thenItems.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
@@ -12194,7 +12249,9 @@ namespace smt {
     }
 
     app * theory_str::mk_strlen(expr * e) {
-        return u.str.mk_length(e);
+        app* tmp = u.str.mk_length(e);
+        ensure_enode(tmp);
+        return tmp;
     }
 
     expr * theory_str::mk_string(zstring const& str) {

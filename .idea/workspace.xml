@@ -86,6 +86,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="7808" column="26" selection-start-line="7808" selection-start-column="26" selection-end-line="7808" selection-end-column="26" />
+            <state relative-caret-position="692">
+              <caret line="5142" column="34" lean-forward="true" selection-start-line="5142" selection-start-column="34" selection-end-line="5142" selection-end-column="34" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#31960#33655#0" />
@@ -143,8 +144,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="381">
-              <caret line="195" column="8" selection-start-line="195" selection-start-column="8" selection-end-line="195" selection-end-column="8" />
+            <state relative-caret-position="396">
+              <caret line="1205" column="17" selection-start-line="1205" selection-start-column="17" selection-end-line="1205" selection-end-column="17" />
               <folding>
                 <element signature="e#9690#19692#1" />
               </folding>
@@ -201,17 +202,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_eqc_value</find>
-      <find>collect_important_vars</find>
-      <find>constPart</find>
-      <find>constPartLen</find>
-      <find>checkIfVarInUnionMembership</find>
-      <find>dumping all asserted formulas</find>
-      <find>refine_eq_combination</find>
-      <find>collectAllInequalities</find>
-      <find>handle_connected_connected_array</find>
-      <find>get_nodes_in_concat</find>
-      <find>countOccurrences_from_combination</find>
       <find>refine_important_vars</find>
       <find>propagate_final</find>
       <find>new_eq_check</find>
@@ -231,6 +221,17 @@
       <find>is_importantVar</find>
       <find>generateConstraint00</find>
       <find>mk_false</find>
+      <find>mk_strlen</find>
+      <find>handle_connected_connected_array</find>
+      <find>bound</find>
+      <find>ts0</find>
+      <find>ts1</find>
+      <find>x1</find>
+      <find>t0&quot;</find>
+      <find>underApproximation</find>
+      <find>instantiate_axiom_</find>
+      <find>collect_eq_nodes</find>
+      <find>final</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -761,12 +762,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="235896000" />
+      <workItem from="1555596195940" duration="244961000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="380818000" />
+    <option name="totallyTimeSpent" value="389883000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1164,8 +1165,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="381">
-          <caret line="195" column="8" selection-start-line="195" selection-start-column="8" selection-end-line="195" selection-end-column="8" />
+        <state relative-caret-position="396">
+          <caret line="1205" column="17" selection-start-line="1205" selection-start-column="17" selection-end-line="1205" selection-end-column="17" />
           <folding>
             <element signature="e#9690#19692#1" />
           </folding>
@@ -1174,8 +1175,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="7808" column="26" selection-start-line="7808" selection-start-column="26" selection-end-line="7808" selection-end-column="26" />
+        <state relative-caret-position="692">
+          <caret line="5142" column="34" lean-forward="true" selection-start-line="5142" selection-start-column="34" selection-end-line="5142" selection-end-column="34" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#31960#33655#0" />
