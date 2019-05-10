@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="692">
-              <caret line="5142" column="34" lean-forward="true" selection-start-line="5142" selection-start-column="34" selection-end-line="5142" selection-end-column="34" />
+            <state relative-caret-position="751">
+              <caret line="3558" column="65" selection-start-line="3558" selection-start-column="35" selection-end-line="3558" selection-end-column="65" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#31960#33655#0" />
@@ -144,8 +144,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="396">
-              <caret line="1205" column="17" selection-start-line="1205" selection-start-column="17" selection-end-line="1205" selection-end-column="17" />
+            <state relative-caret-position="411">
+              <caret line="1207" column="23" selection-start-line="1207" selection-start-column="23" selection-end-line="1207" selection-end-column="23" />
               <folding>
                 <element signature="e#9690#19692#1" />
               </folding>
@@ -202,10 +202,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>refine_important_vars</find>
-      <find>propagate_final</find>
-      <find>new_eq_check</find>
-      <find>time</find>
       <find>construct_eq_combination</find>
       <find>handle_equality</find>
       <find>handle_eq</find>
@@ -214,7 +210,6 @@
       <find>initUnderapprox</find>
       <find>NULL)</find>
       <find>eqc_roots</find>
-      <find>underapproximation</find>
       <find>get_important_asts_in_node</find>
       <find>extend_object</find>
       <find>correct cáe</find>
@@ -231,6 +226,11 @@
       <find>underApproximation</find>
       <find>instantiate_axiom_</find>
       <find>collect_eq_nodes</find>
+      <find>specialhand</find>
+      <find>causes</find>
+      <find>underapproximation</find>
+      <find>mk_no</find>
+      <find>mk_not</find>
       <find>final</find>
     </findStrings>
   </component>
@@ -762,12 +762,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="244961000" />
+      <workItem from="1555596195940" duration="255138000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="389883000" />
+    <option name="totallyTimeSpent" value="400060000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1135,13 +1135,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="980" column="20" selection-start-line="980" selection-start-column="20" selection-end-line="980" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="381">
@@ -1163,10 +1156,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="980" column="20" selection-start-line="980" selection-start-column="20" selection-end-line="980" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="1205" column="17" selection-start-line="1205" selection-start-column="17" selection-end-line="1205" selection-end-column="17" />
+        <state relative-caret-position="411">
+          <caret line="1207" column="23" selection-start-line="1207" selection-start-column="23" selection-end-line="1207" selection-end-column="23" />
           <folding>
             <element signature="e#9690#19692#1" />
           </folding>
@@ -1175,8 +1175,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="692">
-          <caret line="5142" column="34" lean-forward="true" selection-start-line="5142" selection-start-column="34" selection-end-line="5142" selection-end-column="34" />
+        <state relative-caret-position="751">
+          <caret line="3558" column="65" selection-start-line="3558" selection-start-column="35" selection-end-line="3558" selection-end-column="65" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#31960#33655#0" />

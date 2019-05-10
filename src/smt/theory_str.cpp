@@ -3520,9 +3520,9 @@ namespace smt {
 
         std::set<expr*> eqc_roots = get_eqc_roots();
         std::set<std::pair<expr *, int>> importantVars = collect_important_vars(eqc_roots);
-        std::map<expr*, std::set<expr*>> causes;
+        std::map<expr*, std::set<expr*>> _causes;
         std::set<expr*> subNodes;
-        std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(causes, subNodes, importantVars);
+        std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(_causes, subNodes, importantVars);
 
         for (const auto& com : eq_combination){
             STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
@@ -3540,7 +3540,23 @@ namespace smt {
                    });
         }
 
+        std::map<expr*, expr*> causes;
+        for (const auto& v : _causes){
+            expr_ref_vector tmp(m);
+            for (const auto& n : v.second) {
+                tmp.push_back(n);
+            }
+            if (tmp.size() == 0)
+                causes[v.first] = m.mk_true();
+            else {
+                expr_ref tmpExpr(createAndOperator(tmp), m);
+                causes[v.first] = tmpExpr;
+            }
+        }
+
+
         bool axiomAdded = specialHandlingForContainFamily(eq_combination);
+        axiomAdded = axiomAdded || specialHandlingForCharAtFamily(eq_combination, causes);
         if (axiomAdded)
             return FC_CONTINUE;
 
@@ -3593,6 +3609,93 @@ namespace smt {
                     }
                 }
             }
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+        if (ands.size() > 0) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
+            assert_axiom(createAndOperator(ands));
+            return true;
+        }
+        else return false;
+    }
+
+    bool theory_str::specialHandlingForCharAtFamily(
+            std::map<expr *, std::set<expr *>> eq_combination,
+            std::map<expr*, expr*> causes) {
+        clock_t t = clock();
+        ast_manager & m = get_manager();
+        expr_ref_vector ands(m);
+        for (const auto &v : eq_combination)
+            if (v.second.size() > 1) {
+                std::vector<expr *> tmpVector;
+                tmpVector.insert(tmpVector.end(), v.second.begin(), v.second.end());
+                for (int i = 0; i < tmpVector.size(); ++i) {
+                    ptr_vector<expr> nodes_i;
+                    get_nodes_in_concat(tmpVector[i], nodes_i);
+                    if (nodes_i.size() > 0) { // charAt
+                        std::string name_i = expr2str(nodes_i[0]);
+                        zstring value_i("");
+                        if (name_i.find("charAt1") == 0 || (u.str.is_string(nodes_i[0], value_i) && value_i.length() > 0)) {
+                            expr_ref_vector eqNodes1(m), eqNodes0(m);
+                            collect_eq_nodes(nodes_i[1], eqNodes1);
+                            collect_eq_nodes(nodes_i[0], eqNodes0);
+
+                            for (int j = i + 1; j < tmpVector.size(); ++j) {
+                                ptr_vector<expr> nodes_j;
+                                get_nodes_in_concat(tmpVector[j], nodes_j);
+                                if (nodes_j.size() > 1) {
+                                    std::string name_j = expr2str(nodes_j[0]);
+                                    zstring value_j("");
+                                    if (name_j.find("charAt1") == 0 || (u.str.is_string(nodes_j[0], value_j) && value_j.length() > 0)) {
+                                        if (!(value_i.length() > 0 && value_j.length() > 0)) {
+                                            if (value_i.length() == 0 && value_j.length() == 0){
+                                                // both are indexofs
+                                                if (causes.find(v.first) != causes.end()) {
+                                                    // implication
+                                                    expr_ref_vector ors(m);
+                                                    ors.push_back(mk_not(m, causes[v.first]));
+                                                    ors.push_back(createEqualOperator(nodes_i[0], nodes_j[0]));
+                                                    ands.push_back(createOrOperator(ors));
+                                                }
+                                                else
+                                                    ands.push_back(createEqualOperator(nodes_i[0], nodes_j[0]));
+                                            }
+                                            else {
+                                                if (value_i.length() > 0) {
+                                                    // indexof vs string
+                                                    zstring valueIndexof = value_i.extract(0, 1);
+                                                    if (causes.find(v.first) != causes.end()) {
+                                                        // implication
+                                                        expr_ref_vector ors(m);
+                                                        ors.push_back(mk_not(m, causes[v.first]));
+                                                        ors.push_back(createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]));
+                                                        ands.push_back(createOrOperator(ors));
+                                                    }
+                                                    else
+                                                        ands.push_back(createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]));
+                                                }
+                                                else {
+                                                    // indexof vs string
+                                                    zstring valueIndexof = value_j.extract(0, 1);
+                                                    if (causes.find(v.first) != causes.end()) {
+                                                        // implication
+                                                        expr_ref_vector ors(m);
+                                                        ors.push_back(mk_not(m, causes[v.first]));
+                                                        ors.push_back(createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof)));
+                                                        ands.push_back(createOrOperator(ors));
+                                                    }
+                                                    else
+                                                        ands.push_back(createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof)));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         if (ands.size() > 0) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
@@ -5033,7 +5136,7 @@ namespace smt {
 
     bool theory_str::underapproximation(
             std::map<expr*, std::set<expr*>> eq_combination,
-            std::map<expr*, std::set<expr*>> causes,
+            std::map<expr*, expr*> causes,
             std::set<std::pair<expr*, int>> importantVars) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
         ast_manager & m = get_manager();
@@ -5082,29 +5185,7 @@ namespace smt {
             v_combination[v.first] = tmp;
         }
 
-        for (const auto& v : causes){
-
-            STRACE("str", tout << __LINE__ <<  " *** " << mk_pp(v.first, m) << ": " << v.second.size()  << std::endl;);
-            for (const auto& n : v.second) {
-                STRACE("str", tout << __LINE__ <<  " \t " << mk_ismt2_pp(n, m) << std::endl;);
-            }
-        }
-
-        std::map<expr*, expr*> _causes;
-        for (const auto& v : causes){
-            expr_ref_vector tmp(m);
-            for (const auto& n : v.second) {
-                tmp.push_back(n);
-            }
-            if (tmp.size() == 0)
-                _causes[v.first] = m.mk_true();
-            else {
-                expr_ref tmpExpr(createAndOperator(tmp), m);
-                _causes[v.first] = tmpExpr;
-            }
-        }
-
-        return convertEqualities(v_combination, connectedVars, _causes);
+        return convertEqualities(v_combination, connectedVars, causes);
     }
 
     bool theory_str::underapproximation_repeat(){
@@ -5137,9 +5218,10 @@ namespace smt {
                     expr_ref_vector eqRhs(m);
                     expr* constLhs = collect_eq_nodes(lhs, eqLhs);
                     expr* constRhs = collect_eq_nodes(rhs, eqRhs);
-                    if (constLhs != nullptr && constLhs != nullptr)
+                    if (constLhs != nullptr && constRhs != nullptr) {
+                        STRACE("str", tout << __LINE__ <<  " simple not (" << mk_pp(constLhs, m) << " = " << mk_pp(constRhs, m) << ")\n";);
                         return;
-
+                    }
                     zstring value;
 
                     if (constLhs != nullptr && u.str.is_string(constLhs, value))
@@ -5226,7 +5308,6 @@ namespace smt {
     void theory_str::handle_NOTContain(){
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
-                STRACE("str", tout << "not (" << wi.first << " = " << wi.second << ")\n";);
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
 
@@ -5254,7 +5335,9 @@ namespace smt {
     }
 
     void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs){
+
         ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
         int bound = -1;
         if (isImportant(lhs, bound)){
             expr_ref_vector cases(m);
