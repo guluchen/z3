@@ -1244,26 +1244,13 @@ namespace smt {
             }
             return result;
         }
-        bool state::is_reachable(ast_manager& m, context& ctx, theory_str& th) const {
+        bool state::is_reachable(ast_manager& m, int_expr_solver& m_int_solver) const {
             STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
             bool on_screen=false;
             expr_ref to_check= m_length.get_path_cond(m);
             if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
 
-            seq_expr_solver csolver(m, ctx.get_fparams(),ctx);
-            expr_ref_vector Assigns(m),Literals(m);
-            ctx.get_guessed_literals(Literals);
-            ctx.get_assignments(Assigns);
-            for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
-                csolver.assert_expr(ctx.get_asserted_formula(i));
-            }
-//            for (auto & e : Assigns){
-//                csolver.assert_expr(e);
-//            }
-//            for (auto & e : Literals){
-//                csolver.assert_expr(e);
-//            }
-            lbool chk_res = csolver.check_sat(to_check);
+            lbool chk_res = m_int_solver.check_sat(to_check);
 
             if(on_screen) std::cout<<"[is_reachable]"<<(chk_res==lbool::l_true)<<std::endl;
             STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
@@ -1274,6 +1261,41 @@ namespace smt {
                    m_eq_wes == other.m_eq_wes &&
                    m_diseq_wes == other.m_diseq_wes &&
                    *m_memberships == *other.m_memberships;
+                   //&& m_length == other.m_length;
+        }
+
+
+
+
+        bool length_constraints::operator==(const length_constraints& s) const{
+            bool on_screen =false;
+            if(on_screen) std::cout<<"PC1:"<<std::endl;
+            for(auto& pc:s.m_path_cond){
+                if(on_screen) pc.print(std::cout);
+            }
+            if(on_screen) std::cout<<"\nPC2:"<<std::endl;
+            for(auto& pc:m_path_cond){
+                if(on_screen) pc.print(std::cout);
+            }
+            if(on_screen) std::cout<<"\nThey are equal: ";
+            if(on_screen) std::cout<<(s.m_path_cond==m_path_cond)<<std::endl;
+
+            if(on_screen) std::cout<<"LC1:"<<std::endl;
+            for(auto& lc:s.m_len_cons){
+                if(on_screen) lc.second.print(std::cout<<lc.first<<"=");
+                if(on_screen) std::cout<<" ";
+            }
+            if(on_screen) std::cout<<"\nLC2:"<<std::endl;
+            for(auto& lc:m_len_cons){
+                if(on_screen) lc.second.print(std::cout<<lc.first<<"=");
+                if(on_screen) std::cout<<" ";
+            }
+            if(on_screen) std::cout<<"\nThey are equal: ";
+            if(on_screen) std::cout<<(s.m_len_cons==m_len_cons)<<std::endl;
+
+
+            return s.m_len_cons==m_len_cons && s.m_path_cond==m_path_cond;
+
         }
 
         std::ostream& operator<<(std::ostream& os, const state& s) {
@@ -1466,7 +1488,7 @@ namespace smt {
             return true;
         }
 
-        void solver::resume(ast_manager& m, context& ctx, theory_str& th){
+        void solver::resume(ast_manager& m, context& ctx, theory_str& th, int_expr_solver& m_int_solver){
             m_unchecked_leaves.clear();
             if (m_pending.size() == 1 && !check_linear_membership(m_pending.top())) return;
             while (!m_pending.empty()&&m_unchecked_leaves.empty()) {
@@ -1485,10 +1507,10 @@ namespace smt {
                         continue;
                     }
 
-//                    if (!action.second.is_reachable(m,ctx,th)) {
-//                        STRACE("strg", tout << "not reachable:\n" << action.second << '\n';);
-//                        continue;
-//                    }
+                    if (!action.second.is_reachable(m, m_int_solver)) {
+                        STRACE("strg", tout << "not reachable:\n" << action.second << '\n';);
+                        continue;
+                    }
 
                     const state& s = m_records.add_state(std::move(action.second));
                     m_records.add_move(std::move(action.first), s);

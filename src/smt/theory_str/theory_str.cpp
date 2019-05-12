@@ -14,7 +14,6 @@
 
 
 namespace smt {
-    bool theory_str::is_main_branch=true;
     bool theory_str::is_over_approximation=false;
 
     namespace {
@@ -360,14 +359,12 @@ namespace smt {
                 handle_prefix(e);
             } else {
                 handle_not_prefix(e);
-//                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_suffix(e, e1, e2)) {
             if (is_true) {
                 handle_suffix(e);
             } else {
                 handle_not_suffix(e);
- //               is_over_approximation=true;
             }
         } else if (m_util_s.str.is_contains(e, e1, e2)) {
             if (is_true) {
@@ -541,13 +538,7 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         bool on_screen=true;
-        if(is_main_branch){
-            main_branch=true;
-            is_main_branch=false;
-        }
 
-
-        if(!main_branch) return FC_DONE;
         using namespace str;
         if (m_word_eq_todo.empty()) {
             if (is_over_approximation)
@@ -559,7 +550,9 @@ namespace smt {
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
 
-        if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
+
+
+        if (!m_aut_imp) m_aut_imp = std::make_shared<oaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
         STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
@@ -582,12 +575,17 @@ namespace smt {
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
+
+        int_expr_solver m_int_solver(get_manager(),get_context().get_fparams());
+        m_int_solver.initialize(get_context());
+
+
         solver solver{std::move(root), m_aut_imp};
         while(solver.unfinished()){
-            solver.resume(get_manager(),get_context(),*this);
+            solver.resume(get_manager(),get_context(),*this, m_int_solver);
             std::list<smt::str::state> to_check=solver.get_last_leaf_states();
             for(auto& s:to_check){
-               bool reachable =  s.is_reachable(get_manager(),get_context(),*this);
+               bool reachable =  s.is_reachable(get_manager(), m_int_solver);
                if(reachable){
                    STRACE("str", tout << "Leaf node reachable: \n"<<s<<std::endl;);
                    if (!is_over_approximation)
@@ -770,9 +768,10 @@ namespace smt {
     }
 
     void theory_str::add_axiom(expr *const e) {
-        STRACE("strg", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        bool on_screen =false;
+        STRACE("str_axiom", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
-        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
 
         if(!axiomatized_terms.contains(e)||false) {
@@ -793,6 +792,8 @@ namespace smt {
     }
 
     void theory_str::add_clause(std::initializer_list<literal> ls) {
+        bool on_screen =false;
+
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
         context& ctx = get_context();
         literal_vector lv;
@@ -803,10 +804,10 @@ namespace smt {
             }
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
-        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__; );
-        if(is_main_branch) STRACE("strg", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
-        STRACE("str", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
-        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__; );
+        if(on_screen) STRACE("str_axiom", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
+        STRACE("str_axiom", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
+        STRACE("str_axiom", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
 
     /*
@@ -1184,7 +1185,6 @@ namespace smt {
         expr *refinement = nullptr;
         STRACE("str", tout << "[Refinement]\nformulas:\n";);
         for (const auto& we : m_word_eq_todo) {
-//            expr *const e = m.mk_not(mk_eq_atom(we.first, we.second));
             expr *const e = m.mk_not(m.mk_eq(we.first, we.second));
             refinement = refinement == nullptr ? e : m.mk_or(refinement, e);
             STRACE("str", tout << we.first << " = " << we.second << '\n';);
@@ -1214,6 +1214,24 @@ namespace smt {
                     std::cout <<"**"<< mk_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (not relevant)\n");
                 }
         );
+    }
+    void int_expr_solver::initialize(context& ctx) {
+        if(!initialized){
+            initialized=true;
+            expr_ref_vector Assigns(m),Literals(m);
+            ctx.get_guessed_literals(Literals);
+            ctx.get_assignments(Assigns);
+            for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
+                assert_expr(ctx.get_asserted_formula(i));
+            }
+            for (auto & e : Assigns){
+                assert_expr(e);
+            }
+            for (auto & e : Literals){
+                assert_expr(e);
+            }
+
+        }
     }
 
 }
