@@ -1858,6 +1858,7 @@ namespace smt {
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,
                     std::map<expr*, std::set<expr*>> &causes,
+                    std::set<expr*> &subNodes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
         bool can_propagate() override;
@@ -2118,6 +2119,8 @@ namespace smt {
         std::map<expr*, std::set<expr*>> backwardDep;
         std::map<expr*, expr*> arrMap;
         std::map<std::string, expr*> arrMap_reverse;
+        std::map<std::string, expr*> varMap_reverse;
+
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;
