@@ -1334,7 +1334,7 @@ namespace smt {
                 if (c1 != c2) {
                     expr *n3 = to_app(c2)->get_arg(0);
                     expr *n4 = to_app(c2)->get_arg(1);
-                    if (eqn1.contains(n3)) {
+                    if (eqn1.contains(n3) && n2 != n4) {
                         expr_ref_vector litems(m);
                         if (lhs != rhs)
                             litems.push_back(ctx.mk_eq_atom(lhs, rhs));
@@ -1345,7 +1345,7 @@ namespace smt {
                         assert_implication(implyL, ctx.mk_eq_atom(n2, n4));
                     }
 
-                    if (eqn2.contains(n4)) {
+                    if (eqn2.contains(n4) && n1 != n3) {
                         expr_ref_vector litems(m);
                         if (lhs != rhs)
                             litems.push_back(ctx.mk_eq_atom(lhs, rhs));
