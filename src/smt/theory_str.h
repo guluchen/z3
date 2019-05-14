@@ -1832,9 +1832,11 @@ namespace smt {
             void refine_important_vars(std::set<std::pair<expr *, int>> &importantVars, std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 std::vector<zstring> collectAllInequalities(expr* nn);
+                bool collectNotContains(expr* nn);
+                bool collectAllNotCharAt(expr* nn, int &maxCharAt);
+                    bool isContainEquality(expr* e, expr* &key);
                 bool is_importantVar(
                     expr* nn,
-                    std::set<expr*> eqc_roots,
                     std::map<expr*, int> occurrences,
                     int &len);
                 bool is_importantVar_recheck(
@@ -1861,6 +1863,7 @@ namespace smt {
                     std::set<expr*> &subNodes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
+                void addSubNodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes);
         bool can_propagate() override;
         void propagate() override;
         expr* queryTheoryArithCore(expr* n, model_generator& mg);
