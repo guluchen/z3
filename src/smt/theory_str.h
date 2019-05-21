@@ -1458,7 +1458,7 @@ namespace smt {
              */
             expr* generateConstraint02(
                 std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elementNames,
+                std::vector<std::pair<expr*, int>> elements,
                 std::string lhs_str, std::string rhs_str,
                 int pMax,
                 std::map<expr*, int> connectedVariables,
@@ -2123,13 +2123,15 @@ namespace smt {
         std::map<expr*, expr*> arrMap;
         std::map<std::string, expr*> arrMap_reverse;
         std::map<std::string, expr*> varMap_reverse;
-
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
+        void fetch_guessed_literals(expr_ref_vector &guessedLiterals);
+        void fetch_guessed_literals_with_scopes(expr_ref_vector &guessedLiterals);
+        void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;
         str::word_term get_word_term(expr *e) const;

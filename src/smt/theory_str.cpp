@@ -3472,8 +3472,16 @@ namespace smt {
 
         ast_manager &m = get_manager();
         context& ctx = get_context();
+
+        expr_ref_vector guessedLiterals(m);
+        fetch_guessed_literals_with_scopes(guessedLiterals);
+
         (void) ctx;
-        TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << " vs " << uState.z3_level << std::endl;);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": at level " << ctx.get_scope_level() << " vs " << uState.z3_level << std::endl;);
+
+        for (int i = 0; i < mful_scope_levels.size(); ++i) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": useful: " << mful_scope_levels[i] << std::endl;);
+        }
 
         if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
             return FC_DONE;
@@ -3542,17 +3550,22 @@ namespace smt {
         }
 
         std::map<expr*, expr*> causes;
+        for (const auto& com : eq_combination){
+            causes[com.first] = createAndOperator(guessedLiterals);
+        }
+
         for (const auto& v : _causes){
-            expr_ref_vector tmp(m);
-            for (const auto& n : v.second) {
-                tmp.push_back(n);
-            }
-            if (tmp.size() == 0)
-                causes[v.first] = m.mk_true();
-            else {
-                expr_ref tmpExpr(createAndOperator(tmp), m);
-                causes[v.first] = tmpExpr;
-            }
+//            expr_ref_vector tmp(m);
+//            for (const auto& n : v.second) {
+//                tmp.push_back(n);
+//            }
+//            if (tmp.size() == 0)
+//                causes[v.first] = m.mk_true();
+//            else {
+//                expr_ref tmpExpr(createAndOperator(tmp), m);
+//                causes[v.first] = tmpExpr;
+//            }
+//            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " causes " << mk_pp(v.first, m) << " " << mk_pp(causes[v.first], m) << std::endl;);
         }
 
 
@@ -3568,7 +3581,6 @@ namespace smt {
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
         if (axiomAdded) {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << "/" << uState.level << ")" << connectingSize << std::endl;);
-
             return FC_CONTINUE;
         } else {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
@@ -4948,8 +4960,6 @@ namespace smt {
     bool theory_str::propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
-        expr_ref_vector assignments(m);
-        ctx.get_assignments(assignments);
         bool axiomAdded = false;
 
         // iterate each concat
@@ -5162,10 +5172,16 @@ namespace smt {
 
         UnderApproxState state(m, m_scope_level, mful_scope_levels.size(), eq_combination, importantVars);
         if (state == uState) {
-            uState = state;
-            return false;
+            expr* causexpr = m.mk_false();
+            if (causes.size() > 0) {
+                causexpr = (causes.begin()->second);
+            }
+            for (const auto& a : uState.assertingConstraints)
+                assert_axiom(createImpliesOperator(causexpr, a));
+            return true;
         }
         else {
+            state.addAssertingConstraints(uState.assertingConstraints);
             uState = state;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << uState.eq_combination.size() << std::endl;);
         }
@@ -5884,15 +5900,13 @@ namespace smt {
                             axiomAdded = true;
                         }
                         if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                            assertedConstraints.push_back(tmp);
+                            expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
                             assert_axiom(tmp.get());
                         }
                         else {
-                            expr_ref tmp(result, m);
-                            assertedConstraints.push_back(tmp);
                             assert_axiom(result);
                         }
+                        assertedConstraints.push_back(result);
 
                     }
                     else {
@@ -5965,21 +5979,20 @@ namespace smt {
                             axiomAdded = true;
                         }
                         if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                            assertedConstraints.push_back(tmp);
+                            expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
                             assert_axiom(tmp.get());
                         }
                         else {
-                            expr_ref tmp(result, m);
-                            assertedConstraints.push_back(tmp);
                             assert_axiom(result);
                         }
+
+                        assertedConstraints.push_back(result);
                     }
                     else {
                         STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
                         /* trivial unsat */
                         if (causes.find(it->first) != causes.end()) {
-                            assert_axiom(createEqualOperator(causes[it->first], m.mk_false()));
+                            assert_axiom(createImpliesOperator(causes[it->first], m.mk_false()));
                         }
                         assertedConstraints.reset();
                     }
@@ -6026,21 +6039,19 @@ namespace smt {
                             }
                             /* sync result*/
                             if (causes.find(it->first) != causes.end()) {
-                                expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                                assertedConstraints.push_back(tmp);
+                                expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
                                 assert_axiom(tmp.get());
                             }
                             else {
-                                expr_ref tmp(result, m);
-                                assertedConstraints.push_back(tmp);
                                 assert_axiom(result);
                             }
+                            assertedConstraints.push_back(result);
                         }
                         else {
                             STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
                             /* trivial unsat */
                             if (causes.find(it->first) != causes.end()) {
-                                assert_axiom(createEqualOperator(causes[it->first], m.mk_false()));
+                                assert_axiom(createImpliesOperator(causes[it->first], m.mk_false()));
                             }
                             assertedConstraints.reset();
                         }
@@ -6049,8 +6060,10 @@ namespace smt {
 
         }
 
-        if (assertedConstraints.size() > 0)
-            uState.addAssertingConstraints(assertedConstraints);
+        if (assertedConstraints.size() > 0) {
+            expr_ref tmp(createAndOperator(assertedConstraints), m);
+            uState.addAssertingConstraints(tmp);
+        }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
     }
@@ -6731,7 +6744,7 @@ namespace smt {
 //                        STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
 //                    STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
-//                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
                 }
                 else {
                 }
@@ -6890,7 +6903,7 @@ namespace smt {
                             elements.insert(elements.begin(), rhs_elements[startPos - 1]);
                             break;
                         case LEFT_SUM:
-                        SASSERT (false);
+                            SASSERT (false);
                             break;
                         case RIGHT_EMPTY:
                             checkLeft[i + 1] = true;
@@ -6899,6 +6912,7 @@ namespace smt {
                             checkLeft[i + 1] = true;
                             checkRight[j + 1] = true;
                             elements.emplace_back(rhs_elements[j + 1]);
+                            STRACE("str", tout << __LINE__ <<  "  RIGHT_EQUAL: elements size: " << elements.size() << std::endl;);
                             break;
                         case RIGHT_SUM:
                             return nullptr; // duplicate case
@@ -7012,45 +7026,14 @@ namespace smt {
         for (unsigned i = 0; i < left_arr.size(); ++i)
             if (!checkLeft[i]) {
                 if (left_arr[i] == EMPTYFLAT) {
-
-                    /* empty */
-                    /* some first flats can be empty */
-                    zstring value;
-                    if (u.str.is_string(lhs_elements[i].first, value) && lhs_elements[i].second % QCONSTMAX == -1) /* head of const */ {
-                        if (value.length() <= 0 ||
-                            (QCONSTMAX == 2 && i + 1 < lhs_elements.size() && left_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
-                            (QCONSTMAX == 1 && value.length() > 0)) /* const string is empty */ {
-                            return nullptr;
-                        }
-                    }
                     checkLeft[i] = true;
-                    expr_ref tmp(generateConstraint00(lhs_elements[i], lhs_str), m);
-
-                    if (tmp == nullptr) {/* cannot happen due to const */
-                        return nullptr;
-                    }
-                    result_element.push_back(tmp);
                 }
             }
 
         for (unsigned i = 0; i < right_arr.size(); ++i)
             if (!checkRight[i]){
                 if (right_arr[i] == EMPTYFLAT) {
-                    /* empty */
-                    /* some first flats can be empty */
-                    zstring value;
-                    if (rhs_elements[i].second % QCONSTMAX == -1 && u.str.is_string(rhs_elements[i].first, value)) /* head of const */ {
-                        if (value.length() <= 0 ||
-                            (QCONSTMAX == 2 && i + 1 < rhs_elements.size() && right_arr[i + 1] == EMPTYFLAT && value.length() > 0) ||
-                            (QCONSTMAX == 1 && value.length() > 0))/*const string is empty*/
-                            return nullptr;
-                    }
                     checkRight[i] = true;
-                    expr* tmp = generateConstraint00(rhs_elements[i], rhs_str);
-                    if (tmp == nullptr) {/* cannot happen due to const */
-                        return nullptr;
-                    }
-                    result_element.push_back(tmp);
                 }
             }
 
@@ -7293,16 +7276,18 @@ namespace smt {
                 }
             }
             else if (!optimizing) {
-                if (a.second % QMAX == -1 && b.second % QMAX  == -1) /* head vs head */ {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+                if ((a.second % QMAX == -1 || valA.length() == 1) && (b.second % QMAX  == -1 || valB.length() == 1)) /* head vs head */ {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(0, i) == valB.extract(0, i)) {
                             /* size can be from 0..i */
-                            result.push_back(createLessEqOperator(nameA, m_autil.mk_int(i)));
-                            return createAndOperator(result);
+                            possibleCases.push_back(createLessEqOperator(nameA, m_autil.mk_int(i)));
                         }
                     }
                 }
-                else if (a.second  % QMAX == -1 && b.second % QMAX == 0) /* head vs tail */ {
+                else if ((a.second % QMAX == -1 || valA.length() == 1) && b.second % QMAX == 0) /* head vs tail */ {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(0, i) == valB.extract(valB.length() - i, i)) {
                             /* size can be i */
@@ -7310,7 +7295,8 @@ namespace smt {
                         }
                     }
                 }
-                else if (a.second % QMAX == 0 && b.second % QMAX == -1) /* tail vs head */ {
+                else if (a.second % QMAX == 0 && (b.second % QMAX  == -1 || valB.length() == 1)) /* tail vs head */ {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valB.extract(0, i) == valA.extract(valA.length() - i, i)) {
                             /* size can be i */
@@ -7319,11 +7305,11 @@ namespace smt {
                     }
                 }
                 else if (a.second % QMAX == 0 && b.second % QMAX == 0) /* tail vs tail */ {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(valA.length() - i, i) == valB.extract(valB.length() - i, i)) {
                             /* size can be i */
-                            result.push_back(createLessEqOperator(nameA, m_autil.mk_int(i)));
-                            return createAndOperator(result);
+                            possibleCases.push_back(createLessEqOperator(nameA, m_autil.mk_int(i)));
                         }
                     }
                 }
@@ -7331,13 +7317,18 @@ namespace smt {
             else {
                 SASSERT (optimizing);
             }
-
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << possibleCases.size() << std::endl;);
             /* create or constraint */
-            if (possibleCases.size() == 0)
+            if ((int)possibleCases.size() == 0)
                 return nullptr;
-            else
-                result.push_back(createOrOperator(possibleCases));
-
+            else {
+                expr* tmpE = createOrOperator(possibleCases);
+                if (tmpE != m.mk_false())
+                    result.push_back(createOrOperator(possibleCases));
+                else
+                    return nullptr;
+            }
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << possibleCases.size() << std::endl;);
             return createAndOperator(result);
         }
 
@@ -7414,7 +7405,9 @@ namespace smt {
 
         ast_manager &m = get_manager();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-
+        for (int i = 0; i < elementNames.size(); ++i)
+            STRACE("str", tout << "  " << mk_pp(elementNames[i].first, m););
+        STRACE("str", tout <<  std::endl;);
         expr_ref_vector result(m);
 
         if (a.second < 0) { /* const string or regex */
@@ -7446,28 +7439,25 @@ namespace smt {
 
             /* collect */
             /* only handle the case of splitting const string into two parts*/
-            expr_ref_vector addElements(m);
+            expr_ref_vector adds(m);
             for (unsigned i = 0 ; i < elementNames.size(); ++i)
                 if (elementNames[i].second <= REGEX_CODE) {
                     expr_ref tmp(getExprVarFlatSize(elementNames[i]), m);
-                    addElements.push_back(tmp.get());
+                    adds.push_back(tmp.get());
                 }
                 else {
                     zstring tmpValue;
                     if (u.str.is_string(elementNames[i].first, tmpValue) && tmpValue.length() == 1)
-                        addElements.push_back(mk_int(1));
+                        adds.push_back(mk_int(1));
                     else
-                        addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
+                        adds.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
                                                              getExprVarFlatIter(elementNames[i])));
                 }
-            expr_ref adding(createAddOperator(addElements), m);
-
             expr_ref len_lhs(m);
-            if (optimizing != NONE)
-                len_lhs = getExprVarSize(a);
+            if (optimizing)
+                result.push_back(createEqualOperator(getExprVarSize(a), createAddOperator(adds)));
             else
-                len_lhs = getExprVarFlatSize(a);
-            result.push_back(createEqualOperator(len_lhs, adding));
+                result.push_back(createEqualOperator(getExprVarFlatSize(a), createAddOperator(adds)));
 
             int splitType = findSplitType(elementNames, connectedVariables);
             /*
@@ -7487,15 +7477,15 @@ namespace smt {
                             a, elementNames,
                             lhs_str, rhs_str,
                             connectedVariables,
-                            optimizing != NONE,
+                            optimizing,
                             pMax));
                     break;
                 case CONST_ONLY:
                     /* handle const */
-                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
+                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing);
                     for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
                         expr_ref_vector tmpp(m);
-                        tmpp.append(toConstraint_NoConnectedVar(a, elementNames, allPossibleSplits[i], lhs_str, rhs_str, optimizing != NONE));
+                        tmpp.append(toConstraint_NoConnectedVar(a, elementNames, allPossibleSplits[i], lhs_str, rhs_str, optimizing));
                         strSplits.push_back(createAndOperator(tmpp));
                     }
                     if (strSplits.size() > 0)
@@ -7507,7 +7497,7 @@ namespace smt {
                 case 3:
                     /* handle connected var */
                     /* handle const */
-                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing != NONE);
+                    allPossibleSplits = collectAllPossibleSplits(a, elementNames, optimizing);
                     for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
                         /* check feasibility */
                         strSplits.push_back(
@@ -7516,7 +7506,7 @@ namespace smt {
                                         elementNames,
                                         allPossibleSplits[i], lhs_str, rhs_str,
                                         connectedVariables,
-                                        optimizing != NONE,
+                                        optimizing,
                                         pMax));
                     }
                     if (strSplits.size() > 0)
@@ -8145,7 +8135,7 @@ namespace smt {
         expr_ref_vector possibleCases(m);
 
         for (unsigned i = 0 ; i < elementNames.size(); ++i){
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << mk_pp(elementNames[i].first, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << mk_pp(elementNames[i].first, m) << ", " << elementNames[i].second << " " << elementNames[i].second % QCONSTMAX << std::endl;);
             if (elementNames[i].second < 0){ /* const || regex */
                 /* |lhs| = 1 vs |rhs| = 1*/
                 if (elementNames.size() == 1 && QCONSTMAX > 1) {
@@ -8409,7 +8399,7 @@ namespace smt {
         else {
             int consideredSize = bound;
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << consideredSize << std::endl;);
-
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; connectingSize size: " << connectingSize << std::endl;);
             for (int i = 1; i <= consideredSize; ++i){
                 expr_ref_vector orConstraints(m);
                 orConstraints.push_back(createEqualOperator(
@@ -8419,8 +8409,10 @@ namespace smt {
                 andConstraints.push_back(createOrOperator(orConstraints));
             }
 
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
             if (consideredSize >= connectingSize)
-                andConstraints.push_back(createLessEqOperator(lenRhs, m_autil.mk_int(connectingSize)));
+                andConstraints.push_back(createLessEqOperator(lenRhs, mk_int(connectingSize)));
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(createAndOperator(andConstraints), m) << std::endl;);
         }
         return createAndOperator(andConstraints);
     }
@@ -8618,66 +8610,38 @@ namespace smt {
             components = collectAlternativeComponents(elementNames[constPos].first);
 
         expr_ref_vector orConstraints(m);
-        for (const auto& v : components)
-            if ((int)v.length() == finish - start){
-                if (startPos == m_autil.mk_int(0)) {
-                    if (components.size() != 1)
-                        for (int i = start; i < finish; ++i) {
-                            unrollMode ?
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01, m_autil.mk_int((i - start))),
-                                    createSelectOperator(tmp02, m_autil.mk_int(i))))
-                                       :
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01, m_autil.mk_int((i - start) % pMax)),
-                                    createSelectOperator(tmp02, m_autil.mk_int(i))));
-                        }
-                    else
-                        for (int i = start; i < finish; ++i) {
-                            unrollMode ?
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01, m_autil.mk_int(i - start)),
-                                    m_autil.mk_int(v[i])))
-                                       :
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01, m_autil.mk_int((i - start) % pMax)),
-                                    m_autil.mk_int(v[i])));
-                        }
+        for (const auto &v : components) {
+            if (components.size() != 1)
+                for (int i = start; i < finish; ++i) {
+                    unrollMode ?
+                    locationConstraint.push_back(createEqualOperator(
+                            createSelectOperator(tmp01,
+                                                 createAddOperator(m_autil.mk_int(i - start), startPos)),
+                            createSelectOperator(tmp02, m_autil.mk_int(i))))
+                               :
+                    locationConstraint.push_back(createEqualOperator(
+                            createSelectOperator(tmp01,
+                                                 createModOperator(
+                                                         createAddOperator(m_autil.mk_int(i - start), startPos),
+                                                         m_autil.mk_int(pMax))),
+                            createSelectOperator(tmp02, m_autil.mk_int(i))));
                 }
-
-                else {
-                    if (components.size() != 1)
-                        for (int i = start; i < finish; ++i) {
-                            unrollMode ?
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01,
-                                                           createAddOperator(m_autil.mk_int(i - start), startPos)),
-                                    createSelectOperator(tmp02, m_autil.mk_int(i))))
-                                       :
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01,
-                                                           createModOperator(
-                                                                   createAddOperator(m_autil.mk_int(i - start), startPos),
-                                                                   m_autil.mk_int(pMax))),
-                                    createSelectOperator(tmp02, m_autil.mk_int(i))));
-                        }
-                    else
-                        for (int i = start; i < finish; ++i) {
-                            unrollMode ?
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01,
-                                                           createAddOperator(m_autil.mk_int(i - start), startPos)),
-                                    m_autil.mk_int(v[i]))) :
-                            locationConstraint.push_back(createEqualOperator(
-                                    createSelectOperator(tmp01,
-                                                           createModOperator(
-                                                                   createAddOperator(m_autil.mk_int(i - start), startPos),
-                                                                   m_autil.mk_int(pMax))),
-                                    m_autil.mk_int(v[i])));
-                        }
+            else
+                for (int i = start; i < finish; ++i) {
+                    unrollMode ?
+                    locationConstraint.push_back(createEqualOperator(
+                            createSelectOperator(tmp01,
+                                                 createAddOperator(m_autil.mk_int(i - start), startPos)),
+                            m_autil.mk_int(v[i]))) :
+                    locationConstraint.push_back(createEqualOperator(
+                            createSelectOperator(tmp01,
+                                                 createModOperator(
+                                                         createAddOperator(m_autil.mk_int(i - start), startPos),
+                                                         m_autil.mk_int(pMax))),
+                            m_autil.mk_int(v[i])));
                 }
-                orConstraints.push_back(createAndOperator(locationConstraint));
-            }
+            orConstraints.push_back(createAndOperator(locationConstraint));
+        }
 
         expr_ref ret(createOrOperator(orConstraints), m);
         STRACE("str", tout << __LINE__ << " return *** " << __FUNCTION__ << " ***" << mk_pp(ret.get(), m) << std::endl;);
@@ -8822,7 +8786,7 @@ namespace smt {
                                     }
                                     possibleCases.push_back(createAndOperator(subpossibleCases));
                                 }
-                            possibleCases.push_back(createLessEqOperator(m_autil.mk_int(std::min(localSplit, (int)content.length()) - 1), subLen));
+                            possibleCases.push_back(createLessEqOperator(m_autil.mk_int(std::min(localSplit, (int)content.length()) + 1 ), subLen));
                             resultParts.push_back(createOrOperator(possibleCases));
                         }
                     }
@@ -9853,7 +9817,7 @@ namespace smt {
         ast_manager &m = get_manager();
         expr_ref_vector ors(m);
         expr_ref tmp(a, m);
-        ors.push_back(createNotOperator(tmp));
+        ors.push_back(mk_not(tmp));
         ors.push_back(b);
         return createOrOperator(ors);
     }
@@ -10813,6 +10777,13 @@ namespace smt {
             if (notImportant.find(v.first) == notImportant.end())
                 importantVars.insert(std::make_pair(v.first, v.second));
 
+        for (const auto& v : eq_combination)
+            if (v.second.size() > 6) {
+                expr_ref_vector eqList(m);
+                collect_eq_nodes(v.first, eqList);
+                for (int i = 0; i < eqList.size(); ++i)
+                    importantVars.insert(std::make_pair(eqList[i].get(), -1));
+            }
 
         TRACE("str", tout << __FUNCTION__ << std::endl;);
         for (const auto& nn : importantVars)
@@ -10973,11 +10944,14 @@ namespace smt {
 
     std::vector<zstring> theory_str::collectAllInequalities(expr* nn){
         ast_manager &m = get_manager();
+        context& ctx = get_context();
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
         std::vector<zstring> maxDiffStrs;
+        expr_ref_vector eqNodeSet(m);
+        collect_eq_nodes(nn, eqNodeSet);
         for (const auto& we : m_wi_expr_memo){
-            if (we.first.get() == nn){
+            if (eqNodeSet.contains(we.first.get())){
                 zstring value;
                 if (u.str.is_string(we.second.get(), value)) {
                     if (diffLen < (int)value.length()) {
@@ -10991,30 +10965,8 @@ namespace smt {
                         maxDiffStrs.push_back(value);
                     }
                 }
-                else if (u.str.is_concat(we.second.get())){
-                    expr* keyContain = nullptr;
-                    if (isContainEquality(we.second.get(), keyContain)){
-                        if (keyContain) {
-                            if (u.str.is_string(keyContain, value)) {
-                                if (diffLen < (int)value.length()) {
-                                    diffLen = (int) value.length();
-                                    maxDiffStrs.clear();
-                                    maxDiffStrs.push_back(value);
-                                    STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " !contain \"" << value << "\""
-                                                       << std::endl;);
-                                }
-                                else if (diffLen == (int)value.length()) {
-                                    maxDiffStrs.push_back(value);
-                                }
-                            }
-                            else {
-
-                            }
-                        }
-                    }
-                }
             }
-            else if (we.second.get() == nn){
+            else if (eqNodeSet.contains(we.second.get())){
                 zstring value;
                 if (u.str.is_string(we.first.get(), value)) {
                     if (diffLen < (int)value.length()) {
@@ -11026,28 +10978,6 @@ namespace smt {
                     }
                     else if (diffLen == (int)value.length()) {
                         maxDiffStrs.push_back(value);
-                    }
-                }
-                else if (u.str.is_concat(we.first.get())){
-                    expr* keyContain = nullptr;
-                    if (isContainEquality(we.first.get(), keyContain)){
-                        if (keyContain) {
-                            if (u.str.is_string(keyContain, value)) {
-                                if (diffLen < (int)value.length()) {
-                                    diffLen = (int) value.length();
-                                    maxDiffStrs.clear();
-                                    maxDiffStrs.push_back(value);
-                                    STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " !contain \"" << value << "\""
-                                                       << std::endl;);
-                                }
-                                else if (diffLen == (int)value.length()) {
-                                    maxDiffStrs.push_back(value);
-                                }
-                            }
-                            else {
-
-                            }
-                        }
                     }
                 }
             }
@@ -11146,10 +11076,11 @@ namespace smt {
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
         if (diffLen > 0) {
+            context& ctx = get_context();
             std::vector<zstring> constParts;
             int constPartLen = 0;
-            if (combinations.find(nn) != combinations.end()) {
-                for (const auto& concat : combinations[nn]) {
+            if (combinations.find(ctx.get_enode(nn)->get_root()->get_owner()) != combinations.end()) {
+                for (const auto& concat : combinations[ctx.get_enode(nn)->get_root()->get_owner()]) {
                     ptr_vector<expr> nodeList;
                     get_nodes_in_concat(concat, nodeList);
                     zstring constPartTmp = "";
@@ -11167,6 +11098,7 @@ namespace smt {
                         constParts.clear();
                         constParts.push_back(constPartTmp);
                         constPartLen = (int)constPartTmp.length();
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << constPartTmp << std::endl;);
                     }
                     else if (constPartTmp.length() == constPartLen) {
                         constParts.push_back(constPartTmp);
@@ -11174,21 +11106,30 @@ namespace smt {
                 }
             }
 
-            if (constPartLen == diffLen)
-                for (const auto& s : maxDiffStrs) {
-                    bool allDiff = true;
-                    for (const auto& ss : constParts) {
+            if (constPartLen == diffLen) {
+                for (const auto &s : maxDiffStrs) {
+                    for (const auto &ss : constParts) {
                         if (ss == s) {
-                            allDiff = false;
-                            break;
-
+                            if (u.str.is_concat(nn)) {
+                                ptr_vector<expr> childrenVector;
+                                get_nodes_in_concat(nn, childrenVector);
+                                expr_ref_vector adds(m);
+                                for (int i = 0; i < childrenVector.size(); ++i)
+                                    adds.push_back(mk_strlen(childrenVector[i]));
+                                expr_ref tmp(createGreaterEqOperator(createAddOperator(adds), mk_int(constPartLen + 1)), m);
+                                assert_axiom(tmp.get());
+                                uState.addAssertingConstraints(tmp);
+                            }
+                            else {
+                                expr_ref tmp(createGreaterEqOperator(mk_strlen(nn), mk_int(constPartLen + 1)), m);
+                                assert_axiom(tmp.get());
+                                uState.addAssertingConstraints(tmp);
+                            }
                         }
                     }
-                    if (allDiff){
-                        STRACE("str", tout << __LINE__ << "\t violate at " << s << std::endl;);
-                        return false;
-                    }
                 }
+                return false;
+            }
         }
         return true;
     }
@@ -11215,7 +11156,7 @@ namespace smt {
 
         expr_ref_vector assignments(m);
         for (expr_ref_vector::iterator it = assignments.begin(); it != assignments.end(); ++it)
-        STRACE("str", tout << "Assigned value " << mk_pp(*it, m) << std::endl;);
+            STRACE("str", tout << "Assigned value " << mk_pp(*it, m) << std::endl;);
     }
 
     std::map<expr*, std::set<expr*>> theory_str::collect_inequalities_nonmembership(){
@@ -11442,16 +11383,17 @@ namespace smt {
                     eqRhs.insert(arg1);
                 }
 
+                causes[object].insert(createEqualOperator(arg0, to_app(*it)->get_arg(0)));
+                causes[object].insert(createEqualOperator(arg1, to_app(*it)->get_arg(1)));
                 // to prevent the exponential growth
                 if (eqLhs.size() > 200){
                     eqLhs.clear();
                     eqLhs.insert(arg0);
                 }
                 else {
-                    if (causes[arg0].size() > 0) {
-                        for (const auto& n : causes[arg0])
-                            causes[object].insert(n);
-                    }
+
+                    if (causes.find(arg0) != causes.end())
+                        causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
 
                 if (eqRhs.size() > 200){
@@ -11459,10 +11401,9 @@ namespace smt {
                     eqRhs.insert(arg1);
                 }
                 else {
-                    if (causes[arg1].size() > 0) {
-                        for (const auto& n : causes[arg1])
-                            causes[object].insert(n);
-                    }
+
+                    if (causes.find(arg0) != causes.end())
+                        causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
 
                 for (const auto &l : eqLhs)
@@ -13541,10 +13482,70 @@ namespace smt {
                 tout << "dumping all assignments:\n";
                 expr_ref_vector assignments{m};
                 ctx.get_assignments(assignments);
-                for (expr *const e : assignments) {
+                for (expr *const e : assignments) if (ctx.is_relevant(e)){
                     tout << mk_ismt2_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (NOT REL)\n")
                          << std::flush;
                 }
+        );
+    }
+
+    void theory_str::fetch_guessed_literals(expr_ref_vector &guessedLiterals) {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        expr_ref_vector tmpExprs(m);
+        ctx.get_relevant_literals(tmpExprs);
+
+        for (int i = 0; i < tmpExprs.size(); ++i) {
+            literal tmp = ctx.get_literal(tmpExprs[i].get());
+            if (ctx.get_assignment(tmpExprs[i].get()) == l_true && ctx.get_assign_level(tmp) > 0) {
+                guessedLiterals.push_back(tmpExprs[i].get());
+                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
+                                   << ", assignLevel = " << ctx.get_assign_level(tmp) << std::endl;);
+            }
+        }
+    }
+
+    void theory_str::fetch_guessed_literals_with_scopes(expr_ref_vector &guessedLiterals) {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        expr_ref_vector tmpExprs(m);
+        ctx.get_relevant_literals(tmpExprs);
+
+        for (int i = 0; i < tmpExprs.size(); ++i) {
+            literal tmp = ctx.get_literal(tmpExprs[i].get());
+            int assignLvl = ctx.get_assign_level(tmp);
+            if (ctx.get_assignment(tmpExprs[i].get()) == l_true && std::find(mful_scope_levels.begin(), mful_scope_levels.end(), assignLvl) != mful_scope_levels.end()) {
+                guessedLiterals.push_back(tmpExprs[i].get());
+                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
+                                   << ", assignLevel = " << ctx.get_assign_level(tmp) << std::endl;);
+            }
+        }
+    }
+
+
+    void theory_str::dump_bool_vars() {
+        STRACE("str", \
+                ast_manager& m = get_manager();
+                context& ctx = get_context();
+                int numBV = ctx.get_num_bool_vars();
+                for (bool_var v = 0; v < numBV; v++)
+                    if (ctx.has_enode(v) && ctx.get_assign_level(v) > 0){
+                        lbool value = ctx.get_assignment(v);
+                        expr* node = ctx.bool_var2expr(v);
+                        switch (value) {
+                            case l_undef:
+                                STRACE("str", tout << __LINE__ << " var " << mk_pp(node, m) << " bvalue = l_undef, assignLevel = " << ctx.get_assign_level(v) << " marked: " << ctx.is_marked(v) << "assumption:"  << ctx.is_assumption(v) << std::endl;);
+                                break;
+                            case l_true:
+                                STRACE("str", tout << __LINE__ << " var " << mk_pp(node, m) << " bvalue = true, assignLevel = " << ctx.get_assign_level(v) << " marked: " << ctx.is_marked(v) << "assumption:"  << ctx.is_assumption(v) << std::endl;);
+                                break;
+                            case l_false:
+                                STRACE("str", tout << __LINE__ << " var " << mk_pp(node, m) << " bvalue = false, assignLevel = " << ctx.get_assign_level(v) << " marked: " << ctx.is_marked(v) << "assumption:"  << ctx.is_assumption(v) << std::endl;);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
         );
     }
 
