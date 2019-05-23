@@ -213,7 +213,7 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level;
-        std::vector<int> mful_scope_levels;
+        scoped_vector<expr_ref> mful_scope_levels;
         const theory_str_params& m_params;
         scoped_vector<str::expr_pair> m_we_expr_memo;
         scoped_vector<str::expr_pair> m_wi_expr_memo;
@@ -465,7 +465,6 @@ namespace smt {
             std::map<expr*, std::set<expr*>> eq_combination;
             std::set<std::pair<expr*, int>> importantVars;
 
-            int level = -1;
             int z3_level = -1;
 
             expr_ref_vector assertingConstraints;
@@ -473,11 +472,10 @@ namespace smt {
 
             }
 
-            UnderApproxState(ast_manager &m, int _z3_level, int _level,
+            UnderApproxState(ast_manager &m, int _z3_level,
                             std::map<expr*, std::set<expr*>> _eq_combination,
                             std::set<std::pair<expr*, int>> _importantVars):
                             z3_level(_z3_level),
-                            level(_level),
                             eq_combination(_eq_combination),
                             importantVars(_importantVars),
                             assertingConstraints(m) {
@@ -485,25 +483,22 @@ namespace smt {
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, z3_level, level, eq_combination, importantVars);
+                UnderApproxState tmp(m, z3_level, eq_combination, importantVars);
                 tmp.addAssertingConstraints(assertingConstraints);
                 return tmp;
             }
 
             void reset(){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << level << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << z3_level << std::endl;);
                 z3_level = -1;
-                level = -1;
             }
 
-            void assignLevel(int _z3_level, int _level){
+            void assignLevel(int _z3_level){
                 z3_level = _z3_level;
-                level = _level;
             }
 
             UnderApproxState&  operator=(const UnderApproxState& other){
                 z3_level = other.z3_level;
-                level = other.level;
                 eq_combination = other.eq_combination;
                 importantVars = other.importantVars;
                 assertingConstraints.reset();
@@ -1284,7 +1279,7 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
-            bool underapproximation_repeat();
+            bool underapproximation_repeat(expr* causes);
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void createNotContainMap();
                 void createConstSet();

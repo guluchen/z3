@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="870">
-              <caret line="5180" column="23" selection-start-line="5180" selection-start-column="23" selection-end-line="5180" selection-end-column="23" />
+            <state relative-caret-position="377">
+              <caret line="3229" selection-start-line="3229" selection-end-line="3229" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -122,20 +122,11 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="761">
-              <caret line="1553" selection-start-line="1553" selection-end-line="1553" />
+            <state relative-caret-position="377">
+              <caret line="687" column="13" selection-start-line="687" selection-start-column="13" selection-end-line="687" selection-end-column="13" />
               <folding>
                 <element signature="e#30447#30471#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/smt_consequences.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="503">
-              <caret line="546" column="25" selection-start-line="546" selection-start-column="12" selection-end-line="546" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -150,10 +141,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/ast/ast.cpp">
+        <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="398">
-              <caret line="2399" column="18" selection-start-line="2399" selection-start-column="18" selection-end-line="2399" selection-end-column="18" />
+              <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
             </state>
           </provider>
         </entry>
@@ -161,8 +152,26 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="398">
+            <state relative-caret-position="391">
               <caret line="1029" column="21" selection-start-line="1029" selection-start-column="21" selection-end-line="1029" selection-end-column="21" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/ast/ast_pp.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="435">
+              <caret line="29" column="4" selection-start-line="29" selection-start-column="4" selection-end-line="29" selection-end-column="4" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/ast/ast_smt2_pp.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="398">
+              <caret line="1323" column="13" selection-start-line="1323" selection-start-column="13" selection-end-line="1323" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -171,7 +180,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="381">
-              <caret line="215" column="25" selection-start-line="215" selection-start-column="25" selection-end-line="215" selection-end-column="25" />
+              <caret line="490" column="17" selection-start-line="490" selection-start-column="17" selection-end-line="490" selection-end-column="17" />
               <folding>
                 <element signature="e#9690#19692#1" />
               </folding>
@@ -180,19 +189,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
+        <entry file="file://$PROJECT_DIR$/src/util/scoped_vector.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="891">
-              <caret line="5259" column="31" selection-start-line="5259" selection-start-column="31" selection-end-line="5259" selection-end-column="31" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/smt_eq_justification.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="686">
-              <caret line="57" column="17" selection-start-line="57" selection-start-column="17" selection-end-line="57" selection-end-column="17" />
+            <state relative-caret-position="15">
+              <caret line="24" column="6" selection-start-line="24" selection-start-column="6" selection-end-line="24" selection-end-column="6" />
             </state>
           </provider>
         </entry>
@@ -201,36 +201,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>replace</find>
-      <find>replace1</find>
-      <find>assert_store_axiom2_core</find>
-      <find>ext_decision</find>
-      <find>br</find>
-      <find>unsat_core</find>
-      <find>mk_contains</find>
-      <find>antecedents</find>
-      <find>eq_justification</find>
-      <find>js</find>
-      <find>justification</find>
-      <find>converteq</find>
-      <find>contain</find>
-      <find>dump</find>
-      <find>case split</find>
-      <find>extract_cores</find>
-      <find>case</find>
-      <find>at_lbls</find>
-      <find>case s</find>
-      <find>dump_guessed_literals</find>
-      <find>guessed_literals</find>
-      <find>is_label_lit</find>
-      <find>fetch_guessed_literals</find>
-      <find>get_relevant_labeled_literals</find>
       <find>implies</find>
-      <find>mful_scope_levels</find>
       <find>final</find>
-      <find>scope</find>
       <find>etch_guessed_literals</find>
       <find>.begin()</find>
+      <find>uState.assertingConstraint</find>
+      <find>underapproximation_repeat</find>
+      <find>ate.z3_leve</find>
+      <find>uState.z3_leve</find>
+      <find>scope</find>
+      <find>push_sco</find>
+      <find>pop_sc</find>
+      <find>m_we_expr_memo</find>
+      <find>get_assign_level</find>
+      <find>usef</find>
+      <find>ful_scope_levels.size() - 1</find>
+      <find>lastAssign</find>
+      <find>mful_scope_levels.pu</find>
+      <find>mful_scope_levels</find>
+      <find>m_index[</find>
+      <find>mful_scope_levels.push</find>
+      <find>l_scope_levels at last</find>
+      <find>get_relevant_labeled_literals</find>
+      <find>mful_scope_levels.pus</find>
+      <find>mk_not(</find>
+      <find>mful_scope_levels[</find>
+      <find>l_scope_levels[(int)mful_scope_levels.size(</find>
+      <find>pop_scope_eh</find>
+      <find>mfu</find>
+      <find>m_basicstr_axiom_todo</find>
+      <find>m_concat_axiom_todo</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -255,7 +255,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="-38" />
+    <option name="x" value="540" />
     <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
@@ -761,19 +761,18 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="351893000" />
+      <workItem from="1555596195940" duration="375544000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="496815000" />
+    <option name="totallyTimeSpent" value="520466000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-38" y="23" width="2560" height="1417" extended-state="0" />
-    <editor active="true" />
+    <frame x="540" y="23" width="2560" height="1417" extended-state="0" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
-      <window_info active="true" id="Structure" order="1" sideWeight="0.5020475" side_tool="true" visible="true" weight="0.17156473" />
+      <window_info id="Structure" order="1" sideWeight="0.5020475" side_tool="true" visible="true" weight="0.17156473" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.07849056" />
@@ -789,7 +788,7 @@
       <window_info anchor="bottom" id="CMake" order="11" weight="0.25207546" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
+      <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
       <window_info anchor="right" id="Database" order="3" />
     </layout>
   </component>
@@ -797,34 +796,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/smt/params/theory_str_params.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="287">
-          <caret line="87" column="24" selection-start-line="87" selection-start-column="9" selection-end-line="87" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="287">
-          <caret line="229" column="14" selection-start-line="229" selection-start-column="14" selection-end-line="229" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/util/old_vector.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="287">
-          <caret line="424" column="9" selection-start-line="424" selection-start-column="9" selection-end-line="424" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/sat/sat_params.pyg">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="283">
-          <caret line="43" column="33" selection-start-line="43" selection-start-column="33" selection-end-line="43" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/math/automata/boolean_algebra.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="525">
@@ -1115,13 +1086,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="398">
-          <caret line="1029" column="21" selection-start-line="1029" selection-start-column="21" selection-end-line="1029" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_kernel.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -1129,20 +1093,55 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast_smt2_pp.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="398">
+          <caret line="1323" column="13" selection-start-line="1323" selection-start-column="13" selection-end-line="1323" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast_pp.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="435">
+          <caret line="29" column="4" selection-start-line="29" selection-start-column="4" selection-end-line="29" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="398">
+          <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/util/scoped_vector.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="24" column="6" selection-start-line="24" selection-start-column="6" selection-end-line="24" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="761">
-          <caret line="1553" selection-start-line="1553" selection-end-line="1553" />
+        <state relative-caret-position="377">
+          <caret line="687" column="13" selection-start-line="687" selection-start-column="13" selection-end-line="687" selection-end-column="13" />
           <folding>
             <element signature="e#30447#30471#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="1029" column="21" selection-start-line="1029" selection-start-column="21" selection-end-line="1029" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="381">
-          <caret line="215" column="25" selection-start-line="215" selection-start-column="25" selection-end-line="215" selection-end-column="25" />
+          <caret line="490" column="17" selection-start-line="490" selection-start-column="17" selection-end-line="490" selection-end-column="17" />
           <folding>
             <element signature="e#9690#19692#1" />
           </folding>
@@ -1151,8 +1150,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="870">
-          <caret line="5180" column="23" selection-start-line="5180" selection-start-column="23" selection-end-line="5180" selection-end-column="23" />
+        <state relative-caret-position="377">
+          <caret line="3229" selection-start-line="3229" selection-end-line="3229" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

@@ -1176,9 +1176,9 @@ namespace smt {
         enode *const n2 = get_enode(y);
 
         if (m_scope_level > 0) {
-            if (mful_scope_levels.size() == 0 ||
-                (mful_scope_levels.size() > 0 && mful_scope_levels[mful_scope_levels.size() - 1] < m_scope_level))
-                mful_scope_levels.push_back(m_scope_level);
+            expr_ref tmp(createEqualOperator(n1->get_owner(), n2->get_owner()), m);
+            ensure_enode(tmp);
+            mful_scope_levels.push_back(tmp);
         }
 
         const str::expr_pair we{expr_ref{n1->get_owner(), m}, expr_ref{n2->get_owner(), m}};
@@ -3148,26 +3148,33 @@ namespace smt {
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << std::endl;);
 
-        instantiate_str_diseq_length_axiom(n1, n2);
 
 
+        bool skip = false;
         if (m_scope_level > 0) {
             zstring value;
             if (u.str.is_string(n1, value)) {
                 if (value.length() != 0) {
-                    if (mful_scope_levels.size() == 0 ||
-                        (mful_scope_levels.size() > 0 && mful_scope_levels[mful_scope_levels.size() - 1] < m_scope_level))
-                        mful_scope_levels.push_back(m_scope_level);
+                    expr_ref tmp(mk_not(m, createEqualOperator(n1, n2)), m);
+                    ensure_enode(tmp);
+                    mful_scope_levels.push_back(tmp);
                 }
+                else
+                    skip = true;
             }
             else if (u.str.is_string(n2, value)) {
                 if (value.length() != 0) {
-                    if (mful_scope_levels.size() == 0 ||
-                        (mful_scope_levels.size() > 0 && mful_scope_levels[mful_scope_levels.size() - 1] < m_scope_level))
-                        mful_scope_levels.push_back(m_scope_level);
+                    expr_ref tmp(mk_not(m, createEqualOperator(n1, n2)), m);
+                    ensure_enode(tmp);
+                    mful_scope_levels.push_back(tmp);
                 }
+                else
+                    skip = true;
             }
         }
+
+        if (!skip)
+            instantiate_str_diseq_length_axiom(n1, n2);
     }
 
     /*
@@ -3401,6 +3408,7 @@ namespace smt {
     void theory_str::push_scope_eh() {
         STRACE("str", tout << __FUNCTION__ << ": at level (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << std::endl;);
         m_scope_level += 1;
+        mful_scope_levels.push_scope();
         m_we_expr_memo.push_scope();
         m_wi_expr_memo.push_scope();
         membership_memo.push_scope();
@@ -3410,28 +3418,38 @@ namespace smt {
     }
 
     void theory_str::pop_scope_eh(const unsigned num_scopes) {
-        STRACE("str", tout << __FUNCTION__ << ": at level (" << m_scope_level << "/" << mful_scope_levels.size() << "/" << uState.level << ") pop " << num_scopes << std::endl;);
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __FUNCTION__ << ": at level (" << m_scope_level << "/" << mful_scope_levels.size() << "/" << uState.z3_level << ") pop " << num_scopes << std::endl;);
 
         m_scope_level -= num_scopes;
 
         if (m_scope_level < uState.z3_level) {
-            uState.z3_level = -1;
+            uState.reset();
             STRACE("str", tout << __FUNCTION__ << " reset uState.z3_level " << std::endl;);
         }
 
         if (mful_scope_levels.size() > 0) {
-            int prev_level = mful_scope_levels[mful_scope_levels.size() - 1];
-            while (mful_scope_levels.size() > 0 && mful_scope_levels[mful_scope_levels.size() - 1] > m_scope_level)
-                mful_scope_levels.pop_back();
+            context& ctx = get_context();
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " mful_scope_levels size " << mful_scope_levels.size() << std::endl;);
+            expr_ref lastAssign = mful_scope_levels[(int)mful_scope_levels.size() - 1];
 
-            if (prev_level >= uState.level && (
-                    (mful_scope_levels.size() > 0 && (int)mful_scope_levels[mful_scope_levels.size() - 1] < uState.level) ||
-                            (mful_scope_levels.size() == 0 && uState.level > 0))){
-                STRACE("str", tout << __FUNCTION__ << " " << mful_scope_levels.size() << " vs " << uState.level << std::endl;);
+            if (!ctx.e_internalized(lastAssign)) // it can be not internalized because its scope was pop.
                 uState.reset();
+            else {
+                literal l = ctx.get_literal(lastAssign);
+                STRACE("str", tout << __FUNCTION__ << " before get_assign_level  " << std::endl;);
+                int lastLevel = ctx.get_assign_level(l);
+                STRACE("str", tout << __FUNCTION__ << " after get_assign_level  " << lastLevel << std::endl;);
+                if (lastLevel < uState.z3_level) {
+                    STRACE("str", tout << __FUNCTION__ << " " << lastLevel << " vs " << uState.z3_level
+                                       << std::endl;);
+                    uState.reset();
+                }
             }
         }
-
+        STRACE("str", tout << __FUNCTION__ << " going to pop " << std::endl;);
+        mful_scope_levels.pop_scope(num_scopes);
+        STRACE("str", tout << __FUNCTION__ << " after pop " << std::endl;);
         m_we_expr_memo.pop_scope(num_scopes);
         m_wi_expr_memo.pop_scope(num_scopes);
         membership_memo.pop_scope(num_scopes);
@@ -3459,7 +3477,6 @@ namespace smt {
     void theory_str::reset_eh() {
         TRACE("str", tout << __FUNCTION__ << std::endl;);
         m_trail_stack.reset();
-
         m_basicstr_axiom_todo.reset();
         m_str_eq_todo.reset();
         m_concat_axiom_todo.reset();
@@ -3473,21 +3490,25 @@ namespace smt {
         ast_manager &m = get_manager();
         context& ctx = get_context();
 
-        expr_ref_vector guessedLiterals(m);
-        fetch_guessed_literals_with_scopes(guessedLiterals);
-
         (void) ctx;
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": at level " << ctx.get_scope_level() << " vs " << uState.z3_level << std::endl;);
 
         for (int i = 0; i < mful_scope_levels.size(); ++i) {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": useful: " << mful_scope_levels[i] << std::endl;);
+            expr_ref lastAssign = mful_scope_levels[i];
+            literal l = ctx.get_literal(lastAssign);
+            int lastLevel = ctx.get_assign_level(l);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": useful: " << mk_pp(mful_scope_levels[i], m) << " assign level: " << lastLevel << std::endl;);
         }
 
         if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
             return FC_DONE;
         }
-        else if (uState.level >= 0 && uState.level <= m_scope_level) {
-            underapproximation_repeat();
+
+        expr_ref_vector guessedLiterals(m);
+        fetch_guessed_literals_with_scopes(guessedLiterals);
+
+        if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
+            underapproximation_repeat(createAndOperator(guessedLiterals));
             uState.z3_level = m_scope_level;
             return FC_CONTINUE;
         }
@@ -3580,7 +3601,7 @@ namespace smt {
  
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
         if (axiomAdded) {
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << "/" << uState.level << ")" << connectingSize << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << ")" << connectingSize << std::endl;);
             return FC_CONTINUE;
         } else {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
@@ -5170,8 +5191,18 @@ namespace smt {
                         });
         }
 
-        UnderApproxState state(m, m_scope_level, mful_scope_levels.size(), eq_combination, importantVars);
+        int tmpz3State = 0;
+        if (mful_scope_levels.size() > 0) {
+            context & ctx = get_context();
+            expr_ref lastAssign = mful_scope_levels[(int)mful_scope_levels.size() - 1];
+            literal tmpL = ctx.get_literal(lastAssign);
+            tmpz3State = std::max(0, (int)ctx.get_assign_level(tmpL) - 1);
+        }
+        UnderApproxState state(m, tmpz3State, eq_combination, importantVars);
+
         if (state == uState) {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;); ;
+            uState.z3_level = tmpz3State;
             expr* causexpr = m.mk_false();
             if (causes.size() > 0) {
                 causexpr = (causes.begin()->second);
@@ -5207,12 +5238,15 @@ namespace smt {
         return convertEqualities(v_combination, connectedVars, causes);
     }
 
-    bool theory_str::underapproximation_repeat(){
+    bool theory_str::underapproximation_repeat(expr* causexpr){
         ast_manager & m = get_manager();
         context & ctx = get_context();
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << "/" << uState.level << ")" << connectingSize << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << ")" << connectingSize << std::endl;);
         initUnderapprox_repeat();
         for (const auto& e : uState.assertingConstraints){
+            for (const auto& a : uState.assertingConstraints)
+                assert_axiom(createImpliesOperator(causexpr, a));
+
             assert_axiom(e);
         }
         return true;
@@ -13510,16 +13544,16 @@ namespace smt {
         context& ctx = get_context();
         expr_ref_vector tmpExprs(m);
         ctx.get_relevant_literals(tmpExprs);
-
         for (int i = 0; i < tmpExprs.size(); ++i) {
             literal tmp = ctx.get_literal(tmpExprs[i].get());
             int assignLvl = ctx.get_assign_level(tmp);
-            if (ctx.get_assignment(tmpExprs[i].get()) == l_true && std::find(mful_scope_levels.begin(), mful_scope_levels.end(), assignLvl) != mful_scope_levels.end()) {
-                guessedLiterals.push_back(tmpExprs[i].get());
+            if (ctx.get_assignment(tmpExprs[i].get()) == l_true) {
                 STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
                                    << ", assignLevel = " << ctx.get_assign_level(tmp) << std::endl;);
             }
         }
+        for (int i = 0; i < mful_scope_levels.size(); ++i)
+            guessedLiterals.push_back(mful_scope_levels[i].get());
     }
 
 
