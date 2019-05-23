@@ -1,0 +1,14 @@
+(set-logic ALL_SUPPORTED)
+(set-option :strings-exp true)
+(set-option :produce-models true)
+(set-option :rewrite-divk true)
+
+(declare-fun str () String)
+(declare-fun pattern () String)
+
+(assert (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (and (not (not (not (= (ite (not (= (str.substr str 0 (- (str.indexof str " " 0) 0)) (str.substr str 0 (- (str.indexof str " " 0) 0)))) 1 0) 0)))) (not (not (= (ite (not (= (str.len pattern) 3)) 1 0) 0)))) (not (= (ite (= (str.len (str.substr (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) (+ (str.indexof (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) " " 0) 1) (- (str.len (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1)))) (+ (str.indexof (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) " " 0) 1)))) 0) 1 0) 0))) (not (= (ite (str.contains (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) " ") 1 0) 0))) (not (not (= (ite (= (str.len (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1)))) 0) 1 0) 0)))) (not (= (ite (str.contains str " ") 1 0) 0))) (not (not (= (ite (= (str.len str) 0) 1 0) 0)))) (>= 0 0)) (>= (- (str.indexof str " " 0) 0) 0)) (>= 0 0)) (>= (- (str.indexof str " " 0) 0) 0)) (>= (+ (str.indexof str " " 0) 1) 0)) (>= (- (str.len str) (+ (str.indexof str " " 0) 1)) 0)) (>= (+ (str.indexof str " " 0) 1) 0)) (>= (- (str.len str) (+ (str.indexof str " " 0) 1)) 0)) (>= (+ (str.indexof str " " 0) 1) 0)) (>= (- (str.len str) (+ (str.indexof str " " 0) 1)) 0)) (>= (+ (str.indexof (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) " " 0) 1) 0)) (>= (- (str.len (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1)))) (+ (str.indexof (str.substr str (+ (str.indexof str " " 0) 1) (- (str.len str) (+ (str.indexof str " " 0) 1))) " " 0) 1)) 0)) (>= (+ (str.indexof str " " 0) 1) 0)) (>= (- (str.len str) (+ (str.indexof str " " 0) 1)) 0)) (>= (+ (str.indexof str " " 0) 1) 0)) (>= (- (str.len str) (+ (str.indexof str " " 0) 1)) 0)))
+
+(check-sat)
+
+(get-value (str))
+(get-value (pattern))
