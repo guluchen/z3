@@ -1175,7 +1175,7 @@ namespace smt {
         enode *const n1 = get_enode(x);
         enode *const n2 = get_enode(y);
 
-        if (m_scope_level > 0) {
+        if (m_scope_level >= 0) {
             expr_ref tmp(createEqualOperator(n1->get_owner(), n2->get_owner()), m);
             ensure_enode(tmp);
             mful_scope_levels.push_back(tmp);
@@ -3151,7 +3151,7 @@ namespace smt {
 
 
         bool skip = false;
-        if (m_scope_level > 0) {
+        if (m_scope_level >= 0) {
             zstring value;
             if (u.str.is_string(n1, value)) {
                 if (value.length() != 0) {
@@ -3173,8 +3173,8 @@ namespace smt {
             }
         }
 
-        if (!skip)
-            instantiate_str_diseq_length_axiom(n1, n2);
+//        if (!skip)
+//            instantiate_str_diseq_length_axiom(n1, n2);
     }
 
     /*
@@ -3440,7 +3440,7 @@ namespace smt {
                 STRACE("str", tout << __FUNCTION__ << " before get_assign_level  " << std::endl;);
                 int lastLevel = ctx.get_assign_level(l);
                 STRACE("str", tout << __FUNCTION__ << " after get_assign_level  " << lastLevel << std::endl;);
-                if (lastLevel < uState.z3_level) {
+                if (lastLevel <= uState.z3_level) {
                     STRACE("str", tout << __FUNCTION__ << " " << lastLevel << " vs " << uState.z3_level
                                        << std::endl;);
                     uState.reset();
@@ -3484,7 +3484,7 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-        if (m_we_expr_memo.empty())
+        if (m_we_expr_memo.empty() && m_wi_expr_memo.empty())
             return FC_DONE;
 
         ast_manager &m = get_manager();
@@ -9212,8 +9212,8 @@ namespace smt {
         unsigned textLeft = str.length() - pos;
         zstring value("");
         u.str.is_string(elementNames[currentSplit.size()].first, value);
-        if (value.length() > 0)
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << " vs " << value << " " << elementNames[currentSplit.size()].second << std::endl;);
+//        if (value.length() > 0)
+//            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << " vs " << value << " " << elementNames[currentSplit.size()].second << std::endl;);
         /* special case for const: leng = leng */
         if (QCONSTMAX == 1 || value.length() == 1) {
             if (value.length() <= textLeft) {
@@ -10822,7 +10822,7 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << std::endl;);
         for (const auto& nn : importantVars)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
-        TRACE("str", tout << __FUNCTION__ << std::endl;);
+        STRACE("str", tout << __FUNCTION__ << std::endl;);
     }
 
     /**
@@ -11299,7 +11299,35 @@ namespace smt {
             }
             if (!important) {
                 if (subNodes.find(c.first) == subNodes.end()) {
-                    ret[c.first] = c.second;
+                    if (u.str.is_concat(c.first)) {
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
+                        // check if it is an important concat
+                        bool importantConcat = false;
+                        ptr_vector<expr> childrenVector;
+                        get_all_nodes_in_concat(c.first, childrenVector);
+                        for (const auto& v : importantVars)
+                            if (childrenVector.contains(v.first)) {
+                                importantConcat = true;
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.first, get_manager()) << std::endl;);
+                                break;
+                            }
+
+                        if (importantConcat)
+                            ret[c.first] = c.second;
+                        else {
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
+                            // remove c.first from the list
+                            std::set<expr*> tmp;
+                            for (const auto& cc : c.second)
+                                if (cc != c.first){
+                                    tmp.insert(cc);
+                                }
+                            ret[c.first] = tmp;
+                        }
+                    }
+                    else
+                        ret[c.first] = c.second;
+
                 }
                 else
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << std::endl;);
@@ -11443,24 +11471,45 @@ namespace smt {
                 for (const auto &l : eqLhs)
                     for (const auto &r : eqRhs) {
                         zstring val_lhs, val_rhs;
-                        bool is_lhs_str = u.str.is_string(l, val_lhs);
-                        bool is_rhs_str = u.str.is_string(r, val_rhs);
+                        bool hasLhSValue = false, hasRhSValue = false;
+                        expr* valueLhs = get_eqc_value(l, hasLhSValue);
+                        expr* valueRhs = get_eqc_value(r, hasRhSValue);
+
+                        if (hasLhSValue) {
+                            u.str.is_string(valueLhs, val_lhs);
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(l, m) << " " << val_lhs << std::endl;);
+                        }
+                        if (hasRhSValue) {
+                            u.str.is_string(valueRhs, val_rhs);
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(r, m) << " " << val_rhs << std::endl;);
+                        }
                         bool specialCase = false;
-                        if (is_lhs_str)
+                        if (hasLhSValue)
                             if (val_lhs.length() == 0) {
                                 specialCase = true;
                                 eqConcat.insert(r);
                             }
 
-                        if (!specialCase && is_rhs_str)
+                        if (!specialCase && hasRhSValue)
                             if (val_rhs.length() == 0){
+                                STRACE("str", tout << __LINE__ << " " << mk_pp(r, m) << " " << val_rhs << std::endl;);
                                 specialCase = true;
                                 eqConcat.insert(l);
                             }
 
                         if (!specialCase) {
-                            if (is_lhs_str && is_rhs_str){
+                            if (hasLhSValue && hasRhSValue){
                                 expr *tmp = u.str.mk_string(val_lhs + val_rhs);
+                                m_trail.push_back(tmp);
+                                eqConcat.insert(tmp);
+                            }
+                            else if (hasLhSValue) {
+                                expr *tmp = u.str.mk_concat(valueLhs, r);
+                                m_trail.push_back(tmp);
+                                eqConcat.insert(tmp);
+                            }
+                            else if (hasRhSValue) {
+                                expr *tmp = u.str.mk_concat(l, valueRhs);
                                 m_trail.push_back(tmp);
                                 eqConcat.insert(tmp);
                             }
@@ -11476,7 +11525,11 @@ namespace smt {
 
         // continuing refining
         for (const auto& nn : eqConcat)
-            if (!is_app(nn) || u.str.is_concat(nn))
+            if (((!u.str.is_extract(nn)) &&
+                 (!u.str.is_at(nn)) &&
+                 (!u.str.is_replace(nn)) &&
+                 (!u.str.is_itos(nn)) &&
+                 (!u.str.is_nth(nn))) || u.str.is_concat(nn))
             {
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
@@ -13547,9 +13600,9 @@ namespace smt {
         for (int i = 0; i < tmpExprs.size(); ++i) {
             literal tmp = ctx.get_literal(tmpExprs[i].get());
             int assignLvl = ctx.get_assign_level(tmp);
-            if (ctx.get_assignment(tmpExprs[i].get()) == l_true) {
+            if (assignLvl > 0 && ctx.get_assignment(tmpExprs[i].get()) == l_true){
                 STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
-                                   << ", assignLevel = " << ctx.get_assign_level(tmp) << std::endl;);
+                                   << ", assignLevel = " << assignLvl << std::endl;);
             }
         }
         for (int i = 0; i < mful_scope_levels.size(); ++i)
