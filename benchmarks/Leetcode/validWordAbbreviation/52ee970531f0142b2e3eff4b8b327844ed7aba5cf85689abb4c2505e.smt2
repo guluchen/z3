@@ -1,7 +1,3 @@
-(set-logic ALL_SUPPORTED)
-(set-option :strings-exp true)
-(set-option :produce-models true)
-(set-option :rewrite-divk true)
 
 (declare-fun word () String)
 (declare-fun abbr () String)
@@ -12,3 +8,6 @@
 
 (get-value (word))
 (get-value (abbr))
+
+
+

@@ -1,7 +1,3 @@
-(set-logic ALL_SUPPORTED)
-(set-option :strings-exp true)
-(set-option :produce-models true)
-(set-option :rewrite-divk true)
 
 (declare-fun digits () String)
 
@@ -10,3 +6,6 @@
 (check-sat)
 
 (get-value (digits))
+
+
+

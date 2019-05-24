@@ -1,7 +1,3 @@
-(set-logic ALL_SUPPORTED)
-(set-option :strings-exp true)
-(set-option :produce-models true)
-(set-option :rewrite-divk true)
 
 (declare-fun str () String)
 (declare-fun pattern () String)
@@ -12,3 +8,6 @@
 
 (get-value (str))
 (get-value (pattern))
+
+
+

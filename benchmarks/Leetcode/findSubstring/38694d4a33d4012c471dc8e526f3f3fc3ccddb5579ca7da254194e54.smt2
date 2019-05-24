@@ -1,7 +1,3 @@
-(set-logic ALL_SUPPORTED)
-(set-option :strings-exp true)
-(set-option :produce-models true)
-(set-option :rewrite-divk true)
 
 (declare-fun s () String)
 (declare-fun in0 () String)
@@ -14,3 +10,6 @@
 (get-value (s))
 (get-value (in0))
 (get-value (in1))
+
+
+

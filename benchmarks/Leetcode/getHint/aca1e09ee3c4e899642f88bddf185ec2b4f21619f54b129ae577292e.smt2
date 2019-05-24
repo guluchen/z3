@@ -1,7 +1,3 @@
-(set-logic ALL_SUPPORTED)
-(set-option :strings-exp true)
-(set-option :produce-models true)
-(set-option :rewrite-divk true)
 
 (declare-fun guess () String)
 (declare-fun secret () String)
@@ -12,3 +8,6 @@
 
 (get-value (guess))
 (get-value (secret))
+
+
+
