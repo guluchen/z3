@@ -5,7 +5,9 @@
 
 (check-sat)
 
-(get-value (beginWord))
+;(get-value (beginWord))
+
+
 
 
 

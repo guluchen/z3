@@ -5,7 +5,9 @@
 
 (check-sat)
 
-(get-value (J))
+;(get-value (J))
+
+
 
 
 

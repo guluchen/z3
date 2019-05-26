@@ -6,8 +6,10 @@
 
 (check-sat)
 
-(get-value (guess))
-(get-value (secret))
+;(get-value (guess))
+;(get-value (secret))
+
+
 
 
 

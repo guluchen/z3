@@ -6,8 +6,10 @@
 
 (check-sat)
 
-(get-value (endWord))
-(get-value (beginWord))
+;(get-value (endWord))
+;(get-value (beginWord))
+
+
 
 
 

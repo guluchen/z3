@@ -7,9 +7,11 @@
 
 (check-sat)
 
-(get-value (in2))
-(get-value (in1))
-(get-value (in0))
+;(get-value (in2))
+;(get-value (in1))
+;(get-value (in0))
+
+
 
 
 

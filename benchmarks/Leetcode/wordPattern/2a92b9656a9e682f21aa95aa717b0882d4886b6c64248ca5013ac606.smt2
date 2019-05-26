@@ -6,8 +6,10 @@
 
 (check-sat)
 
-(get-value (pattern))
-(get-value (str))
+;(get-value (pattern))
+;(get-value (str))
+
+
 
 
 

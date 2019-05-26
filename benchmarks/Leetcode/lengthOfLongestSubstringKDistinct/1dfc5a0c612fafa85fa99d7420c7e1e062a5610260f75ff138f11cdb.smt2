@@ -6,8 +6,10 @@
 
 (check-sat)
 
-(get-value (k))
-(get-value (s))
+;(get-value (k))
+;(get-value (s))
+
+
 
 
 

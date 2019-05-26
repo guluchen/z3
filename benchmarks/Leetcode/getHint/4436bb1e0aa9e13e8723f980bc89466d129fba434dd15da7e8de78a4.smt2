@@ -5,7 +5,9 @@
 
 (check-sat)
 
-(get-value (secret))
+;(get-value (secret))
+
+
 
 
 

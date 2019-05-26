@@ -5,7 +5,9 @@
 
 (check-sat)
 
-(get-value (path))
+;(get-value (path))
+
+
 
 
 

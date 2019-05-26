@@ -6,8 +6,10 @@
 
 (check-sat)
 
-(get-value (num2))
-(get-value (num1))
+;(get-value (num2))
+;(get-value (num1))
+
+
 
 
 
