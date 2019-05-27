@@ -1852,6 +1852,10 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> &combinations,
                         std::set<expr*> subNodes
                 );
+                std::set<expr*> refine_eq_set(
+                    std::set<expr*> s,
+                    std::set<std::pair<expr*, int>> importantVars);
+                bool isImportant(expr *n, std::set<std::pair<expr*, int>> importantVars);
                 std::set<expr*> extend_object(
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,

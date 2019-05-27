@@ -6066,16 +6066,16 @@ namespace smt {
                                 STRACE("str", tout << __LINE__ <<  " no causes" << std::endl;);
                             if (!m.is_true(result)){
                                 axiomAdded = true;
+                                /* sync result*/
+                                if (causes.find(it->first) != causes.end()) {
+                                    expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
+                                    assert_axiom(tmp.get());
+                                }
+                                else {
+                                    assert_axiom(result);
+                                }
+                                assertedConstraints.push_back(result);
                             }
-                            /* sync result*/
-                            if (causes.find(it->first) != causes.end()) {
-                                expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
-                                assert_axiom(tmp.get());
-                            }
-                            else {
-                                assert_axiom(result);
-                            }
-                            assertedConstraints.push_back(result);
                         }
                         else {
                             STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
@@ -11005,6 +11005,8 @@ namespace smt {
                                            << std::endl;);
                     }
                     else if (diffLen == (int)value.length()) {
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                           << std::endl;);
                         maxDiffStrs.push_back(value);
                     }
                 }
@@ -11020,6 +11022,8 @@ namespace smt {
                                            << std::endl;);
                     }
                     else if (diffLen == (int)value.length()) {
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                           << std::endl;);
                         maxDiffStrs.push_back(value);
                     }
                 }
@@ -11118,6 +11122,7 @@ namespace smt {
         std::vector<zstring> maxDiffStrs = collectAllInequalities(nn);
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
+
         if (diffLen > 0) {
             context& ctx = get_context();
             std::vector<zstring> constParts;
@@ -11151,8 +11156,10 @@ namespace smt {
 
             if (constPartLen == diffLen) {
                 for (const auto &s : maxDiffStrs) {
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " diffstr: " << s << std::endl;);
                     for (const auto &ss : constParts) {
-                        if (ss == s) {
+                        if (ss.operator==(s)) {
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << ss << " == " << s << std::endl;);
                             if (u.str.is_concat(nn)) {
                                 ptr_vector<expr> childrenVector;
                                 get_nodes_in_concat(nn, childrenVector);
@@ -11298,18 +11305,11 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
-            bool important = false;
-            for (const auto& p : importantVars){
-                if (p.first == c.first){
-                    ret[c.first] = c.second;
-                    important = true;
-                    break;
-                }
-            }
+            bool important = isImportant(c.first, importantVars);
             if (!important) {
                 if (c.second.size() > 10) {
                     importantVars.insert(std::make_pair(c.first, -1));
-                    ret[c.first] = c.second;
+                    ret[c.first] = refine_eq_set(c.second, importantVars);
                 }
                 else if (subNodes.find(c.first) == subNodes.end()) {
                     if (u.str.is_concat(c.first)) {
@@ -11339,14 +11339,80 @@ namespace smt {
                         }
                     }
                     else
-                        ret[c.first] = c.second;
+                        ret[c.first] = refine_eq_set(c.second, importantVars);
 
                 }
                 else
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << std::endl;);
             }
+            else {
+                ret[c.first] = refine_eq_set(c.second, importantVars);
+            }
         }
         return ret;
+    }
+
+    std::set<expr*> theory_str::refine_eq_set(
+            std::set<expr*> s,
+            std::set<std::pair<expr*, int>> importantVars){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+        ast_manager &m = get_manager();
+        std::set<expr*> ret;
+        for (std::set<expr*>::iterator it = s.begin(); it != s.end(); ++it) {
+            if (u.str.is_concat(*it)) {
+                expr* arg0 = to_app(*it)->get_arg(0);
+                expr_ref_vector eq0(m);
+                collect_eq_nodes(arg0, eq0);
+                bool imp0 = isImportant(arg0, importantVars);
+
+                expr* arg1 = to_app(*it)->get_arg(1);
+                expr_ref_vector eq1(m);
+                collect_eq_nodes(arg1, eq1);
+                bool imp1 = isImportant(arg1, importantVars);
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": checking " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << std::endl;);
+                bool notAdd = false;
+                if (!imp0 && !u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
+                    for (std::set<expr *>::iterator i = s.begin(); i != s.end(); ++i) {
+                        if (u.str.is_concat(*i) && (*i) != (*it)) {
+                            expr *arg00 = to_app(*i)->get_arg(0);
+                            expr *arg01 = to_app(*i)->get_arg(1);
+                            if (arg1 == arg01 && eq0.contains(arg00)) {
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg0, m) << " " << mk_pp(arg00, m) << std::endl;);
+                                notAdd = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!imp1 && !u.str.is_concat(arg1) && !u.str.is_string(arg1)){
+                    for (std::set<expr *>::iterator i = s.begin(); i != s.end(); ++i) {
+                        if (u.str.is_concat(*i) && (*i) != (*it)) {
+                            expr *arg00 = to_app(*i)->get_arg(0);
+                            expr *arg01 = to_app(*i)->get_arg(1);
+                            if (arg0 == arg00 && eq1.contains(arg01)) {
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg1, m) << " " << mk_pp(arg01, m) << std::endl;);
+                                notAdd = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (notAdd == false)
+                    ret.insert(*it);
+            }
+        }
+        return ret;
+    }
+
+    bool theory_str::isImportant(expr *n, std::set<std::pair<expr*, int>> importantVars) {
+        for (const auto& p : importantVars){
+            if (p.first == n){
+                return true;
+            }
+        }
+        return false;
     }
 
     std::set<expr*> theory_str::extend_object(
