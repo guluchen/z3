@@ -1830,10 +1830,20 @@ namespace smt {
             std::set<word_equation> updated_result;
 
             bool updated =true;
-
+            bool on_screen =false;
 
             while (updated) {
                 updated = false;
+                if(on_screen){
+                    std::cout << "Word equality:" << std::endl;
+                    for(auto &eq:m_eq_wes) {
+                        std::cout << eq << std::endl;
+                    }
+                    std::cout << "Word m_diseq_wes:" << std::endl;
+                    for(auto &eq:m_diseq_wes) {
+                        std::cout << eq << std::endl;
+                    }
+                }
                 for(auto &eq:m_eq_wes){
                     element source =element::null();
                     word_term target;
@@ -1849,14 +1859,14 @@ namespace smt {
                     }
                     if(updated){
                         m_length=m_length.add_equality(source,target);
+                        if(on_screen) std::cout << "Replace " << source<< " to "<<target<<std::endl;
+
+
 
                         for (auto &eq2:m_eq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
                             eq3=eq3.trim_prefix();
-                            if(eq3.lhs()==eq3.rhs()){
-                                eq3=eq3.trim_prefix();
-                            }
-                            if (!eq3.empty()){
+                            if (eq3!=eq && !eq3.empty()){
                                 updated_result.insert(eq3);
                             }
                         }
@@ -1865,10 +1875,11 @@ namespace smt {
                         for (auto &eq2:m_diseq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
                             eq3=eq3.trim_prefix();
-                            if(eq3.lhs()==eq3.rhs()){
-                                eq3=eq3.trim_prefix();
+
+
+                            if (eq3!=eq) {
+                                updated_result.insert(eq3);
                             }
-                            updated_result.insert(eq3);
                         }
                         m_diseq_wes = updated_result;
                         updated_result.clear();

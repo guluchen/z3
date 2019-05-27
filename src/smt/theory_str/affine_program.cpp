@@ -53,6 +53,7 @@ namespace smt {
         }
 
         counter_system::counter_system(const smt::str::solver &solv) {
+            SASSERT(!solv.get_success_leaves().empty());
             bool on_screen =false;
             cs_state counter = 1;
             std::unordered_map<state::cref, cs_state, state::hash, std::equal_to<state>> mapped_states;
@@ -219,7 +220,10 @@ namespace smt {
         }
 
         void counter_system::print_counter_system() const {
+            bool on_screen=true;
             std::string sep_str;
+            if(on_screen) std::cout<<" digraph counter_system {\n";
+
             STRACE("str", tout << "counter system pretty print..." << std::endl;);
             STRACE("str", tout << "init={";);
             sep_str = "";
@@ -242,10 +246,13 @@ namespace smt {
                 for (auto const &tran: r.second) {
                     STRACE("str", tout << tab;);
                     print_transition(r.first, tran.first, tran.second);
+                    if(on_screen) std::cout<<r.first<<" -> "<<tran.second<<";\n";
                     STRACE("str", tout << std::endl;);
                 }
             }
             STRACE("str", tout << "}" << std::endl;);
+            if(on_screen) std::cout<<"}"<<std::endl;
+
         }
 
         bool counter_system::is_dag() {  // standard dag cycle detection algorithm

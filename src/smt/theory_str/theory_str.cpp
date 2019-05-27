@@ -563,17 +563,18 @@ namespace smt {
         STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
+        if (root.unsolvable_by_inference() ) {
+            STRACE("str", tout << "proved unsolvable by inference\n";);
+            block_curr_assignment();
+            IN_CHECK_FINAL = false;
+            return FC_CONTINUE;
+        }
+
         if(root.word_eqs().size()==0){
             if (!is_over_approximation)
                 return FC_GIVEUP;
             else
                 return FC_DONE;
-        }
-        if (root.unsolvable_by_inference() ) {
-        STRACE("str", tout << "proved unsolvable by inference\n";);
-            block_curr_assignment();
-            IN_CHECK_FINAL = false;
-            return FC_CONTINUE;
         }
 
         int_expr_solver m_int_solver(get_manager(),get_context().get_fparams());
