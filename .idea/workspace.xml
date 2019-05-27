@@ -83,9 +83,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="586">
-              <caret line="3153" column="28" selection-start-line="3153" selection-start-column="28" selection-end-line="3153" selection-end-column="28" />
+            <state relative-caret-position="665">
+              <caret line="11468" column="22" lean-forward="true" selection-start-line="11468" selection-start-column="22" selection-end-line="11468" selection-end-column="22" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -179,7 +179,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="381">
-              <caret line="1979" column="57" selection-start-line="1979" selection-start-column="46" selection-end-line="1979" selection-end-column="57" />
+              <caret line="1305" column="21" selection-start-line="1305" selection-start-column="21" selection-end-line="1305" selection-end-column="21" />
               <folding>
                 <element signature="e#9690#19692#1" />
               </folding>
@@ -200,9 +200,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ate.z3_leve</find>
-      <find>uState.z3_leve</find>
-      <find>scope</find>
       <find>push_sco</find>
       <find>pop_sc</find>
       <find>m_we_expr_memo</find>
@@ -225,11 +222,14 @@
       <find>m_concat_axiom_todo</find>
       <find>new_diseq_eh</find>
       <find>get_nodes_in_concat</find>
-      <find>refine_eq_combination</find>
-      <find>mfu</find>
       <find>importantVars</find>
       <find>eqConcat</find>
       <find>mk_value</find>
+      <find>extend_object</find>
+      <find>refine_eq_combination</find>
+      <find>convertEqualities</find>
+      <find>root_tmp</find>
+      <find>mfu</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -254,7 +254,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="227" />
+    <option name="x" value="196" />
     <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
@@ -760,15 +760,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="389067000" />
+      <workItem from="1555596195940" duration="394160000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="533989000" />
+    <option name="totallyTimeSpent" value="539082000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="227" y="23" width="2560" height="1417" extended-state="0" />
+    <frame x="196" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
@@ -1141,7 +1141,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="381">
-          <caret line="1979" column="57" selection-start-line="1979" selection-start-column="46" selection-end-line="1979" selection-end-column="57" />
+          <caret line="1305" column="21" selection-start-line="1305" selection-start-column="21" selection-end-line="1305" selection-end-column="21" />
           <folding>
             <element signature="e#9690#19692#1" />
           </folding>
@@ -1150,8 +1150,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="586">
-          <caret line="3153" column="28" selection-start-line="3153" selection-start-column="28" selection-end-line="3153" selection-end-column="28" />
+        <state relative-caret-position="665">
+          <caret line="11468" column="22" lean-forward="true" selection-start-line="11468" selection-start-column="22" selection-end-line="11468" selection-end-column="22" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

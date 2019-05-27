@@ -5176,7 +5176,7 @@ namespace smt {
         ast_manager & m = get_manager();
 
         for (const auto& com : eq_combination){
-            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
                 STRACE("str",
                         if (!u.str.is_concat(e))
@@ -5208,7 +5208,10 @@ namespace smt {
                 causexpr = (causes.begin()->second);
             }
             for (const auto& a : uState.assertingConstraints)
-                assert_axiom(createImpliesOperator(causexpr, a));
+                if (m.is_or(a))
+                    assert_axiom(createImpliesOperator(causexpr, a));
+                else
+                    assert_axiom(a);
             return true;
         }
         else {
@@ -5509,7 +5512,9 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
-    void theory_str::initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars){
+    void theory_str::initUnderapprox(
+            std::map<expr*, std::set<expr*>> eq_combination,
+            std::map<expr*, int> &importantVars){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         context & ctx = get_context();
@@ -5896,16 +5901,7 @@ namespace smt {
             if (isInternalRegexVar(it->first) || isImportant(it->first) || u.str.is_string(it->first)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
-                expr* root_tmp = it->first;
-                if (u.str.is_concat(root_tmp)) {
-                    expr_ref_vector eqNodeSet(m);
-                    collect_eq_nodes(root_tmp, eqNodeSet);
-                    for (int i = 0; i < eqNodeSet.size(); ++i)
-                        if (!u.str.is_concat(eqNodeSet[i].get())) {
-                            root_tmp = eqNodeSet[i].get();
-                            break;
-                        }
-                }
+                expr* root_tmp = findEquivalentVariable(it->first);
                 for (const auto& element: it->second) {
                     if (element == it->first){
                         continue;
@@ -6100,6 +6096,19 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    expr* theory_str::findEquivalentVariable(expr* e){
+        if (u.str.is_concat(e)) {
+            // change from concat to variable if it is possible
+            expr_ref_vector eqNodeSet(get_manager());
+            collect_eq_nodes(e, eqNodeSet);
+            for (int i = 0; i < eqNodeSet.size(); ++i)
+                if (!u.str.is_concat(eqNodeSet[i].get())) {
+                    return eqNodeSet[i].get();
+                }
+        }
+        return e;
     }
 
     bool theory_str::isInternalVar(expr* e){
@@ -11255,7 +11264,7 @@ namespace smt {
     std::map<expr*, std::set<expr*>> theory_str::construct_eq_combination(
             std::map<expr*, std::set<expr*>> &causes,
             std::set<expr*> &subNodes,
-            std::set<std::pair<expr*, int>> importantVars){
+            std::set<std::pair<expr*, int>> &importantVars){
         clock_t t = clock();
         ast_manager &m = get_manager();
         context& ctx = get_context();
@@ -11282,7 +11291,7 @@ namespace smt {
     }
 
     std::map<expr*, std::set<expr*>> theory_str::refine_eq_combination(
-            std::set<std::pair<expr*, int>> importantVars,
+            std::set<std::pair<expr*, int>> &importantVars,
             std::map<expr*, std::set<expr*>> &combinations,
             std::set<expr*> subNodes
             ){
@@ -11298,7 +11307,11 @@ namespace smt {
                 }
             }
             if (!important) {
-                if (subNodes.find(c.first) == subNodes.end()) {
+                if (c.second.size() > 10) {
+                    importantVars.insert(std::make_pair(c.first, -1));
+                    ret[c.first] = c.second;
+                }
+                else if (subNodes.find(c.first) == subNodes.end()) {
                     if (u.str.is_concat(c.first)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
                         // check if it is an important concat
@@ -11448,9 +11461,10 @@ namespace smt {
                 causes[object].insert(createEqualOperator(arg0, to_app(*it)->get_arg(0)));
                 causes[object].insert(createEqualOperator(arg1, to_app(*it)->get_arg(1)));
                 // to prevent the exponential growth
-                if (eqLhs.size() > 200){
+                if (eqLhs.size() > 10){
                     eqLhs.clear();
-                    eqLhs.insert(arg0);
+                    eqLhs.insert(findEquivalentVariable(arg0));
+                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
                 }
                 else {
 
@@ -11458,9 +11472,10 @@ namespace smt {
                         causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
 
-                if (eqRhs.size() > 200){
+                if (eqRhs.size() > 10){
                     eqRhs.clear();
-                    eqRhs.insert(arg1);
+                    eqRhs.insert(findEquivalentVariable(arg1));
+                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
                 }
                 else {
 

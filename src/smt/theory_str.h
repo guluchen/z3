@@ -1303,6 +1303,7 @@ namespace smt {
             bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
+                expr* findEquivalentVariable(expr* e);
                 bool isInternalVar(expr* e);
                 bool isInternalRegexVar(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
@@ -1845,9 +1846,9 @@ namespace smt {
             std::map<expr*, std::set<expr*>> construct_eq_combination(
                     std::map<expr*, std::set<expr*>> &causes,
                     std::set<expr*> &subNodes,
-                    std::set<std::pair<expr*, int>> importantVars);
+                    std::set<std::pair<expr*, int>> &importantVars);
                 std::map<expr*, std::set<expr*>> refine_eq_combination(
-                        std::set<std::pair<expr*, int>> importantVars,
+                        std::set<std::pair<expr*, int>> &importantVars,
                         std::map<expr*, std::set<expr*>> &combinations,
                         std::set<expr*> subNodes
                 );
