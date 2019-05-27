@@ -246,7 +246,32 @@ namespace smt {
                 for (auto const &tran: r.second) {
                     STRACE("str", tout << tab;);
                     print_transition(r.first, tran.first, tran.second);
-                    if(on_screen) std::cout<<r.first<<" -> "<<tran.second<<";\n";
+                    if(on_screen) std::cout<<r.first<<" -> "<<tran.second<<"\t";
+
+                    switch (tran.first.type) {
+                        case counter_system::assign_type::CONST:
+                            sep_str = "";
+                            for (const auto v : tran.first.vars) {
+                                if(on_screen) std::cout << "[ label = \""<<sep_str << var_expr.find(v)->second.second << ":=" << tran.first.num<<"\"];\n";
+                            }
+                            break;
+                        case counter_system::assign_type::VAR:
+                            if(on_screen) std::cout << "[ label = \""<<var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                             var_expr.find(*(std::next(tran.first.vars.begin())))->second.second<<"\"];\n";
+                            break;
+                        case counter_system::assign_type::PLUS_ONE:
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                      var_expr.find(*(tran.first.vars.begin()))->second.second << "+1\"];\n";
+                            break;
+                        case counter_system::assign_type::PLUS_VAR:
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                      var_expr.find(*(tran.first.vars.begin()))->second.second << "+" <<
+                                      var_expr.find(*(std::next(tran.first.vars.begin())))->second.second << "\"];\n";
+                            break;
+                        default:
+                            break;
+                    }
+
                     STRACE("str", tout << std::endl;);
                 }
             }

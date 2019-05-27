@@ -108,7 +108,7 @@ namespace smt {
         void propagate_basic_string_axioms(enode * str);
         bool lenc_check_sat(expr *e);
         void tightest_prefix(expr*,expr*);
-        bool check_counter_system_lenc(str::solver& solver);
+        bool check_counter_system_lenc(str::solver& solver, int_expr_solver& m_int_solver);
         void print_ast(expr *e);
         void print_ctx(context& ctx);
         bool mini_check_sat(expr *e);

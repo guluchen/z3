@@ -503,9 +503,9 @@ namespace smt {
         return chk_res;
     }
 
-    bool theory_str::check_counter_system_lenc(smt::str::solver &solver) {
+    bool theory_str::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver& m_int_solver) {
         using namespace str;
-        bool on_screen=false;
+        bool on_screen=true;
 
         counter_system cs = counter_system(solver);
         cs.print_counter_system();  // STRACE output
@@ -527,7 +527,11 @@ namespace smt {
             expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
             if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
             STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
-            return lenc_check_sat(lenc_res);
+            lbool result =m_int_solver.check_sat(lenc_res);
+
+            bool result2 = lenc_check_sat(lenc_res);
+            return result==lbool::l_true;
+//            return lenc_check_sat(lenc_res);
 //            add_axiom(lenc_res);
 //            return true;
         }
@@ -605,7 +609,7 @@ namespace smt {
             if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = check_counter_system_lenc(solver, m_int_solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
