@@ -102,7 +102,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="377">
-              <caret line="10776" column="43" selection-start-line="10776" selection-start-column="20" selection-end-line="10776" selection-end-column="43" />
+              <caret line="9009" column="77" selection-start-line="9009" selection-start-column="75" selection-end-line="9009" selection-end-column="77" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -179,8 +179,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="381">
-              <caret line="1854" column="32" selection-start-line="1854" selection-start-column="32" selection-end-line="1854" selection-end-column="32" />
+            <state relative-caret-position="396">
+              <caret line="1864" column="40" selection-start-line="1864" selection-start-column="40" selection-end-line="1864" selection-end-column="40" />
               <folding>
                 <element signature="e#9690#19692#1" />
               </folding>
@@ -201,9 +201,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ful_scope_levels.size() - 1</find>
-      <find>lastAssign</find>
-      <find>mful_scope_levels.pu</find>
       <find>mful_scope_levels</find>
       <find>m_index[</find>
       <find>mful_scope_levels.push</find>
@@ -217,20 +214,23 @@
       <find>m_basicstr_axiom_todo</find>
       <find>m_concat_axiom_todo</find>
       <find>new_diseq_eh</find>
-      <find>get_nodes_in_concat</find>
       <find>importantVars</find>
       <find>eqConcat</find>
       <find>mk_value</find>
       <find>extend_object</find>
-      <find>refine_eq_combination</find>
       <find>convertEqualities</find>
       <find>root_tmp</find>
       <find>equalityToSMT</find>
       <find>for (const auto&amp; p : importantVars){</find>
       <find>for (const auto&amp; p : importantVar){</find>
-      <find>mfu</find>
       <find>rechec</find>
       <find>is_importantVar_recheck</find>
+      <find>get_nodes_in_concat</find>
+      <find>collect</find>
+      <find>mfu</find>
+      <find>refine_important_vars</find>
+      <find>refine_eq_combination</find>
+      <find>10</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -255,7 +255,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="314" />
+    <option name="x" value="24" />
     <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
@@ -761,15 +761,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="401659000" />
+      <workItem from="1555596195940" duration="410151000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="546581000" />
+    <option name="totallyTimeSpent" value="555073000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="314" y="23" width="2560" height="1417" extended-state="0" />
+    <frame x="24" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
@@ -1141,8 +1141,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="381">
-          <caret line="1854" column="32" selection-start-line="1854" selection-start-column="32" selection-end-line="1854" selection-end-column="32" />
+        <state relative-caret-position="396">
+          <caret line="1864" column="40" selection-start-line="1864" selection-start-column="40" selection-end-line="1864" selection-end-column="40" />
           <folding>
             <element signature="e#9690#19692#1" />
           </folding>
@@ -1152,7 +1152,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="377">
-          <caret line="10776" column="43" selection-start-line="10776" selection-start-column="20" selection-end-line="10776" selection-end-column="43" />
+          <caret line="9009" column="77" selection-start-line="9009" selection-start-column="75" selection-end-line="9009" selection-end-column="77" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

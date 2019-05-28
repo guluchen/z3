@@ -1825,7 +1825,10 @@ namespace smt {
                     ptr_vector<expr> &new_rhs);
 
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
-            void refine_important_vars(std::set<std::pair<expr *, int>> &importantVars, std::map<expr *, std::set<expr *>> eq_combination);
+            void refine_important_vars(
+                    std::set<std::pair<expr *, int>> &importantVars,
+                    std::set<expr*> &notImportant,
+                    std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 std::vector<zstring> collectAllInequalities(expr* nn);
                 bool collectNotContains(expr* nn);
@@ -1852,6 +1855,16 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> &combinations,
                         std::set<expr*> subNodes
                 );
+                std::map<expr*, std::set<expr*>> refine_eq_combination(
+                        std::set<std::pair<expr*, int>> &importantVars,
+                        std::map<expr*, std::set<expr*>> &combinations,
+                        std::set<expr*> subNodes,
+                        std::set<expr*> notImportantVars
+                );
+
+                std::set<expr*> refine_eq_set(
+                    std::set<expr*> s,
+                    std::set<expr*> notImportantVars);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,
                     std::set<std::pair<expr*, int>> importantVars);

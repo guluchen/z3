@@ -3595,8 +3595,9 @@ namespace smt {
         if (axiomAdded)
             return FC_CONTINUE;
 
-        refine_important_vars(importantVars, eq_combination);
-        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes);
+        std::set<expr*> notImportant;
+        refine_important_vars(importantVars, notImportant, eq_combination);
+        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
         const str::state &root = build_state_from_memo();
  
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
@@ -10767,11 +10768,15 @@ namespace smt {
         return ret;
     }
 
-    void theory_str::refine_important_vars(std::set<std::pair<expr *, int>> &importantVars, std::map<expr *, std::set<expr *>> eq_combination) {
+    void theory_str::refine_important_vars(
+            std::set<std::pair<expr *, int>> &importantVars,
+            std::set<expr*> &notImportant,
+            std::map<expr *, std::set<expr *>> eq_combination) {
         std::map<expr *, int> retTmp;
         ast_manager & m = get_manager();
-        std::set<expr*> notImportant;
         context& ctx = get_context();
+        notImportant.clear();
+
         for (const auto& nn : importantVars) {
             if (retTmp.find(nn.first) == retTmp.end() && notImportant.find(nn.first) == notImportant.end()) {
                 if (is_importantVar_recheck(ctx.get_enode(nn.first)->get_root()->get_owner(), eq_combination)) {
@@ -10788,6 +10793,7 @@ namespace smt {
                     collect_eq_nodes(nn.first, eqList);
                     for (int i = 0; i < eqList.size(); ++i) {
                         notImportant.insert(eqList[i].get());
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
                     }
                 }
             }
@@ -10799,12 +10805,16 @@ namespace smt {
         for (const auto& v : retTmp)
             if (notImportant.find(v.first) == notImportant.end()) {
                 if (v.second == -1) {
-                    if (occurrences.find(v.first) == occurrences.end() || occurrences[v.first] < 2) {
+                    expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(rootTmp, m) << " eq_combination size: " << eq_combination[rootTmp].size()
+                                       << std::endl;);
+                    if ((occurrences.find(v.first) == occurrences.end() || occurrences[v.first] < 2) && eq_combination[rootTmp].size() <= 20) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
                         collect_eq_nodes(v.first, eqList);
                         for (int i = 0; i < eqList.size(); ++i) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
                             notImportant.insert(eqList[i].get());
                         }
                     } else
@@ -11307,9 +11317,9 @@ namespace smt {
         for (const auto& c : combinations){
             bool important = isImportant(c.first, importantVars);
             if (!important) {
-                if (c.second.size() > 10) {
+                if (c.second.size() > 20) {
                     importantVars.insert(std::make_pair(c.first, -1));
-                    ret[c.first] = refine_eq_set(c.second, importantVars);
+                    ret[c.first] = c.second;
                 }
                 else if (subNodes.find(c.first) == subNodes.end()) {
                     if (u.str.is_concat(c.first)) {
@@ -11339,15 +11349,113 @@ namespace smt {
                         }
                     }
                     else
-                        ret[c.first] = refine_eq_set(c.second, importantVars);
+                        ret[c.first] = c.second;
 
                 }
                 else
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << std::endl;);
             }
             else {
-                ret[c.first] = refine_eq_set(c.second, importantVars);
+                ret[c.first] = c.second;
             }
+        }
+        return ret;
+    }
+
+    std::map<expr*, std::set<expr*>> theory_str::refine_eq_combination(
+            std::set<std::pair<expr*, int>> &importantVars,
+            std::map<expr*, std::set<expr*>> &combinations,
+            std::set<expr*> subNodes,
+            std::set<expr*> notImportantVars
+    ){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+        ast_manager &m = get_manager();
+
+        for (const auto& n : notImportantVars) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": notImportantVars  " << mk_pp(n, m) << std::endl;);
+        }
+        std::map<expr*, std::set<expr*>> ret;
+        for (const auto& c : combinations){
+            bool important = isImportant(c.first, importantVars);
+            if (!important) {
+                if (c.second.size() > 20) {
+                    importantVars.insert(std::make_pair(c.first, -1));
+                    ret[c.first] = refine_eq_set(c.second, notImportantVars);
+                }
+                else if (subNodes.find(c.first) == subNodes.end()) {
+                    if (u.str.is_concat(c.first)) {
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
+                        // check if it is an important concat
+                        bool importantConcat = false;
+                        ptr_vector<expr> childrenVector;
+                        get_all_nodes_in_concat(c.first, childrenVector);
+                        for (const auto& v : importantVars)
+                            if (childrenVector.contains(v.first)) {
+                                importantConcat = true;
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.first, get_manager()) << std::endl;);
+                                break;
+                            }
+
+                        if (importantConcat)
+                            ret[c.first] = c.second;
+                        else {
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
+                            // remove c.first from the list
+                            std::set<expr*> tmp;
+                            for (const auto& cc : c.second)
+                                if (cc != c.first){
+                                    tmp.insert(cc);
+                                }
+                            ret[c.first] = tmp;
+                        }
+                    }
+                    else
+                        ret[c.first] = refine_eq_set(c.second, notImportantVars);
+
+                }
+                else
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << std::endl;);
+            }
+            else {
+                ret[c.first] = refine_eq_set(c.second, notImportantVars);
+            }
+        }
+        return ret;
+    }
+
+    std::set<expr*> theory_str::refine_eq_set(
+            std::set<expr*> s,
+            std::set<expr*> notImportantVars){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+        ast_manager &m = get_manager();
+        std::set<expr*> ret;
+        for (std::set<expr*>::iterator it = s.begin(); it != s.end(); ++it) {
+            if (u.str.is_concat(*it)) {
+                ptr_vector<expr> childrenVector;
+                get_all_nodes_in_concat(*it, childrenVector);
+
+                bool notAdd = false;
+                // check if it contains a nonimportantVar
+                for (const auto&  notimp : notImportantVars)
+                    if (childrenVector.contains(notimp)) {
+                        expr_ref_vector eqs(m);
+                        collect_eq_nodes(notimp, eqs);
+                        for (const auto& eq_imp : eqs){
+                            if (u.str.is_concat(eq_imp)) {
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
+                                notAdd = true;
+                                break;
+                            }
+                        }
+                        if (notAdd)
+                            break;
+                    }
+
+                if (!notAdd)
+                    ret.insert(*it);
+            }
+            else
+                ret.insert(*it);
         }
         return ret;
     }
@@ -11527,7 +11635,7 @@ namespace smt {
                 causes[object].insert(createEqualOperator(arg0, to_app(*it)->get_arg(0)));
                 causes[object].insert(createEqualOperator(arg1, to_app(*it)->get_arg(1)));
                 // to prevent the exponential growth
-                if (eqLhs.size() > 10){
+                if (eqLhs.size() > 20){
                     eqLhs.clear();
                     eqLhs.insert(findEquivalentVariable(arg0));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
@@ -11538,7 +11646,7 @@ namespace smt {
                         causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
 
-                if (eqRhs.size() > 10){
+                if (eqRhs.size() > 20){
                     eqRhs.clear();
                     eqRhs.insert(findEquivalentVariable(arg1));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
