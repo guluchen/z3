@@ -1198,6 +1198,8 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool all_length_solved();
+            std::set<char> collect_char_domain();
             bool specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination);
             bool specialHandlingForCharAtFamily(
                 std::map<expr *, std::set<expr *>> eq_combination,
@@ -1359,6 +1361,8 @@ namespace smt {
                     */
                     void removeExtraParentheses(zstring &s);
 
+                std::set<zstring> collect_strs_in_membership(expr* v);
+                void collect_strs_in_membership(expr* v, std::set<zstring> &ret);
                 zstring underApproxRegex(zstring str);
                 zstring getStdRegexStr(expr* regex);
             /*
@@ -1830,7 +1834,8 @@ namespace smt {
                     std::set<expr*> &notImportant,
                     std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
-                std::vector<zstring> collectAllInequalities(expr* nn);
+                std::vector<zstring> collect_all_inequalities(expr* nn);
+                    bool is_trivial_inequality(zstring s);
                 bool collectNotContains(expr* nn);
                 bool collectAllNotCharAt(expr* nn, int &maxCharAt);
                     bool isContainEquality(expr* e, expr* &key);
@@ -2021,7 +2026,7 @@ namespace smt {
         /*
          * Collect important vars in AST node
          */
-        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList);
+        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList, bool consider_itself = false);
         eautomaton* get_automaton(expr* re);
 
         void track_variable_scope(expr * var);
@@ -2127,7 +2132,7 @@ namespace smt {
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
         std::set<zstring> constSet;
-
+        std::set<char> sigmaDomain;
         std::map<expr*, std::vector<expr*>> lenMap;
         std::map<expr*, std::vector<expr*>> iterMap;
         std::map<expr*, std::set<expr*>> appearanceMap;

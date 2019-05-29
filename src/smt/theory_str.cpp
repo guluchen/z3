@@ -3447,9 +3447,7 @@ namespace smt {
                 }
             }
         }
-        STRACE("str", tout << __FUNCTION__ << " going to pop " << std::endl;);
         mful_scope_levels.pop_scope(num_scopes);
-        STRACE("str", tout << __FUNCTION__ << " after pop " << std::endl;);
         m_we_expr_memo.pop_scope(num_scopes);
         m_wi_expr_memo.pop_scope(num_scopes);
         membership_memo.pop_scope(num_scopes);
@@ -3467,7 +3465,6 @@ namespace smt {
         }
         m_basicstr_axiom_todo.reset();
         m_basicstr_axiom_todo = new_m_basicstr;
-        STRACE("str", tout << "pop m_basicstr_axiom_todo" << num_scopes << " to " << m_scope_level << std::endl;);
 
         m_trail_stack.pop_scope(num_scopes);
         STRACE("str", tout << "pop m_trail_stack " << num_scopes << " to " << m_scope_level << std::endl;);
@@ -3492,6 +3489,8 @@ namespace smt {
 
         (void) ctx;
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": at level " << ctx.get_scope_level() << " vs " << uState.z3_level << std::endl;);
+        expr_ref_vector guessedLiterals(m);
+        fetch_guessed_literals_with_scopes(guessedLiterals);
 
         for (int i = 0; i < mful_scope_levels.size(); ++i) {
             expr_ref lastAssign = mful_scope_levels[i];
@@ -3502,10 +3501,17 @@ namespace smt {
 
         if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
             return FC_DONE;
+//            if (all_length_solved()) {
+//                STRACE("str", tout << __LINE__ << " done because of all_length_solved " << std::endl;);
+//                return FC_DONE;
+//            }
+//            else {
+//                STRACE("str", tout << __LINE__ << " not done because of all_length_solved " << std::endl;);
+//                return FC_CONTINUE;
+//            }
         }
 
-        expr_ref_vector guessedLiterals(m);
-        fetch_guessed_literals_with_scopes(guessedLiterals);
+
 
         if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
             underapproximation_repeat(createAndOperator(guessedLiterals));
@@ -3536,8 +3542,6 @@ namespace smt {
             else if (get_len_value(n, vLen)) {
                 STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
             }
-
-
         }
 
         for (const auto& we: non_membership_memo) {
@@ -3547,6 +3551,10 @@ namespace smt {
         for (const auto& we: membership_memo) {
             STRACE("str", tout << "Membership: " << we.first << " = " << we.second << std::endl;);
         }
+
+        sigmaDomain = collect_char_domain();
+        for (const auto& ch : sigmaDomain)
+            STRACE("str", tout << __LINE__ <<  " sigmaDomain: " << ch << std::endl;);
 
         std::set<expr*> eqc_roots = get_eqc_roots();
         std::set<std::pair<expr *, int>> importantVars = collect_important_vars(eqc_roots);
@@ -3608,6 +3616,71 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
+    }
+
+    bool theory_str::all_length_solved(){
+        ast_manager &m = get_manager();
+        bool notSolved = false;
+        for (const auto& n : variable_set){
+            rational vLen;
+            if (get_len_value(n, vLen)) {
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
+            }
+            else {
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = not solved" << std::endl;);
+                notSolved = true;
+            }
+        }
+        return !notSolved;
+    }
+
+    std::set<char> theory_str::collect_char_domain(){
+        std::set<char> charDomain;
+        for (const auto& we : m_we_expr_memo) {
+            zstring value;
+            // lhs
+            if (u.str.is_concat(we.first.get())) {
+                ptr_vector<expr> childNodes;
+                get_nodes_in_concat(we.first.get(), childNodes);
+                for (const auto& n : childNodes){
+                    if (u.str.is_string(n, value)) {
+                        for (int i = 0; i < value.length(); ++i)
+                            charDomain.insert(value[i]);
+                    }
+                }
+
+            }
+            else if (u.str.is_string(we.first.get(), value)) {
+                for (int i = 0; i < value.length(); ++i)
+                    charDomain.insert(value[i]);
+            }
+
+            // rhs
+            if (u.str.is_concat(we.second.get())) {
+                ptr_vector<expr> childNodes;
+                get_nodes_in_concat(we.second.get(), childNodes);
+                for (const auto& n : childNodes){
+                    if (u.str.is_string(n, value)) {
+                        for (int i = 0; i < value.length(); ++i)
+                            charDomain.insert(value[i]);
+                    }
+                }
+
+            }
+            else if (u.str.is_string(we.second.get(), value)) {
+                for (int i = 0; i < value.length(); ++i)
+                    charDomain.insert(value[i]);
+            }
+        }
+
+        for (const auto& mem : membership_memo){
+            std::set<zstring> tmp = collect_strs_in_membership(mem.second);
+            for (const auto& s : tmp)
+                for (int i = 0; i < s.length(); ++i)
+                    charDomain.insert(s[i]);
+        }
+
+        return charDomain;
     }
 
     bool theory_str::specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination) {
@@ -5209,8 +5282,8 @@ namespace smt {
                 causexpr = (causes.begin()->second);
             }
             for (const auto& a : uState.assertingConstraints)
-                if (m.is_or(a))
-                    assert_axiom(createImpliesOperator(causexpr, a));
+                if (m.is_and(a))
+                    assert_axiom(createEqualOperator(causexpr, a));
                 else
                     assert_axiom(a);
             return true;
@@ -5247,11 +5320,11 @@ namespace smt {
         context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << ")" << connectingSize << std::endl;);
         initUnderapprox_repeat();
-        for (const auto& e : uState.assertingConstraints){
-            for (const auto& a : uState.assertingConstraints)
+        for (const auto& a : uState.assertingConstraints){
+            if (m.is_and(a))
                 assert_axiom(createImpliesOperator(causexpr, a));
-
-            assert_axiom(e);
+            else
+                assert_axiom(a);
         }
         return true;
     }
@@ -5355,7 +5428,8 @@ namespace smt {
             }
             STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
-            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
+            expr_ref axiom(createEqualOperator(mk_not(notcause), createOrOperator(cases)), m);
+//            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
             assert_axiom(axiom);
             uState.addAssertingConstraints(axiom);
         }
@@ -5931,7 +6005,7 @@ namespace smt {
                             axiomAdded = true;
                         }
                         if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
+                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
                             assert_axiom(tmp.get());
                         }
                         else {
@@ -5975,7 +6049,7 @@ namespace smt {
                                                      importantVars);
 
                         if (result != nullptr) {
-                            expr_ref tmp (result, m);
+                            expr_ref tmp(result, m);
                             ors.push_back(tmp);
                         }
                     }
@@ -6010,7 +6084,7 @@ namespace smt {
                             axiomAdded = true;
                         }
                         if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
+                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
                             assert_axiom(tmp.get());
                         }
                         else {
@@ -6069,7 +6143,7 @@ namespace smt {
                                 axiomAdded = true;
                                 /* sync result*/
                                 if (causes.find(it->first) != causes.end()) {
-                                    expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
+                                    expr_ref tmp(createEqualOperator(causes[it->first], result), m);
                                     assert_axiom(tmp.get());
                                 }
                                 else {
@@ -6542,6 +6616,35 @@ namespace smt {
         else
             SASSERT(false);
         return true;
+    }
+
+    std::set<zstring> theory_str::collect_strs_in_membership(expr* v){
+        std::set<zstring> ret;
+        collect_strs_in_membership(v, ret);
+        return ret;
+    }
+
+    void theory_str::collect_strs_in_membership(expr* v, std::set<zstring> &ret) {
+        if (u.re.is_to_re(v)){
+            expr* arg0 = to_app(v)->get_arg(0);
+            zstring tmpStr;
+            u.str.is_string(arg0, tmpStr);
+            ret.insert(tmpStr);
+        }
+        else if (u.re.is_union(v)){
+            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
+            collect_strs_in_membership(to_app(v)->get_arg(1), ret);
+        }
+        else if (u.re.is_star(v) || u.re.is_plus(v)) {
+            expr* arg0 = to_app(v)->get_arg(0);
+            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
+        }
+        else if (u.re.is_concat(v)){
+            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
+            collect_strs_in_membership(to_app(v)->get_arg(1), ret);
+        }
+        else
+            SASSERT(false);
     }
 
 
@@ -10831,7 +10934,7 @@ namespace smt {
                 importantVars.insert(std::make_pair(v.first, v.second));
 
         for (const auto& v : eq_combination)
-            if (v.second.size() > 6) {
+            if (v.second.size() >= 6) {
                 expr_ref_vector eqList(m);
                 collect_eq_nodes(v.first, eqList);
                 for (int i = 0; i < eqList.size(); ++i)
@@ -10869,7 +10972,7 @@ namespace smt {
         if (collectNotContains(nn))
             return true;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
-        std::vector<zstring> maxDiffStrs = collectAllInequalities(nn);
+        std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             len = maxDiffStrs[0].length();
         int maxCharAt = 0;
@@ -10995,7 +11098,7 @@ namespace smt {
         return false;
     }
 
-    std::vector<zstring> theory_str::collectAllInequalities(expr* nn){
+    std::vector<zstring> theory_str::collect_all_inequalities(expr* nn){
         ast_manager &m = get_manager();
         context& ctx = get_context();
         int diffLen = 0;
@@ -11006,40 +11109,50 @@ namespace smt {
         for (const auto& we : m_wi_expr_memo){
             if (eqNodeSet.contains(we.first.get())){
                 zstring value;
-                if (u.str.is_string(we.second.get(), value)) {
-                    if (diffLen < (int)value.length()) {
-                        diffLen = (int) value.length();
-                        maxDiffStrs.clear();
-                        maxDiffStrs.push_back(value);
-                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
-                                           << std::endl;);
+                if (u.str.is_string(we.second.get(), value))
+                    if (!is_trivial_inequality(value)){
+                        if (diffLen < (int)value.length()) {
+                            diffLen = (int) value.length();
+                            maxDiffStrs.clear();
+                            maxDiffStrs.push_back(value);
+                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                               << std::endl;);
+                        }
+                        else if (diffLen == (int)value.length()) {
+                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                               << std::endl;);
+                            maxDiffStrs.push_back(value);
+                        }
                     }
-                    else if (diffLen == (int)value.length()) {
-                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
-                                           << std::endl;);
-                        maxDiffStrs.push_back(value);
-                    }
-                }
             }
             else if (eqNodeSet.contains(we.second.get())){
                 zstring value;
-                if (u.str.is_string(we.first.get(), value)) {
-                    if (diffLen < (int)value.length()) {
-                        diffLen = (int) value.length();
-                        maxDiffStrs.clear();
-                        maxDiffStrs.push_back(value);
-                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
-                                           << std::endl;);
+                if (u.str.is_string(we.first.get(), value))
+                    if (!is_trivial_inequality(value)){
+                        if (diffLen < (int)value.length()) {
+                            diffLen = (int) value.length();
+                            maxDiffStrs.clear();
+                            maxDiffStrs.push_back(value);
+                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                               << std::endl;);
+                        }
+                        else if (diffLen == (int)value.length()) {
+                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                               << std::endl;);
+                            maxDiffStrs.push_back(value);
+                        }
                     }
-                    else if (diffLen == (int)value.length()) {
-                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
-                                           << std::endl;);
-                        maxDiffStrs.push_back(value);
-                    }
-                }
             }
         }
         return maxDiffStrs;
+    }
+
+    bool theory_str::is_trivial_inequality(zstring s){
+        for (int i = 0; i < s.length(); ++i)
+            if (sigmaDomain.find(s[i]) == sigmaDomain.end())
+                return  true;
+
+        return false;
     }
 
     bool theory_str::collectNotContains(expr* nn){
@@ -11129,7 +11242,7 @@ namespace smt {
         ast_manager &m = get_manager();
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
-        std::vector<zstring> maxDiffStrs = collectAllInequalities(nn);
+        std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
 
@@ -13514,20 +13627,21 @@ namespace smt {
     /*
      * Collect important vars in AST node
      */
-    void theory_str::get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList) {
-        for (const auto& p : importantVars)
-            if (p.first == node) {
-                STRACE("str", tout << __LINE__ <<  " \t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);
-                astList.push_back(node);
-                break;
-            }
+    void theory_str::get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList, bool consider_itself) {
+        if (consider_itself)
+            for (const auto& p : importantVars)
+                if (p.first == node) {
+                    STRACE("str", tout << __LINE__ <<  " \t found in the important list " << mk_ismt2_pp(node, get_manager()) << std::endl;);
+                    astList.push_back(node);
+                    break;
+                }
 
         if (is_app(node)) {
             app * func_app = to_app(node);
             unsigned int argCount = func_app->get_num_args();
             for (unsigned int i = 0; i < argCount; i++) {
                 expr * argAst = func_app->get_arg(i);
-                get_important_asts_in_node(argAst, importantVars, astList);
+                get_important_asts_in_node(argAst, importantVars, astList, true);
             }
         }
     }
@@ -13795,7 +13909,8 @@ namespace smt {
             }
         }
         for (int i = 0; i < mful_scope_levels.size(); ++i)
-            guessedLiterals.push_back(mful_scope_levels[i].get());
+            if (!m.is_not(mful_scope_levels[i].get()))
+                guessedLiterals.push_back(mful_scope_levels[i].get());
     }
 
 
