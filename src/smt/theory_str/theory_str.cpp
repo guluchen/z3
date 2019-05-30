@@ -527,13 +527,7 @@ namespace smt {
             expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
             if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
             STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
-            lbool result =m_int_solver.check_sat(lenc_res);
-
-            bool result2 = lenc_check_sat(lenc_res);
-            return result==lbool::l_true;
-//            return lenc_check_sat(lenc_res);
-//            add_axiom(lenc_res);
-//            return true;
+            return m_int_solver.check_sat(lenc_res)==lbool::l_true;
         }
         else {  // if generated no length constraint, return true(sat)
             return true;
@@ -541,7 +535,7 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-        bool on_screen=true;
+        bool on_screen=false;
 
         using namespace str;
         if (m_word_eq_todo.empty()) {
@@ -555,16 +549,18 @@ namespace smt {
         IN_CHECK_FINAL = true;
 
 
-
         if (!m_aut_imp) m_aut_imp = std::make_shared<oaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
         STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
+        if(on_screen) std::cout << "root original:\n" << root <<std::endl;
         STRACE("strg", tout << "root original:\n" << root <<std::endl;);
         root.remove_single_variable_word_term();
         STRACE("strg", tout << "root removed single var:\n" << root <<std::endl;);
         root.merge_elements();
         STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
+
+
 
 
         if (root.unsolvable_by_inference() ) {
@@ -692,6 +688,9 @@ namespace smt {
 //            ctx.mark_as_relevant(n);
 //            STRACE("str", tout << "new theory_var #" << v << '\n';);
 //        }
+
+        expr_ref ret(a,m);
+        string_theory_propagation(ret);
 
         return expr_ref(a,m);
 
@@ -927,6 +926,8 @@ namespace smt {
             expr_ref emp(m_util_s.str.mk_empty(m.get_sort(t)), m);
 
             literal cnt = mk_literal(m_util_s.str.mk_contains(t, s));
+
+
             literal i_eq_m1 = mk_eq(i, minus_one, false);
             literal i_eq_0 = mk_eq(i, zero, false);
             literal s_eq_empty = mk_eq(s, emp, false);
@@ -1213,6 +1214,8 @@ namespace smt {
                 context& ctx = get_context();
                 std::cout << "dump all assignments:\n";
                 expr_ref_vector assignments{m};
+
+
                 ctx.get_assignments(assignments);
                 for (expr *const e : assignments) {
                    // ctx.mark_as_relevant(e);
@@ -1220,23 +1223,64 @@ namespace smt {
                 }
         );
     }
+
+    void int_expr_solver::assert_expr(expr * e){
+        //m_kernel.assert_expr(e);
+        erv.push_back(e);
+        lbool r = m_kernel.check(erv);
+        if(r==lbool::l_false){
+            std::cout<< "UNSAT core:\n";
+            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
+                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+            }
+        }
+    }
+
     void int_expr_solver::initialize(context& ctx) {
+        bool on_screen =false;
         if(!initialized){
             initialized=true;
             expr_ref_vector Assigns(m),Literals(m);
             ctx.get_guessed_literals(Literals);
             ctx.get_assignments(Assigns);
             for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
+                if(on_screen) std::cout<<"check_sat context from asserted:"<<mk_pp(ctx.get_asserted_formula(i),m)<<std::endl;
                 assert_expr(ctx.get_asserted_formula(i));
+
             }
             for (auto & e : Assigns){
-                assert_expr(e);
+                if(ctx.is_relevant(e)) {
+                    if(on_screen) std::cout << "check_sat context from assign:" << mk_pp(e, m) << std::endl;
+                    assert_expr(e);
+                }
+                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
             }
-            for (auto & e : Literals){
-                assert_expr(e);
-            }
+//            for (auto & e : Literals){
+//                if(ctx.is_relevant(e)) {
+//                    if (on_screen) std::cout << "check_sat context from guess:" << mk_pp(e, m) << std::endl;
+//                    assert_expr(e);
+//                }
+//                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
+//
+//            }
 
         }
     }
+    lbool int_expr_solver::check_sat(expr* e) {
+        bool on_screen =false;
+        erv.push_back(e);
+        m_kernel.push();
+        lbool r = m_kernel.check(erv);
 
+        if(on_screen && r==lbool::l_false){
+            std::cout<< "UNSAT core:\n";
+            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
+                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+            }
+        }
+
+        m_kernel.pop(1);
+        erv.pop_back();
+        return r;
+    }
 }

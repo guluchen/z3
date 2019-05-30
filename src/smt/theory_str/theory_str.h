@@ -118,26 +118,19 @@ namespace smt {
         kernel m_kernel;
         ast_manager& m;
         bool initialized;
+        expr_ref_vector erv;
     public:
         int_expr_solver(ast_manager& m, smt_params fp):
-                m_kernel(m, fp), m(m){
+                m_kernel(m, fp), m(m),erv(m){
             fp.m_string_solver = symbol("none");
             initialized=false;
        }
 
-        lbool check_sat(expr* e) override{
-            m_kernel.push();
-            m_kernel.assert_expr(e);
-            lbool r = m_kernel.check();
-            m_kernel.pop(1);
-            return r;
-        }
+        lbool check_sat(expr* e) override;
 
         void initialize(context& ctx);
 
-        void assert_expr(expr * e){
-            m_kernel.assert_expr(e);
-        }
+        void assert_expr(expr * e);
     };
 
 }

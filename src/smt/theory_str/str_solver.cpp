@@ -723,12 +723,13 @@ namespace smt {
         }
         length_constraints length_constraints::assign_prefix(const element& x, const element& a) const{
             //x -> a.x
+
             length_constraints ret(*this);
             SASSERT(m_len_cons.count(x)>0);
             ret.m_len_cons.at(x).add(constraint::constant(), -1);
             constraint ex = ret.m_len_cons.at(x);
 
-            ret.m_path_cond.insert(ex.set_type(constraint::t::GT));//set m_len_cons[x]>0
+            ret.m_path_cond.insert(ex.set_type(constraint::t::GT));//set m_len_cons[x] -1 >0
             return ret;
         };
         length_constraints length_constraints::assign_as(const element& x, const element& y) const{
@@ -1248,7 +1249,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
             bool on_screen=false;
             expr_ref to_check= m_length.get_path_cond(m);
-            if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
+//            if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
 
             lbool chk_res = m_int_solver.check_sat(to_check);
 
