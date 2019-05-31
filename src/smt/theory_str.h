@@ -1198,6 +1198,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool all_length_solved();
             std::set<char> collect_char_domain();
             bool specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1835,6 +1836,7 @@ namespace smt {
                     std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 std::vector<zstring> collect_all_inequalities(expr* nn);
+                expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(zstring s);
                 bool collectNotContains(expr* nn);
                 bool collectAllNotCharAt(expr* nn, int &maxCharAt);
@@ -2149,6 +2151,7 @@ namespace smt {
         void dump_assignments();
         void fetch_guessed_literals(expr_ref_vector &guessedLiterals);
         void fetch_guessed_literals_with_scopes(expr_ref_vector &guessedLiterals);
+        void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;
