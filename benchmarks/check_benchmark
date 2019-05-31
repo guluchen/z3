@@ -42,6 +42,7 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
     fp = open(log_file, 'a')
     fp_err = open(log_file + '.err', 'a')
 
+    # This condition is for Trau-Tester. Use Trau -cvc4 for PyEx-sat 
     if tool_name == 'trau':
         if "PyEx" in benchmark_files[0]:
             command[2] = 'cvc4'
@@ -49,11 +50,12 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
     for file in benchmark_files:
         shell_command = command + [file]
         time_start = time.time()
+        out_err = ""
+        result_except = False
         try:
             out = str(check_output(shell_command, stderr=STDOUT, timeout=time_out))
         except CalledProcessError as err:
-            out_err = str(err.output)
-            out = 'exception'
+            result_except = True
         except TimeoutExpired as err:
             out_err = str(err.output)
             out = 'timeout'
@@ -64,17 +66,24 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         out = out.splitlines()[-1]
         if 'unsat' in out or 'UNSAT' in out:
             res = 'unsat'
+            result_except = False
         elif 'sat' in out or 'SAT' in out:
+            result_except = False
             res = 'sat'
         elif out == 'timeout':
             res = 'timeout'
         elif out == 'exception':
             res = 'exception'
         elif 'unknown' in out:
+            result_except = False
             res = 'unknown'
         else:  # should not encounter this case
             res = '???'
             # print(f'unexpected output: {out}')
+
+        if result_except:
+            out_err = str(err.output)
+            out = 'exception'
 
         # detect error message
         if res == 'timeout' or res == 'exception':
@@ -85,15 +94,14 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         print(log_str)
         fp.write(f'{log_str}\n')
 
-        # record errors for debug
+        # Record every output to fp_err
         if res == 'error' or res == 'exception':
             print(f'ERROR_REPORT: {out_err}')
-            fp_err.write(f'{log_str}\n{out_err}\n\n')
-
         if res == '???':  # should not encounter this case
             print(f'UNEXPECTED_OUTPUT: {out}')
-            fp_err.write(f'{log_str}\n{out}\n\n')
-        
+        fp_err.write(f'{log_str}\nstdout: {out}\nstderr: {out_err}\n\n')
+
+        # Store -tr:strg to trace/
         if "trauc" in command[0]:
             filename = file.replace("/", ".")
             os.system("mv .z3-trace " + "trace/" + filename)

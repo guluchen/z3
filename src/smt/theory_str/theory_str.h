@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <smt/params/smt_params.h>
 #include "ast/arith_decl_plugin.h"
 #include "ast/seq_decl_plugin.h"
 #include "smt/params/theory_str_params.h"
@@ -28,7 +29,6 @@ namespace smt {
 
     class theory_str : public theory {
         int m_scope_level = 0;
-        static bool is_main_branch;
         static bool is_over_approximation;
         const theory_str_params& m_params;
         th_rewriter m_rewrite;
@@ -108,10 +108,29 @@ namespace smt {
         void propagate_basic_string_axioms(enode * str);
         bool lenc_check_sat(expr *e);
         void tightest_prefix(expr*,expr*);
-        bool check_counter_system_lenc(str::solver& solver);
+        bool check_counter_system_lenc(str::solver& solver, int_expr_solver& m_int_solver);
         void print_ast(expr *e);
         void print_ctx(context& ctx);
         bool mini_check_sat(expr *e);
+    };
+
+    class int_expr_solver:expr_solver{
+        kernel m_kernel;
+        ast_manager& m;
+        bool initialized;
+        expr_ref_vector erv;
+    public:
+        int_expr_solver(ast_manager& m, smt_params fp):
+                m_kernel(m, fp), m(m),erv(m){
+            fp.m_string_solver = symbol("none");
+            initialized=false;
+       }
+
+        lbool check_sat(expr* e) override;
+
+        void initialize(context& ctx);
+
+        void assert_expr(expr * e);
     };
 
 }

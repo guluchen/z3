@@ -493,6 +493,20 @@ namespace smt {
             return mk_from_re_expr(str_re, false);
         }
 
+
+        automaton::sptr oaut_adaptor::mk_empty() {
+            expr_ref a{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"a"})), m};
+            expr_ref b{m_util_s.re.mk_to_re(m_util_s.str.mk_string(symbol{"b"})), m};
+            expr_ref empty{m_util_s.re.mk_inter(a, b), m};
+            return mk_from_re_expr(empty, true);
+        }
+
+        automaton::sptr oaut_adaptor::mk_from_word(const zstring& str) {
+            expr_ref str_re{m_util_s.re.mk_to_re(m_util_s.str.mk_string(str)), m};
+            return mk_from_re_expr(str_re, false);
+        }
+
+
         automaton::sptr zaut_adaptor::mk_from_re_expr(expr *const re, bool minimize_result) {
             std::stringstream ss;
             ss << mk_pp(re, m_ast_man);
@@ -712,7 +726,7 @@ namespace smt {
 
         std::ostream& oaut::display_timbuk(std::ostream& os) {
             os<<"Ops  start:0 ";
-            for(int i=0;i<=automaton::maximal_char;i++){
+            for(unsigned int i=0;i<=automaton::maximal_char;i++){
                 os<<"a"<<i<<":1 ";
 
             }

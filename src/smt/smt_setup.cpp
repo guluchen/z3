@@ -718,17 +718,26 @@ namespace smt {
     }
 
     void setup::setup_QF_S() {
-        if (m_params.m_string_solver == "z3str3") {
+        if (m_params.m_string_solver == "trauc") {
+            setup_str();
+        }
+        else if (m_params.m_string_solver == "z3str3") {
             setup_str();
         }
         else if (m_params.m_string_solver == "seq") {
-            setup_unknown();
+            setup_str();
         }
         else if (m_params.m_string_solver == "auto") {
-            setup_unknown();
+            setup_str();
+        }
+        else if (m_params.m_string_solver == "empty") {
+            m_context.register_plugin(alloc(smt::theory_seq_empty, m_manager));
+        }
+        else if (m_params.m_string_solver == "none") {
+            // don't register any solver.
         }
         else {
-            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'seq', 'auto'");
+            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'seq', 'auto', 'empty', 'none'");
         }
     }
 
@@ -879,15 +888,24 @@ namespace smt {
 
     void setup::setup_seq_str(static_features const & st) {
         // check params for what to do here when it's ambiguous
-        if (m_params.m_string_solver == "z3str3") {
+        if (m_params.m_string_solver == "trauc") {
             setup_str();
-        } 
+        }
+        else if (m_params.m_string_solver == "z3str3") {
+            setup_str();
+        }
         else if (m_params.m_string_solver == "seq") {
             setup_seq();
-        } 
+        }
+        else if (m_params.m_string_solver == "empty") {
+            m_context.register_plugin(alloc(smt::theory_seq_empty, m_manager));
+        }
+        else if (m_params.m_string_solver == "none") {
+            // don't register any solver.
+        }
         else if (m_params.m_string_solver == "auto") {
             if (st.m_has_seq_non_str) {
-                setup_seq();
+                setup_str();
             } 
             else {
                 setup_str();
@@ -913,7 +931,8 @@ namespace smt {
     }
 
     void setup::setup_seq() {
-        m_context.register_plugin(alloc(smt::theory_seq, m_manager, m_params));
+        setup_arith();
+        m_context.register_plugin(alloc(theory_str, m_manager, m_params));
     }
 
     void setup::setup_unknown() {

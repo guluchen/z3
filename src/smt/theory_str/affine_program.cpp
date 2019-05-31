@@ -53,6 +53,7 @@ namespace smt {
         }
 
         counter_system::counter_system(const smt::str::solver &solv) {
+            SASSERT(!solv.get_success_leaves().empty());
             bool on_screen =false;
             cs_state counter = 1;
             std::unordered_map<state::cref, cs_state, state::hash, std::equal_to<state>> mapped_states;
@@ -219,7 +220,10 @@ namespace smt {
         }
 
         void counter_system::print_counter_system() const {
+            bool on_screen=true;
             std::string sep_str;
+            if(on_screen) std::cout<<" digraph counter_system {\n";
+
             STRACE("str", tout << "counter system pretty print..." << std::endl;);
             STRACE("str", tout << "init={";);
             sep_str = "";
@@ -242,10 +246,38 @@ namespace smt {
                 for (auto const &tran: r.second) {
                     STRACE("str", tout << tab;);
                     print_transition(r.first, tran.first, tran.second);
+                    if(on_screen) std::cout<<r.first<<" -> "<<tran.second<<"\t";
+
+                    switch (tran.first.type) {
+                        case counter_system::assign_type::CONST:
+                            sep_str = "";
+                            for (const auto v : tran.first.vars) {
+                                if(on_screen) std::cout << "[ label = \""<<sep_str << var_expr.find(v)->second.second << ":=" << tran.first.num<<"\"];\n";
+                            }
+                            break;
+                        case counter_system::assign_type::VAR:
+                            if(on_screen) std::cout << "[ label = \""<<var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                             var_expr.find(*(std::next(tran.first.vars.begin())))->second.second<<"\"];\n";
+                            break;
+                        case counter_system::assign_type::PLUS_ONE:
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                      var_expr.find(*(tran.first.vars.begin()))->second.second << "+1\"];\n";
+                            break;
+                        case counter_system::assign_type::PLUS_VAR:
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(tran.first.vars.begin()))->second.second << ":=" <<
+                                      var_expr.find(*(tran.first.vars.begin()))->second.second << "+" <<
+                                      var_expr.find(*(std::next(tran.first.vars.begin())))->second.second << "\"];\n";
+                            break;
+                        default:
+                            break;
+                    }
+
                     STRACE("str", tout << std::endl;);
                 }
             }
             STRACE("str", tout << "}" << std::endl;);
+            if(on_screen) std::cout<<"}"<<std::endl;
+
         }
 
         bool counter_system::is_dag() {  // standard dag cycle detection algorithm
@@ -375,7 +407,7 @@ namespace smt {
             ap_environment_name_of_dim_free(name_of_dim);
         }
 
-        void ap_length_constraint::len_cons::pretty_print(ast_manager &ast_man) {
+        void ap_length_constraint::len_cons::pretty_print(ast_manager &ast_man, bool on_screen) {
             std::stringstream tmp_str;
             for (const auto& ve : m_var_expr_coeff) {
                 if (ve.second.first.size() > 1) {  // concat of variables
@@ -384,29 +416,37 @@ namespace smt {
                         tmp_str << " " << mk_pp(e, ast_man);
                     }
                     STRACE("str", tout << "(" << ve.second.second << ")*" << tmp_str.str() << " + ";);
+                    if (on_screen) std::cout << "(" << ve.second.second << ")*" << tmp_str.str() << " + ";
                 }
                 else {
                     STRACE("str", tout << "(" << ve.second.second << ")*" << mk_pp(ve.second.first.front(), ast_man) << " + ";);
+                    if (on_screen) std::cout << "(" << ve.second.second << ")*" << mk_pp(ve.second.first.front(), ast_man) << " + ";
                 }
             }
             STRACE("str", tout << m_cst;);
+            if (on_screen) std::cout << m_cst;
             switch (m_type) {
                 case lcons_type::EQ:
                     STRACE("str", tout << " = 0";);
+                    if (on_screen) std::cout << " = 0";
                     break;
                 case lcons_type::SUPEQ:
                     STRACE("str", tout << " >=0";);
+                    if (on_screen) std::cout << " >=0";
                     break;
                 default:
                     SASSERT(false);
             }
             STRACE("str", tout << std::endl;);
+            if (on_screen) std::cout << std::endl;
         }
 
         void ap_length_constraint::pretty_print(ast_manager &ast_man) {
+            bool on_screen = true;
             STRACE("str", tout << "total linear constraints: " << m_cons.size() << '\n';);
+            if (on_screen) std::cout << "total linear constraints: " << m_cons.size() << '\n';
             for (auto& e : m_cons) {
-                e.pretty_print(ast_man);
+                e.pretty_print(ast_man, on_screen);
             }
         }
 
@@ -414,23 +454,27 @@ namespace smt {
             arith_util ap_util_a(m);
             seq_util ap_util_s(m);
 
-            expr_ref ret = {ap_util_a.mk_int(m_cst),m};
+            expr_ref ret = {ap_util_a.mk_int(m_cst),m};  // const-coeff
             expr_ref var_len_exp(m);
 
+            bool on_screen = true;
             for (const auto& ve : m_var_expr_coeff) {
                 int i = 1;
-                if (ve.second.first.size() > 1) {  // addition of variable lengths if more than one expression
-                    for (auto& e : ve.second.first) {
-                        if (i==1) {
-                            var_len_exp = {ap_util_s.str.mk_length(e),m};
-                        }
-                        else {
-                            var_len_exp = {ap_util_a.mk_add(var_len_exp, ap_util_s.str.mk_length(e)),m};
-                        }
-                        i++;
+                std::cout << "var_name: [ " << ve.first << " ]" << std::endl;
+                for (auto& e : ve.second.first) {
+                    if (i==1) {
+                        var_len_exp = {ap_util_s.str.mk_length(e),m};
                     }
+                    else {  // addition of variable lengths if more than one expression
+                        var_len_exp = {ap_util_a.mk_add(var_len_exp, ap_util_s.str.mk_length(e)),m};
+                    }
+                    i++;
                 }
+                if (ve.second.second != 1)
+                    var_len_exp = {ap_util_a.mk_mul(ap_util_a.mk_int(ve.second.second),var_len_exp),m};  // multiply coeff
+                ret = {ap_util_a.mk_add(ret,var_len_exp),m};  // add to previously generated terms
             }
+            if (on_screen) std::cout << mk_pp(ret,m) << std::endl;
             switch (m_type) {
                 case lcons_type::EQ:
                     ret = {ap_util_a.mk_eq(ret,ap_util_a.mk_int(0)),m};
@@ -441,6 +485,7 @@ namespace smt {
                 default:
                     SASSERT(false);
             }
+            if (on_screen) std::cout << mk_pp(ret,m) << std::endl;
             return ret;
         }
 

@@ -14,7 +14,6 @@
 
 
 namespace smt {
-    bool theory_str::is_main_branch=true;
     bool theory_str::is_over_approximation=false;
 
     namespace {
@@ -360,14 +359,12 @@ namespace smt {
                 handle_prefix(e);
             } else {
                 handle_not_prefix(e);
-//                is_over_approximation=true;
             }
         } else if (m_util_s.str.is_suffix(e, e1, e2)) {
             if (is_true) {
                 handle_suffix(e);
             } else {
                 handle_not_suffix(e);
- //               is_over_approximation=true;
             }
         } else if (m_util_s.str.is_contains(e, e1, e2)) {
             if (is_true) {
@@ -506,9 +503,9 @@ namespace smt {
         return chk_res;
     }
 
-    bool theory_str::check_counter_system_lenc(smt::str::solver &solver) {
+    bool theory_str::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver& m_int_solver) {
         using namespace str;
-        bool on_screen=false;
+        bool on_screen=true;
 
         counter_system cs = counter_system(solver);
         cs.print_counter_system();  // STRACE output
@@ -530,9 +527,7 @@ namespace smt {
             expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
             if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
             STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
-            return lenc_check_sat(lenc_res);
-//            add_axiom(lenc_res);
-//            return true;
+            return m_int_solver.check_sat(lenc_res)==lbool::l_true;
         }
         else {  // if generated no length constraint, return true(sat)
             return true;
@@ -540,14 +535,8 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-        bool on_screen=true;
-        if(is_main_branch){
-            main_branch=true;
-            is_main_branch=false;
-        }
+        bool on_screen=false;
 
-
-        if(!main_branch) return FC_DONE;
         using namespace str;
         if (m_word_eq_todo.empty()) {
             if (is_over_approximation)
@@ -559,10 +548,12 @@ namespace smt {
         TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
         IN_CHECK_FINAL = true;
 
-        if (!m_aut_imp) m_aut_imp = std::make_shared<zaut_adaptor>(get_manager(), get_context());
+
+        if (!m_aut_imp) m_aut_imp = std::make_shared<oaut_adaptor>(get_manager(), get_context());
         state&& root = mk_state_from_todo();
         STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
 
+        if(on_screen) std::cout << "root original:\n" << root <<std::endl;
         STRACE("strg", tout << "root original:\n" << root <<std::endl;);
         root.remove_single_variable_word_term();
         STRACE("strg", tout << "root removed single var:\n" << root <<std::endl;);
@@ -570,24 +561,32 @@ namespace smt {
         STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
+
+
+        if (root.unsolvable_by_inference() ) {
+            STRACE("str", tout << "proved unsolvable by inference\n";);
+            block_curr_assignment();
+            IN_CHECK_FINAL = false;
+            return FC_CONTINUE;
+        }
+
         if(root.word_eqs().size()==0){
             if (!is_over_approximation)
                 return FC_GIVEUP;
             else
                 return FC_DONE;
         }
-        if (root.unsolvable_by_inference() ) {
-        STRACE("str", tout << "proved unsolvable by inference\n";);
-            block_curr_assignment();
-            IN_CHECK_FINAL = false;
-            return FC_CONTINUE;
-        }
+
+        int_expr_solver m_int_solver(get_manager(),get_context().get_fparams());
+        m_int_solver.initialize(get_context());
+
+
         solver solver{std::move(root), m_aut_imp};
         while(solver.unfinished()){
-            solver.resume(get_manager(),get_context(),*this);
+            solver.resume(get_manager(),get_context(),*this, m_int_solver);
             std::list<smt::str::state> to_check=solver.get_last_leaf_states();
             for(auto& s:to_check){
-               bool reachable =  s.is_reachable(get_manager(),get_context(),*this);
+               bool reachable =  s.is_reachable(get_manager(), m_int_solver);
                if(reachable){
                    STRACE("str", tout << "Leaf node reachable: \n"<<s<<std::endl;);
                    if (!is_over_approximation)
@@ -606,7 +605,7 @@ namespace smt {
             if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
             if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = check_counter_system_lenc(solver);
+            bool cs_lenc_check_res = check_counter_system_lenc(solver, m_int_solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
@@ -690,6 +689,9 @@ namespace smt {
 //            STRACE("str", tout << "new theory_var #" << v << '\n';);
 //        }
 
+        expr_ref ret(a,m);
+        string_theory_propagation(ret);
+
         return expr_ref(a,m);
 
     }
@@ -770,9 +772,10 @@ namespace smt {
     }
 
     void theory_str::add_axiom(expr *const e) {
-        STRACE("strg", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        bool on_screen =false;
+        STRACE("str_axiom", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
-        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
 
         if(!axiomatized_terms.contains(e)||false) {
@@ -793,6 +796,8 @@ namespace smt {
     }
 
     void theory_str::add_clause(std::initializer_list<literal> ls) {
+        bool on_screen =false;
+
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
         context& ctx = get_context();
         literal_vector lv;
@@ -803,10 +808,10 @@ namespace smt {
             }
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
-        if(is_main_branch) STRACE("strg", std::cout << __LINE__ << " " << __FUNCTION__; );
-        if(is_main_branch) STRACE("strg", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
-        STRACE("str", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
-        STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
+        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__; );
+        if(on_screen) STRACE("str_axiom", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
+        STRACE("str_axiom", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
+        STRACE("str_axiom", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
 
     /*
@@ -921,6 +926,8 @@ namespace smt {
             expr_ref emp(m_util_s.str.mk_empty(m.get_sort(t)), m);
 
             literal cnt = mk_literal(m_util_s.str.mk_contains(t, s));
+
+
             literal i_eq_m1 = mk_eq(i, minus_one, false);
             literal i_eq_0 = mk_eq(i, zero, false);
             literal s_eq_empty = mk_eq(s, emp, false);
@@ -1184,7 +1191,6 @@ namespace smt {
         expr *refinement = nullptr;
         STRACE("str", tout << "[Refinement]\nformulas:\n";);
         for (const auto& we : m_word_eq_todo) {
-//            expr *const e = m.mk_not(mk_eq_atom(we.first, we.second));
             expr *const e = m.mk_not(m.mk_eq(we.first, we.second));
             refinement = refinement == nullptr ? e : m.mk_or(refinement, e);
             STRACE("str", tout << we.first << " = " << we.second << '\n';);
@@ -1208,6 +1214,8 @@ namespace smt {
                 context& ctx = get_context();
                 std::cout << "dump all assignments:\n";
                 expr_ref_vector assignments{m};
+
+
                 ctx.get_assignments(assignments);
                 for (expr *const e : assignments) {
                    // ctx.mark_as_relevant(e);
@@ -1216,4 +1224,63 @@ namespace smt {
         );
     }
 
+    void int_expr_solver::assert_expr(expr * e){
+        //m_kernel.assert_expr(e);
+        erv.push_back(e);
+        lbool r = m_kernel.check(erv);
+        if(r==lbool::l_false){
+            std::cout<< "UNSAT core:\n";
+            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
+                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+            }
+        }
+    }
+
+    void int_expr_solver::initialize(context& ctx) {
+        bool on_screen =false;
+        if(!initialized){
+            initialized=true;
+            expr_ref_vector Assigns(m),Literals(m);
+            ctx.get_guessed_literals(Literals);
+            ctx.get_assignments(Assigns);
+            for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
+                if(on_screen) std::cout<<"check_sat context from asserted:"<<mk_pp(ctx.get_asserted_formula(i),m)<<std::endl;
+                assert_expr(ctx.get_asserted_formula(i));
+
+            }
+            for (auto & e : Assigns){
+                if(ctx.is_relevant(e)) {
+                    if(on_screen) std::cout << "check_sat context from assign:" << mk_pp(e, m) << std::endl;
+                    assert_expr(e);
+                }
+                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
+            }
+//            for (auto & e : Literals){
+//                if(ctx.is_relevant(e)) {
+//                    if (on_screen) std::cout << "check_sat context from guess:" << mk_pp(e, m) << std::endl;
+//                    assert_expr(e);
+//                }
+//                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
+//
+//            }
+
+        }
+    }
+    lbool int_expr_solver::check_sat(expr* e) {
+        bool on_screen =false;
+        erv.push_back(e);
+        m_kernel.push();
+        lbool r = m_kernel.check(erv);
+
+        if(on_screen && r==lbool::l_false){
+            std::cout<< "UNSAT core:\n";
+            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
+                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+            }
+        }
+
+        m_kernel.pop(1);
+        erv.pop_back();
+        return r;
+    }
 }

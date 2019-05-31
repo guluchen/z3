@@ -145,8 +145,8 @@ namespace smt {
         class ap_length_constraint {
         public:
             enum class lcons_type {
-                EQ = 0,    // =
-                SUPEQ = 1  // >=
+                EQ = 0,    // =0
+                SUPEQ = 1  // >=0
             };
             class len_cons {
                 lcons_type m_type;
@@ -155,7 +155,7 @@ namespace smt {
             public:
                 len_cons(ap_manager_t *ap_man, ap_lincons1_t* ap_cons_ptr,
                         const std::map<std::string,std::pair<std::list<expr*>,std::string>>& var_expr);
-                void pretty_print(ast_manager& ast_man);
+                void pretty_print(ast_manager& ast_man, bool on_screen);
                 expr_ref export_z3exp(ast_manager&);
             };
         private:

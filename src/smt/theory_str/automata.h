@@ -240,7 +240,9 @@ namespace smt {
             ast_manager& m;
             seq_util m_util_s;
         public:
-            explicit oaut_adaptor(ast_manager& m) : m{m}, m_util_s{m} {}
+            oaut_adaptor(ast_manager& m, context& ctx) : m{m}, m_util_s{m} {}
+            automaton::sptr mk_empty() override;
+            automaton::sptr mk_from_word(const zstring& str) override;
             automaton::sptr mk_from_re_expr(expr *re, bool minimize_result) override;
             automaton::sptr mk_empty() { return nullptr; }
             automaton::sptr mk_universe() { return mk_empty()->complement(); }

@@ -1,6 +1,7 @@
 #ifndef _STR_SOLVER_H_
 #define _STR_SOLVER_H_
 
+
 #include <functional>
 #include <list>
 #include <set>
@@ -14,17 +15,21 @@
 #include "ast/arith_decl_plugin.h"
 #include "ast/seq_decl_plugin.h"
 #include "smt/params/theory_str_params.h"
+#include "smt/smt_types.h"
 #include "smt/smt_kernel.h"
 #include "smt/smt_theory.h"
+#include "smt/theory_str/theory_str.h"
 #include "util/scoped_vector.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
 #include "smt/theory_str/affine_program.h"
+#include "theory_str.h"
 
 
 namespace smt {
     class theory_str;
+    class int_expr_solver;
     namespace str {
         class element {
         public:
@@ -271,6 +276,10 @@ namespace smt {
                 void add(const constraint& tgt) {  for (const auto& e : tgt.m_coeffs) { add(e.first, e.second); } }
                 void minus(const constraint& tgt) { for (const auto& e : tgt.m_coeffs) { add(e.first, -e.second); } }
                 constraint& set_type(t type){this->type=type;return *this;}
+                bool operator==(const constraint& s) const{
+                    return type==s.type && m_coeffs==s.m_coeffs;
+                };
+
                 bool operator<(const constraint& other) const {
                     if (type < other.type) return true;
                     if (type > other.type) return false;
@@ -348,8 +357,10 @@ namespace smt {
                 return os;
             }
             friend std::ostream& operator<<(std::ostream& os, const length_constraints& s);
+            bool operator==(const length_constraints& s) const;
 
         };
+
 
         class state {
         public:
@@ -425,8 +436,10 @@ namespace smt {
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
             friend std::ostream& operator<<(std::ostream& os, const state& s);
-            bool is_reachable(ast_manager& m, context& ctx, theory_str& th) const;
+            bool is_reachable(ast_manager& m, int_expr_solver& m_int_solver) const;
         };
+
+
 
         enum class result {
             SAT, UNSAT, UNKNOWN
@@ -485,7 +498,7 @@ namespace smt {
             bool should_explore_all() const;
 
             bool unfinished();
-            void resume(ast_manager& m, context& ctx, theory_str& th);
+            void resume(ast_manager& m, context& ctx, theory_str& th, int_expr_solver&);
             std::list<state> get_last_leaf_states();
             result check();
 
@@ -507,25 +520,10 @@ namespace smt {
         };
 
     }
-    class seq_expr_solver : public expr_solver {
-        kernel m_kernel;
-        ast_manager& m;
-    public:
-        seq_expr_solver(ast_manager& m, smt_params& fp, context& ctx):
-                m_kernel(m, fp), m(m){}
 
-        lbool check_sat(expr* e) override {
-            m_kernel.push();
-            m_kernel.assert_expr(e);
-            lbool r = m_kernel.check();
-            m_kernel.pop(1);
-            return r;
-        }
 
-        void assert_expr(expr * e){
-            m_kernel.assert_expr(e);
-        }
-    };
+
+
 
 }
 
