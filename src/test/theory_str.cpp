@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+
 class string_fuzzer {
     ast_manager& m;
     smt_params params;
@@ -407,9 +408,250 @@ static void tst_oaut(){
 
 }
 
+static void tst_testtest() {
+    std::cout << "testtest: 11111" << std::endl;
+}
+
+using namespace smt::str;
+
+
+
+
+// parameters
+std::map<int,char> tst_alphabets = {{0,'a'},{1,'b'},{2,'c'},{3,'d'},{4,'e'},{5,'f'},{6,'g'},{7,'h'}};  // use only these characters
+unsigned int tst_strlen_max = 5;  // max length of a string (string constant or variable name)
+
+static zstring gen_rnd_name() {
+    unsigned int l_range = (rand() % tst_strlen_max);
+    zstring ret_zstr = "";
+    for (int i=0; i < l_range; i++) {
+        ret_zstr = ret_zstr + tst_alphabets[rand() % tst_alphabets.size()];
+    }
+    std::cout << "gen_rnd_name: " << ret_zstr.encode() << std::endl;
+    return ret_zstr;
+}
+
+class str_fuzzer {
+    ast_manager& m;
+    smt_params params;
+    smt::context ctx;
+    seq_util m_util_s;
+    arith_util m_util_a;
+
+public:
+    str_fuzzer(ast_manager& m): m(m), ctx(m,params), m_util_s(m), m_util_a(m) {
+        params.m_model = true;
+        params.m_pb_enable_simplex = true;
+    }
+    ast_manager& get_manager() const { return m; }
+    app_ref gen_rnd_str_const() {
+        app_ref ret(m_util_s.str.mk_string(gen_rnd_name()),m);
+        std::cout << "gen_rnd_str_const:" << mk_pp(ret.get(),m) << std::endl;
+        return ret;
+    }
+    app_ref gen_str_const(zstring name) {
+        app_ref ret(m_util_s.str.mk_string(name),m);
+        std::cout << "gen_str_const:" << mk_pp(ret.get(),m) << std::endl;
+        return ret;
+    }
+    var_ref gen_str_var(unsigned idx) {
+        var_ref ret(m.mk_var(idx,m_util_s.str.mk_string_sort()),m);
+        return ret;
+    }
+    zstring get_const_zstring(app* n) {  // only for constant
+        SASSERT(is_app(n));
+        return n->get_decl()->get_parameter(0).get_symbol().bare_str();
+    }
+    void tst_elem() {
+        std::cout << "str_fuzz::tst_elem()" << std::endl;
+        app_ref const1_ref = gen_rnd_str_const();
+        std::cout << "const1(" << get_const_zstring(const1_ref.get()) << "): " << mk_pp(const1_ref.get(),m) << std::endl;
+        zstring zname2 = "abcde";
+        zstring zname3 = "abcde";
+        app_ref const2_ref = gen_str_const(zname2);
+        app_ref const3_ref = gen_str_const(zname3);
+        std::cout << "const2:" << mk_pp(const2_ref.get(),m) << std::endl;
+        std::cout << "const3:" << mk_pp(const3_ref.get(),m) << std::endl;
+        std::cout << "id of const1: " << const1_ref->get_id() << std::endl;
+        std::cout << "id of const2: " << const2_ref->get_id() << std::endl;
+        std::cout << "id of const3: " << const3_ref->get_id() << std::endl;
+        ENSURE(const2_ref.get()==const3_ref.get())
+        var_ref var1_ref = gen_str_var(0);
+        std::cout << "var1(" << var1_ref.get()->get_idx() << "):" << mk_pp(var1_ref.get(),m) << std::endl;
+    }
+    void tst_word_term() {
+        std::cout << "str_fuzz::tst_word_term()" << std::endl;
+        unsigned idx = 0;
+        zstring zstr1 = "abcde", zstr2 = "bbcde", zstr3 = "cde";
+        word_term wt1 = word_term::from_string(zstr1);
+        word_term wt1a = word_term::from_string(zstr1);
+        word_term wt2 = word_term::from_string(zstr2);
+        word_term wt3 = word_term::from_string(zstr3);
+        ENSURE(wt1==wt1a)
+        ENSURE(wt1.has_constant())
+        ENSURE(!wt1.empty())
+        ENSURE(wt1.length()==5)
+        ENSURE(wt1.count_const()==5)
+        ENSURE(wt1.head().value().encode()=="a")
+        ENSURE(wt1.get(2).value().encode()=="c")
+        ENSURE(wt1.get(wt1.length()-1).value().encode()=="e")
+        ENSURE(wt1.check_head(element::t::CONST))
+
+        var_ref var1_exprf = gen_str_var(idx++);
+        word_term wt3a = word_term::from_variable(zstr1,var1_exprf.get());
+        element var1_elm(element::t::VAR,zstr1,var1_exprf.get());
+        ENSURE(wt3a.has_variable())
+        ENSURE(wt3a.count_var(var1_elm)==1)
+        wt3a.concat(wt3a);
+        ENSURE(wt3a.count_var(var1_elm)==2)
+        ENSURE(wt3a.head()==wt3a.get(wt3a.length()-1))
+        wt3a.remove_head();
+        ENSURE(wt3a.count_var(var1_elm)==1)
+
+        ENSURE(wt2.get(3)==wt3.get(1))
+        word_term wt4(wt3.content());
+        ENSURE(wt4==wt3)
+        word_term wt5({element(element::t::CONST,zstr3[0],gen_str_const(zstr3[0]).get()),
+                       element(element::t::CONST,zstr3[1],gen_str_const(zstr3[1]).get()),
+                       element(element::t::CONST,zstr3[2],gen_str_const(zstr3[2]).get())});
+        ENSURE(wt5==wt3)
+
+//        var_ref var2_exprf = gen_str_var(idx++);
+//        word_term wt3b = word_term::from_variable(zstr2,var2_exprf.get());
+//        element var2_elm(element::t::VAR,zstr2,var2_exprf.get());
+        wt1.replace(wt1.get(2),wt3);
+        word_term wt1r = word_term::from_string("abcdede");
+        ENSURE(wt1==wt1r)
+    }
+    void tst_word_equation() {
+        std::cout << "str_fuzz::tst_word_equation()" << std::endl;
+        unsigned idx = 0;
+        word_term wt1c = word_term::from_string("abcde");
+        var_ref var1_exprf = gen_str_var(idx++);
+        word_term wt1v = word_term::from_variable("A",var1_exprf.get());
+        element var1_elm(element::t::VAR,"A",var1_exprf.get());
+        word_equation we1(wt1v,wt1c);
+        ENSURE(we1.heads().first==wt1v.get(0))
+        ENSURE(we1.heads().second==wt1c.get(0))
+        ENSURE(we1.count_var(var1_elm)==1)
+        ENSURE(we1.variables().size()==1)
+        ENSURE(*we1.variables().begin()==var1_elm)
+        word_equation we2(wt1c,wt1v);
+        ENSURE(we1==we2)
+        word_term wt2c = word_term::from_string("abcde");
+        var_ref var2_exprf = gen_str_var(idx++);
+        word_term wt2v = word_term::from_variable("A",var2_exprf.get());
+        ENSURE(we1.lhs()==wt2v)
+        ENSURE(we1.rhs()==wt2c)
+        ENSURE(!we1.empty())
+        ENSURE(word_equation(word_term(),word_term()).empty())
+
+        word_equation we3(wt2c,wt2v);
+        ENSURE(we1==we3)
+
+    }
+
+};
+
+static void fuzz_str()
+{
+    ast_manager m;
+    reg_decl_plugins(m);
+    str_fuzzer fuzzer(m);
+    fuzzer.tst_elem();
+    fuzzer.tst_word_term();
+    fuzzer.tst_word_equation();
+
+//    std::cout << "round 2" << std::endl;
+//    app_ref const1_ref = fuzzer.gen_rnd_str_const();
+//    std::cout << "const1:" << mk_pp(const1_ref.get(),m) << std::endl;
+//    zstring zname = "abcdefg";
+//    app_ref const2_ref = fuzzer.gen_str_const(zname);
+//    app_ref const3_ref = fuzzer.gen_str_const(zname);
+//    std::cout << "const2:" << mk_pp(const2_ref.get(),m) << std::endl;
+//    std::cout << "const3:" << mk_pp(const3_ref.get(),m) << std::endl;
+//    std::cout << "id of const1: " << const1_ref->get_id() << std::endl;
+//    std::cout << "family id of const1: " << const1_ref->get_family_id() << std::endl;
+//    std::cout << "id of const2: " << const2_ref->get_id() << std::endl;
+//    std::cout << "family id of const2: " << const2_ref->get_family_id() << std::endl;
+//    std::cout << "id of const3: " << const3_ref->get_id() << std::endl;
+//    std::cout << "family id of const3: " << const3_ref->get_family_id() << std::endl;
+//    ENSURE(const2_ref.get()==const3_ref.get())
+//
+//    int idx=0;
+//    var_ref var1_ref = fuzzer.gen_str_var(idx++);
+//    std::cout << "var1: " << mk_pp(var1_ref.get(),m) << std::endl;
+//    std::cout << "id of var1: " << var1_ref->get_id() << std::endl;
+}
+
+static void tst_element() {
+
+    // init z3 environment
+    ast_manager m;
+    reg_decl_plugins(m);
+    smt_params params;
+    params.m_model = true;
+    smt::context ctx(m, params);
+    seq_util m_util_s(m);
+//    arith_util m_util_a(m);
+//    smt::theory_str theo_str(m,params);
+
+//    for (int i=0; i<1000; i++) {
+//        std::cout << genRandName().encode() << std::endl;
+//    }
+    zstring zstr_a5 = "aaaaa";
+    zstring zstr_b5 = "bbbbb";
+
+    std::cout << "test element class..." << std::endl;
+    app_ref expr_a5_const_ref(m_util_s.str.mk_string(zstr_a5),m);
+    expr* expr_a5_const = expr_a5_const_ref.get();
+    element elm_a5_const(element::t::CONST,zstr_a5,expr_a5_const);
+    std::cout << "new string constant: " << elm_a5_const.value() << mk_pp(expr_a5_const,m) << ", id: " << expr_a5_const->get_id() << std::endl;
+    ENSURE(elm_a5_const.type()==element::t::CONST)
+    ENSURE(elm_a5_const.value()==zstr_a5)
+    ENSURE(elm_a5_const.origin_expr().size()==1)
+    ENSURE(elm_a5_const.origin_expr().front()==expr_a5_const)
+    ENSURE(m_util_s.str.is_string(expr_a5_const))
+
+    app_ref expr_a5_const_ref_2(m_util_s.str.mk_string(zstr_a5),m);
+    expr* expr_a5_const_2 = expr_a5_const_ref.get();
+    element elm_a5_const_2(element::t::CONST,zstr_a5,expr_a5_const);
+    ENSURE(elm_a5_const==elm_a5_const_2)
+
+    app_ref expr_b5_const_ref(m_util_s.str.mk_string(zstr_b5),m);
+    expr* expr_b5_const = expr_b5_const_ref.get();
+    element elm_b5_const(element::t::CONST,zstr_b5,expr_b5_const);
+    ENSURE(elm_a5_const!=elm_b5_const)
+    ENSURE(elm_a5_const<elm_b5_const)
+
+    sort* string_sort = m_util_s.str.mk_string_sort();
+    var_ref expr_b5_var_ref(m.mk_var(0,string_sort),m);
+    var* expr_b5_var = expr_b5_var_ref.get();
+    ENSURE(m.get_sort(expr_b5_var)==string_sort)
+    element elm_b5_var(element::t::VAR,zstr_b5,expr_b5_var);
+    std::cout << "new string variable: " << elm_b5_var.value() << mk_pp(expr_b5_var,m) << ", id: " << expr_b5_var->get_id() << std::endl;
+    ENSURE(elm_b5_var.type()==element::t::VAR)
+    ENSURE(elm_b5_var.value()==zstr_b5)
+    ENSURE(elm_b5_var.origin_expr().size()==1)
+    ENSURE(elm_b5_var.origin_expr().front()==expr_b5_var)
+    std::cout << "shortname: " << elm_b5_var.shortname() << std::endl;
+    ENSURE(elm_b5_var.shortname()=="V0")
+
+    ENSURE(elm_a5_const<elm_b5_var)
+
+//    std::cout << "-------1-------" << std::endl;
+//    ctx.internalize(expr_b5_var,false);
+//    ctx.get_enode(expr_b5_var);
+//    smt::theory_var theory_var_b5_var = theo_str.mk_var(ctx.get_enode(expr_b5_var));
+}
+
+
 void tst_theory_str() {
-    tst_oaut_adaptor();
-    tst_zaut_adaptor();
-    tst_oaut();
-    tst_zaut_oaut_crosscheck();
+    tst_element();
+    fuzz_str();
+
+//    tst_oaut_adaptor();
+//    tst_zaut_adaptor();
+//    tst_oaut();
+//    tst_zaut_oaut_crosscheck();
 }

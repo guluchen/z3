@@ -165,7 +165,6 @@ namespace smt {
             propgated_string_theory.insert(expr);
             ast_manager &m = get_manager();
             context &ctx = get_context();
-
             if (!ctx.e_internalized(expr)) {
                 ctx.internalize(expr, false);
             }
