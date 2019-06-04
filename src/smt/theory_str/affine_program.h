@@ -66,6 +66,7 @@ namespace smt {
             const std::map<std::string,std::pair<std::list<expr*>,std::string>> &get_var_expr() const { return var_expr; };
             const unsigned long get_num_states() const { return num_states; };
             const cs_relation &get_relations() const { return relation; };
+            expr_ref get_length_constraint_for_dag_counter_system(ast_manager&);
             void print_counter_system() const;  // printout
             void print_var_expr(ast_manager & m);
             bool is_dag();

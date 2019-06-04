@@ -1572,6 +1572,95 @@ namespace smt {
             return m_unchecked_leaves;
         }
 
+        const void solver::print_counter_automaton(ast_manager& mgr){
+            unsigned counter = 1;
+            unsigned cs_curr, cs_tgt;
+
+            std::queue<state::cref> process_queue;
+            std::unordered_set<state::cref, state::hash, std::equal_to<state>> processed_states;
+            std::unordered_map<state, unsigned, state::hash> mapped_states;
+
+
+            for (const auto &s : get_success_leaves()) {  // assume all succ_states are different (set of states)
+                mapped_states.insert({s, counter});
+                process_queue.push(s);
+                counter++;
+            }
+
+            std::list<solver::move> moves;
+            while (!process_queue.empty()) {
+                const state &curr = process_queue.front();
+                cs_curr = mapped_states[curr];
+                process_queue.pop();
+                if (processed_states.count(curr) != 0) {
+                    continue;  // already processed, skip
+                } else {
+                    processed_states.insert(curr);
+                }
+                for (auto const &m : get_graph().incoming_moves(curr)) {
+                    const state &tgt = m.m_from;
+                    if (mapped_states.count(tgt) == 0) {  // if tgt is new, add to mapping
+                        mapped_states.insert({tgt, counter});
+                        cs_tgt = counter;
+                        counter++;
+                    } else {
+                        cs_tgt = mapped_states[tgt];
+                    }
+
+                    std::cout<<cs_curr<< " -->"<<cs_tgt<<"\t";
+                    switch (m.m_type) {
+                        case solver::move::t::TO_EMPTY:
+                            std::cout << "[ label = TO_EMPTY\"";
+                            for(auto& e:m.m_record){
+                                for(auto& f:e.origin_expr()){
+                                    std::cout<<mk_pp(f,mgr)<<" ";
+                                }
+                            }
+                            std::cout<<"\n";
+                            break;
+                        case solver::move::t::TO_CONST:
+                            std::cout << "[ label = TO_CONST\"";
+                            for(auto& e:m.m_record){
+                                for(auto& f:e.origin_expr()){
+                                    std::cout<<mk_pp(f,mgr)<<" ";
+                                }
+                            }
+                            std::cout<<"\n";
+                            break;
+                        case solver::move::t::TO_VAR:
+                            std::cout << "[ label = TO_VAR\"";
+                            for(auto& e:m.m_record){
+                                for(auto& f:e.origin_expr()){
+                                    std::cout<<mk_pp(f,mgr)<<" ";
+                                }
+                            }
+                            std::cout<<"\n";
+                            break;
+                        case solver::move::t::TO_VAR_VAR:
+                            std::cout << "[ label = TO_VAR_VAR\"";
+                            for(auto& e:m.m_record){
+                                for(auto& f:e.origin_expr()){
+                                    std::cout<<mk_pp(f,mgr)<<" ";
+                                }
+                            }
+                            std::cout<<"\n";
+                            break;
+                        case solver::move::t::TO_CHAR_VAR:
+                            std::cout << "[ label = TO_CHAR_VAR\"";
+                            for(auto& e:m.m_record){
+                                for(auto& f:e.origin_expr()){
+                                    std::cout<<mk_pp(f,mgr)<<" ";
+                                }
+                            }
+                            std::cout<<"\n";
+                            break;
+                        default: SASSERT(false);
+                    }
+                    if (processed_states.count(tgt) == 0)  // if tgt is not processed yet, add to queue
+                        process_queue.push(tgt);
+                }
+            }
+        }
 
         result solver::check() {
 

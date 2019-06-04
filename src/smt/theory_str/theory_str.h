@@ -74,12 +74,12 @@ namespace smt {
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
+        expr_ref mk_str_var(symbol const&);
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
                            expr *e4 = nullptr, sort *sort = nullptr);
         void add_axiom(expr *e);
 
     private:
-        bool main_branch=false;
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
         bool is_regex_sort(expr *e) const;
@@ -115,6 +115,7 @@ namespace smt {
     };
 
     class int_expr_solver:expr_solver{
+        bool unsat_core=false;
         kernel m_kernel;
         ast_manager& m;
         bool initialized;

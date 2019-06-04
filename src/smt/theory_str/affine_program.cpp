@@ -218,9 +218,249 @@ namespace smt {
             }
             STRACE("str", tout << "]";);
         }
+        expr_ref counter_system::get_length_constraint_for_dag_counter_system(ast_manager& m){
+            bool on_screen=false;
+
+            arith_util m_util_a(m);
+            seq_util m_util_s(m);
+
+            sort * int_sort = m.mk_sort(m_util_a.get_family_id(), INT_SORT);
+            SASSERT(is_dag());
+            std::map<cs_state, unsigned> num_of_incoming_transition;
+            std::map<cs_state, std::map<string,unsigned>> variable_version_at_state;
+
+
+            std::set<cs_state> worklist;
+            std::set<cs_state> processed;
+            std::set<string> var_names;
+            for(auto& s:this->init) worklist.insert(s);
+
+            //initialize num_of_incoming_transition
+            while(!worklist.empty()){
+                cs_state from = *worklist.begin();
+                worklist.erase(from);
+                processed.insert(from);
+                for(auto&tr:relation[from]){
+                    cs_assign assignment=tr.first;
+
+                    string var_name = (*assignment.vars.begin());
+                    var_names.insert(var_name);
+
+                    cs_state to=tr.second;
+                    num_of_incoming_transition[to]=num_of_incoming_transition[to]+1;
+                    if(processed.count(to)==0 && worklist.count(to)==0){
+                        worklist.insert(to);
+                    }
+                }
+            }
+
+            std::map<cs_state, expr_ref> length_constraint;
+
+
+
+            processed.clear();
+            for(auto& s:this->init) worklist.insert(s);
+            while(!worklist.empty()){
+                cs_state from=0;
+                for(auto& s:worklist){
+                    if(num_of_incoming_transition[s]==0){
+                        from=s;
+                        break;
+                    }
+                }
+                SASSERT(from!=0);
+                processed.insert(from);
+                worklist.erase(from);
+                for(auto&tr:relation[from]){
+                    cs_state to=tr.second;
+
+
+                    if(on_screen){
+                        std::cout<<from<<":";
+                        for(auto& v:var_names){
+                            std::cout<<v<<"_"<<variable_version_at_state[from][v]<<"　";
+                        }
+                        std::cout<<"\n"<<to<<":";
+                        for(auto& v:var_names){
+                            std::cout<<v<<"_"<<variable_version_at_state[to][v]<<"　";
+                        }
+                        std::cout<<"\n";
+                    }
+
+
+
+                    num_of_incoming_transition[to]=num_of_incoming_transition[to]-1;
+                    if(processed.count(to)==0 && worklist.count(to)==0){
+                        worklist.insert(to);
+                    }
+                    cs_assign assignment=tr.first;
+                    string lhs_var_name = (*assignment.vars.begin());
+
+                    expr_ref index_update_original{nullptr,m};
+                    expr_ref index_update_new_branch{nullptr,m};
+
+                    //set variable index to max(current, new)
+                    for(auto& v:var_names){
+
+
+                        std::stringstream from_var_name;
+                        std::stringstream to_var_name;
+                        unsigned from_variable_version=variable_version_at_state[from][v];
+
+
+                        if(lhs_var_name==v) {
+                            from_variable_version++;
+                        }
+
+                        from_var_name << v << from_variable_version;
+                        app *from_var = m_util_s.mk_skolem(symbol(from_var_name.str().c_str()), 0, nullptr, int_sort);
+                        to_var_name << v << variable_version_at_state[to][v];
+                        app *to_var = m_util_s.mk_skolem(symbol(to_var_name.str().c_str()), 0, nullptr, int_sort);
+
+                        expr_ref index_update{m_util_a.mk_eq(from_var, to_var), m};
+
+
+                        if(variable_version_at_state[to][v]> from_variable_version){
+                            if(index_update_new_branch==nullptr){
+                                index_update_new_branch=index_update;
+                            }else{
+                                index_update_new_branch={m.mk_and(index_update_new_branch, index_update), m};
+                            }
+                        }else if(variable_version_at_state[to][v]<from_variable_version &&
+                                length_constraint.find(to)!=length_constraint.end()
+                        ){
+                            if(index_update_original==nullptr){
+                                index_update_original=index_update;
+                            }else{
+                                index_update_original={m.mk_and(index_update_original, index_update), m};
+                            }
+                        }
+
+                        variable_version_at_state[to][v]= std::max(from_variable_version,variable_version_at_state[to][v]);
+                    }
+
+
+
+                    std::stringstream new_lhs_var_name;
+                    new_lhs_var_name << lhs_var_name << variable_version_at_state[to][lhs_var_name];
+                    app *new_lhs_var = m_util_s.mk_skolem(symbol(new_lhs_var_name.str().c_str()), 0, nullptr, int_sort);
+
+
+                    if(on_screen) std::cout<<from<<" -> "<<to<<"\t";
+
+                    expr_ref assign_exp{nullptr,m};
+                    switch (assignment.type) {
+                        case counter_system::assign_type::CONST: {
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(assignment.vars.begin()))->second.second << ":=" << assignment.num<<"\"];\n";
+
+                            unsigned long value = assignment.num;
+                            assign_exp={m.mk_eq(new_lhs_var, m_util_a.mk_int(value)), m};
+                            if(on_screen) std::cout << "assignment in SMT: "<<mk_pp(assign_exp,m)<<std::endl;
+                            break;
+                        }
+
+
+
+                        case counter_system::assign_type::VAR:{
+                            if(on_screen) std::cout << "[ label = \""<<var_expr.find(*(assignment.vars.begin()))->second.second << ":=" <<
+                                      var_expr.find(*(std::next(assignment.vars.begin())))->second.second<<"\"];\n";
+                            string rhs_var_name = (*(std::next(assignment.vars.begin())));
+                            std::stringstream old_rhs_var_name;
+                            old_rhs_var_name << rhs_var_name << variable_version_at_state[from][rhs_var_name];;
+
+                            app *rhs_var = m_util_s.mk_skolem(symbol(old_rhs_var_name.str().c_str()), 0, nullptr, int_sort);
+                            assign_exp={m.mk_eq(m_util_a.mk_sub(new_lhs_var, rhs_var),m_util_a.mk_int(0)), m};
+                            if(on_screen) std::cout << "assignment in SMT: "<<mk_pp(assign_exp,m)<<std::endl;
+                            break;
+
+                        }
+                        case counter_system::assign_type::PLUS_ONE:{
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(assignment.vars.begin()))->second.second << ":=" <<
+                                                    var_expr.find(*(assignment.vars.begin()))->second.second << "+1\"];\n";
+                            std::stringstream old_lhs_var_name;
+                            old_lhs_var_name << lhs_var_name << variable_version_at_state[from][lhs_var_name];;
+                            app *old_lhs_var = m_util_s.mk_skolem(symbol(old_lhs_var_name.str().c_str()), 0, nullptr, int_sort);
+
+                            assign_exp={m.mk_eq(new_lhs_var, m_util_a.mk_add(old_lhs_var,m_util_a.mk_int(1))), m};
+                            if(on_screen) std::cout << "assignment in SMT: "<<mk_pp(assign_exp,m)<<std::endl;
+                            break;
+                        }
+                        case counter_system::assign_type::PLUS_VAR:{
+                            if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(assignment.vars.begin()))->second.second << ":=" <<
+                                                    var_expr.find(*(assignment.vars.begin()))->second.second << "+" <<
+                                                    var_expr.find(*(std::next(assignment.vars.begin())))->second.second << "\"];\n";
+                            string rhs_var_name = (*(std::next(assignment.vars.begin())));
+                            std::stringstream old_lhs_var_name;
+                            old_lhs_var_name << lhs_var_name << variable_version_at_state[from][lhs_var_name];;
+                            app *old_lhs_var = m_util_s.mk_skolem(symbol(old_lhs_var_name.str().c_str()), 0, nullptr, int_sort);
+                            std::stringstream old_rhs_var_name;
+                            old_rhs_var_name << rhs_var_name << variable_version_at_state[from][rhs_var_name];;
+                            app *old_rhs_var = m_util_s.mk_skolem(symbol(old_rhs_var_name.str().c_str()), 0, nullptr, int_sort);
+                            assign_exp={m.mk_eq(new_lhs_var, m_util_a.mk_add(old_lhs_var,old_rhs_var)), m};
+                            if(on_screen) std::cout << "assignment in SMT: "<<mk_pp(assign_exp,m)<<std::endl;
+                            break;
+                        }
+                        default:
+                            SASSERT(false);
+                            break;
+                    }
+
+                    if(length_constraint.find(from)!=length_constraint.end())
+                        assign_exp={m.mk_and(length_constraint.find(from)->second, assign_exp),m};
+                    if(index_update_new_branch!= nullptr){
+                        assign_exp={m.mk_and(index_update_new_branch, assign_exp),m};
+                    }
+
+
+                    if (length_constraint.find(to) == length_constraint.end()) {
+                        length_constraint.insert({to, assign_exp});
+                    } else {
+                        expr_ref original_constraint=length_constraint.find(to)->second;
+                        length_constraint.erase(to);
+                        if(index_update_original!= nullptr){
+                            length_constraint.insert({to, {m.mk_or(m.mk_and(original_constraint,index_update_original), assign_exp),m}});
+                        }else{
+
+                            length_constraint.insert({to, {m.mk_or(original_constraint, assign_exp),m}});
+                        }
+
+                    }
+                    if(on_screen) std::cout << "Length const. at "<<to<<":"<<length_constraint.find(to)->second<<std::endl;
+
+
+                    if(on_screen&&index_update_original!=nullptr)
+                        std::cout << "variable update (original) in SMT: "<<mk_pp(index_update_original,m)<<std::endl;
+                    if(on_screen&&index_update_new_branch!=nullptr)
+                        std::cout << "variable update (new branch) in SMT: "<<mk_pp(index_update_new_branch,m)<<std::endl;
+                }
+            }
+
+            expr_ref equalize_indexed_and_unindexed_versions_of_variables{nullptr,m};
+
+
+            expr_ref indexed_v_equals_unindexed_v{nullptr,m};
+
+            for(auto& v:var_names){
+                app *var = m_util_s.mk_skolem(symbol(v.c_str()), 0, nullptr, int_sort);
+                std::stringstream var_name_with_version;
+                var_name_with_version << v << variable_version_at_state[final][v];
+                app *var_with_version = m_util_s.mk_skolem(symbol(var_name_with_version.str().c_str()), 0, nullptr, int_sort);
+                indexed_v_equals_unindexed_v={m.mk_eq(var,var_with_version),m};
+            }
+            if(equalize_indexed_and_unindexed_versions_of_variables== nullptr){
+                equalize_indexed_and_unindexed_versions_of_variables=indexed_v_equals_unindexed_v;
+            }else{
+                equalize_indexed_and_unindexed_versions_of_variables={m.mk_and(equalize_indexed_and_unindexed_versions_of_variables,indexed_v_equals_unindexed_v),m};
+            }
+            equalize_indexed_and_unindexed_versions_of_variables={m.mk_and(equalize_indexed_and_unindexed_versions_of_variables,length_constraint.find(final)->second),m};
+
+
+            return equalize_indexed_and_unindexed_versions_of_variables;
+
+        }
 
         void counter_system::print_counter_system() const {
-            bool on_screen=true;
+            bool on_screen=false;
             std::string sep_str;
             if(on_screen) std::cout<<" digraph counter_system {\n";
 

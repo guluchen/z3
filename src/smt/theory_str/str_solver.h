@@ -505,6 +505,8 @@ namespace smt {
             const record_graph& get_graph() const { return m_records; };
             const std::list<state::cref>& get_success_leaves() const { return m_rec_success_leaves; };
             const state::cref get_root() const { return m_rec_root; };
+
+            const void print_counter_automaton(ast_manager&);
         private:
             automaton::sptr derive_var_membership(const var_relation& g, memberships::sptr m, const element& var);
             bool check_straight_line_membership(const var_relation& g, memberships::sptr m);

@@ -505,33 +505,44 @@ namespace smt {
 
     bool theory_str::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver& m_int_solver) {
         using namespace str;
-        bool on_screen=true;
+        bool on_screen=false;
 
         counter_system cs = counter_system(solver);
         cs.print_counter_system();  // STRACE output
         cs.print_var_expr(get_manager());  // STRACE output
 
-        STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
-        apron_counter_system ap_cs = apron_counter_system(cs);
-        STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
-        // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
-        STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
-        ap_cs.run_abstraction();
-        STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
-        // make length constraints from the result of abstraction interpretation
-        STRACE("str", tout << "generating length constraints..." << std::endl;);
-        ap_length_constraint lenc = ap_length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
-                                                   ap_cs.get_var_expr());
-        lenc.pretty_print(get_manager());
-        if (!lenc.empty()) {
-            expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
+        if(!cs.is_dag()){
+            STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
+            apron_counter_system ap_cs = apron_counter_system(cs);
+            STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
+            // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
+            STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
+            ap_cs.run_abstraction();
+            STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
+            // make length constraints from the result of abstraction interpretation
+            STRACE("str", tout << "generating length constraints..." << std::endl;);
+            ap_length_constraint lenc = ap_length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
+                                                             ap_cs.get_var_expr());
+            lenc.pretty_print(get_manager());
+            if (!lenc.empty()) {
+                expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
+                if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
+                STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
+                return m_int_solver.check_sat(lenc_res)==lbool::l_true;
+            }
+
+        }else{
+            expr_ref lenc_res=cs.get_length_constraint_for_dag_counter_system(get_manager());
             if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
-            STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
             return m_int_solver.check_sat(lenc_res)==lbool::l_true;
+
+
+
         }
-        else {  // if generated no length constraint, return true(sat)
-            return true;
-        }
+
+
+
+        return true;
     }
 
     final_check_status theory_str::final_check_eh() {
@@ -596,22 +607,28 @@ namespace smt {
         }
 
         if (solver.check() == result::SAT) {
-            counter_system cs = counter_system(solver);
-            STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
-            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
-            // stdout for test: print graph size then exit
-            if(on_screen) std::cout << "graph construction summary:\n";
-            if(on_screen) std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
-            if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
-            if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
+            //solver.print_counter_automaton(get_manager());
+//            counter_system cs = counter_system(solver);
+//            STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
+//            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
+//            // stdout for test: print graph size then exit
+//            if(on_screen) std::cout << "graph construction summary:\n";
+//            if(on_screen) std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
+//            if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
+//            if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
             bool cs_lenc_check_res = check_counter_system_lenc(solver, m_int_solver);
 
             TRACE("str", tout << "final_check ends\n";);
 
             if (cs_lenc_check_res) {
+                counter_system cs = counter_system(solver);
+
                 IN_CHECK_FINAL = false;
-                return FC_GIVEUP;
+                if(cs.is_dag())
+                    return FC_DONE;
+                else
+                    return FC_GIVEUP;
             }  // will leave this if block if lenc_check_sat returns false
         }
         block_curr_assignment();
@@ -664,6 +681,7 @@ namespace smt {
         m_rewrite(result);
         return result;
     }
+
 
     expr_ref
     theory_str::mk_skolem(symbol const& name, expr *e1, expr *e2, expr *e3, expr *e4, sort *sort) {
@@ -821,6 +839,7 @@ namespace smt {
         i < 0 \/ i >= len(s)  ->  e = empty
     */
     void theory_str::handle_char_at(expr *e) {
+
         ast_manager& m = get_manager();
         expr *s = nullptr, *i = nullptr;
         VERIFY(m_util_s.str.is_at(e, s, i));
@@ -1225,13 +1244,18 @@ namespace smt {
     }
 
     void int_expr_solver::assert_expr(expr * e){
-        //m_kernel.assert_expr(e);
-        erv.push_back(e);
-        lbool r = m_kernel.check(erv);
-        if(r==lbool::l_false){
-            std::cout<< "UNSAT core:\n";
-            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
-                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+
+        if(!unsat_core){
+            m_kernel.assert_expr(e);
+
+        }else{
+            erv.push_back(e);
+            lbool r = m_kernel.check(erv);
+            if(r==lbool::l_false){
+                std::cout<< "UNSAT core:\n";
+                for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
+                    std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
+                }
             }
         }
     }
@@ -1268,9 +1292,11 @@ namespace smt {
     }
     lbool int_expr_solver::check_sat(expr* e) {
         bool on_screen =false;
+//        m_kernel.push();
+
         erv.push_back(e);
-        m_kernel.push();
         lbool r = m_kernel.check(erv);
+        erv.pop_back();
 
         if(on_screen && r==lbool::l_false){
             std::cout<< "UNSAT core:\n";
@@ -1279,8 +1305,7 @@ namespace smt {
             }
         }
 
-        m_kernel.pop(1);
-        erv.pop_back();
+//        m_kernel.pop(1);
         return r;
     }
 }
