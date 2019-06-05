@@ -1920,7 +1920,7 @@ namespace smt {
             std::set<word_equation> updated_result;
 
             bool updated =true;
-            bool on_screen =false;
+            bool on_screen = false;
 
             while (updated) {
                 updated = false;
@@ -1935,6 +1935,7 @@ namespace smt {
                     }
                 }
                 for(auto &eq:m_eq_wes){
+                    word_equation cur=eq;
                     element source =element::null();
                     word_term target;
 
@@ -1952,22 +1953,22 @@ namespace smt {
                         if(on_screen) std::cout << "Replace " << source<< " to "<<target<<std::endl;
 
 
-
                         for (auto &eq2:m_eq_wes) {
+
                             word_equation eq3 = eq2.replace(source, target);
                             eq3=eq3.trim_prefix();
-                            if (eq3!=eq && !eq3.empty()){
+                            if (eq3!=cur && !eq3.empty()){
                                 updated_result.insert(eq3);
                             }
                         }
                         m_eq_wes = updated_result;
+
                         updated_result.clear();
+
                         for (auto &eq2:m_diseq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
                             eq3=eq3.trim_prefix();
-
-
-                            if (eq3!=eq) {
+                            if (eq3!=cur) {
                                 updated_result.insert(eq3);
                             }
                         }

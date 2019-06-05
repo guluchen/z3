@@ -625,7 +625,7 @@ namespace smt {
                 counter_system cs = counter_system(solver);
 
                 IN_CHECK_FINAL = false;
-                if(cs.is_dag())
+                if(cs.is_dag()&& !is_over_approximation)
                     return FC_DONE;
                 else
                     return FC_GIVEUP;
