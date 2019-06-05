@@ -1700,7 +1700,7 @@ namespace smt {
 
             if (in_same_eqc(node, resultAst)) {
                 TRACE("str", tout << "SKIP: both concats are already in the same equivalence class" << std::endl;);
-            } else {
+            } else if (u.str.is_string(resultAst)){
                 expr_ref_vector items(m);
                 int pos = 0;
                 for (auto itor : resolvedMap) {
@@ -3177,8 +3177,20 @@ namespace smt {
             }
         }
 
-//        if (!skip)
-//            instantiate_str_diseq_length_axiom(n1, n2);
+        if (!skip)
+            instantiate_str_diseq_length_axiom(n1, n2);
+
+        const str::state &root = build_state_from_memo();
+        if (at_same_state(root, uState.currState)) {
+
+            expr_ref_vector guessedLiterals(m);
+            fetch_guessed_exprs_with_scopes(guessedLiterals);
+            underapproximation_repeat(createAndOperator(guessedLiterals));
+
+            int tmpz3State = get_actual_trau_lvl();
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
+            uState.z3_level = tmpz3State;
+        }
     }
 
     /*
@@ -3195,21 +3207,92 @@ namespace smt {
 
         // build premise: not ( Length(lhs) == Length(rhs) )
         expr_ref len_lhs(mk_strlen(lhs), m);
-        SASSERT(len_lhs);
+        zstring valueLhs;
+        if (u.str.is_string(lhs, valueLhs))
+            len_lhs = mk_int(valueLhs.length());
+
         expr_ref len_rhs(mk_strlen(rhs), m);
-        SASSERT(len_rhs);
+        zstring valueRhs;
+        if (u.str.is_string(rhs, valueRhs))
+            len_rhs = mk_int(valueRhs.length());
+
         expr_ref premise01(mk_not(m, ctx.mk_eq_atom(len_lhs, len_rhs)), m);
 
-        expr_ref_vector and_item(m);
-        and_item.push_back(ctx.mk_eq_atom(len_lhs, len_rhs));
-        and_item.push_back(ctx.mk_eq_atom(len_lhs, mk_int(0)));
-
-        expr_ref premise02(::mk_and(and_item));
-        expr_ref conclusion02(ctx.mk_eq_atom(len_lhs, len_rhs), m);
-
         assert_implication(premise01, conclusion01);
-        assert_implication(premise02, conclusion02);
-    };
+
+        // check all combinations
+        zstring value;
+        if (u.str.is_string(lhs, value)) {
+            expr* extraAssert = handle_trivial_diseq(rhs, value);
+            if (extraAssert != nullptr) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
+                assert_implication(conclusion01, extraAssert);
+            }
+        }
+        else if (u.str.is_string(rhs, value)) {
+            expr* extraAssert = handle_trivial_diseq(lhs, value);
+            if (extraAssert != nullptr) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
+                assert_implication(conclusion01, extraAssert);
+            }
+        }
+
+
+    }
+
+    expr* theory_str::handle_trivial_diseq(expr * e, zstring value){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        std::set<zstring> constPart = extract_const(e);
+
+        for (const auto& s : constPart)
+            if (s.length() > value.length() || (s.length() == value.length() && s != value)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << std::endl;);
+                return createGreaterEqOperator(mk_strlen(e), mk_int(value.length() + 1));
+            }
+            else if (s == value) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << std::endl;);
+                return createGreaterEqOperator(mk_strlen(e), mk_int(value.length() + 1));
+            }
+        return nullptr;
+    }
+
+    std::set<zstring> theory_str::extract_const(expr* e, int lvl){
+        if (lvl >= 5)
+            return {};
+
+        ast_manager & m = get_manager();
+
+        expr_ref_vector eq(m);
+        expr* constValue = collect_eq_nodes(e, eq);
+        if (constValue != nullptr){
+            zstring constValueStr;
+            u.str.is_string(constValue, constValueStr);
+            return {constValueStr};
+        }
+        else {
+            std::set<zstring> ret;
+            for (int i = 0; i < eq.size(); ++i)
+                if (u.str.is_concat(eq[i].get())) {
+                    std::set<zstring> const00 = extract_const(to_app(eq[i].get())->get_arg(0), lvl + 1);
+                    std::set<zstring> const01 = extract_const(to_app(eq[i].get())->get_arg(1), lvl + 1);
+                    if (const00.size() == 0)
+                        if (const01.size() > 0)
+                            ret.insert(const01.begin(), const01.end());
+
+                    if (const01.size() == 0)
+                        if (const00.size() > 0)
+                            ret.insert(const00.begin(), const00.end());
+
+                    if (const00.size() > 0 && const01.size() > 0){
+                        for (const auto& s0 : const00)
+                            for (const auto& s1 : const01)
+                                ret.insert(s0 + s1);
+                    }
+                }
+            return ret;
+        }
+    }
 
     enode* theory_str::ensure_enode(expr* e) {
         context& ctx = get_context();
@@ -3444,7 +3527,7 @@ namespace smt {
                 STRACE("str", tout << __FUNCTION__ << " before get_assign_level  " << std::endl;);
                 int lastLevel = ctx.get_assign_level(l);
                 STRACE("str", tout << __FUNCTION__ << " after get_assign_level  " << lastLevel << std::endl;);
-                if (lastLevel <= uState.z3_level) {
+                if (lastLevel < uState.z3_level) {
                     STRACE("str", tout << __FUNCTION__ << " " << lastLevel << " vs " << uState.z3_level
                                        << std::endl;);
                     uState.reset();
@@ -3493,35 +3576,30 @@ namespace smt {
 
         (void) ctx;
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": at level " << ctx.get_scope_level() << " vs " << uState.z3_level << std::endl;);
-        expr_ref_vector guessedLiterals(m);
-        fetch_guessed_literals_with_scopes(guessedLiterals);
-        guessedLiterals.reset();
-        for (int i = 0; i < mful_scope_levels.size(); ++i) {
-            expr_ref lastAssign = mful_scope_levels[i];
-            literal l = ctx.get_literal(lastAssign);
-            int lastLevel = ctx.get_assign_level(l);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": useful: " << mk_pp(mful_scope_levels[i], m) << " assign level: " << lastLevel << std::endl;);
-        }
+        dump_assignments();
+        dump_literals();
 
-        if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
+        if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level && !ctx.inconsistent()) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE " << m_scope_level << std::endl;);
             return FC_DONE;
-//            if (all_length_solved()) {
-//                STRACE("str", tout << __LINE__ << " done because of all_length_solved " << std::endl;);
-//                return FC_DONE;
-//            }
-//            else {
-//                STRACE("str", tout << __LINE__ << " not done because of all_length_solved " << std::endl;);
-//                return FC_CONTINUE;
-//            }
         }
 
 
 
-        if (uState.z3_level >= 0 && uState.z3_level <= m_scope_level) {
+        const str::state &root = build_state_from_memo();
+        if ((uState.z3_level >= 0 && uState.z3_level <= m_scope_level) || (at_same_state(root, uState.currState))) {
+            expr_ref_vector guessedLiterals(m);
+            fetch_guessed_exprs_with_scopes(guessedLiterals);
             underapproximation_repeat(createAndOperator(guessedLiterals));
-            uState.z3_level = m_scope_level;
+
+            int tmpz3State = get_actual_trau_lvl();
+
+            uState.z3_level = tmpz3State;
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
             return FC_CONTINUE;
         }
+
+
 
         // enhancement: improved backpropagation of value/length information
         {
@@ -3556,7 +3634,7 @@ namespace smt {
             STRACE("str", tout << "Membership: " << we.first << " = " << we.second << std::endl;);
         }
 
-        sigmaDomain = collect_char_domain();
+        sigmaDomain = collect_char_domain_from_strs();
         for (const auto& ch : sigmaDomain)
             STRACE("str", tout << __LINE__ <<  " sigmaDomain: " << ch << std::endl;);
 
@@ -3565,15 +3643,16 @@ namespace smt {
         std::map<expr*, std::set<expr*>> _causes;
         std::set<expr*> subNodes;
         std::map<expr *, std::set<expr *>> eq_combination = construct_eq_combination(_causes, subNodes, importantVars);
+
         if (!review_combination(eq_combination)){
-            enode_pair_vector eqs;
-            literal_vector lits;
-            fetch_guessed_literals_with_scopes(lits);
-            ctx.set_conflict(
-                    ctx.mk_justification(
-                            ext_theory_conflict_justification(
-                                    get_id(), ctx.get_region(), lits.size(), lits.c_ptr(), eqs.size(), eqs.c_ptr(), 0, nullptr)));
+            negate_context();
         }
+
+        sigmaDomain = collect_char_domain_from_eqmap(eq_combination);
+        for (const auto& ch : sigmaDomain)
+            STRACE("str", tout << __LINE__ <<  " sigmaDomain: " << ch << std::endl;);
+
+
         for (const auto& com : eq_combination){
             STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
@@ -3590,25 +3669,12 @@ namespace smt {
                    });
         }
 
+        expr_ref_vector guessedExprs(m);
+        fetch_guessed_exprs_with_scopes(guessedExprs);
         std::map<expr*, expr*> causes;
         for (const auto& com : eq_combination){
-            causes[com.first] = createAndOperator(guessedLiterals);
+            causes[com.first] = createAndOperator(guessedExprs);
         }
-
-        for (const auto& v : _causes){
-            expr_ref_vector tmp(m);
-            for (const auto& n : v.second) {
-                tmp.push_back(n);
-            }
-            if (tmp.size() == 0)
-                causes[v.first] = m.mk_true();
-            else {
-                expr_ref tmpExpr(createAndOperator(tmp), m);
-                causes[v.first] = tmpExpr;
-            }
-            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " causes " << mk_pp(v.first, m) << " " << mk_pp(causes[v.first], m) << std::endl;);
-        }
-
 
         bool axiomAdded = specialHandlingForContainFamily(eq_combination);
         axiomAdded = axiomAdded || specialHandlingForCharAtFamily(eq_combination, causes);
@@ -3618,7 +3684,6 @@ namespace smt {
         std::set<expr*> notImportant;
         refine_important_vars(importantVars, notImportant, eq_combination);
         eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
-        const str::state &root = build_state_from_memo();
  
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
         if (axiomAdded) {
@@ -3628,6 +3693,45 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
+    }
+
+    int theory_str::get_actual_trau_lvl(){
+//        return m_scope_level;
+        context& ctx = get_context();
+        int tmpz3State = 0;
+        if (mful_scope_levels.size() > 0) {
+            expr_ref lastAssign = mful_scope_levels[(int)mful_scope_levels.size() - 1];
+            literal tmpL = ctx.get_literal(lastAssign);
+            tmpz3State = std::max(0, (int)ctx.get_assign_level(tmpL));
+        }
+        return tmpz3State;
+    }
+
+    bool theory_str::at_same_state(str::state curr, str::state prev) {
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+
+        for(const auto& e : prev.m_wes_to_satisfy){
+            STRACE("str", tout << __LINE__ <<  " " << e << std::endl;);
+        }
+
+
+        // compare all eq
+        for(const auto& e : curr.m_wes_to_satisfy){
+            if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
+                STRACE("str", tout << __LINE__ <<  " " << e << std::endl;);
+                return false;
+            }
+        }
+
+        // compare all diseq
+        for(const auto& e : curr.m_wes_to_fail){
+            if (prev.m_wes_to_fail.find(e) == prev.m_wes_to_fail.end()) {
+                STRACE("str", tout << __LINE__ <<  " " << e << std::endl;);
+                return false;
+            }
+        }
+
+        return true;
     }
 
     bool theory_str::review_combination(std::map<expr *, std::set<expr *>> eq_combination){
@@ -3687,7 +3791,7 @@ namespace smt {
         return !notSolved;
     }
 
-    std::set<char> theory_str::collect_char_domain(){
+    std::set<char> theory_str::collect_char_domain_from_strs(){
         std::set<char> charDomain;
         for (const auto& we : m_we_expr_memo) {
             zstring value;
@@ -3723,6 +3827,57 @@ namespace smt {
             else if (u.str.is_string(we.second.get(), value)) {
                 for (int i = 0; i < value.length(); ++i)
                     charDomain.insert(value[i]);
+            }
+        }
+
+        for (const auto& mem : membership_memo){
+            std::set<zstring> tmp = collect_strs_in_membership(mem.second);
+            for (const auto& s : tmp)
+                for (int i = 0; i < s.length(); ++i)
+                    charDomain.insert(s[i]);
+        }
+
+        return charDomain;
+    }
+
+    std::set<char> theory_str::collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination){
+        std::set<char> charDomain;
+        for (const auto& v : eq_combination) {
+            // skip if it is a simple case
+            if (v.second.size() == 1 && v.first == *(v.second.begin()))
+                continue;
+
+            zstring value;
+            if (u.str.is_concat(v.first)) {
+                ptr_vector<expr> childNodes;
+                get_nodes_in_concat(v.first, childNodes);
+                for (const auto& n : childNodes){
+                    if (u.str.is_string(n, value)) {
+                        for (int i = 0; i < value.length(); ++i)
+                            charDomain.insert(value[i]);
+                    }
+                }
+            }
+            else if (u.str.is_string(v.first, value)) {
+                for (int i = 0; i < value.length(); ++i)
+                    charDomain.insert(value[i]);
+            }
+
+            for (const auto& e : v.second) {
+                if (u.str.is_concat(e)) {
+                    ptr_vector<expr> childNodes;
+                    get_nodes_in_concat(e, childNodes);
+                    for (const auto& n : childNodes){
+                        if (u.str.is_string(n, value)) {
+                            for (int i = 0; i < value.length(); ++i)
+                                charDomain.insert(value[i]);
+                        }
+                    }
+                }
+                else if (u.str.is_string(e, value)) {
+                    for (int i = 0; i < value.length(); ++i)
+                        charDomain.insert(value[i]);
+                }
             }
         }
 
@@ -5320,36 +5475,35 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** get_base_level (" << ctx.get_base_level() << "/scope_levels" << ctx.get_scope_level() << ")" << ctx.get_scope_level() - ctx.get_base_level() << std::endl;);
 
+        int tmpz3State = get_actual_trau_lvl();
 
-        int tmpz3State = 0;
-        if (mful_scope_levels.size() > 0) {
-            expr_ref lastAssign = mful_scope_levels[(int)mful_scope_levels.size() - 1];
-            literal tmpL = ctx.get_literal(lastAssign);
-            tmpz3State = std::max(0, (int)ctx.get_assign_level(tmpL) - 1);
-        }
-        UnderApproxState state(m, tmpz3State, eq_combination, importantVars);
+        expr_ref_vector guessedExprs(m);
+        fetch_guessed_exprs_with_scopes(guessedExprs);
+        const str::state &root = build_state_from_memo();
+        UnderApproxState state(m, tmpz3State, eq_combination, importantVars, guessedExprs, root);
 
         if (state == uState) {
-            enode_pair_vector eqs;
-            literal_vector lits;
-            fetch_guessed_literals_with_scopes(lits);
-            ctx.set_conflict(
-                    ctx.mk_justification(
-                            ext_theory_conflict_justification(
-                                    get_id(), ctx.get_region(), lits.size(), lits.c_ptr(), eqs.size(), eqs.c_ptr(), 0, nullptr)));
-            return true;
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;); ;
-            uState.z3_level = tmpz3State;
-            expr* causexpr = m.mk_false();
-            if (causes.size() > 0) {
-                causexpr = (causes.begin()->second);
+            dump_literals();
+//            if (!is_weaker_expr_sets(state.equalities, uState.equalities)) {
+//                negate_context();
+//                return true;
+//            }
+//            else
+            {
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/"
+                                   << mful_scope_levels.size() << ")" << connectingSize << std::endl;);;
+                uState.z3_level = tmpz3State;
+                expr *causexpr = m.mk_true();
+                if (guessedExprs.size() > 0) {
+                    causexpr = createAndOperator(guessedExprs);
+                }
+                for (const auto &a : uState.assertingConstraints)
+                    if (m.is_and(a))
+                        assert_axiom(createImpliesOperator(causexpr, a));
+                    else
+                        assert_axiom(a);
+                return true;
             }
-            for (const auto& a : uState.assertingConstraints)
-                if (m.is_and(a))
-                    assert_axiom(createEqualOperator(causexpr, a));
-                else
-                    assert_axiom(a);
-            return true;
         }
         else {
             state.addAssertingConstraints(uState.assertingConstraints);
@@ -5378,22 +5532,57 @@ namespace smt {
         return convertEqualities(v_combination, connectedVars, causes);
     }
 
+    bool theory_str::is_weaker_expr_sets(expr_ref_vector curr, expr_ref_vector prev){
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << curr.size() << " vs " << curr.size() << std::endl;);
+        // check if curr is WEAKER than prev, means all exprs in curr are in prev
+        for (const auto& e : curr) {
+            STRACE("str",
+                   tout << __LINE__ << " curr eq " << mk_pp(e, m) << std::endl;);
+
+            if (!prev.contains(e)) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** return true" << std::endl;);
+                return true;
+            }
+        }
+
+        for (const auto& e : prev)
+            STRACE("str",
+               tout << __LINE__ << " prev eq " << mk_pp(e, m) << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** return false" << std::endl;);
+        return false;
+    }
+
     bool theory_str::underapproximation_repeat(expr* causexpr){
         ast_manager & m = get_manager();
         context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << uState.z3_level << ")" << connectingSize << std::endl;);
         initUnderapprox_repeat();
+        additionalHandling();
+//        for (const auto& a : uState.assertingConstraints){
+//            if (m.is_and(a))
+//                assert_axiom(createImpliesOperator(causexpr, a));
+//            else
+//                assert_axiom(a);
+//        }
+
+        literal causeLiteral = ctx.get_literal(causexpr);
+
         for (const auto& a : uState.assertingConstraints){
+            ensure_enode(a);
+//            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
+            literal assertLiteral = ctx.get_literal(a);
             if (m.is_and(a))
-                assert_axiom(createImpliesOperator(causexpr, a));
+                ctx.assign(assertLiteral, b_justification(causeLiteral), false);
             else
-                assert_axiom(a);
+                ctx.assign(assertLiteral, b_justification::mk_axiom(), false);
         }
         return true;
     }
 
     void theory_str::additionalHandling(){
-//        handle_NOTEqual();
+        handle_NOTEqual();
         handle_NOTContain();
     }
 
@@ -5430,6 +5619,7 @@ namespace smt {
 
     void theory_str::handle_NOTEqual_var(expr* lhs, expr* rhs){
         ast_manager & m = get_manager();
+        context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
 
         expr_ref_vector cases(m);
@@ -5456,10 +5646,17 @@ namespace smt {
             }
 
             expr_ref notcause(createEqualOperator(lhs, rhs), m);
+            expr_ref cause(mk_not(notcause), m);
+            ensure_enode(cause.get());
+            literal causeLiteral = ctx.get_literal(cause.get());
+            expr* assertExpr = createOrOperator(cases);
+            literal assertLiteral = ctx.get_literal(assertExpr);
+            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
+//            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
+//            assert_axiom(axiom);
 
-            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
-            assert_axiom(axiom);
-            uState.addAssertingConstraints(axiom);
+//            expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr), m);
+//            uState.addAssertingConstraints(tmpAxiom);
         }
 
 
@@ -5467,6 +5664,7 @@ namespace smt {
 
     void theory_str::handle_NOTEqual_const(expr* lhs, zstring rhs){
         ast_manager & m = get_manager();
+        context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
         expr_ref_vector cases(m);
         expr_ref lenLhs(mk_strlen(lhs), m);
@@ -5491,10 +5689,24 @@ namespace smt {
             }
             STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
-            expr_ref axiom(createEqualOperator(mk_not(notcause), createOrOperator(cases)), m);
-//            expr_ref axiom(m.mk_or(notcause, createOrOperator(cases)), m);
-            assert_axiom(axiom);
-            uState.addAssertingConstraints(axiom);
+            expr_ref cause(mk_not(notcause), m);
+            ensure_enode(cause.get());
+            literal causeLiteral = ctx.get_literal(cause.get());
+            expr* assertExpr = createOrOperator(cases);
+
+            STRACE("str", tout << __LINE__ <<  " " << mk_pp(assertExpr, m) << ")\n";);
+
+            literal assertLiteral = ctx.get_literal(assertExpr);
+            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
+
+//            expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr), m);
+//            uState.addAssertingConstraints(tmpAxiom);
+
+
+//            expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
+//            expr_ref axiom(createEqualOperator(mk_not(notcause), createOrOperator(cases)), m);
+//            assert_axiom(axiom);
+//            uState.addAssertingConstraints(axiom);
         }
 
     }
@@ -5646,7 +5858,7 @@ namespace smt {
             }
         }
 
-        connectingSize = maxInt + allStrExprs.size() + sumConst;
+        connectingSize = std::min(maxInt + (int)allStrExprs.size() + sumConst, 300);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
@@ -5729,7 +5941,10 @@ namespace smt {
                     expr* rexpr;
                     if (u.str.is_string(v, val)){
                         for (int i = 0; i < val.length(); ++i){
-                            assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
+//                            assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
+                            expr* tmp = createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i]));
+                            literal exprLiteral = ctx.get_literal(tmp);
+                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
                         }
                     }
                     else if (isRegexVar(v, rexpr)) {
@@ -5744,7 +5959,10 @@ namespace smt {
                                 }
                                 ors.push_back(createAndOperator(ands));
                             }
-                            assert_axiom(createOrOperator(ors));
+//                            assert_axiom(createOrOperator(ors));
+                            expr* tmp = createOrOperator(ors);
+                            literal exprLiteral = ctx.get_literal(tmp);
+                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
                         }
 
                     }
@@ -5758,7 +5976,10 @@ namespace smt {
                     zstring val;
                     if (u.str.is_string(v, val)){
                         for (int i = 0; i < val.length(); ++i){
-                            assert_axiom(createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i])));
+//                            assert_axiom(createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i])));
+                            expr* tmp = createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i]));
+                            literal exprLiteral = ctx.get_literal(tmp);
+                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
                         }
                     }
                 }
@@ -5847,7 +6068,10 @@ namespace smt {
                     zstring val;
                     if (u.str.is_string(v, val)){
                         for (int i = 0; i < val.length(); ++i){
-                            assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
+//                            assert_axiom(createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i])));
+                            expr* tmp = createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i]));
+                            literal exprLiteral = ctx.get_literal(tmp);
+                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
                         }
                     }
                 }
@@ -5860,7 +6084,10 @@ namespace smt {
                     zstring val;
                     if (u.str.is_string(v, val)){
                         for (int i = 0; i < val.length(); ++i){
-                            assert_axiom(createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i])));
+//                            assert_axiom(createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i])));
+                            expr* tmp = createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i]));
+                            literal exprLiteral = ctx.get_literal(tmp);
+                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
                         }
                     }
                 }
@@ -6016,6 +6243,7 @@ namespace smt {
                                        std::map<expr*, expr*> causes){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         ast_manager &m = get_manager();
+        context & ctx = get_context();
         clock_t t = clock();
         currVarPieces.clear();
         generatedEqualities.clear();
@@ -6062,29 +6290,7 @@ namespace smt {
                                                               importantVars
                     );
                     t = clock() - t;
-                    if (result != nullptr) {
-                        /* sync result */
-                        if (!m.is_true(result)){
-                            axiomAdded = true;
-                        }
-                        if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                            assert_axiom(tmp.get());
-                        }
-                        else {
-                            assert_axiom(result);
-                        }
-                        assertedConstraints.push_back(result);
-
-                    }
-                    else {
-                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-                        /* trivial unsat */
-                        if (causes.find(it->first) != causes.end()) {
-                            assert_axiom(createEqualOperator(causes[it->first], m.mk_false()));
-                        }
-                        assertedConstraints.reset();
-                    }
+                    assert_breakdown_combination(result, it->first, causes, assertedConstraints, axiomAdded);
                 }
 
                 expr* regexExpr;
@@ -6140,30 +6346,7 @@ namespace smt {
                             importantVars
                     );
                     t = clock() - t;
-                    if (result != nullptr) {
-                        /* sync result */
-                        STRACE("str", tout << __LINE__ <<  mk_pp(result, m) << std::endl;);
-                        if (!m.is_true(result)){
-                            axiomAdded = true;
-                        }
-                        if (causes.find(it->first) != causes.end()) {
-                            expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                            assert_axiom(tmp.get());
-                        }
-                        else {
-                            assert_axiom(result);
-                        }
-
-                        assertedConstraints.push_back(result);
-                    }
-                    else {
-                        STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-                        /* trivial unsat */
-                        if (causes.find(it->first) != causes.end()) {
-                            assert_axiom(createImpliesOperator(causes[it->first], m.mk_false()));
-                        }
-                        assertedConstraints.reset();
-                    }
+                    assert_breakdown_combination(result, it->first, causes, assertedConstraints, axiomAdded);
                 }
             }
             else {
@@ -6195,34 +6378,7 @@ namespace smt {
                                 importantVars
                         );
                         t = clock() - t;
-                        if (result != nullptr) {
-                            if (causes.find(it->first) != causes.end()) {
-                                STRACE("str", tout << __LINE__ <<  " has causes" << std::endl;);
-                                STRACE("str", tout << __LINE__ << mk_pp(causes[it->first], m) << std::endl;);
-                            }
-                            else
-                                STRACE("str", tout << __LINE__ <<  " no causes" << std::endl;);
-                            if (!m.is_true(result)){
-                                axiomAdded = true;
-                                /* sync result*/
-                                if (causes.find(it->first) != causes.end()) {
-                                    expr_ref tmp(createEqualOperator(causes[it->first], result), m);
-                                    assert_axiom(tmp.get());
-                                }
-                                else {
-                                    assert_axiom(result);
-                                }
-                                assertedConstraints.push_back(result);
-                            }
-                        }
-                        else {
-                            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
-                            /* trivial unsat */
-                            if (causes.find(it->first) != causes.end()) {
-                                assert_axiom(createImpliesOperator(causes[it->first], m.mk_false()));
-                            }
-                            assertedConstraints.reset();
-                        }
+                        assert_breakdown_combination(result, it->first, causes, assertedConstraints, axiomAdded);
                     }
             }
 
@@ -6234,6 +6390,59 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    void theory_str::assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded){
+        ast_manager &m = get_manager();
+        context &ctx = get_context();
+        if (e != nullptr) {
+            if (causes.find(var) != causes.end()) {
+                STRACE("str", tout << __LINE__ <<  " has causes" << std::endl;);
+                STRACE("str", tout << __LINE__ << mk_pp(causes[var], m) << std::endl;);
+            }
+            else
+            STRACE("str", tout << __LINE__ <<  " no causes" << std::endl;);
+            if (!m.is_true(e)){
+                axiomAdded = true;
+                assertedConstraints.push_back(e);
+            }
+            assert_breakdown_combination(e, var, causes);
+            assertedConstraints.push_back(e);
+        }
+        else {
+            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
+            /* trivial unsat */
+            assertedConstraints.reset();
+            if (causes.find(var) != causes.end()) {
+                negate_context();
+            }
+        }
+    }
+
+    void theory_str::assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes){
+        context &ctx = get_context();
+        ensure_enode(e);
+        literal resultLiteral = ctx.get_literal(e);
+        if (causes.find(var) != causes.end()) {
+//            expr_ref tmp(createImpliesOperator(causes[it->first], result), m);
+//            assert_axiom(tmp.get());
+            literal causeLiteral = ctx.get_literal(causes[var]);
+            ctx.assign(resultLiteral, b_justification(causeLiteral), false);
+        } else {
+            ctx.assign(resultLiteral, b_justification::mk_axiom(), false);
+//            assert_axiom(result);
+        }
+    }
+
+    void theory_str::negate_context(){
+        context & ctx = get_context();
+        enode_pair_vector eqs;
+        literal_vector lits;
+        fetch_guessed_literals_with_scopes(lits);
+        ctx.set_conflict(
+                ctx.mk_justification(
+                        ext_theory_conflict_justification(
+                                get_id(), ctx.get_region(), lits.size(), lits.c_ptr(), eqs.size(), eqs.c_ptr(), 0, nullptr)));
     }
 
     expr* theory_str::findEquivalentVariable(expr* e){
@@ -8415,7 +8624,7 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ << " return *** " << __FUNCTION__ << " ***" << std::endl;);
         expr_ref ret(createAndOperator(possibleCases), m);
-
+//        return m.mk_true();
         return ret.get();
     }
 
@@ -8855,6 +9064,7 @@ namespace smt {
 
         expr_ref ret(createOrOperator(orConstraints), m);
         STRACE("str", tout << __LINE__ << " return *** " << __FUNCTION__ << " ***" << mk_pp(ret.get(), m) << std::endl;);
+//        ret = m.mk_true();
         return ret;
     }
 
@@ -11190,21 +11400,25 @@ namespace smt {
             }
             else if (eqNodeSet.contains(we.second.get())){
                 zstring value;
-                if (u.str.is_string(we.first.get(), value))
-                    if (!is_trivial_inequality(value)){
-                        if (diffLen < (int)value.length()) {
+                if (u.str.is_string(we.first.get(), value)) {
+                    STRACE("str",
+                           tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << std::endl;);
+                    if (!is_trivial_inequality(value)) {
+                        if (diffLen < (int) value.length()) {
                             diffLen = (int) value.length();
                             maxDiffStrs.clear();
                             maxDiffStrs.push_back(value);
-                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
-                                               << std::endl;);
-                        }
-                        else if (diffLen == (int)value.length()) {
-                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
-                                               << std::endl;);
+                            STRACE("str",
+                                   tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                        << std::endl;);
+                        } else if (diffLen == (int) value.length()) {
+                            STRACE("str",
+                                   tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\""
+                                        << std::endl;);
                             maxDiffStrs.push_back(value);
                         }
                     }
+                }
             }
         }
         return maxDiffStrs;
@@ -11368,17 +11582,17 @@ namespace smt {
                                 expr_ref tmp(createGreaterEqOperator(createAddOperator(adds), mk_int(constPartLen + 1)), m);
                                 expr* causes = create_conjuct_all_inequalities(nn);
 
-                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
-                                assert_axiom(tmpAssert.get());
-                                uState.addAssertingConstraints(tmpAssert);
+//                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
+//                                assert_axiom(tmpAssert.get());
+//                                uState.addAssertingConstraints(tmpAssert);
                             }
                             else {
                                 expr_ref tmp(createGreaterEqOperator(mk_strlen(nn), mk_int(constPartLen + 1)), m);
                                 expr* causes = create_conjuct_all_inequalities(nn);
 
-                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
-                                assert_axiom(tmpAssert.get());
-                                uState.addAssertingConstraints(tmpAssert);
+//                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
+//                                assert_axiom(tmpAssert.get());
+//                                uState.addAssertingConstraints(tmpAssert);
                             }
                         }
                     }
@@ -11930,9 +12144,6 @@ namespace smt {
             result.emplace(object);
 
         combinations[object] = result;
-        for (const auto& e : result) {
-            STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " = " << mk_pp(e, m) << std::endl;);
-        }
         return result;
     }
 
@@ -13951,45 +14162,41 @@ namespace smt {
         STRACE("str", \
                 ast_manager& m = get_manager();
                 context& ctx = get_context();
-                tout << "dumping all assignments:\n";
-                expr_ref_vector assignments{m};
-                ctx.get_assignments(assignments);
-                for (expr *const e : assignments) if (ctx.is_relevant(e)){
-                    tout << mk_ismt2_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (NOT REL)\n")
-                         << std::flush;
+
+                for (int i = 0; i < mful_scope_levels.size(); ++i)
+//                    if (!m.is_not(mful_scope_levels[i].get()))
+                    {
+
+                        literal tmp = ctx.get_literal(mful_scope_levels[i].get());
+                        int assignLvl = ctx.get_assign_level(tmp);
+
+                        STRACE("str", tout << __LINE__ << " assigned expr " << mk_pp(mful_scope_levels[i].get(), m)
+                                           << ", assignLevel = " << assignLvl << std::endl;);
+                    }
+        );
+    }
+
+    void theory_str::dump_literals() {
+        STRACE("str", \
+                ast_manager& m = get_manager();
+                context& ctx = get_context();
+
+                expr_ref_vector tmpExprs(m);
+                ctx.get_relevant_literals(tmpExprs);
+                for (int i = 0; i < tmpExprs.size(); ++i) {
+                    literal tmp = ctx.get_literal(tmpExprs[i].get());
+                    int assignLvl = ctx.get_assign_level(tmp);
+                    if (ctx.get_assignment(tmpExprs[i].get()) == l_true){
+                        STRACE("str", tout << __LINE__ << " guessed literal " << mk_pp(tmpExprs[i].get(), m)
+                                           << ", assignLevel = " << assignLvl << std::endl;);
+                    }
                 }
         );
     }
 
-    void theory_str::fetch_guessed_literals(expr_ref_vector &guessedLiterals) {
+    void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedLiterals) {
         ast_manager& m = get_manager();
         context& ctx = get_context();
-        expr_ref_vector tmpExprs(m);
-        ctx.get_relevant_literals(tmpExprs);
-
-        for (int i = 0; i < tmpExprs.size(); ++i) {
-            literal tmp = ctx.get_literal(tmpExprs[i].get());
-            if (ctx.get_assignment(tmpExprs[i].get()) == l_true && ctx.get_assign_level(tmp) > 0) {
-                guessedLiterals.push_back(tmpExprs[i].get());
-                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
-                                   << ", assignLevel = " << ctx.get_assign_level(tmp) << std::endl;);
-            }
-        }
-    }
-
-    void theory_str::fetch_guessed_literals_with_scopes(expr_ref_vector &guessedLiterals) {
-        ast_manager& m = get_manager();
-        context& ctx = get_context();
-        expr_ref_vector tmpExprs(m);
-        ctx.get_relevant_literals(tmpExprs);
-        for (int i = 0; i < tmpExprs.size(); ++i) {
-            literal tmp = ctx.get_literal(tmpExprs[i].get());
-            int assignLvl = ctx.get_assign_level(tmp);
-            if (assignLvl > 0 && ctx.get_assignment(tmpExprs[i].get()) == l_true){
-//                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(tmpExprs[i].get(), m)
-//                                   << ", assignLevel = " << assignLvl << std::endl;);
-            }
-        }
         for (int i = 0; i < mful_scope_levels.size(); ++i)
             if (!m.is_not(mful_scope_levels[i].get()))
                 guessedLiterals.push_back(mful_scope_levels[i].get());
@@ -14000,13 +14207,13 @@ namespace smt {
         context& ctx = get_context();
 
         for (int i = 0; i < mful_scope_levels.size(); ++i)
-            if (!m.is_not(mful_scope_levels[i].get())) {
+            if (!m.is_not(mful_scope_levels[i].get()))
+            {
 
                 literal tmp = ctx.get_literal(mful_scope_levels[i].get());
                 int assignLvl = ctx.get_assign_level(tmp);
 
-                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(mful_scope_levels[i].get(), m)
-                                   << ", assignLevel = " << assignLvl << std::endl;);
+                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(mful_scope_levels[i].get(), m) << std::endl;);
 
                 guessedLiterals.push_back(tmp);
             }

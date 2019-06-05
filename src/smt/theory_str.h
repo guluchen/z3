@@ -144,8 +144,7 @@ namespace smt {
             };
 
             bool m_allow_empty_var = true;
-            std::set<word_equation> m_wes_to_satisfy;
-            std::set<word_equation> m_wes_to_fail;
+
         public:
             state() = default;
             explicit state(const bool allow_empty_var) : m_allow_empty_var{allow_empty_var} {}
@@ -167,6 +166,9 @@ namespace smt {
             const std::list<state> transform() const;
             const bool operator<(const state& other) const;
             friend std::ostream& operator<<(std::ostream& os, const state& s);
+
+            std::set<word_equation> m_wes_to_satisfy;
+            std::set<word_equation> m_wes_to_fail;
         private:
             static const bool dag_def_check_node(const def_graph& graph, const def_node& node,
                                                  def_nodes& marked, def_nodes& checked);
@@ -464,26 +466,34 @@ namespace smt {
         public:
             std::map<expr*, std::set<expr*>> eq_combination;
             std::set<std::pair<expr*, int>> importantVars;
-
+            expr_ref_vector equalities;
+            str::state currState;
             int z3_level = -1;
 
             expr_ref_vector assertingConstraints;
-            UnderApproxState(ast_manager &m) : assertingConstraints(m){
+            UnderApproxState(ast_manager &m) : assertingConstraints(m), equalities(m){
 
             }
 
             UnderApproxState(ast_manager &m, int _z3_level,
                             std::map<expr*, std::set<expr*>> _eq_combination,
-                            std::set<std::pair<expr*, int>> _importantVars):
+                            std::set<std::pair<expr*, int>> _importantVars,
+                            expr_ref_vector _equalities,
+                            str::state _currState):
+
                             z3_level(_z3_level),
                             eq_combination(_eq_combination),
                             importantVars(_importantVars),
-                            assertingConstraints(m) {
+                            assertingConstraints(m),
+                            equalities(m),
+                            currState(_currState){
                 assertingConstraints.reset();
+                equalities.reset();
+                equalities.append(_equalities);
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, z3_level, eq_combination, importantVars);
+                UnderApproxState tmp(m, z3_level, eq_combination, importantVars, equalities, currState);
                 tmp.addAssertingConstraints(assertingConstraints);
                 return tmp;
             }
@@ -501,6 +511,9 @@ namespace smt {
                 z3_level = other.z3_level;
                 eq_combination = other.eq_combination;
                 importantVars = other.importantVars;
+                equalities.reset();
+                equalities.append(other.equalities);
+                currState = other.currState;
                 assertingConstraints.reset();
                 for (int i = 0; i < other.assertingConstraints.size(); ++i)
                     assertingConstraints.push_back(other.assertingConstraints[i]);
@@ -1191,6 +1204,8 @@ namespace smt {
              * len lhs == 0 == len rhs --> lhs == rhs
              */
             void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs);
+                expr* handle_trivial_diseq(expr * e, zstring value);
+                    std::set<zstring> extract_const(expr* e, int lvl = 0);
         void init_search_eh() override;
         void relevant_eh(app *n) override;
         void assign_eh(bool_var v, bool is_true) override;
@@ -1198,9 +1213,12 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            int get_actual_trau_lvl();
+            bool at_same_state(str::state curr, str::state prev);
             bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool all_length_solved();
-            std::set<char> collect_char_domain();
+            std::set<char> collect_char_domain_from_strs();
+            std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
             bool specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination);
             bool specialHandlingForCharAtFamily(
                 std::map<expr *, std::set<expr *>> eq_combination,
@@ -1282,6 +1300,7 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
+                bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat(expr* causes);
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void createNotContainMap();
@@ -1306,6 +1325,9 @@ namespace smt {
             bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
+                void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded);
+                void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes);
+                void negate_context();
                 expr* findEquivalentVariable(expr* e);
                 bool isInternalVar(expr* e);
                 bool isInternalRegexVar(expr* e);
@@ -2149,8 +2171,8 @@ namespace smt {
     private:
         void assert_axiom(expr *e);
         void dump_assignments();
-        void fetch_guessed_literals(expr_ref_vector &guessedLiterals);
-        void fetch_guessed_literals_with_scopes(expr_ref_vector &guessedLiterals);
+        void dump_literals();
+        void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedLiterals);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
