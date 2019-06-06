@@ -3,7 +3,7 @@
 #include "util/trace.h"
 #include "ast/ast_pp.h"
 #include "smt/smt_theory.h"
-#include "smt/theory_str/theory_str.h"
+#include "smt/theory_str/theory_str2.h"
 
 namespace smt {
 

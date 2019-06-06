@@ -196,6 +196,9 @@ br_status bv_rewriter::mk_app_core(func_decl * f, unsigned num_args, expr * cons
         return mk_bv_comp(args[0], args[1], result);
     case OP_MKBV:
         return mk_mkbv(num_args, args, result);
+    case OP_BIT2BOOL:
+        SASSERT(num_args == 1);
+        return mk_bit2bool(args[0], f->get_parameter(0).get_int(), result);
     case OP_BSMUL_NO_OVFL:
         return mk_bvsmul_no_overflow(num_args, args, result);
     case OP_BUMUL_NO_OVFL:
@@ -497,12 +500,14 @@ br_status bv_rewriter::mk_leq_core(bool is_signed, expr * a, expr * b, expr_ref 
     // (bvsle (- x (srem x c1)) c2) -> (bvsle x (+ c1 c2 - 1))
     // (bvsle (+ x (* -1 (srem_i x c1))) c2)
     // pre: (and (> c1 0) (> c2 0) (= c2 % c1 0) (<= (+ c1 c2 -1) max_int))
-    if (is_signed && is_num2 && m_util.is_bv_add(a, a1, a2) &&
+    if (is_signed && is_num2 && 
+        m_util.is_bv_add(a, a1, a2) &&
         m_util.is_bv_mul(a2, a3, a4) && is_numeral(a3, r1, sz) &&
         m_util.norm(r1, sz, is_signed).is_minus_one() &&
         m_util.is_bv_sremi(a4, a5, a6) && is_numeral(a6, r1, sz) &&
         (r1 = m_util.norm(r1, sz, is_signed), r1.is_pos()) &&
         r2.is_pos() &&
+        (a1 == a5) && 
         (r2 % r1).is_zero() && r1 + r2 - rational::one() < rational::power_of_two(sz-1)) {
         result = m_util.mk_sle(a1, m_util.mk_numeral(r1 + r2 - rational::one(), sz));
         return BR_REWRITE2;
@@ -779,10 +784,11 @@ br_status bv_rewriter::mk_extract(unsigned high, unsigned low, expr * arg, expr_
         }
     }
 
-    if (m().is_ite(arg)) {
-        result = m().mk_ite(to_app(arg)->get_arg(0),
-                            m_mk_extract(high, low, to_app(arg)->get_arg(1)),
-                            m_mk_extract(high, low, to_app(arg)->get_arg(2)));
+    expr* c = nullptr, *t = nullptr, *e = nullptr;
+    if (m().is_ite(arg, c, t, e) &&
+        (t->get_ref_count() == 1 || !m().is_ite(t)) && 
+        (e->get_ref_count() == 1 || !m().is_ite(e))) {
+        result = m().mk_ite(c, m_mk_extract(high, low, t), m_mk_extract(high, low, e));
         return BR_REWRITE2;
     }
 
@@ -2202,6 +2208,19 @@ br_status bv_rewriter::mk_bv_mul(unsigned num_args, expr * const * args, expr_re
     return st;
 }
 
+br_status bv_rewriter::mk_bit2bool(expr * n, int idx, expr_ref & result) {
+    rational v, bit;
+    unsigned sz = 0;
+    if (!is_numeral(n, v, sz)) 
+        return BR_FAILED;
+    if (idx < 0 || idx >= static_cast<int>(sz)) 
+        return BR_FAILED;
+    div(v, rational::power_of_two(idx), bit);
+    mod(bit, rational(2), bit);
+    result = m().mk_bool_val(bit.is_one());
+    return BR_DONE;
+}
+
 br_status bv_rewriter::mk_bit2bool(expr * lhs, expr * rhs, expr_ref & result) {
     unsigned sz = get_bv_size(lhs);
     if (sz != 1)
@@ -2679,7 +2698,7 @@ br_status bv_rewriter::mk_ite_core(expr * c, expr * t, expr * e, expr_ref & resu
             }
 
             const unsigned sz = m_util.get_bv_size(rhs);
-            if (sz == 1) { // detect (lhs = N) ? C : D, where N, C, D are 1 bit numberals
+            if (sz == 1) { // detect (lhs = N) ? C : D, where N, C, D are 1 bit numerals
                 numeral rhs_n, e_n, t_n;
                 unsigned rhs_sz, e_sz, t_sz;
                 if (is_numeral(rhs, rhs_n, rhs_sz)

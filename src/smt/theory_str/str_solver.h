@@ -18,17 +18,17 @@
 #include "smt/smt_types.h"
 #include "smt/smt_kernel.h"
 #include "smt/smt_theory.h"
-#include "smt/theory_str/theory_str.h"
+#include "smt/theory_str/theory_str2.h"
 #include "util/scoped_vector.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
 #include "smt/theory_str/affine_program.h"
-#include "theory_str.h"
+#include "theory_str2.h"
 
 
 namespace smt {
-    class theory_str;
+    class theory_str2;
     class int_expr_solver;
     namespace str {
         class element {
@@ -498,7 +498,7 @@ namespace smt {
             bool should_explore_all() const;
 
             bool unfinished();
-            void resume(ast_manager& m, context& ctx, theory_str& th, int_expr_solver&);
+            void resume(ast_manager& m, context& ctx, theory_str2& th, int_expr_solver&);
             std::list<state> get_last_leaf_states();
             result check();
 

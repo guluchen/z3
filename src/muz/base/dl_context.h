@@ -581,7 +581,7 @@ namespace datalog {
         /**
            \brief Display a certificate for reachability and/or unreachability.
         */
-        void display_certificate(std::ostream& out);
+        std::ostream& display_certificate(std::ostream& out);
 
         /**
            \brief query result if it contains fact.
@@ -615,7 +615,7 @@ namespace datalog {
 
         void ensure_engine();
 
-        // auxilary functions for SMT2 pretty-printer.
+        // auxiliary functions for SMT2 pretty-printer.
         void declare_vars(expr_ref_vector& rules, mk_fresh_name& mk_fresh, std::ostream& out);
 
         //undefined and private copy constructor and operator=

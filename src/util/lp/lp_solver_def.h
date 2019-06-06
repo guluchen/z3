@@ -86,9 +86,7 @@ template <typename T, typename X> int lp_solver<T, X>::get_column_index_by_name(
 
 
 template <typename T, typename X>  lp_solver<T, X>::~lp_solver(){
-    if (m_A != nullptr) {
-        delete m_A;
-    }
+    delete m_A;
     for (auto t : m_map_from_var_index_to_column_info) {
         delete t.second;
     }
@@ -103,7 +101,7 @@ template <typename T, typename X> void lp_solver<T, X>::flip_costs() {
 
 template <typename T, typename X>    bool lp_solver<T, X>::problem_is_empty() {
     for (auto & c : m_A_values)
-        if (c.second.size())
+        if (!c.second.empty())
             return false;
     return true;
 }
@@ -387,7 +385,7 @@ template <typename T, typename X> unsigned lp_solver<T, X>::try_to_remove_some_r
             return 0;
         }
     }
-    if (rows_to_delete.size() > 0) {
+    if (!rows_to_delete.empty()) {
         for (unsigned k : rows_to_delete) {
             m_A_values.erase(k);
         }
@@ -561,7 +559,7 @@ template <typename T, typename X> void lp_solver<T, X>::set_scaled_cost(unsigned
     column_info<T> * ci = this->m_map_from_var_index_to_column_info[this->m_core_solver_columns_to_external_columns[j]];
     T cost = ci->get_cost();
     if (ci->is_flipped()){
-        cost *= -1;
+        cost *= T(-1);
     }
     lp_assert(ci->is_fixed() == false);
     this->m_costs[j] = cost * this->m_column_scale[j];

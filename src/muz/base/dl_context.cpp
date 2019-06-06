@@ -658,7 +658,7 @@ namespace datalog {
     void context::add_table_fact(func_decl * pred, unsigned num_args, unsigned args[]) {
         if (pred->get_arity() != num_args) {
             std::ostringstream out;
-            out << "miss-matched number of arguments passed to " << mk_ismt2_pp(pred, m) << " " << num_args << " passed";
+            out << "mismatched number of arguments passed to " << mk_ismt2_pp(pred, m) << " " << num_args << " passed";
             throw default_exception(out.str());
         }
         table_fact fact;
@@ -730,6 +730,7 @@ namespace datalog {
     void context::collect_params(param_descrs& p) {
         fp_params::collect_param_descrs(p);
         insert_timeout(p);
+        insert_ctrl_c(p);
     }
 
     void context::updt_params(params_ref const& p) {
@@ -854,7 +855,11 @@ namespace datalog {
             UNREACHABLE();
         }
         ensure_engine();
-        return m_engine->query(query);
+        lbool r = m_engine->query(query);
+        if (r != l_undef && get_params().print_certificate()) {
+            display_certificate(std::cout) << "\n";
+        }
+        return r;
     }
 
     lbool context::query_from_lvl (expr* query, unsigned lvl) {
@@ -951,9 +956,10 @@ namespace datalog {
         }
     }
 
-    void context::display_certificate(std::ostream& out) {
+    std::ostream& context::display_certificate(std::ostream& out) {
         ensure_engine();
         m_engine->display_certificate(out);
+        return out;
     }
 
     void context::display(std::ostream & out) const {
@@ -1243,7 +1249,7 @@ namespace datalog {
     void context::declare_vars(expr_ref_vector& rules, mk_fresh_name& fresh_names, std::ostream& out) {
         //
         // replace bound variables in rules by 'var declarations'
-        // First remove quantifers, then replace bound variables
+        // First remove quantifiers, then replace bound variables
         // by fresh constants.
         //
         smt2_pp_environment_dbg env(m);

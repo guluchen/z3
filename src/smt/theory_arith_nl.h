@@ -789,7 +789,14 @@ namespace smt {
             bound  = m_util.mk_eq(var2expr(v), m_util.mk_numeral(rational(0), true));
         TRACE("non_linear", tout << "new bound:\n" << mk_pp(bound, get_manager()) << "\n";);
         context & ctx = get_context();
+        ast_manager & m = get_manager();
+        if (m.has_trace_stream()) {
+            app_ref body(m);
+            body = m.mk_or(bound, m.mk_not(bound));
+            log_axiom_instantiation(body);
+        }
         ctx.internalize(bound, true);
+        if (m.has_trace_stream()) m.trace_stream() << "[end-of-instance]\n";
         ctx.mark_as_relevant(bound);
         literal l     = ctx.get_literal(bound);
         SASSERT(!l.sign());
@@ -1337,7 +1344,7 @@ namespace smt {
     }
 
     /**
-       \brief Diplay a nested form expression
+       \brief Display a nested form expression
     */
     template<typename Ext>
     void theory_arith<Ext>::display_nested_form(std::ostream & out, expr * p) {
@@ -1682,7 +1689,7 @@ namespace smt {
         if (!get_manager().int_real_coercions() && is_mixed_real_integer(r))
             return true; // giving up... see comment above
 
-        TRACE("cross_nested", tout << "cheking problematic row...\n";);
+        TRACE("cross_nested", tout << "checking problematic row...\n";);
 
         rational c = rational::one();
         if (is_integer(r))
@@ -1764,7 +1771,7 @@ namespace smt {
        updated with the fixed variables in m.  A variable is only
        added to dep if it is not already in already_found.
 
-       Return null if the monomial was simplied to 0.
+       Return null if the monomial was simplified to 0.
     */
     template<typename Ext>
     grobner::monomial * theory_arith<Ext>::mk_gb_monomial(rational const & _coeff, expr * m, grobner & gb, v_dependency * & dep, var_set & already_found) {
@@ -1924,7 +1931,7 @@ namespace smt {
         derived_bound  b(null_theory_var, inf_numeral(0), B_LOWER);
         dependency2new_bound(d, b);
         set_conflict(b, ante, "arith_nl");
-        TRACE("non_linear", for (literal lit : b.m_lits) tout << lit << " "; tout << "\n";); 
+        TRACE("non_linear", for (literal lit : b.m_lits) get_context().display_literal_verbose(tout, lit) << "\n"; tout << "\n";); 
     }
 
     /**

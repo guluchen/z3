@@ -835,6 +835,17 @@ void tst_visit() {
     visit(f);
 }
 
+void tst_numeral() {
+    context c;
+    expr x = c.real_val("1/3");
+    double d = 0;
+    if (!x.is_numeral(d)) {
+        std::cout << x << " is not recognized as a numeral\n";
+        return;
+    }
+    std::cout << x << " is " << d << "\n";
+}
+
 void incremental_example1() {
     std::cout << "incremental example1\n";
     context c;
@@ -1155,6 +1166,14 @@ static void parse_example() {
     // expr b = c.parse_string("(benchmark tst :extrafuns ((x Int) (y Int)) :formula (> x y) :formula (> x 0))");
 }
 
+static void parse_string() {
+    std::cout << "parse string\n";
+    z3::context c;
+    z3::solver s(c);
+    s.from_string("(declare-const x Int)(assert (> x 10))");
+    std::cout << s.check() << "\n";
+}
+
 void mk_model_example() {
     context c;
 
@@ -1179,6 +1198,59 @@ void mk_model_example() {
     std::cout << m.eval(a + b < 2)<< std::endl;
 }
 
+void recfun_example() {
+    std::cout << "recfun example\n";
+    context c;    
+    expr x = c.int_const("x");
+    expr y = c.int_const("y");
+    expr b = c.bool_const("b");
+    sort I = c.int_sort();
+    sort B = c.bool_sort();    
+    func_decl f = recfun("f", I, B, I);
+    expr_vector args(c);
+    args.push_back(x); args.push_back(b);
+    c.recdef(f, args, ite(b, x, f(x + 1, !b)));
+    prove(f(x,c.bool_val(false)) > x);
+}
+
+static void string_values() {
+    context c;
+    expr s = c.string_val("abc\n\n\0\0", 7);
+    std::cout << s << "\n";
+    std::string s1 = s.get_string();
+    std::cout << s1 << "\n";
+}
+
+expr MakeStringConstant(context* context, std::string value) {
+    return context->string_val(value.c_str());
+}
+
+expr MakeStringFunction(context* c, std::string s) {
+    sort sort = c->string_sort();
+    symbol name = c->str_symbol(s.c_str());
+    return c->constant(name, sort);
+}
+
+static void string_issue_2298() {
+    context c;
+    solver s(c);
+    s.push();
+    expr func1 = MakeStringFunction(&c, "func1");
+    expr func2 = MakeStringFunction(&c, "func2");
+    
+    expr abc = MakeStringConstant(&c, "abc");
+    expr cde = MakeStringConstant(&c, "cde");
+    
+    expr length = func1.length();
+    expr five = c.int_val(5);
+    
+    s.add(func2 == abc || func1 == cde);
+    s.add(func2 == abc || func2 == cde);
+    s.add(length <= five);
+    
+    s.check();
+    s.pop();
+}
 
 int main() {
 
@@ -1212,6 +1284,7 @@ int main() {
         tactic_example9(); std::cout << "\n";
         tactic_qe(); std::cout << "\n";
         tst_visit(); std::cout << "\n";
+        tst_numeral(); std::cout << "\n";
         incremental_example1(); std::cout << "\n";
         incremental_example2(); std::cout << "\n";
         incremental_example3(); std::cout << "\n";
@@ -1226,7 +1299,11 @@ int main() {
         sudoku_example(); std::cout << "\n";
         consequence_example(); std::cout << "\n";
         parse_example(); std::cout << "\n";
+        parse_string(); std::cout << "\n";
         mk_model_example(); std::cout << "\n";
+        recfun_example(); std::cout << "\n";
+        string_values(); std::cout << "\n";
+        string_issue_2298(); std::cout << "\n";
         std::cout << "done\n";
     }
     catch (exception & ex) {

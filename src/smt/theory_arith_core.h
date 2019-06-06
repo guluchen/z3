@@ -447,7 +447,14 @@ namespace smt {
               tout << l_ante << "\n" << l_conseq << "\n";);
 
         // literal lits[2] = {l_ante, l_conseq};
+        if (m.has_trace_stream()) {
+            app_ref body(m);
+            body = m.mk_or(ante, conseq);
+            log_axiom_instantiation(body);
+        }
         mk_clause(l_ante, l_conseq, 0, nullptr);
+        if (m.has_trace_stream()) m.trace_stream() << "[end-of-instance]\n";
+
         if (ctx.relevancy()) {
             if (l_ante == false_literal) {
                 ctx.mark_as_relevant(l_conseq);
@@ -482,12 +489,12 @@ namespace smt {
 
     template<typename Ext>
     void theory_arith<Ext>::mk_idiv_mod_axioms(expr * dividend, expr * divisor) {
+        th_rewriter & s  = get_context().get_rewriter();
         if (!m_util.is_zero(divisor)) {
             ast_manager & m = get_manager();
             // if divisor is zero, then idiv and mod are uninterpreted functions.
             expr_ref div(m), mod(m), zero(m), abs_divisor(m), one(m);
             expr_ref eqz(m), eq(m), lower(m), upper(m);
-            th_rewriter & s  = get_context().get_rewriter();
             div         = m_util.mk_idiv(dividend, divisor);
             mod         = m_util.mk_mod(dividend, divisor);
             zero        = m_util.mk_int(0);
@@ -503,11 +510,22 @@ namespace smt {
                   tout << "lower: " << lower << "\n";
                   tout << "upper: " << upper << "\n";);
 
-            mk_axiom(eqz, eq,    true);
+            mk_axiom(eqz, eq,    false);
             mk_axiom(eqz, lower, false);
             mk_axiom(eqz, upper, !m_util.is_numeral(abs_divisor));
             rational k;
             context& ctx = get_context();
+
+            if (!m_util.is_numeral(divisor)) {
+                // (=> (> y 0) (<= (* y (div x y)) x))
+                // (=> (< y 0) ???)
+                expr_ref div_ge(m), div_non_pos(m);
+                div_ge = m_util.mk_ge(m_util.mk_sub(dividend, m_util.mk_mul(divisor, div)), zero);
+                s(div_ge);
+                div_non_pos = m_util.mk_le(divisor, zero);
+                mk_axiom(div_non_pos, div_ge, false);
+            }
+
             (void)ctx;
             if (m_params.m_arith_enum_const_mod && m_util.is_numeral(divisor, k) &&
                 k.is_pos() && k < rational(8)) {
@@ -517,7 +535,9 @@ namespace smt {
                 expr_ref mod_j(m);
                 while(j < k) {
                     mod_j = m.mk_eq(mod, m_util.mk_numeral(j, true));
+                    if (m.has_trace_stream()) log_axiom_instantiation(mod_j);
                     ctx.internalize(mod_j, false);
+                    if (m.has_trace_stream()) m.trace_stream() << "[end-of-instance]\n";
                     literal lit(ctx.get_literal(mod_j));
                     lits.push_back(lit);
                     ctx.mark_as_relevant(lit);
@@ -542,6 +562,7 @@ namespace smt {
                 }
 #endif
             }
+
 #if 0
             // e-matching is too restrictive for multiplication.
             // also suffers from use-after free so formulas have to be pinned in solver.
@@ -2983,7 +3004,7 @@ namespace smt {
                 js = alloc(theory_lemma_justification, get_id(), ctx, lits.size(), lits.c_ptr(),
                            ante.num_params(), ante.params("assign-bounds"));
             }
-            ctx.mk_clause(lits.size(), lits.c_ptr(), js, CLS_AUX_LEMMA, nullptr);
+            ctx.mk_clause(lits.size(), lits.c_ptr(), js, CLS_TH_LEMMA, nullptr);
         }
         else {
             region & r = ctx.get_region();
@@ -3128,7 +3149,7 @@ namespace smt {
     //
     // 1) Handling inequalities: (n1, k1) <= (n2, k2)
     //
-    // The only intersting case is n1 < n2 and k1 > k2.
+    // The only interesting case is n1 < n2 and k1 > k2.
     // Using the definition of infinitesimal numbers
     // we have:
     // n1 + k1 * epsilon <= n2 + k2 - epsilon
@@ -3301,7 +3322,6 @@ namespace smt {
         bound* b = (v == null_theory_var) ? nullptr : upper(v);
         return b && to_expr(b->get_value(), is_int(v), r);
     }
-
 
     template<typename Ext>
     bool theory_arith<Ext>::get_lower(enode * n, rational& r, bool& is_strict) {
@@ -3533,7 +3553,7 @@ namespace smt {
     }
 
     /**
-       \brief reset and retrieve built-in explanation hints for arithmetic lemmmas.
+       \brief reset and retrieve built-in explanation hints for arithmetic lemmas.
     */
 
     template<typename Ext>

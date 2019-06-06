@@ -60,6 +60,7 @@ class inc_sat_solver : public solver {
     atom2bool_var       m_map;
     scoped_ptr<bit_blaster_rewriter> m_bb_rewriter;
     tactic_ref          m_preprocess;
+    bool                m_is_cnf;
     unsigned            m_num_scopes;
     sat::literal_vector m_asms;
     goal_ref_buffer     m_subgoals;
@@ -88,6 +89,7 @@ public:
         m_fmls_head(0),
         m_core(m),
         m_map(m),
+        m_is_cnf(true),
         m_num_scopes(0),
         m_unknown("no reason given"),
         m_internalized_converted(false), 
@@ -164,7 +166,7 @@ public:
             (m.is_not(e, e) && is_uninterp_const(e));
     }
 
-    lbool check_sat(unsigned sz, expr * const * assumptions) override {
+    lbool check_sat_core(unsigned sz, expr * const * assumptions) override {
         m_solver.pop_to_base_level();
         m_core.reset();
         if (m_solver.inconsistent()) return l_false;
@@ -262,7 +264,19 @@ public:
     void assert_expr_core2(expr * t, expr * a) override {        
         if (a) {
             m_asmsf.push_back(a);
-            assert_expr_core(m.mk_implies(a, t));
+            if (m_is_cnf && is_literal(t) && is_literal(a)) {
+                assert_expr_core(m.mk_or(::mk_not(m, a), t));
+            }
+            else if (m_is_cnf && m.is_or(t) && is_clause(t) && is_literal(a)) {
+                expr_ref_vector args(m);
+                args.push_back(::mk_not(m, a));
+                args.append(to_app(t)->get_num_args(), to_app(t)->get_args());
+                assert_expr_core(m.mk_or(args.size(), args.c_ptr()));
+            }
+            else {
+                m_is_cnf = false;
+                assert_expr_core(m.mk_implies(a, t));
+            }
         }
         else {
             assert_expr_core(t);
@@ -272,6 +286,7 @@ public:
     ast_manager& get_manager() const override { return m; }
     void assert_expr_core(expr * t) override {
         TRACE("goal2sat", tout << mk_pp(t, m) << "\n";);
+        m_is_cnf &= is_clause(t);
         m_fmls.push_back(t);
     }
     void set_produce_models(bool f) override {}
@@ -285,11 +300,6 @@ public:
         sat_params p1(p);
         m_params.set_bool("keep_cardinality_constraints", p1.cardinality_solver());
         m_params.set_sym("pb.solver", p1.pb_solver());
-
-        m_params.set_bool("keep_pb_constraints", m_solver.get_config().m_pb_solver == sat::PB_SOLVER);
-        m_params.set_bool("pb_num_system", m_solver.get_config().m_pb_solver == sat::PB_SORTING);
-        m_params.set_bool("pb_totalizer", m_solver.get_config().m_pb_solver == sat::PB_TOTALIZER);
-
         m_params.set_bool("xor_solver", p1.xor_solver());
         m_solver.updt_params(m_params);
         m_solver.set_incremental(is_incremental() && !override_incremental());
@@ -303,14 +313,36 @@ public:
         r.reset();
         r.append(m_core.size(), m_core.c_ptr());
     }
+
+    void get_levels(ptr_vector<expr> const& vars, unsigned_vector& depth) override {
+        unsigned sz = vars.size();
+        depth.resize(sz);
+        for (unsigned i = 0; i < sz; ++i) {
+            auto bv = m_map.to_bool_var(vars[i]);
+            depth[i] = bv == sat::null_bool_var ? UINT_MAX : m_solver.lvl(bv);
+        }
+    }
+
+    expr_ref_vector get_trail() override {
+        expr_ref_vector result(m);
+        unsigned sz = m_solver.trail_size();
+        expr_ref_vector lit2expr(m);
+        lit2expr.resize(m_solver.num_vars() * 2);
+        m_map.mk_inv(lit2expr);
+        for (unsigned i = 0; i < sz; ++i) {
+            sat::literal lit = m_solver.trail_literal(i);
+            result.push_back(lit2expr[lit.index()].get());
+        }
+        return result;
+    }
+
     proof * get_proof() override {
-        UNREACHABLE();
         return nullptr;
     }
 
-    expr_ref_vector last_cube() {
+    expr_ref_vector last_cube(bool is_sat) {
         expr_ref_vector result(m);
-        result.push_back(m.mk_false());
+        result.push_back(is_sat ? m.mk_true() : m.mk_false());
         return result;
     }
 
@@ -332,18 +364,6 @@ public:
         }
         sat::literal_vector lits;
         lbool result = m_solver.cube(vars, lits, backtrack_level);
-        switch (result) {
-        case l_true:
-            return expr_ref_vector(m);
-        case l_false: 
-            return last_cube();
-        default: 
-            SASSERT(!lits.empty());
-            if (lits.empty()) {
-                IF_VERBOSE(0, verbose_stream() << "empty cube for undef\n";);
-            }
-            break;
-        }
         expr_ref_vector fmls(m);
         expr_ref_vector lit2expr(m);
         lit2expr.resize(m_solver.num_vars() * 2);
@@ -358,7 +378,17 @@ public:
                 vs.push_back(x);
             }
         }
-        if (fmls.empty()) { IF_VERBOSE(0, verbose_stream() << "no literals were produced in cube\n"); }
+        switch (result) {
+        case l_true:
+            return last_cube(true);
+        case l_false: 
+            return last_cube(false);
+        default: 
+            break;
+        }
+        if (lits.empty()) {
+            set_reason_unknown(m_solver.get_reason_unknown());
+        }
         return fmls;
     }
     
@@ -547,7 +577,12 @@ private:
         SASSERT(!g->proofs_enabled());
         TRACE("sat", m_solver.display(tout); g->display(tout););
         try {
-            (*m_preprocess)(g, m_subgoals);
+            if (m_is_cnf) {
+                m_subgoals.push_back(g.get());
+            }
+            else {
+                (*m_preprocess)(g, m_subgoals);
+            }
         }
         catch (tactic_exception & ex) {
             IF_VERBOSE(0, verbose_stream() << "exception in tactic " << ex.msg() << "\n";);
@@ -707,6 +742,25 @@ private:
         }
     }
 
+    bool is_literal(expr* n) {
+        return is_uninterp_const(n) || (m.is_not(n, n) && is_uninterp_const(n));
+    }
+
+    bool is_clause(expr* fml) {
+        if (is_literal(fml)) {
+            return true;
+        }
+        if (!m.is_or(fml)) {
+            return false;
+        }
+        for (expr* n : *to_app(fml)) {
+            if (!is_literal(n)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     lbool internalize_formulas() {
         if (m_fmls_head == m_fmls.size()) {
             return l_true;
@@ -714,7 +768,8 @@ private:
         dep2asm_t dep2asm;
         goal_ref g = alloc(goal, m, true, false); // models, maybe cores are enabled
         for (unsigned i = m_fmls_head ; i < m_fmls.size(); ++i) {
-            g->assert_expr(m_fmls[i].get());
+            expr* fml = m_fmls.get(i);
+            g->assert_expr(fml);
         }
         lbool res = internalize_goal(g, dep2asm, false);
         if (res != l_undef) {
@@ -813,14 +868,14 @@ private:
             mdl = nullptr;
             return;
         }
+        TRACE("sat", m_solver.display_model(tout););
         sat::model const & ll_m = m_solver.get_model();
         mdl = alloc(model, m);
-        for (auto const& kv : m_map) {
-            expr * n   = kv.m_key;
-            if (is_app(n) && to_app(n)->get_num_args() > 0) {
+        for (sat::bool_var v = 0; v < ll_m.size(); ++v) {
+            expr* n = m_sat_mc->var2expr(v);
+            if (!n || !is_app(n) || to_app(n)->get_num_args() > 0) {
                 continue;
             }
-            sat::bool_var v = kv.m_value;
             switch (sat::value_at(v, ll_m)) {
             case l_true:
                 mdl->register_decl(to_app(n)->get_decl(), m.mk_true());
@@ -832,23 +887,21 @@ private:
                 break;
             }
         }
-        //IF_VERBOSE(0, model_v2_pp(verbose_stream(), *mdl, true););
 
         if (m_sat_mc) {
-            //IF_VERBOSE(0, m_sat_mc->display(verbose_stream() << "satmc\n"););
             (*m_sat_mc)(mdl);
         }
         if (m_mcs.back()) {            
-            //IF_VERBOSE(0, m_mc0->display(verbose_stream() << "mc0\n"););
             (*m_mcs.back())(mdl);
         }
-        TRACE("sat", model_smt2_pp(tout, m, *mdl, 0););
-        
+        TRACE("sat", model_smt2_pp(tout, m, *mdl, 0););        
 
-        if (!gparams::get_ref().get_bool("model_validate", false)) return;
+        if (!gparams::get_ref().get_bool("model_validate", false)) {
+            return;
+        }
         IF_VERBOSE(1, verbose_stream() << "Verifying solution\n";);
         model_evaluator eval(*mdl);
-        eval.set_model_completion(false);
+        // eval.set_model_completion(false);
         bool all_true = true;
         //unsigned i = 0;
         for (expr * f : m_fmls) {
@@ -858,14 +911,15 @@ private:
                    tout << "Evaluation failed: " << mk_pp(f, m) << " to " << mk_pp(f, m) << "\n";
                    model_smt2_pp(tout, m, *(mdl.get()), 0););
             if (!m.is_true(tmp)) {
-                IF_VERBOSE(0, verbose_stream() << "failed to verify: " << mk_pp(f, m) << "\n";);
+                IF_VERBOSE(0, verbose_stream() << "failed to verify: " << mk_pp(f, m) << "\n");
+                IF_VERBOSE(0, verbose_stream() << "evaluated to " << tmp << "\n");
                 all_true = false;
             }
             //IF_VERBOSE(0, verbose_stream() << (i++) << ": " << mk_pp(f, m) << "\n");
         }
         if (!all_true) {
             IF_VERBOSE(0, verbose_stream() << m_params << "\n");
-            IF_VERBOSE(0, m_sat_mc->display(verbose_stream() << "sat mc\n"));
+            // IF_VERBOSE(0, m_sat_mc->display(verbose_stream() << "sat mc\n"));
             IF_VERBOSE(0, if (m_mcs.back()) m_mcs.back()->display(verbose_stream() << "mc0\n"));
             //IF_VERBOSE(0, m_solver.display(verbose_stream()));
             IF_VERBOSE(0, for (auto const& kv : m_map) verbose_stream() << mk_pp(kv.m_key, m) << " |-> " << kv.m_value << "\n");

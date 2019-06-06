@@ -693,7 +693,7 @@ def mk_install_tactic_cpp_internal(h_files_full_path, path):
     fout.write('#include "cmd_context/tactic_cmds.h"\n')
     fout.write('#include "cmd_context/cmd_context.h"\n')
     tactic_pat   = re.compile('[ \t]*ADD_TACTIC\(.*\)')
-    probe_pat    = re.compile('[ \t]*ADD_PROBE\(.*\)')
+    probe_pat    = re.compile('[ \t]*ADD_PROBE\(.*\)')   
     for h_file in sorted_headers_by_component(h_files_full_path):
         added_include = False
         try:

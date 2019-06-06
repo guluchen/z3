@@ -33,9 +33,7 @@ namespace smt {
         SASSERT(is_watching_clause(~cls->get_literal(0), cls));        
         SASSERT(is_watching_clause(~cls->get_literal(1), cls));        
         if (lit_occs_enabled()) {
-            unsigned num_lits = cls->get_num_literals();
-            for (unsigned i = 0; i < num_lits; i++) {
-                literal l = cls->get_literal(i);
+            for (literal l : *cls) {
                 SASSERT(m_lit_occs[l.index()].contains(const_cast<clause*>(cls)));
             }
         }
@@ -303,7 +301,7 @@ namespace smt {
         for (bool_var v = 0; v < num; v++) {
             if (has_enode(v)) {
                 enode * n = bool_var2enode(v);
-                if (n->is_eq() && is_relevant(n) && get_assignment(v) == l_false) {
+                if (n->is_eq() && is_relevant(n) && get_assignment(v) == l_false && !m_manager.is_iff(n->get_owner())) {
                     TRACE("check_th_diseq_propagation", tout << "checking: #" << n->get_owner_id() << " " << mk_bounded_pp(n->get_owner(), m_manager) << "\n";);
                     enode * lhs = n->get_arg(0)->get_root();
                     enode * rhs = n->get_arg(1)->get_root();

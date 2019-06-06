@@ -3,7 +3,7 @@
 #include <sstream>
 #include "ast/ast_pp.h"
 #include "ast/rewriter/bool_rewriter.h"
-#include "smt/theory_str/theory_str.h"
+#include "smt/theory_str/theory_str2.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
 #include "smt/theory_lra.h"
@@ -1489,7 +1489,7 @@ namespace smt {
             return true;
         }
 
-        void solver::resume(ast_manager& m, context& ctx, theory_str& th, int_expr_solver& m_int_solver){
+        void solver::resume(ast_manager& m, context& ctx, theory_str2& th, int_expr_solver& m_int_solver){
             m_unchecked_leaves.clear();
             if (m_pending.size() == 1 && !check_linear_membership(m_pending.top())) return;
             while (!m_pending.empty()&&m_unchecked_leaves.empty()) {

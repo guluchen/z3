@@ -1007,7 +1007,10 @@ class context {
                          const vector<bool>& reach_pred_used,
                          pob_ref_buffer &out);
 
-    expr_ref mk_sat_answer();
+    /**
+       \brief Retrieve satisfying assignment with explanation.
+    */
+    expr_ref mk_sat_answer() {return get_ground_sat_answer();}
     expr_ref mk_unsat_answer() const;
     unsigned get_cex_depth ();
 
@@ -1092,7 +1095,7 @@ public:
     void reset();
 
     std::ostream& display(std::ostream& out) const;
-    void display_certificate(std::ostream& out) const {NOT_IMPLEMENTED_YET();}
+    void display_certificate(std::ostream& out);
 
     pob& get_root() const {return m_pob_queue.get_root();}
     void set_query(func_decl* q) {m_query_pred = q;}

@@ -220,7 +220,7 @@ class mps_reader {
                 *m_message_stream << "cannot read from file" << std::endl;
             }
             m_line_number++;
-            if (m_line.size() != 0 && m_line[0] != '*' && !all_white_space())
+            if (!m_line.empty() && m_line[0] != '*' && !all_white_space())
                 break;
         }
     }
@@ -514,7 +514,7 @@ class mps_reader {
         lp_assert(m_line.size() >= 14);
         vector<std::string> bound_string = split_and_trim(m_line.substr(name_offset, m_line.size()));
 
-        if (bound_string.size() == 0) {
+        if (bound_string.empty()) {
             set_m_ok_to_false();
             (*m_message_stream) << "error at line " << m_line_number << std::endl;
             throw m_line;
@@ -754,10 +754,7 @@ public:
         }
         for (auto s : m_columns) {
             auto col = s.second;
-            auto b = col->m_bound;
-            if (b != nullptr) {
-                delete b;
-            }
+            delete col->m_bound;
             delete col;
         }
     }

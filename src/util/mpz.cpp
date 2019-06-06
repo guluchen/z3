@@ -16,7 +16,8 @@ Author:
 Revision History:
 
 --*/
-#include<sstream>
+#include <sstream>
+#include <iomanip>
 #include "util/mpz.h"
 #include "util/buffer.h"
 #include "util/trace.h"
@@ -30,7 +31,6 @@ Revision History:
 #else
 #error No multi-precision library selected.
 #endif
-#include <immintrin.h> 
 
 // Available GCD algorithms
 // #define EUCLID_GCD
@@ -46,13 +46,18 @@ Revision History:
 #define LEHMER_GCD
 #endif
 
+#ifdef _WINDOWS
+// This is needed for _tzcnt_u32 and friends.
+#include <immintrin.h>
+#endif
+
 #if defined(__GNUC__)
 #define _trailing_zeros32(X) __builtin_ctz(X)
 #else
 #define _trailing_zeros32(X) _tzcnt_u32(X)
 #endif
 
-#if defined(_AMD64_) 
+#if defined(__LP64__) || defined(_WIN64)
  #if defined(__GNUC__)
  #define _trailing_zeros64(X) __builtin_ctzll(X)
  #else
@@ -1718,6 +1723,102 @@ void mpz_manager<SYNCH>::display_smt2(std::ostream & out, mpz const & a, bool de
         display(out, a);
         if (decimal)
             out << ".0";
+    }
+}
+
+template<bool SYNCH>
+void mpz_manager<SYNCH>::display_hex(std::ostream & out, mpz const & a, unsigned num_bits) const {
+    SASSERT(num_bits % 4 == 0);
+    std::ios fmt(nullptr);
+    fmt.copyfmt(out);
+    out << std::hex;
+    if (is_small(a)) {
+        out << std::setw(num_bits/4) << std::setfill('0') << get_uint64(a);
+    } else {
+#ifndef _MP_GMP
+        digit_t *ds = digits(a);
+        unsigned sz = size(a);
+        unsigned bitSize = sz * sizeof(digit_t) * 8;
+        unsigned firstDigitSize;
+        if (num_bits >= bitSize) {
+            firstDigitSize = sizeof(digit_t) * 2;
+
+            for (unsigned i = 0; i < (num_bits - bitSize)/4; ++i) {
+                out << "0";
+            }
+        } else {
+            firstDigitSize = num_bits % (sizeof(digit_t) * 8) / 4;
+        }
+
+        out << std::setfill('0') << std::setw(firstDigitSize) << ds[sz-1] << std::setw(sizeof(digit_t)*2);
+        for (unsigned i = 1; i < sz; ++i) {
+            out << ds[sz-i-1];
+        }
+#else
+        // GMP version
+        size_t sz = mpz_sizeinbase(*(a.m_ptr), 16);
+        unsigned requiredLength = num_bits / 4;
+        unsigned padding = requiredLength > sz ? requiredLength - sz : 0;
+        sbuffer<char, 1024> buffer(sz, 0);
+        mpz_get_str(buffer.c_ptr(), 16, *(a.m_ptr));
+        for (unsigned i = 0; i < padding; ++i) {
+            out << "0";
+        }
+        out << buffer.c_ptr() + (sz > requiredLength ? sz - requiredLength : 0);
+#endif
+    }
+    out.copyfmt(fmt);
+}
+
+void display_binary_data(std::ostream &out, unsigned val, unsigned numBits) {
+    SASSERT(numBits <= sizeof(unsigned)*8);
+    for (int shift = numBits-1; shift >= 0; --shift) {
+        if (val & (1 << shift)) {
+            out << "1";
+        } else {
+            out << "0";
+        }
+    }
+ }
+
+template<bool SYNCH>
+void mpz_manager<SYNCH>::display_bin(std::ostream & out, mpz const & a, unsigned num_bits) const {
+    if (is_uint(a)) {
+        display_binary_data(out, get_uint(a), num_bits);
+    } 
+    else {
+#ifndef _MP_GMP
+        digit_t *ds = digits(a);
+        unsigned sz = size(a);
+        const unsigned digitBitSize = sizeof(digit_t) * 8;
+        unsigned bitSize = sz * digitBitSize;
+        unsigned firstDigitLength;
+        if (num_bits > bitSize) {
+            firstDigitLength = 0;
+            for (unsigned i = 0; i < (num_bits - bitSize); ++i) {
+                out << "0";
+            }
+        } else {
+            firstDigitLength = num_bits % digitBitSize;
+        }
+        for (unsigned i = 0; i < sz; ++i) {
+            if (i == 0 && firstDigitLength != 0) {
+                display_binary_data(out, ds[sz-1], firstDigitLength);
+            } else {
+                display_binary_data(out, ds[sz-i-1], digitBitSize);
+            }
+        }
+#else
+        // GMP version
+        size_t sz = mpz_sizeinbase(*(a.m_ptr), 2);
+        unsigned padding = num_bits > sz ? num_bits - sz : 0;
+        sbuffer<char, 1024> buffer(sz, 0);
+        mpz_get_str(buffer.c_ptr(), 2, *(a.m_ptr));
+        for (unsigned i = 0; i < padding; ++i) {
+            out << "0";
+        }
+        out << buffer.c_ptr() + (sz > num_bits ? sz - num_bits : 0);
+#endif
     }
 }
 
