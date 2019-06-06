@@ -81,3 +81,6 @@ doc/code
 .vs
 examples/**/obj
 CMakeSettings.json
+# Benchmark log files
+benchmarks/*.log
+benchmarks/*.log.err

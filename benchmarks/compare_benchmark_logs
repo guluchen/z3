@@ -52,7 +52,7 @@ class CheckLog:
             self.logs.append(LogElem(line))
         # for e in self.logs:
         #     print(e)
-        assert len(self.logs) == self.benchmark_size
+        #assert len(self.logs) == self.benchmark_size
 
     def count_result(self, res: str):
         return len([e for e in self.logs if e.result == res])

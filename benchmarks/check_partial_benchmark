@@ -24,7 +24,7 @@ DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp', '--quiet'],
                 'z3seq': ['z3'],
                 'z3str3': ['z3', 'smt.string_solver=z3str3'],
                 'trau': ['trau', '-language', 'smt2.6'],
-                'trauc': ['trauc', 'smt.string_solver=z3str3', '-tr:strg'],
+                'trauc': ['trauc', 'smt.string_solver=trauc', '-tr:strg'],
                 'z3-trau': ['z3-trau', 'smt.string_solver=z3str3']}
 
 # expected error messages
@@ -61,6 +61,8 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         try:
             out = str(check_output(shell_command, stderr=STDOUT, timeout=time_out))
         except CalledProcessError as err:
+            out_err = str(err.output)
+            out = out_err
             result_except = True
         except TimeoutExpired as err:
             out_err = str(err.output)
