@@ -34,6 +34,14 @@ RUN apt-get update && \
         python-setuptools \
         sudo
 
+# Install dotnet runtime
+RUN wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && \
+    dpkg -i packages-microsoft-prod.deb && \
+    apt-get install apt-transport-https && \
+    add-apt-repository universe && \
+    apt-get update && \
+    apt-get -y install dotnet-sdk-2.2
+
 # Install clang6.0
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
 	apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main" && \
