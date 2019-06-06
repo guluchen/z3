@@ -468,6 +468,8 @@ namespace smt {
             std::set<std::pair<expr*, int>> importantVars;
             expr_ref_vector equalities;
             str::state currState;
+            bool reassertEQ = false;
+            bool reassertDisEQ = false;
             int z3_level = -1;
 
             expr_ref_vector assertingConstraints;
@@ -490,17 +492,23 @@ namespace smt {
                 assertingConstraints.reset();
                 equalities.reset();
                 equalities.append(_equalities);
+                reassertEQ = true;
+                reassertDisEQ = true;
             }
 
             UnderApproxState clone(ast_manager &m){
                 UnderApproxState tmp(m, z3_level, eq_combination, importantVars, equalities, currState);
                 tmp.addAssertingConstraints(assertingConstraints);
+                reassertEQ = true;
+                reassertDisEQ = true;
                 return tmp;
             }
 
             void reset(){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << z3_level << std::endl;);
                 z3_level = -1;
+                reassertEQ = false;
+                reassertDisEQ = false;
             }
 
             void assignLevel(int _z3_level){
@@ -515,6 +523,8 @@ namespace smt {
                 equalities.append(other.equalities);
                 currState = other.currState;
                 assertingConstraints.reset();
+                reassertEQ = true;
+                reassertDisEQ = true;
                 for (int i = 0; i < other.assertingConstraints.size(); ++i)
                     assertingConstraints.push_back(other.assertingConstraints[i]);
 
@@ -1198,12 +1208,14 @@ namespace smt {
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         void new_eq_eh(theory_var, theory_var) override;
         void new_diseq_eh(theory_var, theory_var) override;
+            void assert_same_diseq_state();
+            void breakdown_cached_diseq(expr* n1, expr* n2);
             /*
              * Add an axiom of the form:
              * len lhs != len rhs -> lhs != rhs
              * len lhs == 0 == len rhs --> lhs == rhs
              */
-            void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs);
+            void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs, bool& skip);
                 expr* handle_trivial_diseq(expr * e, zstring value);
                     std::set<zstring> extract_const(expr* e, int lvl = 0);
         void init_search_eh() override;
@@ -1215,7 +1227,10 @@ namespace smt {
         final_check_status final_check_eh() override;
             int get_actual_trau_lvl();
             bool at_same_state(str::state curr, str::state prev);
-            bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
+                bool at_same_eq_state(str::state curr, str::state prev);
+                bool at_same_diseq_state(str::state curr, str::state prev);
+
+        bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool all_length_solved();
             std::set<char> collect_char_domain_from_strs();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1301,7 +1316,7 @@ namespace smt {
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
-            bool underapproximation_repeat(expr* causes);
+            bool underapproximation_repeat();
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void createNotContainMap();
                 void createConstSet();
@@ -1312,11 +1327,13 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> eq_combination);
             void initUnderapprox_repeat();
 
-            void additionalHandling();
+            void handle_diseq();
                 void handle_NOTEqual();
+                    void handle_NOTEqual(expr* lhs, expr* rhs);
                     void handle_NOTEqual_const(expr* lhs, zstring rhs);
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
                 void handle_NOTContain();
+                    void handle_NOTContain(expr* lhs, expr* rhs);
                     void handle_NOTContain_var(expr* lhs, expr* rhs);
                     void handle_NOTContain_const(expr* lhs, zstring rhs);
                     bool isContains(expr* n, expr* &contain);
@@ -1912,7 +1929,7 @@ namespace smt {
         expr* queryTheoryArray(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
-
+        void assert_same_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
         /*
          * strArgmt::solve_concat_eq_str()
