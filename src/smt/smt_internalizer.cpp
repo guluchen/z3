@@ -1332,7 +1332,7 @@ namespace smt {
         default:
             break;
         }
-        TRACE("mk_clause", tout << "after simplification:\n"; display_literals(tout, num_lits, lits); tout << "\n";);
+        TRACE("mk_clause", tout << "after simplification:\n"; display_literals_verbose(tout, num_lits, lits); tout << "\n";);
         unsigned activity = 0;
         if (activity == 0)
             activity = 1;
@@ -1353,6 +1353,7 @@ namespace smt {
             return nullptr;
         case 2:
             if (use_binary_clause_opt(lits[0], lits[1], lemma)) {
+                TRACE("mk_clause", tout << " use_binary_clause_opt \n";);
                 literal l1 = lits[0];
                 literal l2 = lits[1];
                 m_watches[(~l1).index()].insert_literal(l2);

@@ -470,20 +470,22 @@ namespace smt {
             str::state currState;
             bool reassertEQ = false;
             bool reassertDisEQ = false;
-            int z3_level = -1;
+            int eqLevel = -1;
+            int diseqLevel = -1;
 
             expr_ref_vector assertingConstraints;
             UnderApproxState(ast_manager &m) : assertingConstraints(m), equalities(m){
 
             }
 
-            UnderApproxState(ast_manager &m, int _z3_level,
+            UnderApproxState(ast_manager &m, int _eqLevel, int _diseqLevel,
                             std::map<expr*, std::set<expr*>> _eq_combination,
                             std::set<std::pair<expr*, int>> _importantVars,
                             expr_ref_vector _equalities,
                             str::state _currState):
 
-                            z3_level(_z3_level),
+                            eqLevel(_eqLevel),
+                            diseqLevel(_diseqLevel),
                             eq_combination(_eq_combination),
                             importantVars(_importantVars),
                             assertingConstraints(m),
@@ -497,26 +499,28 @@ namespace smt {
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, z3_level, eq_combination, importantVars, equalities, currState);
+                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, importantVars, equalities, currState);
                 tmp.addAssertingConstraints(assertingConstraints);
                 reassertEQ = true;
                 reassertDisEQ = true;
                 return tmp;
             }
 
-            void reset(){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": " << z3_level << std::endl;);
-                z3_level = -1;
+            void reset_eq(){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": eqLevel = " << eqLevel << "; diseqLevel = " << diseqLevel << std::endl;);
+                eqLevel = -1;
                 reassertEQ = false;
+            }
+
+            void reset_diseq(){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ <<  ": eqLevel = " << eqLevel << "; diseqLevel = " << diseqLevel << std::endl;);
+                diseqLevel = -1;
                 reassertDisEQ = false;
             }
 
-            void assignLevel(int _z3_level){
-                z3_level = _z3_level;
-            }
-
             UnderApproxState&  operator=(const UnderApproxState& other){
-                z3_level = other.z3_level;
+                eqLevel = other.eqLevel;
+                diseqLevel = other.diseqLevel;
                 eq_combination = other.eq_combination;
                 importantVars = other.importantVars;
                 equalities.reset();
@@ -1207,7 +1211,12 @@ namespace smt {
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
         void new_eq_eh(theory_var, theory_var) override;
+            /*
+            * x . "abc" = x . y && y = "abc"
+            */
+            bool is_trivial_eq_concat(expr* x, expr* y);
         void new_diseq_eh(theory_var, theory_var) override;
+            bool is_not_added_diseq(expr_ref n1, expr_ref n2);
             void assert_same_diseq_state();
             void breakdown_cached_diseq(expr* n1, expr* n2);
             /*
@@ -1907,7 +1916,7 @@ namespace smt {
                         std::set<expr*> subNodes,
                         std::set<expr*> notImportantVars
                 );
-
+                bool is_trivial_combination(expr* v, std::set<expr*> eq);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,
                     std::set<expr*> notImportantVars);
@@ -1929,6 +1938,7 @@ namespace smt {
         expr* queryTheoryArray(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
+
         void assert_same_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
         /*
@@ -2187,8 +2197,10 @@ namespace smt {
         UnderApproxState uState;
     private:
         void assert_axiom(expr *e);
+        void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();
         void dump_literals();
+        void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedLiterals);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedLiterals);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void dump_bool_vars();
