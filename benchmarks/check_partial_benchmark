@@ -151,7 +151,15 @@ def main(argv):
     benchmark_path = os.path.normpath(args.benchmark_path)
     benchmark_files = sorted([os.path.join(root, file)
                               for root, dirs, files in os.walk(benchmark_path) for file in files])
-    benchmark_size = len(benchmark_files)
+    cnt = 0
+    benchmark_size = 0
+    for file in benchmark_files:
+        cnt += 1
+        if cnt is not 9:
+            continue
+        else:
+            cnt = 0
+            benchmark_size += 1
     print(f'benchmark_path: {os.path.realpath(benchmark_path)}')
     print(f'benchmark_size: {benchmark_size}')
     print(f'nolog: {args.nolog}')
