@@ -609,7 +609,7 @@ namespace smt {
         }
 
         if(root.word_eqs().size()==0){
-            if (!is_over_approximation)
+            if (is_over_approximation)
                 return FC_GIVEUP;
             else
                 return FC_DONE;
