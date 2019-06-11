@@ -1178,6 +1178,8 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(n1->get_owner(), m) << " = "
                            << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
 
+//        if (uState.reassertEQ && uState.reassertDisEQ)
+//            return;
 
         handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
 
@@ -1193,8 +1195,8 @@ namespace smt {
             m_we_expr_memo.push_back(we);
         }
 
-        assert_same_eq_state();
-        assert_same_diseq_state();
+        assert_cached_eq_state();
+        assert_cached_diseq_state();
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
@@ -1229,28 +1231,17 @@ namespace smt {
         return false;
     }
 
-    void theory_str::assert_same_eq_state(){
-        // skip first iteration
-        if (uState.currState.m_wes_to_satisfy.size() == 0)
-            return;
-
+    void theory_str::assert_cached_eq_state(){
         if (uState.reassertEQ) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = true" << std::endl;);
             return;
         }
 
-        ast_manager & m = get_manager();
-        const str::state &root = build_state_from_memo();
-        if (at_same_eq_state(root, uState.currState)) {
-
-            underapproximation_repeat();
-            uState.reassertEQ = true;
-            int tmpz3State = get_actual_trau_lvl();
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
-            uState.eqLevel = tmpz3State;
-        }
-        else
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not at_same_state " << std::endl;);
+        underapproximation_repeat();
+        uState.reassertEQ = true;
+        int tmpz3State = get_actual_trau_lvl();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
+        uState.eqLevel = tmpz3State;
     }
 
     void theory_str::handle_equality(expr * lhs, expr * rhs) {
@@ -3211,8 +3202,8 @@ namespace smt {
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << std::endl;);
 
-        if (uState.diseqLevel == 0 && uState.reassertDisEQ)
-            return;
+//        if ((uState.diseqLevel == 0 && uState.reassertDisEQ) || (uState.reassertEQ && uState.reassertDisEQ))
+//            return;
 
         bool skip = false;
         if (m_scope_level >= 0) {
@@ -3244,8 +3235,8 @@ namespace smt {
             m_wi_expr_memo.push_back(wi);
         }
 
-        assert_same_diseq_state();
-        assert_same_eq_state();
+        assert_cached_diseq_state();
+        assert_cached_eq_state();
     }
 
     bool theory_str::is_not_added_diseq(expr_ref n1, expr_ref n2){
@@ -3258,27 +3249,17 @@ namespace smt {
         return true;
     }
 
-    void theory_str::assert_same_diseq_state(){
-        // skip first iteration
-        if (uState.currState.m_wes_to_fail.size() == 0)
-            return;
-
+    void theory_str::assert_cached_diseq_state(){
         if (uState.reassertDisEQ) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = true" << std::endl;);
             return;
         }
 
-        ast_manager & m = get_manager();
-        const str::state &root = build_state_from_memo();
-        if (at_same_diseq_state(root, uState.currState)) {
-            handle_diseq();
+        handle_diseq();
 
-            uState.reassertDisEQ = true;
-            uState.diseqLevel = get_actual_trau_lvl();
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        }
-        else
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not at_same_diseq_state " << std::endl;);
+        uState.reassertDisEQ = true;
+        uState.diseqLevel = get_actual_trau_lvl();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
     }
 
     void theory_str::breakdown_cached_diseq(expr* n1, expr* n2){
@@ -3351,7 +3332,7 @@ namespace smt {
         for (const auto& s : constPart)
             if (s.length() > value.length() || (s.length() == value.length() && s != value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << std::endl;);
-                return createGreaterEqOperator(mk_strlen(e), mk_int(value.length() + 1));
+                return createGreaterEqOperator(mk_strlen(e), mk_int(s.length()));
             }
             else if (s == value) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << std::endl;);
@@ -3681,13 +3662,19 @@ namespace smt {
         context& ctx = get_context();
 
         (void) ctx;
+        expr_ref_vector asms(m);
+        vector<expr_ref_vector> cores;
+        unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         dump_assignments();
 
-        if (uState.eqLevel >= 0 && uState.diseqLevel >= 0 && uState.reassertDisEQ && uState.reassertEQ) {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE " << m_scope_level << std::endl;);
-            return FC_DONE;
-        }
+//        if (uState.eqLevel >= 0 && uState.diseqLevel >= 0 && uState.reassertDisEQ && uState.reassertEQ) {
+//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE " << m_scope_level << std::endl;);
+//            return FC_DONE;
+//        }
+
+        expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+        fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
 
         const str::state &root = build_state_from_memo();
         if (at_same_state(root, uState.currState)) {
@@ -3722,9 +3709,13 @@ namespace smt {
                 uState.reassertEQ = true;
             }
 
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.eqLevel << std::endl;);
             handle_diseq();
             uState.diseqLevel = get_actual_trau_lvl();
             uState.reassertDisEQ = true;
+            uState.disequalities.reset();
+            uState.disequalities.append(guessedDisEqs);
+            uState.currState = root;
             return FC_CONTINUE;
         }
 
@@ -3796,11 +3787,14 @@ namespace smt {
                    });
         }
 
-        expr_ref_vector guessedExprs(m);
-        fetch_guessed_exprs_with_scopes(guessedExprs);
+        std::set<expr*> notImportant;
+        refine_important_vars(importantVars, notImportant, eq_combination);
+        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
+
         std::map<expr*, expr*> causes;
+        fetch_guessed_core_exprs(eq_combination, guessedEqs);
         for (const auto& com : eq_combination){
-            causes[com.first] = createAndOperator(guessedExprs);
+            causes[com.first] = createAndOperator(guessedEqs);
         }
 
         bool axiomAdded = specialHandlingForContainFamily(eq_combination);
@@ -3808,10 +3802,6 @@ namespace smt {
         if (axiomAdded)
             return FC_CONTINUE;
 
-        std::set<expr*> notImportant;
-        refine_important_vars(importantVars, notImportant, eq_combination);
-        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
- 
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
 
 
@@ -3842,11 +3832,19 @@ namespace smt {
 
     bool theory_str::at_same_eq_state(str::state curr, str::state prev) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
-        if (curr.m_wes_to_satisfy.size() != prev.m_wes_to_satisfy.size())
-            return false;
-
         // compare all eq
+        for(const auto& e : prev.m_wes_to_satisfy){
+            if (curr.m_wes_to_satisfy.find(e) == curr.m_wes_to_satisfy.end()) {
+                STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
+                return false;
+            }
+        }
+
         for(const auto& e : curr.m_wes_to_satisfy){
+            // skip x = ""
+            if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
+                continue;
+
             if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
                 return false;
@@ -3858,11 +3856,12 @@ namespace smt {
 
     bool theory_str::at_same_diseq_state(str::state curr, str::state prev) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
-        if (curr.m_wes_to_fail.size() != prev.m_wes_to_fail.size() || curr.m_wes_to_fail.size() == 0 )
-            return false;
 
         // compare all diseq
         for(const auto& e : curr.m_wes_to_fail){
+            // skip x = ""
+            if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
+                continue;
             if (prev.m_wes_to_fail.find(e) == prev.m_wes_to_fail.end()) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state  " << e << std::endl;);
                 return false;
@@ -5637,22 +5636,37 @@ namespace smt {
 
         int tmpz3State = get_actual_trau_lvl();
 
-        expr_ref_vector guessedExprs(m);
-        fetch_guessed_exprs_with_scopes(guessedExprs);
+        expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+        fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
         const str::state &root = build_state_from_memo();
-        UnderApproxState state(m, tmpz3State, tmpz3State, eq_combination, importantVars, guessedExprs, root);
+        UnderApproxState state(m, tmpz3State, tmpz3State, eq_combination, importantVars, guessedEqs, guessedDisEqs, root);
 
         if (state == uState) {
-            underapproximation_repeat();
-            handle_diseq();
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/"
-                               << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
+            expr_ref_vector corePrev(m);
+            fetch_guessed_exprs_from_cache(corePrev);
+
+            expr_ref_vector coreCurr(m);
+            fetch_guessed_core_exprs(eq_combination, guessedEqs);
+
+            // update guessed exprs
+            uState.equalities.reset();
+            uState.equalities.append(guessedEqs);
+
+            uState.disequalities.reset();
+            uState.disequalities.append(guessedDisEqs);
+
+            bool skip = false;
+            if (is_equal(corePrev, coreCurr)) {
+                skip = true;
+                underapproximation_repeat();
+                handle_diseq();
+                uState.eqLevel = tmpz3State;
+                uState.diseqLevel = tmpz3State;
+            }
             uState.currState = root;
-            uState.eqLevel = tmpz3State;
-            uState.diseqLevel = tmpz3State;
             uState.reassertEQ = true;
             uState.reassertDisEQ = true;
-            return true;
+            return !skip;
         }
         else {
             state.addAssertingConstraints(uState.assertingConstraints);
@@ -5681,6 +5695,17 @@ namespace smt {
         return convertEqualities(v_combination, connectedVars, causes);
     }
 
+    bool theory_str::is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr){
+        if (coreCurr.size() != corePrev.size())
+            return false;
+
+        for (const auto& e : coreCurr)
+            if (!corePrev.contains(e))
+                return false;
+
+        return true;
+    }
+
     bool theory_str::is_weaker_expr_sets(expr_ref_vector curr, expr_ref_vector prev){
         context & ctx = get_context();
         ast_manager & m = get_manager();
@@ -5707,9 +5732,9 @@ namespace smt {
         ast_manager & m = get_manager();
         context & ctx = get_context();
 
-        expr_ref_vector guessedLiterals(m);
-        fetch_guessed_exprs_with_scopes(guessedLiterals);
-        expr* causexpr = createAndOperator(guessedLiterals);
+        expr_ref_vector guessedExprs(m);
+        fetch_guessed_exprs_from_cache(guessedExprs);
+        expr* causexpr = createAndOperator(guessedExprs);
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << std::endl;);
         initUnderapprox_repeat();
@@ -7485,8 +7510,8 @@ namespace smt {
                         case NONE:
                             break;
                         case LEFT_EMPTY:
-                            if (left_arr.size() != 2)
-                                return nullptr;
+//                            if (left_arr.size() != 2)
+//                                return nullptr;
 
                             checkLeft[i - 1] = true;
                             break;
@@ -7570,8 +7595,8 @@ namespace smt {
                         case NONE:
                             break;
                         case LEFT_EMPTY:
-                            if (right_arr.size() != 2)
-                                return nullptr;
+//                            if (right_arr.size() != 2)
+//                                return nullptr;
                             checkRight[i - 1] = true;
                             break;
                         case LEFT_EQUAL:
@@ -14393,7 +14418,6 @@ namespace smt {
                 context& ctx = get_context();
 
                 for (int i = 0; i < mful_scope_levels.size(); ++i)
-//                    if (!m.is_not(mful_scope_levels[i].get()))
                     {
 
                         literal tmp = ctx.get_literal(mful_scope_levels[i].get());
@@ -14423,21 +14447,137 @@ namespace smt {
         );
     }
 
-    void theory_str::fetch_guessed_exprs_from_cache(expr_ref_vector &guessedLiterals) {
-//        ast_manager& m = get_manager();
-//        context& ctx = get_context();
-//        for (const auto& p : uState.currState.m_wes_to_satisfy){
-//            p.lhs().
-//        }
-//            guessedLiterals.push_back(createEqualOperator(uState.currState.m_wes_to_satisfy));
+    void theory_str::fetch_guessed_core_exprs(
+            std::map<expr*, std::set<expr*>> eq_combination,
+            expr_ref_vector &guessedExprs){
+        ast_manager& m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        // collect vars
+        std::set<expr*> allvars = collect_all_vars_in_eq_combination(eq_combination);
+        expr_ref_vector orgExprs(m);
+        orgExprs.append(guessedExprs);
+
+        expr_ref_vector ret(m);
+        expr_ref_vector tmpGuessedExprs(m);
+        while (true) {
+            // collect all eq
+            for (const auto &e : guessedExprs) {
+
+                bool adding = false;
+                expr *lhs = to_app(e)->get_arg(0);
+                expr *rhs = to_app(e)->get_arg(1);
+
+                // check rhs
+                if (u.str.is_concat(rhs)) {
+                    ptr_vector<expr> argVec;
+                    get_nodes_in_concat(rhs, argVec);
+                    if (check_intersection_not_empty(argVec, allvars)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+                        // add lhs
+                        ret.push_back(e);
+                        adding = true;
+                        update_all_vars(allvars, lhs);
+                    }
+                }
+
+                // check lhs
+                if ((u.str.is_concat(lhs)) && !adding) {
+                    ptr_vector<expr> argVec;
+                    get_nodes_in_concat(lhs, argVec);
+                    if (check_intersection_not_empty(argVec, allvars)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+                        // add rhs
+                        ret.push_back(e);
+                        adding = true;
+                        update_all_vars(allvars, rhs);
+                    }
+                }
+
+
+                if (adding == false)
+                    tmpGuessedExprs.push_back(e);
+            }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << tmpGuessedExprs.size() << " " << guessedExprs.size() << std::endl;);
+            // check if no improvement
+            if (tmpGuessedExprs.size() == guessedExprs.size())
+                break;
+
+            guessedExprs.reset();
+            guessedExprs.append(tmpGuessedExprs);
+            tmpGuessedExprs.reset();
+            tmpGuessedExprs.append(tmpGuessedExprs);
+        }
+
+        guessedExprs.reset();
+        guessedExprs.append(ret);
+
+        for (const auto& e : orgExprs){
+            expr *lhs = to_app(e)->get_arg(0);
+            expr *rhs = to_app(e)->get_arg(1);
+            if (u.str.is_string(lhs) && allvars.find(rhs) != allvars.end())
+                guessedExprs.push_back(e);
+            else if (u.str.is_string(rhs) && allvars.find(lhs) != allvars.end())
+                guessedExprs.push_back(e);
+        }
+
+
+        for (const auto& e : guessedExprs)
+            STRACE("str", tout << __LINE__ << " core guessed literal " << mk_pp(e, m) << std::endl;);
     }
 
-    void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedLiterals) {
+    std::set<expr*> theory_str::collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){
+        ast_manager& m = get_manager();
+        std::set<expr*> allvars;
+        for (const auto& eq : eq_combination){
+            for (const auto& e : eq.second) {
+                ptr_vector<expr> argVec;
+                get_nodes_in_concat(e, argVec);
+                for (int i = 0; i < argVec.size(); ++i)
+                    if (!u.str.is_string(argVec[i]))
+                        allvars.insert(argVec[i]);
+            }
+        }
+
+        for (const auto& e : allvars)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        return allvars;
+    }
+
+    void theory_str::update_all_vars(std::set<expr*> &allvars, expr* e){
+        if (u.str.is_concat(e)) {
+            ptr_vector<expr> argVec;
+            get_nodes_in_concat(e, argVec);
+            for (int j = 0; j < argVec.size(); ++j)
+                allvars.insert(argVec[j]);
+        }
+        else {
+            allvars.insert(e);
+        }
+    }
+
+    bool theory_str::check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars){
+        for (int i = 0; i < v.size(); ++i)
+            if (allvars.find(v[i]) != allvars.end())
+                return true;
+        return false;
+    }
+
+    void theory_str::fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs) {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+        guessedExprs.append(uState.equalities);
+        fetch_guessed_core_exprs(uState.eq_combination, guessedExprs);
+    }
+
+    void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs) {
         ast_manager& m = get_manager();
         context& ctx = get_context();
         for (int i = 0; i < mful_scope_levels.size(); ++i)
             if (!m.is_not(mful_scope_levels[i].get()))
-                guessedLiterals.push_back(mful_scope_levels[i].get());
+                guessedEqs.push_back(mful_scope_levels[i].get());
+            else
+                guessedDisEqs.push_back(mful_scope_levels[i].get());
     }
 
     void theory_str::fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals) {
@@ -14447,7 +14587,6 @@ namespace smt {
         for (int i = 0; i < mful_scope_levels.size(); ++i)
             if (!m.is_not(mful_scope_levels[i].get()))
             {
-
                 literal tmp = ctx.get_literal(mful_scope_levels[i].get());
                 int assignLvl = ctx.get_assign_level(tmp);
 

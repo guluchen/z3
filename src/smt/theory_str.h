@@ -467,6 +467,7 @@ namespace smt {
             std::map<expr*, std::set<expr*>> eq_combination;
             std::set<std::pair<expr*, int>> importantVars;
             expr_ref_vector equalities;
+            expr_ref_vector disequalities;
             str::state currState;
             bool reassertEQ = false;
             bool reassertDisEQ = false;
@@ -474,7 +475,7 @@ namespace smt {
             int diseqLevel = -1;
 
             expr_ref_vector assertingConstraints;
-            UnderApproxState(ast_manager &m) : assertingConstraints(m), equalities(m){
+            UnderApproxState(ast_manager &m) : assertingConstraints(m), equalities(m), disequalities(m){
 
             }
 
@@ -482,6 +483,7 @@ namespace smt {
                             std::map<expr*, std::set<expr*>> _eq_combination,
                             std::set<std::pair<expr*, int>> _importantVars,
                             expr_ref_vector _equalities,
+                            expr_ref_vector _disequalities,
                             str::state _currState):
 
                             eqLevel(_eqLevel),
@@ -490,16 +492,19 @@ namespace smt {
                             importantVars(_importantVars),
                             assertingConstraints(m),
                             equalities(m),
+                            disequalities(m),
                             currState(_currState){
                 assertingConstraints.reset();
                 equalities.reset();
                 equalities.append(_equalities);
+                disequalities.reset();
+                disequalities.append(_disequalities);
                 reassertEQ = true;
                 reassertDisEQ = true;
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, importantVars, equalities, currState);
+                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, importantVars, equalities, disequalities, currState);
                 tmp.addAssertingConstraints(assertingConstraints);
                 reassertEQ = true;
                 reassertDisEQ = true;
@@ -523,8 +528,13 @@ namespace smt {
                 diseqLevel = other.diseqLevel;
                 eq_combination = other.eq_combination;
                 importantVars = other.importantVars;
+
                 equalities.reset();
                 equalities.append(other.equalities);
+
+                disequalities.reset();
+                disequalities.append(other.disequalities);
+
                 currState = other.currState;
                 assertingConstraints.reset();
                 reassertEQ = true;
@@ -1217,7 +1227,7 @@ namespace smt {
             bool is_trivial_eq_concat(expr* x, expr* y);
         void new_diseq_eh(theory_var, theory_var) override;
             bool is_not_added_diseq(expr_ref n1, expr_ref n2);
-            void assert_same_diseq_state();
+            void assert_cached_diseq_state();
             void breakdown_cached_diseq(expr* n1, expr* n2);
             /*
              * Add an axiom of the form:
@@ -1324,6 +1334,7 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
+                bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat();
             void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
@@ -1939,7 +1950,7 @@ namespace smt {
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
 
-        void assert_same_eq_state();
+        void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
         /*
          * strArgmt::solve_concat_eq_str()
@@ -2200,8 +2211,14 @@ namespace smt {
         void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();
         void dump_literals();
-        void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedLiterals);
-        void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedLiterals);
+        void fetch_guessed_core_exprs(
+                std::map<expr*, std::set<expr*>> eq_combination,
+                expr_ref_vector &guessedExprs);
+        std::set<expr*> collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
+        void update_all_vars(std::set<expr*> &allvars, expr* e);
+        bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
+        void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs);
+        void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
