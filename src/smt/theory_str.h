@@ -1906,6 +1906,7 @@ namespace smt {
                     int &len);
                 bool is_importantVar_recheck(
                     expr* nn,
+                    int len,
                     std::map<expr *, std::set<expr *>> combinations);
                     std::map<expr*, int> countOccurrences_from_root(std::set<expr*> eqc_roots);
                     std::map<expr*, int> countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1918,15 +1919,25 @@ namespace smt {
                     std::set<std::pair<expr*, int>> &importantVars);
                 std::map<expr*, std::set<expr*>> refine_eq_combination(
                         std::set<std::pair<expr*, int>> &importantVars,
-                        std::map<expr*, std::set<expr*>> &combinations,
+                        std::map<expr*, std::set<expr*>> combinations,
                         std::set<expr*> subNodes
                 );
                 std::map<expr*, std::set<expr*>> refine_eq_combination(
                         std::set<std::pair<expr*, int>> &importantVars,
-                        std::map<expr*, std::set<expr*>> &combinations,
+                        std::map<expr*, std::set<expr*>> combinations,
                         std::set<expr*> subNodes,
                         std::set<expr*> notImportantVars
                 );
+                /*
+                * true if var does not appear in all eqs
+                */
+                bool appear_in_all_eqs(std::set<expr*> s, expr* var);
+
+                /*
+                * true if it has subvars
+                */
+                bool has_sub_var(expr* var);
+
                 bool is_trivial_combination(expr* v, std::set<expr*> eq);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,
