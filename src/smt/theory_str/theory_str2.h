@@ -17,7 +17,9 @@
 #include "smt/params/theory_str_params.h"
 #include "smt/smt_kernel.h"
 #include "smt/smt_theory.h"
+#include "smt/smt_arith_value.h"
 #include "util/scoped_vector.h"
+#include "util/union_find.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "smt/theory_str/automata.h"
@@ -28,6 +30,10 @@ namespace smt {
 
 
     class theory_str2 : public theory {
+        typedef union_find<theory_str2> th_union_find;
+        typedef trail_stack<theory_str2> th_trail_stack;
+
+
         int m_scope_level = 0;
         static bool is_over_approximation;
         const theory_str_params& m_params;
@@ -35,9 +41,16 @@ namespace smt {
         arith_util m_util_a;
         seq_util m_util_s;
         str::automaton_factory::sptr m_aut_imp;
+        ast_manager& m;
+        th_union_find m_find;
+        th_trail_stack m_trail_stack;
+
 
         obj_hashtable<expr> axiomatized_terms;
         obj_hashtable<expr> propgated_string_theory;
+        obj_hashtable<expr> m_has_length;          // is length applied
+        expr_ref_vector     m_length;             // length applications themselves
+
         std::set<std::pair<int,int>> axiomatized_eq_vars;
 
 
@@ -50,13 +63,13 @@ namespace smt {
         scoped_vector<str::expr_pair> m_membership_todo;
     public:
         char const * get_name() const override { return "trau"; }
-
         theory_str2(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
         theory *mk_fresh(context *) override { return alloc(theory_str2, get_manager(), m_params); }
         void init(context *ctx) override;
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         theory_var mk_var(enode *n) override;
+        void apply_sort_cnstr(enode* n, sort* s) override;
         bool internalize_atom(app *atom, bool gate_ctx) override;
         bool internalize_term(app *term) override;
         void init_search_eh() override;
@@ -74,10 +87,25 @@ namespace smt {
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
+
+        void add_length_axiom(expr* n);
+
         expr_ref mk_str_var(symbol const&);
+        enode* ensure_enode(expr* a);
         expr_ref mk_skolem(symbol const& s, expr *e1, expr *e2 = nullptr, expr *e3 = nullptr,
                            expr *e4 = nullptr, sort *sort = nullptr);
+        expr_ref mk_len(expr* s) const { return expr_ref(m_util_s.str.mk_length(s), m); }
+
         void add_axiom(expr *e);
+        th_trail_stack& get_trail_stack() { return m_trail_stack; }
+        void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
+        void after_merge_eh(theory_var r1, theory_var r2, theory_var v1, theory_var v2) { }
+        void unmerge_eh(theory_var v1, theory_var v2) {}
+
+
+        bool has_length(expr *e) const { return m_has_length.contains(e); }
+        void add_length(expr* e);
+        void enforce_length(expr* n);
 
     private:
         bool is_of_this_theory(expr *e) const;

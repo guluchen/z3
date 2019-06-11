@@ -22,7 +22,7 @@ namespace smt {
 
     theory_str2::theory_str2(ast_manager& m, const theory_str_params& params)
             : theory{m.mk_family_id("seq")}, m_params{params}, m_rewrite{m}, m_util_a{m},
-              m_util_s{m} {}
+              m_util_s{m},m{m}, m_find{*this}, m_trail_stack(*this), m_length(m) {}
 
     void theory_str2::display(std::ostream& os) const {
         os << "theory_str display" << std::endl;
@@ -30,6 +30,7 @@ namespace smt {
 
     void theory_str2::init(context *ctx) {
         theory::init(ctx);
+
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init\n";);
     }
 
@@ -37,23 +38,31 @@ namespace smt {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "add_theory_assumptions\n";);
     }
 
+    enode* theory_str2::ensure_enode(expr* e) {
+        context& ctx = get_context();
+        if (!ctx.e_internalized(e)) {
+            ctx.internalize(e, false);
+        }
+        enode* n = ctx.get_enode(e);
+        ctx.mark_as_relevant(n);
+        return n;
+    }
+
     theory_var theory_str2::mk_var(enode *const n) {
-        STRACE("str", tout << "mk_var: " << mk_pp(n->get_owner(), get_manager()) << '\n';);
-        if (!is_string_sort(n->get_owner()) && !is_regex_sort(n->get_owner())) {
+        if (!m_util_s.is_seq(n->get_owner()) &&
+            !m_util_s.is_re(n->get_owner())) {
             return null_theory_var;
         }
         if (is_attached_to_var(n)) {
-            const theory_var v = n->get_th_var(get_id());
-            STRACE("str", tout << "already attached to theory_var #" << v << '\n';);
+            return n->get_th_var(get_id());
+        }
+        else {
+            theory_var v = theory::mk_var(n);
+            m_find.mk_var();
+            get_context().attach_th_var(n, this, v);
+            get_context().mark_as_relevant(n);
             return v;
         }
-
-        context& ctx = get_context();
-        const theory_var v = theory::mk_var(n);
-        ctx.attach_th_var(n, this, v);
-        ctx.mark_as_relevant(n);
-        STRACE("str", tout << "new theory_var #" << v << '\n';);
-        return v;
     }
 
 
@@ -70,21 +79,14 @@ namespace smt {
     }
 
     bool theory_str2::internalize_term(app *const term) {
-        ast_manager& m = get_manager();
         context& ctx = get_context();
-        SASSERT(is_of_this_theory(term));
         if (ctx.e_internalized(term)) {
             enode *e = ctx.get_enode(term);
             mk_var(e);
             return true;
         }
-        for (auto e : *term) {
-            if (!ctx.e_internalized(e)) {
-                ctx.internalize(e, false);
-            }
-            enode *n = ctx.get_enode(e);
-            ctx.mark_as_relevant(n);
-            mk_var(n);
+        for (auto arg : *term) {
+            mk_var(ensure_enode(arg));
         }
         if (m.is_bool(term)) {
             bool_var bv = ctx.mk_bool_var(term);
@@ -95,11 +97,19 @@ namespace smt {
         enode *e = nullptr;
         if (ctx.e_internalized(term)) {
             e = ctx.get_enode(term);
-        } else {
+        }
+        else {
             e = ctx.mk_enode(term, false, m.is_bool(term), true);
         }
         mk_var(e);
+        if (!ctx.relevancy()) {
+            relevant_eh(term);
+        }
         return true;
+    }
+
+    void theory_str2::apply_sort_cnstr(enode* n, sort* s) {
+        mk_var(n);
     }
 
     void theory_str2::print_ctx(context& ctx) {  // test_hlin
@@ -326,9 +336,16 @@ namespace smt {
 
         }
     }
+    void theory_str2::add_length_axiom(expr* n) {
+        add_axiom(m_util_a.mk_ge(n, m_util_a.mk_int(0)));
 
+    }
     void theory_str2::relevant_eh(app *const n) {
         STRACE("str", tout << "relevant: " << mk_pp(n, get_manager()) << '\n';);
+
+        if (m_util_s.str.is_length(n)) {
+            add_length_axiom(n);
+        }
 
 
         if (m_util_s.str.is_extract(n)) {
@@ -343,6 +360,11 @@ namespace smt {
             //handle_replace(n);
         } else if (m_util_s.str.is_index(n)) {
             handle_index_of(n);
+        }
+
+        expr* arg;
+        if (m_util_s.str.is_length(n, arg) && !has_length(arg) && get_context().e_internalized(arg)) {
+            enforce_length(arg);
         }
 
     }
@@ -383,7 +405,12 @@ namespace smt {
 
     void theory_str2::new_eq_eh(theory_var x, theory_var y) {
         m_word_eq_var_todo.push_back({x,y});
-        ast_manager& m = get_manager();
+        if (m_find.find(x) == m_find.find(y)) {
+            return;
+        }
+        m_find.merge(x, y);
+
+
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
 
@@ -638,7 +665,6 @@ namespace smt {
     }
 
     model_value_proc *theory_str2::mk_value(enode *const n, model_generator& mg) {
-        ast_manager& m = get_manager();
         app *const tgt = n->get_owner();
         (void) m;
         STRACE("str", tout << "mk_value: sort is " << mk_pp(m.get_sort(tgt), m) << ", "
@@ -759,6 +785,32 @@ namespace smt {
         return word_term::from_variable({ss.str().data()}, e);
     }
 
+    void theory_str2::add_length(expr* l) {
+        expr* e = nullptr;
+        VERIFY(m_util_s.str.is_length(l, e));
+        SASSERT(!m_length.contains(l));
+        m_length.push_back(l);
+        m_has_length.insert(e);
+        m_trail_stack.push(insert_obj_trail<theory_str2, expr>(m_has_length, e));
+        m_trail_stack.push(push_back_vector<theory_str2, expr_ref_vector>(m_length));
+    }
+    /*
+  ensure that all elements in equivalence class occur under an application of 'length'
+*/
+    void theory_str2::enforce_length(expr* e) {
+        enode* n = ensure_enode(e);
+        enode* n1 = n;
+        do {
+            expr* o = n->get_owner();
+            if (!has_length(o)) {
+                expr_ref len = mk_len(o);
+                add_length_axiom(len);
+            }
+            n = n->get_next();
+        }
+        while (n1 != n);
+    }
+
     str::state theory_str2::mk_state_from_todo() {
         using namespace str;
         state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
@@ -790,7 +842,7 @@ namespace smt {
     }
 
     void theory_str2::add_axiom(expr *const e) {
-        bool on_screen =false;
+        bool on_screen =true;
         STRACE("str_axiom", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
 
         if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
@@ -814,7 +866,7 @@ namespace smt {
     }
 
     void theory_str2::add_clause(std::initializer_list<literal> ls) {
-        bool on_screen =false;
+        bool on_screen =true;
 
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
         context& ctx = get_context();
