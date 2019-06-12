@@ -925,7 +925,7 @@ namespace smt {
 
                     int sum = 0;
                     for (int i = 0; i < leafNodes.size(); ++i){
-                        if (th.isImportant(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.isRegexVar(leafNodes[i])){
+                        if (th.is_important(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
                             zstring leafVal;
 
                             if (getStrValue(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
@@ -1109,7 +1109,7 @@ namespace smt {
                 }
                 else {
                     // query int theory
-                    expr *value_ral = th.queryTheoryArithCore(n->get_owner(), mg);
+                    expr *value_ral = th.query_theory_arith_core(n->get_owner(), mg);
                     if (value_ral != nullptr) {
 
                         rational tmp;
@@ -1211,11 +1211,11 @@ namespace smt {
          */
         app * mk_value_helper(app * n, model_generator& mg);
         model_value_proc *mk_value(enode *n, model_generator& mg) override;
-        bool isImportant(expr* n);
-        bool isImportant(expr* n, int &val);
-        bool isRegexVar(expr* n, expr* &regexExpr);
-        bool isRegexVar(expr* n);
-        bool isRegexConcat(expr* n);
+        bool is_important(expr* n);
+        bool is_important(expr* n, int &val);
+        bool is_regex_var(expr* n, expr* &regexExpr);
+        bool is_regex_var(expr* n);
+        bool is_regex_concat(expr* n);
         std::set<expr*> getDependency(expr* n);
 
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
@@ -1253,8 +1253,8 @@ namespace smt {
             bool all_length_solved();
             std::set<char> collect_char_domain_from_strs();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
-            bool specialHandlingForContainFamily(std::map<expr *, std::set<expr *>> eq_combination);
-            bool specialHandlingForCharAtFamily(
+            bool special_handling_for_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
+            bool special_handling_for_charAt_family(
                 std::map<expr *, std::set<expr *>> eq_combination,
                 std::map<expr*, expr*> causes);
             std::set<expr*> get_eqc_roots();
@@ -1337,15 +1337,15 @@ namespace smt {
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat();
-            void initUnderapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
-                void createNotContainMap();
-                void createConstSet();
+            void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
+                void create_notcontain_map();
+                void create_const_set();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
                 std::set<char> initExcludeCharSet();
                 std::set<char> initIncludeCharSet();
                 void createAppearanceMap(
                         std::map<expr*, std::set<expr*>> eq_combination);
-            void initUnderapprox_repeat();
+            void init_underapprox_repeat();
 
             void handle_diseq();
                 void handle_NOTEqual();
@@ -1356,16 +1356,16 @@ namespace smt {
                     void handle_NOTContain(expr* lhs, expr* rhs);
                     void handle_NOTContain_var(expr* lhs, expr* rhs);
                     void handle_NOTContain_const(expr* lhs, zstring rhs);
-                    bool isContains(expr* n, expr* &contain);
-                void  initConnectingSize(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
-                    void staticIntegerAnalysis(std::map<expr*, std::set<expr*>> eq_combination);
-            bool convertEqualities(std::map<expr*, std::vector<expr*>> eq_combination,
+                    bool is_contains(expr* n, expr* &contain);
+                void  init_connecting_size(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
+                    void static_analysis(std::map<expr*, std::set<expr*>> eq_combination);
+            bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
                                             std::map<expr*, expr*> causes);
                 void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes);
                 void negate_context();
-                expr* findEquivalentVariable(expr* e);
+                expr* find_equivalent_variable(expr* e);
                 bool isInternalVar(expr* e);
                 bool isInternalRegexVar(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
@@ -1450,14 +1450,14 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              *
              */
-            expr_ref_vector collectAllPossibleArrangements(
+            expr_ref_vector collect_all_possible_arrangements(
                 std::string lhs_str, std::string rhs_str,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::map<expr*, int> connectedVariables,
                 int p = PMAX);
 
-            void updatePossibleArrangements(
+            void update_possible_arrangements(
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::vector<Arrangment> tmp,
@@ -1482,7 +1482,7 @@ namespace smt {
             /*
              * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
              */
-            expr* generateSMT(int p,
+            expr* generate_smt(int p,
                                             std::vector<int> left_arr,
                                             std::vector<int> right_arr,
                                             std::string lhs_str, std::string rhs_str,
@@ -1495,7 +1495,7 @@ namespace smt {
              * Flat = empty
              */
 
-            expr* generateConstraint00(
+            expr* generate_constraint00(
                     std::pair<expr*, int> a,
                     std::string l_r_hs);
 
@@ -1504,7 +1504,7 @@ namespace smt {
              * size = size && it = it  ||
              * size = size && it = 1
              */
-            expr* generateConstraint01(
+            expr* generate_constraint01(
                     std::string lhs_str, std::string rhs_str,
                     std::pair<expr*, int> a, std::pair<expr*, int> b,
                     int pMax,
@@ -1516,7 +1516,7 @@ namespace smt {
             /*
              * Flat = sum (flats)
              */
-            expr* generateConstraint02(
+            expr* generate_constraint02(
                 std::pair<expr*, int> a,
                 std::vector<std::pair<expr*, int>> elements,
                 std::string lhs_str, std::string rhs_str,
@@ -1576,7 +1576,7 @@ namespace smt {
                 /*
                  *
                  */
-                expr* unrollConnectedVariable(
+                expr* unroll_connected_variable(
                         std::pair<expr*, int> a, /* connected variable */
                         std::vector<std::pair<expr*, int> > elementNames, /* contain const */
                         std::string lhs_str, std::string rhs_str,
@@ -1831,6 +1831,7 @@ namespace smt {
             std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
             expr* getExprVarFlatArray(std::pair<expr*, int> a);
             expr* getExprVarFlatArray(expr* e);
+            app* createITEOperator(expr* c, expr* t, expr* e);
             /*
             * First base case
             */
@@ -1858,14 +1859,14 @@ namespace smt {
             /*
              * extra variables
              */
-            std::vector<expr*> createSetOfFlatVariables(int flatP, std::map<expr*, int> &importantVars);
+            std::vector<expr*> create_set_of_flat_variables(int flatP, std::map<expr*, int> &importantVars);
             /*
              * Input: x . y
              * Output: flat . flat . flat . flat . flat . flat
              */
-            std::vector<std::pair<expr*, int>> createEquality(expr* node);
-            std::vector<std::pair<expr*, int>> createEquality(ptr_vector<expr> list);
-            std::vector<std::pair<expr*, int>> createEquality(std::vector<expr*> list);
+            std::vector<std::pair<expr*, int>> create_equality(expr* node);
+            std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> list);
+            std::vector<std::pair<expr*, int>> create_equality(std::vector<expr*> list);
                 void createInternalVar(expr* v);
                 void reuseInternalVar(expr* v);
             std::vector<expr*> set2vector(std::set<expr*> s);
@@ -1897,9 +1898,9 @@ namespace smt {
                 std::vector<zstring> collect_all_inequalities(expr* nn);
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(zstring s);
-                bool collectNotContains(expr* nn);
-                bool collectAllNotCharAt(expr* nn, int &maxCharAt);
-                    bool isContainEquality(expr* e, expr* &key);
+                bool collect_not_contains(expr* nn);
+                bool collect_not_charAt(expr* nn, int &maxCharAt);
+                    bool is_contain_equality(expr* e, expr* &key);
                 bool is_importantVar(
                     expr* nn,
                     std::map<expr*, int> occurrences,
@@ -1945,7 +1946,7 @@ namespace smt {
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,
                     std::set<std::pair<expr*, int>> importantVars);
-                bool isImportant(expr *n, std::set<std::pair<expr*, int>> importantVars);
+                bool is_important(expr *n, std::set<std::pair<expr*, int>> importantVars);
                 std::set<expr*> extend_object(
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,
@@ -1953,11 +1954,11 @@ namespace smt {
                     std::set<expr*> &subNodes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
-                void addSubNodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes);
+                void add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes);
         bool can_propagate() override;
         void propagate() override;
-        expr* queryTheoryArithCore(expr* n, model_generator& mg);
-        expr* queryTheoryArray(expr* n, model_generator& mg);
+        expr* query_theory_arith_core(expr* n, model_generator& mg);
+        expr* query_theory_array(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
 
