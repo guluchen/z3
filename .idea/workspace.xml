@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="791">
-              <caret line="6002" column="48" selection-start-line="6002" selection-start-column="48" selection-end-line="6002" selection-end-column="48" />
+            <state relative-caret-position="662">
+              <caret line="5770" column="16" lean-forward="true" selection-start-line="5770" selection-start-column="16" selection-end-line="5770" selection-end-column="16" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -180,7 +180,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="381">
-              <caret line="2150" column="26" selection-start-line="2150" selection-start-column="26" selection-end-line="2150" selection-end-column="26" />
+              <caret line="1942" column="105" selection-start-line="1942" selection-start-column="105" selection-end-line="1942" selection-end-column="105" />
             </state>
           </provider>
         </entry>
@@ -198,15 +198,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>unrollConnectedVariable</find>
-      <find>unroll_connected_variable</find>
-      <find>unrollconnect</find>
-      <find>assert_ax</find>
-      <find>build_state_from_memo</find>
-      <find>is_not_added_diseq</find>
-      <find>new_diseq</find>
-      <find>indexof</find>
-      <find>instantiate</find>
       <find>ite</find>
       <find>propagate_length</find>
       <find>init_underapprox</find>
@@ -225,9 +216,18 @@
       <find>12024</find>
       <find>instantiate_axiom_contains</find>
       <find>axiomatized_terms</find>
-      <find>is_contain</find>
       <find>n</find>
       <find>m_library_aware_axiom_todo</find>
+      <find>trivial_com</find>
+      <find>is_contain</find>
+      <find>is_trivial_combination</find>
+      <find>extend_object</find>
+      <find>propagate_final</find>
+      <find>handle_NOTEqual_const</find>
+      <find>assert_cached_diseq_state</find>
+      <find>underapproximation</find>
+      <find>underapproximation_repeat</find>
+      <find>assert_cached_eq_state</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -253,7 +253,7 @@
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
     <option name="x" value="138" />
-    <option name="y" value="23" />
+    <option name="y" value="24" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -758,12 +758,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="635044000" />
+      <workItem from="1555596195940" duration="648024000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="779966000" />
+    <option name="totallyTimeSpent" value="792946000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="138" y="23" width="2560" height="1417" extended-state="0" />
@@ -1126,13 +1126,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="381">
-          <caret line="2150" column="26" selection-start-line="2150" selection-start-column="26" selection-end-line="2150" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/old_vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="731">
@@ -1147,10 +1140,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="381">
+          <caret line="1942" column="105" selection-start-line="1942" selection-start-column="105" selection-end-line="1942" selection-end-column="105" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="791">
-          <caret line="6002" column="48" selection-start-line="6002" selection-start-column="48" selection-end-line="6002" selection-end-column="48" />
+        <state relative-caret-position="662">
+          <caret line="5770" column="16" lean-forward="true" selection-start-line="5770" selection-start-column="16" selection-end-line="5770" selection-end-column="16" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

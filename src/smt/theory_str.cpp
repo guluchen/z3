@@ -1196,7 +1196,6 @@ namespace smt {
         }
 
         assert_cached_eq_state();
-        assert_cached_diseq_state();
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
@@ -3201,9 +3200,6 @@ namespace smt {
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << " @ lvl " << m_scope_level << std::endl;);
 
-//        if ((uState.diseqLevel == 0 && uState.reassertDisEQ) || (uState.reassertEQ && uState.reassertDisEQ))
-//            return;
-
         bool skip = false;
         {
             zstring value;
@@ -3244,7 +3240,6 @@ namespace smt {
                                << mk_ismt2_pp(n2, m) << std::endl;);
         }
 
-        assert_cached_diseq_state();
         assert_cached_eq_state();
     }
 
@@ -3262,9 +3257,6 @@ namespace smt {
         if (uState.reassertDisEQ) {
             return;
         }
-
-        handle_diseq();
-
         uState.reassertDisEQ = true;
         uState.diseqLevel = get_actual_trau_lvl();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -3685,7 +3677,6 @@ namespace smt {
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         dump_assignments();
-
 //        if (uState.eqLevel >= 0 && uState.diseqLevel >= 0 && uState.reassertDisEQ && uState.reassertEQ) {
 //            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE " << m_scope_level << std::endl;);
 //            return FC_DONE;
@@ -5109,7 +5100,7 @@ namespace smt {
             }
         }
 
-//        axiomAdded = axiomAdded || propagate_value(concatSet);
+        axiomAdded = axiomAdded || propagate_value(concatSet);
 //        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
@@ -5158,6 +5149,7 @@ namespace smt {
                                                    << mk_pp(eqNodeSet[i].get(), m) << std::endl
                                                    << "LHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " RHS ~= empty"
                                                    << std::endl;);
+                                continue;
                                 expr_ref_vector lhs_terms(m);
                                 expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
                                 expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_strlen(eqNodeSet[i].get())), m);
@@ -5189,7 +5181,7 @@ namespace smt {
                                                    << mk_pp(eqNodeSet[i].get(), m) << std::endl
                                                    << "RHS ~= " << mk_pp(eqNodeSet[i].get(), m) << " LHS ~= empty"
                                                    << std::endl;);
-
+                                continue;
                                 expr_ref_vector lhs_terms(m);
                                 expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
                                 expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_strlen(eqNodeSet[i].get())), m);
@@ -5226,7 +5218,7 @@ namespace smt {
                                                    << mk_pp(eqNodeSet[i].get(), m) << std::endl
                                                    << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
                                                    << std::endl;);
-
+                                continue;
                                 expr_ref_vector lhs_terms(m);
                                 expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
                                 expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_lhs), mk_strlen(i_lhs)), m);
@@ -5257,6 +5249,7 @@ namespace smt {
                                                    << mk_pp(eqNodeSet[i].get(), m) << std::endl
                                                    << "LHS ~= " << mk_pp(i_lhs, m) << " RHS ~= " << mk_pp(i_rhs, m)
                                                    << std::endl;);
+                                continue;
                                 expr_ref_vector lhs_terms(m);
                                 expr_ref expr1(ctx.mk_eq_atom(*it, eqNodeSet[i].get()), m);
                                 expr_ref expr2(ctx.mk_eq_atom(mk_strlen(concat_rhs), mk_strlen(i_rhs)), m);
@@ -5289,6 +5282,9 @@ namespace smt {
                 zstring lhsString, rhsString;
                 u.str.is_string(concat_lhs_str, lhsString);
                 u.str.is_string(concat_rhs_str, rhsString);
+
+                if (lhsString.length() == 0 || rhsString.length() == 0)
+                    continue;
                 zstring concatString = lhsString + rhsString;
 
                 // special handling: don't assert that string constants are equal to themselves
@@ -5319,6 +5315,7 @@ namespace smt {
                 zstring concatString, rhsString;
                 u.str.is_string(concat_str, concatString);
                 u.str.is_string(concat_rhs_str, rhsString);
+
                 zstring lhsString = concatString.extract(0, concatString.length() - rhsString.length());
 
                 // special handling: don't assert that string constants are equal to themselves
@@ -5673,18 +5670,24 @@ namespace smt {
             uState.disequalities.reset();
             uState.disequalities.append(guessedDisEqs);
 
-            bool skip = false;
-            if (is_equal(corePrev, coreCurr)) {
-                skip = true;
+            bool axiomAdded = false;
+            if (!is_equal(corePrev, coreCurr)) {
+                axiomAdded = true;
                 underapproximation_repeat();
                 handle_diseq();
                 uState.eqLevel = tmpz3State;
                 uState.diseqLevel = tmpz3State;
             }
+            else if (!uState.reassertDisEQ){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
+                handle_diseq();
+                uState.diseqLevel = get_actual_trau_lvl();
+                axiomAdded = true;
+            }
             uState.currState = root;
             uState.reassertEQ = true;
             uState.reassertDisEQ = true;
-            return !skip;
+            return axiomAdded;
         }
         else {
             state.addAssertingConstraints(uState.assertingConstraints);
@@ -5766,7 +5769,7 @@ namespace smt {
                 assert_axiom(a, causexpr);
 //                ctx.assign(assertLiteral, b_justification(causeLiteral), false);
             else
-                assert_axiom(a, m.mk_true());
+                assert_axiom(a);
 //                ctx.assign(assertLiteral, b_justification::mk_axiom(), false);
         }
         return true;
@@ -5850,7 +5853,7 @@ namespace smt {
 
             assert_axiom(assertExpr, cause.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr), m);
-            uState.addAssertingConstraints(tmpAxiom);
+//            uState.addAssertingConstraints(tmpAxiom);
 
 //            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
 
@@ -5871,9 +5874,7 @@ namespace smt {
         expr_ref lenLhs(mk_strlen(lhs), m);
         expr_ref lenRhs(mk_int(rhs.length()), m);
         expr_ref eqref(createEqualOperator(lenLhs.get(),lenRhs.get()), m);
-        STRACE("str", tout << __LINE__ <<  " " << mk_pp(eqref.get(), m)  << "\n";);
         expr_ref notLenEq(mk_not(m, eqref.get()), m);
-        STRACE("str", tout << __LINE__ <<  " " << mk_pp(notLenEq.get(), m)  << "\n";);
 
         cases.push_back(notLenEq);
         int val = -1;
@@ -5890,7 +5891,6 @@ namespace smt {
                 subcases.push_back(mk_not(m, tmp));
                 cases.push_back(createAndOperator(subcases));
             }
-            STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
             expr_ref cause(mk_not(notcause), m);
             ensure_enode(cause.get());
@@ -5899,9 +5899,9 @@ namespace smt {
 
             STRACE("str", tout << __LINE__ <<  " " << mk_pp(assertExpr, m) << ")\n";);
 
-            assert_axiom(assertExpr.get(), cause.get());
+            assert_axiom(assertExpr.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr.get()), m);
-            uState.addAssertingConstraints(tmpAxiom);
+//            uState.addAssertingConstraints(assertExpr);
 
 //            literal assertLiteral = ctx.get_literal(assertExpr);
 //            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
@@ -6000,7 +6000,7 @@ namespace smt {
 //            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
 
 //            expr_ref tmpAxiom(createEqualOperator(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);
-            uState.addAssertingConstraints(axiom);
+//            uState.addAssertingConstraints(axiom);
         }
     }
 
@@ -10279,7 +10279,6 @@ namespace smt {
     }
 
     expr* theory_str::getExprVarFlatArray(expr* e){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()););
         ensure_enode(e);
         context & ctx   = get_context();
         expr* root = ctx.get_enode(e)->get_root()->get_owner();
@@ -10288,10 +10287,8 @@ namespace smt {
 
         expr_ref_vector eqNodeSet(get_manager());
         collect_eq_nodes(root, eqNodeSet);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(e, get_manager()) << std::endl;);
         for (int i = 0; i < eqNodeSet.size(); ++i){
             if (arrMap.find(eqNodeSet[i].get()) != arrMap.end()) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " " << mk_pp(arrMap[eqNodeSet[i].get()], get_manager()) << std::endl;);
                 return arrMap[eqNodeSet[i].get()];
             }
         }
@@ -12049,7 +12046,7 @@ namespace smt {
 
         std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
-            if (is_trivial_combination(c.first, c.second))
+            if (is_trivial_combination(c.first, c.second, importantVars))
                 continue;
 
             std::set<expr*> tmpSet = refine_eq_set(c.second, notImportantVars);
@@ -12125,9 +12122,12 @@ namespace smt {
     /*
      * size = 0 or size = 1 && trivial equal
      */
-    bool theory_str::is_trivial_combination(expr* v, std::set<expr*> eq){
+    bool theory_str::is_trivial_combination(expr* v, std::set<expr*> eq, std::set<std::pair<expr*, int>> importantVars){
         if (eq.size() == 0)
             return true;
+
+        if (is_important(v, importantVars))
+            return false;
 
         if (eq.size() == 1 && v == *(eq.begin()))
             return true;
@@ -12369,6 +12369,12 @@ namespace smt {
                 else {
                     eqRhs.insert(arg1);
                 }
+
+                if (is_important(arg1, importantVars))
+                    eqRhs = {to_app(*it)->get_arg(1)};
+
+                if (is_important(arg0, importantVars))
+                    eqLhs = {to_app(*it)->get_arg(0)};
 
                 causes[object].insert(createEqualOperator(arg0, to_app(*it)->get_arg(0)));
                 causes[object].insert(createEqualOperator(arg1, to_app(*it)->get_arg(1)));
@@ -14651,7 +14657,7 @@ namespace smt {
 
 
         for (const auto& e : guessedExprs)
-            STRACE("str", tout << __LINE__ << " core guessed literal " << mk_pp(e, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(e, m) << std::endl;);
     }
 
     std::set<expr*> theory_str::collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){
