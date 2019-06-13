@@ -3435,8 +3435,12 @@ namespace smt {
                         input_var_in_len.insert(var);
                     }
                 } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
+                    STRACE("str",
+                          tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (u.str.is_itos(ap)) {
+                    STRACE("str",
+                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     TRACE("str",
                           tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
@@ -3465,6 +3469,8 @@ namespace smt {
                 if (is_app(ex)) {
                     app *ap = to_app(ex);
                     if (u.str.is_prefix(ap) || u.str.is_suffix(ap) || u.str.is_contains(ap) || u.str.is_in_re(ap)) {
+                        STRACE("str",
+                               tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                         m_library_aware_axiom_todo.push_back(n);
                     }
                 }
@@ -3485,8 +3491,12 @@ namespace smt {
             if (is_app(ex)) {
                 app *ap = to_app(ex);
                 if (u.str.is_index(ap)) {
+                    STRACE("str",
+                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (u.str.is_stoi(ap)) {
+                    STRACE("str",
+                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     STRACE("str",
                           tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
@@ -5773,7 +5783,7 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
-                if (!is_contains(lhs, contain) && !is_contains(rhs, contain)) {
+                if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
                     handle_NOTEqual(lhs, rhs);
                 }
             }
@@ -5782,7 +5792,7 @@ namespace smt {
 
     void theory_str::handle_NOTEqual(expr* lhs, expr* rhs){
         expr* contain = nullptr;
-        if (!is_contains(lhs, contain) && !is_contains(rhs, contain)) {
+        if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
             ast_manager & m = get_manager();
             expr_ref_vector eqLhs(m);
             expr_ref_vector eqRhs(m);
@@ -5920,14 +5930,14 @@ namespace smt {
 
     void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
         expr* contain = nullptr;
-        if (is_contains(lhs, contain)) {
+        if (is_contain_equality(lhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
                 handle_NOTContain_const(rhs, value);
             else
                 handle_NOTContain_var(rhs, contain);
         }
-        else if (is_contains(rhs, contain)) {
+        else if (is_contain_equality(rhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
                 handle_NOTContain_const(lhs, value);
@@ -5981,18 +5991,47 @@ namespace smt {
                 }
                 cases.push_back(createOrOperator(subcases));
             }
+            cases.push_back(createLessEqOperator(lenExpr, mk_int(bound)));
 
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(createAndOperator(cases), m) << ")\n";);
 
             expr_ref axiom(createAndOperator(cases), m);
-            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
+            assert_axiom(axiom.get());
+//            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
 
-            expr_ref tmpAxiom(createEqualOperator(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);
-            uState.addAssertingConstraints(tmpAxiom);
+//            expr_ref tmpAxiom(createEqualOperator(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);
+            uState.addAssertingConstraints(axiom);
         }
     }
 
-    bool theory_str::is_contains(expr* n, expr* &contain){
+    bool theory_str::is_contain_equality(expr* n){
+
+        ast_manager & m = get_manager();
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(n, eqs);
+        for  (const auto& nn : eqs)
+            if (u.str.is_concat(nn)){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(nn, m) << " = " << mk_pp(n, m)  << std::endl;);
+                ptr_vector<expr> exprVector;
+                get_nodes_in_concat(nn, exprVector);
+                if (exprVector.size() == 3) {
+                    // check var name
+                    std::string n1 = expr2str(exprVector[0]);
+                    std::string n3 = expr2str(exprVector[2]);
+                    if ((n1.find("pre_contain!tmp") != std::string::npos &&
+                            n3.find("post_contain!tmp") != std::string::npos) ||
+                            (n1.find("indexOf1!tmp") != std::string::npos &&
+                             n3.find("indexOf2!tmp") != std::string::npos) ||
+                            (n1.find("replace1!tmp") != std::string::npos &&
+                             n3.find("replace2!tmp") != std::string::npos)) {
+                        return true;
+                    }
+                }
+            }
+        return false;
+    }
+
+    bool theory_str::is_contain_equality(expr* n, expr* &contain){
         if (u.str.is_concat(n)){
             ptr_vector<expr> exprVector;
             get_nodes_in_concat(n, exprVector);
@@ -6000,13 +6039,18 @@ namespace smt {
                 // check var name
                 std::string n1 = expr2str(exprVector[0]);
                 std::string n3 = expr2str(exprVector[2]);
-                if (n1.find("pre_contain!tmp") != std::string::npos &&
-                        n3.find("post_contain!tmp") != std::string::npos) {
+                if ((n1.find("pre_contain!tmp") != std::string::npos &&
+                     n3.find("post_contain!tmp") != std::string::npos) ||
+                    (n1.find("indexOf1!tmp") != std::string::npos &&
+                     n3.find("indexOf2!tmp") != std::string::npos) ||
+                        (n1.find("replace1!tmp") != std::string::npos &&
+                         n3.find("replace2!tmp") != std::string::npos)) {
                     contain = exprVector[1];
                     return true;
                 }
             }
         }
+        contain = nullptr;
         return false;
     }
 
@@ -6200,6 +6244,7 @@ namespace smt {
         std::set<expr*> allStrExprs;
         noFlatVariables = 0;
         for (const auto& v : uState.eq_combination){
+            ensure_enode(v.first);
             if (is_app(v.first)) {
                 app *ap = to_app(v.first);
                 if (!u.str.is_concat(ap))
@@ -6221,6 +6266,7 @@ namespace smt {
                 }
             }
             for (const auto& eq : v.second){
+                ensure_enode(eq);
                 if (is_app(eq)){
                     ptr_vector<expr> exprVector;
                     get_nodes_in_concat(eq, exprVector);
@@ -6240,60 +6286,50 @@ namespace smt {
 
         // create all tmp vars
         for(const auto& v : allStrExprs){
+            app *ap = to_app(v);
+            expr* arrVar = getExprVarFlatArray(v);
+            if (!u.str.is_concat(ap) && arrVar == nullptr) {
+                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                expr_ref v1(m);
+                if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
+                    v1 = arrMap_reverse[flatArr];
 
-            if (is_app(v)){
-                app *ap = to_app(v);
-                expr* arrVar = getExprVarFlatArray(v);
-                if (!u.str.is_concat(ap) && arrVar == nullptr) {
-                    std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
-                    expr_ref v1(m);
-                    if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
-                        v1 = arrMap_reverse[flatArr];
-
-                        if (!ctx.e_internalized(v1.get())){
-                            ctx.internalize(v1, false);
-                        }
-                    }
-                    else {
-                        v1 = mk_arr_var(flatArr);
-                        arrMap_reverse[flatArr] = v1;
-                    }
-                    arrMap[v] = v1;
-                    STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
-
-                    zstring val;
-                    if (u.str.is_string(v, val)){
-                        for (int i = 0; i < val.length(); ++i){
-                            expr* tmp = createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i]));
-                            assert_axiom(tmp, m.mk_true());
-//                            literal exprLiteral = ctx.get_literal(tmp);
-//                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
-                        }
+                    if (!ctx.e_internalized(v1.get())){
+                        ctx.internalize(v1, false);
                     }
                 }
-                else if (arrVar != nullptr) {
-                    ensure_enode(arrVar);
-                    // I'm assuming that this combination will do the correct thing in the integer theory.
-                    STRACE("str", tout << __LINE__ << " arr: " << mk_pp(arrVar, m) << std::endl;);
-                    m_trail.push_back(arrVar);
-                    zstring val;
-                    if (u.str.is_string(v, val)){
-                        for (int i = 0; i < val.length(); ++i){
-                            expr* tmp = createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i]));
-                            assert_axiom(tmp, m.mk_true());
-//                            literal exprLiteral = ctx.get_literal(tmp);
-//                            ctx.assign(exprLiteral, b_justification::mk_axiom(), false);
+                else {
+                    v1 = mk_arr_var(flatArr);
+                    arrMap_reverse[flatArr] = v1;
+                }
+                arrMap[v] = v1;
+                STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
-                        }
+                zstring val;
+                if (u.str.is_string(v, val)){
+                    for (int i = 0; i < val.length(); ++i){
+                        expr* tmp = createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i]));
+                        assert_axiom(tmp, m.mk_true());
+                    }
+                }
+            }
+            else if (arrVar != nullptr) {
+                ensure_enode(arrVar);
+                // I'm assuming that this combination will do the correct thing in the integer theory.
+                STRACE("str", tout << __LINE__ << " arr: " << mk_pp(arrVar, m) << std::endl;);
+                m_trail.push_back(arrVar);
+                zstring val;
+                if (u.str.is_string(v, val)){
+                    for (int i = 0; i < val.length(); ++i){
+                        expr* tmp = createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i]));
+                        assert_axiom(tmp, m.mk_true());
                     }
                 }
             }
         }
 
         for  (const auto& arr : arrMap_reverse) {
-            if (!ctx.e_internalized(arr.second)){
-                ctx.internalize(arr.second, false);
-            }
+            ensure_enode(arr.second);
         }
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** Done" << connectingSize << std::endl;);
@@ -11405,7 +11441,7 @@ namespace smt {
                     expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(rootTmp, m) << " eq_combination size: " << eq_combination[rootTmp].size()
                                        << std::endl;);
-                    if ((occurrences.find(v.first) == occurrences.end() || occurrences[v.first] < 2) && eq_combination[rootTmp].size() <= 20) {
+                    if (!more_than_two_occurrences(rootTmp, occurrences) && eq_combination[rootTmp].size() <= 20 && !is_contain_equality(rootTmp)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
@@ -11438,6 +11474,16 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << std::endl;);
         for (const auto& nn : importantVars)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+    }
+
+    bool theory_str::more_than_two_occurrences(expr* n, std::map<expr*, int> occurrences){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(n, eqs);
+        for (const auto& nn : eqs)
+            if (occurrences[nn] >= 2)
+                return true;
+
+        return false;
     }
 
     /**
@@ -11517,12 +11563,12 @@ namespace smt {
                 return true;
         }
 
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         len = -1;
         for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it)
             if (u.str.is_concat(*it))
                 return false;
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         // now we know it is a leaf node
         // --> check if their parents are fresh
         if (occurrences.find(nn) != occurrences.end())
@@ -11728,20 +11774,6 @@ namespace smt {
             }
         }
         return found;
-    }
-
-    bool theory_str::is_contain_equality(expr* e, expr* &key) {
-        ptr_vector<expr> nodeList;
-        get_nodes_in_concat(e, nodeList);
-        if (nodeList.size() == 3) {
-            std::string tmp = expr2str(nodeList[0]);
-            if (tmp.find("pre_contain") == 0) {
-                key = nodeList[1];
-                return true;
-            }
-        }
-        key = nullptr;
-        return false;
     }
 
     bool theory_str::is_importantVar_recheck(
@@ -12524,9 +12556,24 @@ namespace smt {
                 // TODO see if any other propagate() worklists need this kind of handling
                 // TODO we really only need to check the new ones on each pass
                 unsigned start_count = m_library_aware_axiom_todo.size();
+                STRACE("str", tout << __LINE__ << " m_library_aware_axiom_todo: size " << start_count << std::endl;);
+                for (int i = 0; i < m_library_aware_axiom_todo.size(); ++i)
+                    STRACE("str", tout << __LINE__ << mk_pp(m_library_aware_axiom_todo[i]->get_owner(), get_manager()) << std::endl;);
                 ptr_vector<enode> axioms_tmp(m_library_aware_axiom_todo);
                 for (auto const& e : axioms_tmp) {
+                    STRACE("str", tout << __LINE__ << " instantiate_axiom" << std::endl;);
+                    if (e == nullptr) {
+                        STRACE("str", tout << __LINE__ << " instantiate_axiom null" << std::endl;);
+                    }
+                    else
+                        STRACE("str", tout << __LINE__ << " instantiate_axiom not null"  << std::endl;);
+
+                    STRACE("str", tout << __LINE__ << " instantiate_axiom not null" << e->get_num_args() << std::endl;);
                     app * a = e->get_owner();
+                    if (a == nullptr) {
+                        STRACE("str", tout << __LINE__ << " instantiate_axiom null" << std::endl;);
+                    }
+                    STRACE("str", tout << __LINE__ << " instantiate_axiom" << mk_pp(e->get_owner(), get_manager()) << std::endl;);
                     if (u.str.is_stoi(a)) {
 //                        instantiate_axiom_str_to_int(e);
                     } else if (u.str.is_itos(a)) {
@@ -12539,6 +12586,7 @@ namespace smt {
                         instantiate_axiom_suffixof(e);
                     } else if (u.str.is_contains(a)) {
                         instantiate_axiom_contains(e);
+                        STRACE("str", tout << __LINE__ << " done instantiate_axiom_contains" << mk_pp(e->get_owner(), get_manager()) << std::endl;);
                     } else if (u.str.is_index(a)) {
                         instantiate_axiom_indexof(e);
                     } else if (u.str.is_extract(a)) {
@@ -12552,6 +12600,7 @@ namespace smt {
                         NOT_IMPLEMENTED_YET();
                     }
                 }
+                STRACE("str", tout << __LINE__ << " done instantiate" << std::endl;);
                 unsigned end_count = m_library_aware_axiom_todo.size();
                 if (end_count > start_count) {
                     STRACE("str", tout << "new library-aware terms added during axiom setup -- checking again" << std::endl;);
@@ -13031,16 +13080,20 @@ namespace smt {
         // case 1: i < 0
         {
             expr_ref premise(m_autil.mk_le(i, minus_one), m);
-            expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
-            assert_implication(premise, conclusion);
+            if (premise != m.mk_false()) {
+                expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
+                assert_implication(premise, conclusion);
+            }
         }
 
         // case 2: i = 0
         {
             expr_ref premise(ctx.mk_eq_atom(i, zero), m);
             // reduction to simpler case
-            expr_ref conclusion(ctx.mk_eq_atom(e, mk_indexof(H, N)), m);
-            assert_implication(premise, conclusion);
+            if (premise != m.mk_false()) {
+                expr_ref conclusion(ctx.mk_eq_atom(e, mk_indexof(H, N)), m);
+                assert_implication(premise, conclusion);
+            }
         }
 
         // case 3: i >= len(H)
@@ -13050,8 +13103,10 @@ namespace smt {
             //th_rewriter rw(m);
             //rw(premise);
             expr_ref premise(m_autil.mk_ge(m_autil.mk_add(i, m_autil.mk_mul(minus_one, mk_strlen(H))), zero), m);
-            expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
-            assert_implication(premise, conclusion);
+            if (premise != m.mk_false()) {
+                expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
+                assert_implication(premise, conclusion);
+            }
         }
 
         // case 4: 0 < i < len(H)

@@ -1356,7 +1356,8 @@ namespace smt {
                     void handle_NOTContain(expr* lhs, expr* rhs);
                     void handle_NOTContain_var(expr* lhs, expr* rhs);
                     void handle_NOTContain_const(expr* lhs, zstring rhs);
-                    bool is_contains(expr* n, expr* &contain);
+                    bool is_contain_equality(expr* n);
+                    bool is_contain_equality(expr* n, expr* &contain);
                 void  init_connecting_size(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
                     void static_analysis(std::map<expr*, std::set<expr*>> eq_combination);
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
@@ -1900,7 +1901,7 @@ namespace smt {
                     bool is_trivial_inequality(zstring s);
                 bool collect_not_contains(expr* nn);
                 bool collect_not_charAt(expr* nn, int &maxCharAt);
-                    bool is_contain_equality(expr* e, expr* &key);
+                bool more_than_two_occurrences(expr* n, std::map<expr*, int> occurrences);
                 bool is_importantVar(
                     expr* nn,
                     std::map<expr*, int> occurrences,
