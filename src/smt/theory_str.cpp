@@ -3677,10 +3677,6 @@ namespace smt {
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         dump_assignments();
-//        if (uState.eqLevel >= 0 && uState.diseqLevel >= 0 && uState.reassertDisEQ && uState.reassertEQ) {
-//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE " << m_scope_level << std::endl;);
-//            return FC_DONE;
-//        }
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
@@ -5897,8 +5893,6 @@ namespace smt {
             literal causeLiteral = ctx.get_literal(cause.get());
             expr_ref assertExpr(createOrOperator(cases), m);
 
-            STRACE("str", tout << __LINE__ <<  " " << mk_pp(assertExpr, m) << ")\n";);
-
             assert_axiom(assertExpr.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr.get()), m);
 //            uState.addAssertingConstraints(assertExpr);
@@ -5993,8 +5987,6 @@ namespace smt {
             }
             cases.push_back(createLessEqOperator(lenExpr, mk_int(bound)));
 
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(createAndOperator(cases), m) << ")\n";);
-
             expr_ref axiom(createAndOperator(cases), m);
             assert_axiom(axiom.get());
 //            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
@@ -6009,9 +6001,12 @@ namespace smt {
         ast_manager & m = get_manager();
         expr_ref_vector eqs(m);
         collect_eq_nodes(n, eqs);
-        for  (const auto& nn : eqs)
-            if (u.str.is_concat(nn)){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(nn, m) << " = " << mk_pp(n, m)  << std::endl;);
+
+        for  (const auto& nn : eqs) {
+            if (u.str.is_concat(nn)) {
+                STRACE("str",
+                       tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << mk_pp(nn, m) << " = " << mk_pp(n, m)
+                            << std::endl;);
                 ptr_vector<expr> exprVector;
                 get_nodes_in_concat(nn, exprVector);
                 if (exprVector.size() == 3) {
@@ -6019,15 +6014,22 @@ namespace smt {
                     std::string n1 = expr2str(exprVector[0]);
                     std::string n3 = expr2str(exprVector[2]);
                     if ((n1.find("pre_contain!tmp") != std::string::npos &&
-                            n3.find("post_contain!tmp") != std::string::npos) ||
-                            (n1.find("indexOf1!tmp") != std::string::npos &&
-                             n3.find("indexOf2!tmp") != std::string::npos) ||
-                            (n1.find("replace1!tmp") != std::string::npos &&
-                             n3.find("replace2!tmp") != std::string::npos)) {
+                         n3.find("post_contain!tmp") != std::string::npos) ||
+                        (n1.find("indexOf1!tmp") != std::string::npos &&
+                         n3.find("indexOf2!tmp") != std::string::npos) ||
+                        (n1.find("replace1!tmp") != std::string::npos &&
+                         n3.find("replace2!tmp") != std::string::npos)) {
                         return true;
                     }
                 }
             }
+        }
+
+        for (const auto& nn : eqs){
+            if (collect_not_contains(nn))
+                return true;
+        }
+
         return false;
     }
 
@@ -6501,7 +6503,7 @@ namespace smt {
                 /* compare with others */
                 expr* root_tmp = find_equivalent_variable(it->first);
                 for (const auto& element: it->second) {
-                    if (element == it->first){
+                    if (element == it->first && !u.str.is_concat(element)){
                         continue;
                     }
                     STRACE("str",
@@ -11438,7 +11440,9 @@ namespace smt {
                     expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(rootTmp, m) << " eq_combination size: " << eq_combination[rootTmp].size()
                                        << std::endl;);
-                    if (!more_than_two_occurrences(rootTmp, occurrences) && eq_combination[rootTmp].size() <= 20 && !is_contain_equality(rootTmp)) {
+                    if (!more_than_two_occurrences(rootTmp, occurrences) &&
+                        eq_combination[rootTmp].size() <= 20 &&
+                        !is_contain_equality(rootTmp)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
@@ -11714,8 +11718,7 @@ namespace smt {
             if (we.first.get() == nn){
 
                 if (u.str.is_concat(we.second.get())){
-                    expr* keyContain = nullptr;
-                    if (is_contain_equality(we.second.get(), keyContain)){
+                    if (is_contain_equality(we.second.get())){
                         return true;
                     }
                 }
@@ -11723,8 +11726,7 @@ namespace smt {
             else if (we.second.get() == nn){
 
                 if (u.str.is_concat(we.first.get())){
-                    expr* keyContain = nullptr;
-                    if (is_contain_equality(we.first.get(), keyContain)){
+                    if (is_contain_equality(we.first.get())){
                         return true;
                     }
                 }
@@ -12078,7 +12080,7 @@ namespace smt {
                                 break;
                             }
 
-                        if (importantConcat)
+                        if (is_important_concat(c.first, importantVars))
                             ret[c.first] = tmpSet;
                         else {
                             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
@@ -12117,6 +12119,17 @@ namespace smt {
         for (const auto& nn : importantVars)
         STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
         return ret;
+    }
+
+    bool theory_str::is_important_concat(expr* e, std::set<std::pair<expr*, int>> importantVars){
+        ptr_vector<expr> childrenVector;
+        get_all_nodes_in_concat(e, childrenVector);
+        for (const auto& v : importantVars)
+            if (childrenVector.contains(v.first)) {
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.first, get_manager()) << std::endl;);
+                return true;
+            }
+        return false;
     }
 
     /*
@@ -12482,6 +12495,18 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " add itself " << mk_pp(object, m) << std::endl;);
             result.emplace(object);
         }
+        else {
+            // important var, it = itself, size = 1, it is root --> add another option if it is possible
+            if ( result.size() == 1 &&
+                    is_important(object, importantVars) &&
+                    object == *result.begin() &&
+                    u.str.is_concat(object)
+                ){
+                for (const auto& nn : eqNodeSet)
+                    if (!u.str.is_concat(nn) && to_app(nn)->get_num_args() < 2)
+                        result.insert(nn);
+            }
+        }
 
         combinations[object] = result;
         return result;
@@ -12767,6 +12792,12 @@ namespace smt {
         app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
         SASSERT(eq);
         assert_axiom(eq);
+
+        // len_x = 0 --> Concat(x, y) = y
+        assert_implication(m.mk_eq(len_x, mk_int(0)), createEqualOperator(a_cat, a_y));
+
+        // len_y = 0 --> Concat(x, y) = x
+        assert_implication(m.mk_eq(len_y, mk_int(0)), createEqualOperator(a_cat, a_x));
     }
 
     void theory_str::instantiate_axiom_prefixof(enode * e) {
@@ -13715,8 +13746,20 @@ namespace smt {
             for (auto el : childrenVector) {
                 items.push_back(mk_strlen(el));
             }
+
+            // len = sum len
             expr_ref lenAssert(ctx.mk_eq_atom(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
+
+            // | n1 | = 0 --> concat = n2
+            expr_ref premise00(ctx.mk_eq_atom(mk_int(0), mk_strlen(n1)), m);
+            expr_ref conclusion00(createEqualOperator(concatAst, n2), m);
+            assert_implication(premise00, conclusion00);
+
+            // | n2 | = 0 --> concat = n1
+            expr_ref premise01(ctx.mk_eq_atom(mk_int(0), mk_strlen(n2)), m);
+            expr_ref conclusion01(createEqualOperator(concatAst, n1), m);
+            assert_implication(premise01, conclusion01);
         }
         return concatAst;
     }

@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
@@ -101,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="662">
-              <caret line="5770" column="16" lean-forward="true" selection-start-line="5770" selection-start-column="16" selection-end-line="5770" selection-end-column="16" />
+            <state relative-caret-position="527">
+              <caret line="6505" column="72" selection-start-line="6505" selection-start-column="72" selection-end-line="6505" selection-end-column="72" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -180,7 +179,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="381">
-              <caret line="1942" column="105" selection-start-line="1942" selection-start-column="105" selection-end-line="1942" selection-end-column="105" />
+              <caret line="2122" column="40" selection-start-line="2122" selection-start-column="40" selection-end-line="2122" selection-end-column="40" />
             </state>
           </provider>
         </entry>
@@ -198,17 +197,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ite</find>
-      <find>propagate_length</find>
-      <find>init_underapprox</find>
-      <find>instantiate_</find>
-      <find>eqConcat</find>
-      <find>handle_NOTContain_cons</find>
-      <find>retTmp</find>
-      <find>isimpor</find>
-      <find>is_contain_e</find>
-      <find>is_contains</find>
-      <find>is_contain_equality</find>
       <find>collect_eq_nodes</find>
       <find>replace1</find>
       <find>indexOf1</find>
@@ -219,7 +207,6 @@
       <find>n</find>
       <find>m_library_aware_axiom_todo</find>
       <find>trivial_com</find>
-      <find>is_contain</find>
       <find>is_trivial_combination</find>
       <find>extend_object</find>
       <find>propagate_final</find>
@@ -228,6 +215,18 @@
       <find>underapproximation</find>
       <find>underapproximation_repeat</find>
       <find>assert_cached_eq_state</find>
+      <find>handle_diseq</find>
+      <find>underapproximation(</find>
+      <find>is_contain_equality</find>
+      <find>handle_NOTContain</find>
+      <find>is_important</find>
+      <find>is_importantvar(</find>
+      <find>m_concat_axiom_todo</find>
+      <find>concat_as</find>
+      <find>instantiate_concat_axiom</find>
+      <find>concatAst</find>
+      <find>is_contain</find>
+      <find>premis</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -758,15 +757,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="648024000" />
+      <workItem from="1555596195940" duration="656237000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="792946000" />
+    <option name="totallyTimeSpent" value="801159000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="138" y="23" width="2560" height="1417" extended-state="0" />
+    <frame x="138" y="24" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
@@ -1143,14 +1142,14 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="381">
-          <caret line="1942" column="105" selection-start-line="1942" selection-start-column="105" selection-end-line="1942" selection-end-column="105" />
+          <caret line="2122" column="40" selection-start-line="2122" selection-start-column="40" selection-end-line="2122" selection-end-column="40" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="662">
-          <caret line="5770" column="16" lean-forward="true" selection-start-line="5770" selection-start-column="16" selection-end-line="5770" selection-end-column="16" />
+        <state relative-caret-position="527">
+          <caret line="6505" column="72" selection-start-line="6505" selection-start-column="72" selection-end-line="6505" selection-end-column="72" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
