@@ -5865,7 +5865,6 @@ namespace smt {
     void theory_str::handle_NOTEqual_const(expr* lhs, zstring rhs){
         ast_manager & m = get_manager();
         context & ctx = get_context();
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
         expr_ref_vector cases(m);
         expr_ref lenLhs(mk_strlen(lhs), m);
         expr_ref lenRhs(mk_int(rhs.length()), m);
@@ -5874,8 +5873,8 @@ namespace smt {
 
         cases.push_back(notLenEq);
         int val = -1;
-        if (is_important(lhs, val) && val != connectingSize) {
-            STRACE("str", tout << __LINE__ <<  " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
+        if (is_important(lhs, val)) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = getExprVarFlatArray(lhs);
             if (arrLhs == nullptr)
                 return;
@@ -6178,7 +6177,15 @@ namespace smt {
                     v1 = mk_arr_var(flatArr);
                     arrMap_reverse[flatArr] = v1;
                 }
-                arrMap[v] = v1;
+
+                {
+                    expr_ref_vector eqs(m);
+                    collect_eq_nodes(v, eqs);
+
+                    for (const auto& vv : eqs)
+                        arrMap[vv] = v1;
+                }
+
 
                 STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
@@ -6290,8 +6297,13 @@ namespace smt {
         for(const auto& v : allStrExprs){
             app *ap = to_app(v);
             expr* arrVar = getExprVarFlatArray(v);
+            if (arrVar == nullptr)
+                continue;
             if (!u.str.is_concat(ap) && arrVar == nullptr) {
                 std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                if (u.str.is_string(v))
+                    flatArr = generateFlatArray(std::make_pair(v, 0), "");
+
                 expr_ref v1(m);
                 if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
                     v1 = arrMap_reverse[flatArr];
@@ -6304,7 +6316,13 @@ namespace smt {
                     v1 = mk_arr_var(flatArr);
                     arrMap_reverse[flatArr] = v1;
                 }
-                arrMap[v] = v1;
+                {
+                    expr_ref_vector eqs(m);
+                    collect_eq_nodes(v, eqs);
+
+                    for (const auto& vv : eqs)
+                        arrMap[vv] = v1;
+                }
                 STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
 
                 zstring val;
@@ -9408,8 +9426,10 @@ namespace smt {
                         if (QCONSTMAX == 1) {
                             resultParts.push_back(createEqualOperator(subLen, m_autil.mk_int(content.length())));
                             for (unsigned k = 0; k < content.length(); ++k){
+                                expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
+
                                 resultParts.push_back(createEqualOperator(
-                                        createSelectOperator(arrayLhs, createAddOperator(m_autil.mk_int(k), prefix_lhs)),
+                                        createSelectOperator(arrayLhs, at),
                                         createSelectOperator(arrayRhs, createAddOperator(m_autil.mk_int(k), prefix_rhs))));
                             }
                         }
@@ -9448,8 +9468,15 @@ namespace smt {
                                     expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
                                     subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
                                     for (int k = 0; k < j; ++k){
+                                        expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
+                                        rational atValue;
+                                        expr* lhsExpr = nullptr;
+                                        if (!m_autil.is_numeral(at, atValue))
+                                            lhsExpr = createSelectOperator(arrayLhs, at);
+                                        else
+                                            lhsExpr = mk_int(content[atValue.get_int32()]);
                                         subpossibleCases.push_back(createEqualOperator(
-                                                createSelectOperator(arrayLhs, createAddOperator(m_autil.mk_int(k), prefix_lhs)),
+                                                lhsExpr,
                                                 createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
                                     }
                                     possibleCases.push_back(createAndOperator(subpossibleCases));
@@ -10359,6 +10386,10 @@ namespace smt {
      *
      */
     app* theory_str::createAddOperator(expr* x, expr* y){
+        rational tmpValue0, tmpValue1;
+        if (m_autil.is_numeral(x, tmpValue0) && m_autil.is_numeral(y, tmpValue1))
+            return m_autil.mk_int(tmpValue0 + tmpValue1);
+
         context & ctx   = get_context();
         app* tmp = m_autil.mk_add(x, y);
         ctx.internalize(tmp, false);
@@ -11718,7 +11749,8 @@ namespace smt {
             if (we.first.get() == nn){
 
                 if (u.str.is_concat(we.second.get())){
-                    if (is_contain_equality(we.second.get())){
+                    expr* tmp = nullptr;
+                    if (is_contain_equality(we.second.get(), tmp)){
                         return true;
                     }
                 }
@@ -11726,7 +11758,8 @@ namespace smt {
             else if (we.second.get() == nn){
 
                 if (u.str.is_concat(we.first.get())){
-                    if (is_contain_equality(we.first.get())){
+                    expr* tmp = nullptr;
+                    if (is_contain_equality(we.first.get(), tmp)){
                         return true;
                     }
                 }
@@ -11981,6 +12014,7 @@ namespace smt {
         for (const auto& c : combinations){
             bool important = is_important(c.first, importantVars);
             if (!important) {
+                // the var is too complicated
                 if (c.second.size() > 20) {
                     importantVars.insert(std::make_pair(c.first, -1));
                     ret[c.first] = c.second;
@@ -12513,16 +12547,16 @@ namespace smt {
     }
 
     void theory_str::add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes){
-//        rational vLen;
-//        if (get_len_value(concatL, vLen)) {
-//            if (vLen.get_int32() == 0)
-//                return;
-//        }
-//
-//        if (get_len_value(concatR, vLen)) {
-//            if (vLen.get_int32() == 0)
-//                return;
-//        }
+        rational vLen;
+        if (get_len_value(concatL, vLen)) {
+            if (vLen.get_int32() == 0)
+                return;
+        }
+
+        if (get_len_value(concatR, vLen)) {
+            if (vLen.get_int32() == 0)
+                return;
+        }
 
         subNodes.insert(concatL);
         subNodes.insert(concatR);
