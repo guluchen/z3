@@ -4076,6 +4076,9 @@ namespace smt {
         else return false;
     }
 
+    /*
+     * charAt1 = charAt1 at beginning because they have the same len = 1
+     */
     bool theory_str::special_handling_for_charAt_family(
             std::map<expr *, std::set<expr *>> eq_combination,
             std::map<expr*, expr*> causes) {
@@ -4105,8 +4108,10 @@ namespace smt {
                                     std::string name_j = expr2str(nodes_j[0]);
                                     zstring value_j("");
                                     if (name_j.find("charAt1") == 0 || (u.str.is_string(nodes_j[0], value_j) && value_j.length() > 0)) {
+                                        if (are_equal_exprs(nodes_i[0], nodes_j[0]))
+                                            continue;
                                         if (!(value_i.length() > 0 && value_j.length() > 0)) {
-                                            if (value_i.length() == 0 && value_j.length() == 0 && nodes_i[0] != nodes_j[0]){
+                                            if (value_i.length() == 0 && value_j.length() == 0){
                                                 // both are indexofs
                                                 if (causes.find(v.first) != causes.end()) {
                                                     // implication
@@ -4180,11 +4185,17 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         if (ands.size() > 0) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
-            assert_axiom(createAndOperator(ands), m.mk_true());
+            assert_axiom(createAndOperator(ands));
             return true;
         }
         else
             return false;
+    }
+
+    bool theory_str::are_equal_exprs(expr* x, expr* y){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(x, eqs);
+        return eqs.contains(y);
     }
 
     std::set<expr*> theory_str::get_eqc_roots(){

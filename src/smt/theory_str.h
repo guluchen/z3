@@ -1257,6 +1257,7 @@ namespace smt {
             bool special_handling_for_charAt_family(
                 std::map<expr *, std::set<expr *>> eq_combination,
                 std::map<expr*, expr*> causes);
+                bool are_equal_exprs(expr* x, expr* y);
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
             std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
