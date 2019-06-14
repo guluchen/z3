@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
@@ -100,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="481">
-              <caret line="4111" column="53" selection-start-line="4111" selection-start-column="53" selection-end-line="4111" selection-end-column="53" />
+            <state relative-caret-position="377">
+              <caret line="1199" column="47" selection-start-line="1199" selection-start-column="47" selection-end-line="1199" selection-end-column="47" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -137,6 +138,15 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="398">
+              <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="391">
@@ -150,15 +160,6 @@
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="490">
               <caret line="448" column="9" selection-start-line="448" selection-start-column="9" selection-end-line="448" selection-end-column="9" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/smt_kernel.cpp">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="398">
-              <caret line="126" column="19" selection-start-line="126" selection-start-column="19" selection-end-line="126" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -178,8 +179,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="381">
-              <caret line="1256" column="17" selection-start-line="1256" selection-start-column="17" selection-end-line="1256" selection-end-column="17" />
+            <state relative-caret-position="366">
+              <caret line="1357" column="82" selection-start-line="1357" selection-start-column="82" selection-end-line="1357" selection-end-column="82" />
             </state>
           </provider>
         </entry>
@@ -197,14 +198,8 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>is_trivial_combination</find>
-      <find>extend_object</find>
-      <find>propagate_final</find>
       <find>handle_NOTEqual_const</find>
-      <find>assert_cached_diseq_state</find>
       <find>underapproximation</find>
-      <find>underapproximation_repeat</find>
-      <find>assert_cached_eq_state</find>
       <find>handle_diseq</find>
       <find>underapproximation(</find>
       <find>is_contain_equality</find>
@@ -226,7 +221,13 @@
       <find>11777</find>
       <find>collect_not_charAt</find>
       <find>collect_eq</find>
+      <find>underapproximation_repeat</find>
+      <find>contain</find>
+      <find>mk_not(m,</find>
       <find>is_contain</find>
+      <find>assert_cached_eq_state</find>
+      <find>assert_cached_diseq_state</find>
+      <find>if (uState.reassertEQ &amp;&amp; uState</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -757,12 +758,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="669816000" />
+      <workItem from="1555596195940" duration="673193000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="814738000" />
+    <option name="totallyTimeSpent" value="818115000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="138" y="24" width="2560" height="1417" extended-state="0" />
@@ -989,13 +990,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="398">
-          <caret line="195" column="9" selection-start-line="195" selection-start-column="9" selection-end-line="195" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="394">
@@ -1139,17 +1133,24 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="398">
+          <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="381">
-          <caret line="1256" column="17" selection-start-line="1256" selection-start-column="17" selection-end-line="1256" selection-end-column="17" />
+        <state relative-caret-position="366">
+          <caret line="1357" column="82" selection-start-line="1357" selection-start-column="82" selection-end-line="1357" selection-end-column="82" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="481">
-          <caret line="4111" column="53" selection-start-line="4111" selection-start-column="53" selection-end-line="4111" selection-end-column="53" />
+        <state relative-caret-position="377">
+          <caret line="1199" column="47" selection-start-line="1199" selection-start-column="47" selection-end-line="1199" selection-end-column="47" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

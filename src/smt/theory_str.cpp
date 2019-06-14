@@ -1196,6 +1196,9 @@ namespace smt {
         }
 
         assert_cached_eq_state();
+
+        if (uState.reassertEQ && uState.eqLevel == 0)
+            assert_cached_diseq_state();
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
@@ -3241,6 +3244,9 @@ namespace smt {
         }
 
         assert_cached_eq_state();
+
+        if (uState.reassertEQ && uState.eqLevel == 0)
+            assert_cached_diseq_state();
     }
 
     bool theory_str::is_not_added_diseq(expr_ref n1, expr_ref n2){
@@ -3254,12 +3260,15 @@ namespace smt {
     }
 
     void theory_str::assert_cached_diseq_state(){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         if (uState.reassertDisEQ) {
             return;
         }
+
+        handle_diseq();
         uState.reassertDisEQ = true;
         uState.diseqLevel = get_actual_trau_lvl();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
     }
 
     void theory_str::breakdown_cached_diseq(expr* n1, expr* n2){
@@ -5764,7 +5773,7 @@ namespace smt {
         fetch_guessed_exprs_from_cache(guessedExprs);
         expr* causexpr = createAndOperator(guessedExprs);
 
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << " @lvl " << m_scope_level << std::endl;);
         init_underapprox_repeat();
         literal causeLiteral = ctx.get_literal(causexpr);
 
@@ -5783,6 +5792,7 @@ namespace smt {
     }
 
     void theory_str::handle_diseq(){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " @lvl " << m_scope_level << "\n";);
         handle_NOTEqual();
         handle_NOTContain();
     }
@@ -5905,7 +5915,7 @@ namespace smt {
 
             assert_axiom(assertExpr.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr.get()), m);
-//            uState.addAssertingConstraints(assertExpr);
+//            uState.addAssertingConstraints(tmpAxiom);
 
 //            literal assertLiteral = ctx.get_literal(assertExpr);
 //            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
@@ -5933,28 +5943,30 @@ namespace smt {
     }
 
     void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
+        ast_manager & m = get_manager();
         expr* contain = nullptr;
+        expr* premise = mk_not(m, createEqualOperator(lhs, rhs));
         if (is_contain_equality(lhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
-                handle_NOTContain_const(rhs, value);
+                handle_NOTContain_const(rhs, value, premise);
             else
-                handle_NOTContain_var(rhs, contain);
+                handle_NOTContain_var(rhs, contain, premise);
         }
         else if (is_contain_equality(rhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
-                handle_NOTContain_const(lhs, value);
+                handle_NOTContain_const(lhs, value, premise);
             else
-                handle_NOTContain_var(lhs, contain);
+                handle_NOTContain_var(lhs, contain, premise);
         }
     }
 
-    void theory_str::handle_NOTContain_var(expr* lhs, expr* rhs){
+    void theory_str::handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise){
 
     }
 
-    void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs){
+    void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise){
 
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
@@ -5998,7 +6010,7 @@ namespace smt {
             cases.push_back(createLessEqOperator(lenExpr, mk_int(bound)));
 
             expr_ref axiom(createAndOperator(cases), m);
-            assert_axiom(axiom.get());
+            assert_axiom(createEqualOperator(premise, axiom.get()));
 //            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
 
 //            expr_ref tmpAxiom(createEqualOperator(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);

@@ -1355,8 +1355,8 @@ namespace smt {
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
                 void handle_NOTContain();
                     void handle_NOTContain(expr* lhs, expr* rhs);
-                    void handle_NOTContain_var(expr* lhs, expr* rhs);
-                    void handle_NOTContain_const(expr* lhs, zstring rhs);
+                    void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise);
+                    void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise);
                     bool is_contain_equality(expr* n);
                     bool is_contain_equality(expr* n, expr* &contain);
                 void  init_connecting_size(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
