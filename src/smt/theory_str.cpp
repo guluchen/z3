@@ -11439,28 +11439,33 @@ namespace smt {
         ast_manager & m = get_manager();
         context& ctx = get_context();
         notImportant.clear();
+        for (const auto& nn : importantVars)
+            STRACE("str", tout << __LINE__ << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+
 
         for (const auto& nn : importantVars) {
-            if (retTmp.find(nn.first) == retTmp.end() && notImportant.find(nn.first) == notImportant.end()) {
-                if (is_importantVar_recheck(ctx.get_enode(nn.first)->get_root()->get_owner(), nn.second, eq_combination)) {
-                    expr_ref_vector eqList(m);
-                    collect_eq_nodes(nn.first, eqList);
-                    for (int i = 0; i < eqList.size(); ++i) {
+            if (retTmp.find(nn.first) == retTmp.end()) {
+                if (is_importantVar_recheck(nn.first, nn.second, eq_combination)) {
+                    expr_ref_vector eqs(m);
+                    collect_eq_nodes(nn.first, eqs);
+                    for (int i = 0; i < eqs.size(); ++i) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn.first, m) << " --> "
-                                           << mk_pp(eqList[i].get(), m) << std::endl;);
-                        retTmp[eqList[i].get()] = nn.second;
-                    }
-                }
-                else {
-                    expr_ref_vector eqList(m);
-                    collect_eq_nodes(nn.first, eqList);
-                    for (int i = 0; i < eqList.size(); ++i) {
-                        notImportant.insert(eqList[i].get());
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
+                                           << mk_pp(eqs[i].get(), m) << std::endl;);
+                        retTmp[eqs[i].get()] = nn.second;
                     }
                 }
             }
         }
+
+        for (const auto& nn : importantVars)
+            if (retTmp.find(nn.first) == retTmp.end()){
+                expr_ref_vector eqList(m);
+                collect_eq_nodes(nn.first, eqList);
+                for (int i = 0; i < eqList.size(); ++i) {
+                    notImportant.insert(eqList[i].get());
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
+                }
+            }
 
         std::map<expr*, int> occurrences = countOccurrences_from_combination(eq_combination);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -11546,17 +11551,16 @@ namespace smt {
             len = maxDiffStrs[0].length();
         int maxCharAt = 0;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
-        if (collect_not_charAt(nn, maxCharAt)) {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
-            if (maxCharAt == -1) {
-                len = -1;
-                return true;
-            }
-            else if (maxCharAt > len){
-                len = maxCharAt;
-                return true;
-            }
-        }
+//        if (collect_not_charAt(nn, maxCharAt)) {
+//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
+//            if (maxCharAt == -1) {
+//                len = -1;
+//                return true;
+//            }
+//            else if (maxCharAt > len){
+//                len = maxCharAt;
+//            }
+//        }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         if (len > 0) {
             zstring constPart = "";
@@ -11805,6 +11809,7 @@ namespace smt {
                 }
             }
         }
+        maxCharAt += 1;
         return found;
     }
 
@@ -11819,6 +11824,18 @@ namespace smt {
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
 
+        int maxCharAt = 0;
+//        if (collect_not_charAt(nn, maxCharAt)) {
+//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
+//            if (maxCharAt == -1) {
+//                return true;
+//            }
+//            else if (maxCharAt == len){
+//                return true;
+//            }
+//            else
+//                diffLen = maxCharAt;
+//        }
         if (diffLen > 0) {
             context& ctx = get_context();
             std::vector<zstring> constParts;
