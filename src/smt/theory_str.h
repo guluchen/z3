@@ -1966,6 +1966,15 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
+            expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
+            expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
+            expr_ref_vector negate_equality(expr* lhs, expr* rhs);
+            bool is_inconsisten(
+                std::set<expr*> concat_lhs,
+                std::set<expr*> concat_rhs,
+                std::set<expr*> const_lhs,
+                std::set<expr*> const_rhs,
+                bool &wrongStart, bool &wrongEnd);
         /*
          * strArgmt::solve_concat_eq_str()
          * Solve concatenations of the form:
@@ -2221,6 +2230,8 @@ namespace smt {
         char defaultChar = 'a';
         UnderApproxState uState;
     private:
+        clock_t startClock;
+        bool newConstraintTriggered = false;
         void assert_axiom(expr *e);
         void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();

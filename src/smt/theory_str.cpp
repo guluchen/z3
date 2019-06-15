@@ -1178,15 +1178,13 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(n1->get_owner(), m) << " = "
                            << mk_ismt2_pp(n2->get_owner(), m) << std::endl;);
 
-//        if (uState.reassertEQ && uState.reassertDisEQ)
-//            return;
-
         handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
 
         // merge eqc **AFTER** handle_equality
         m_find.merge(x, y);
 
         if (!is_trivial_eq_concat(n1->get_owner(), n2->get_owner())) {
+            newConstraintTriggered = true;
             expr_ref tmp(createEqualOperator(n1->get_owner(), n2->get_owner()), m);
             ensure_enode(tmp);
             mful_scope_levels.push_back(tmp);
@@ -1194,11 +1192,6 @@ namespace smt {
             const str::expr_pair we{expr_ref{n1->get_owner(), m}, expr_ref{n2->get_owner(), m}};
             m_we_expr_memo.push_back(we);
         }
-
-        assert_cached_eq_state();
-
-        if (uState.reassertEQ && uState.eqLevel == 0)
-            assert_cached_diseq_state();
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
@@ -1351,6 +1344,22 @@ namespace smt {
                       }
         );
 
+        bool wrongStart, wrongEnd;
+        if (is_inconsisten(eqc_concat_lhs, eqc_concat_rhs, eqc_const_lhs, eqc_const_rhs, wrongStart, wrongEnd)){
+            STRACE("str", tout << __LINE__ << " is_inconsisten " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+            if (wrongStart){
+                expr_ref_vector tmp(collect_all_empty_start(lhs, rhs));
+                assert_axiom(mk_not(m, createAndOperator(tmp)));
+            }
+
+            if (wrongEnd){
+                expr_ref_vector tmp(collect_all_empty_end(lhs, rhs));
+                assert_axiom(mk_not(m, createAndOperator(tmp)));
+            }
+
+            return;
+        }
+
         // step 1: Concat == Constant
         /*
          * Solve concatenations of the form:
@@ -1411,6 +1420,167 @@ namespace smt {
         }
     }
 
+    expr_ref_vector theory_str::collect_all_empty_start(expr* lhs, expr* rhs){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
+        expr_ref_vector eqLhs(m);
+        collect_eq_nodes(lhs, eqLhs);
+
+        expr_ref_vector eqRhs(m);
+        collect_eq_nodes(rhs, eqRhs);
+
+        // combine two lists
+        eqLhs.append(eqRhs);
+
+        // collect all zero starts
+        for (const auto& e : eqLhs){
+            ptr_vector<expr> v;
+            get_nodes_in_concat(e, v);
+            for (int i = 0; i < v.size(); ++i){
+                rational len;
+                if (get_len_value(v[i], len)){
+                    if (len.get_int32() == 0){
+                        ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
+                    }
+                    else
+                        break;
+                }
+                else break;
+            }
+        }
+
+        if (ret.size() == 0){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " cannot find zero start"  << std::endl;);
+            return negate_equality(lhs, rhs);
+        }
+
+        for (const auto& e : ret){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        }
+        return ret;
+    }
+
+    expr_ref_vector theory_str::collect_all_empty_end(expr* lhs, expr* rhs){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
+        expr_ref_vector eqLhs(m);
+        collect_eq_nodes(lhs, eqLhs);
+
+        expr_ref_vector eqRhs(m);
+        collect_eq_nodes(rhs, eqRhs);
+
+        // combine two lists
+        eqLhs.append(eqRhs);
+
+        // collect all zero ends
+        for (const auto& e : eqLhs){
+            ptr_vector<expr> v;
+            get_nodes_in_concat(e, v);
+            for (int i = v.size() - 1; i >= 0; --i){
+                rational len;
+                if (get_len_value(v[i], len)){
+                    if (len.get_int32() == 0){
+                        ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
+                    }
+                    else
+                        break;
+                }
+                else break;
+            }
+        }
+
+        if (ret.size() == 0){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " cannot find zero start"  << std::endl;);
+            return negate_equality(lhs, rhs);
+        }
+
+        for (const auto& e : ret){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        }
+        return ret;
+    }
+
+    expr_ref_vector theory_str::negate_equality(expr* lhs, expr* rhs){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
+        expr_ref_vector eqLhs(m);
+        collect_eq_nodes(lhs, eqLhs);
+
+        expr_ref_vector eqRhs(m);
+        collect_eq_nodes(rhs, eqRhs);
+
+        for (int i = 0; i < eqLhs.size(); ++i)
+            if (lhs != eqLhs[i].get())
+                ret.push_back(createEqualOperator(lhs, eqLhs[i].get()));
+
+        for (int i = 0; i < eqRhs.size(); ++i)
+            if (rhs != eqRhs[i].get())
+                ret.push_back(createEqualOperator(rhs, eqRhs[i].get()));
+
+        ret.push_back(createEqualOperator(lhs, rhs));
+        return ret;
+    }
+
+    bool theory_str::is_inconsisten(
+            std::set<expr*> concat_lhs,
+            std::set<expr*> concat_rhs,
+            std::set<expr*> const_lhs,
+            std::set<expr*> const_rhs,
+            bool &wrongStart, bool &wrongEnd){
+        wrongStart = false;
+        wrongEnd = false;
+        concat_lhs.insert(concat_rhs.begin(), concat_rhs.end());
+        const_lhs.insert(const_rhs.begin(), const_rhs.end());
+
+        // copy from const vectors
+        std::vector<zstring> starts, ends;
+        for (const auto& s: const_lhs){
+            zstring value;
+            u.str.is_string(s, value);
+            starts.push_back(value);
+        }
+        ends = starts;
+
+        // collect all starting, ending
+        for (const auto& c : concat_lhs){
+            ptr_vector<expr> exprVector;
+            get_nodes_in_concat(c, exprVector);
+            zstring value;
+            if (u.str.is_string(exprVector[0], value)){
+                starts.push_back(value);
+            }
+
+            if (u.str.is_string(exprVector[exprVector.size() - 1], value)){
+                ends.push_back(value);
+            }
+        }
+
+        // all issues
+
+        // check all starts
+        for (int i = 0; i < starts.size(); ++i)
+            for (int j = i + 1; j < starts.size(); ++j)
+                if (starts[j].prefixof(starts[i]) || starts[i].prefixof(starts[j])) {
+
+                }
+                else {
+                    wrongStart = true;
+                    break;
+                }
+
+        // check all starts
+        for (int i = 0; i < ends.size(); ++i)
+            for (int j = i + 1; j < ends.size(); ++j)
+                if (ends[j].suffixof(ends[i]) || ends[i].suffixof(ends[j])) {
+
+                }
+                else {
+                    wrongEnd = true;
+                    break;
+                }
+
+        return wrongEnd || wrongStart;
+    }
 
     /*
      * strArgmt::solve_concat_eq_str()
@@ -3231,6 +3401,7 @@ namespace smt {
             STRACE("str", tout << __FUNCTION__ << ": not add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
                                << mk_ismt2_pp(n2, m) << std::endl;);
             // skip all trivial diseq
+            newConstraintTriggered = true;
             expr_ref tmp(mk_not(m, createEqualOperator(n1, n2)), m);
             ensure_enode(tmp);
             mful_scope_levels.push_back(tmp);
@@ -3242,11 +3413,6 @@ namespace smt {
             STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
                                << mk_ismt2_pp(n2, m) << std::endl;);
         }
-
-        assert_cached_eq_state();
-
-        if (uState.reassertEQ && uState.eqLevel == 0)
-            assert_cached_diseq_state();
     }
 
     bool theory_str::is_not_added_diseq(expr_ref n1, expr_ref n2){
@@ -3543,6 +3709,7 @@ namespace smt {
         m_re2aut.reset();
         m_automata.reset();
         m_res.reset();
+        startClock = clock();
 
         /*
          * Recursive descent through all asserted formulas to set up axioms.
@@ -3597,6 +3764,7 @@ namespace smt {
 
     void theory_str::push_scope_eh() {
         STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         m_scope_level += 1;
         mful_scope_levels.push_scope();
         m_we_expr_memo.push_scope();
@@ -3610,7 +3778,6 @@ namespace smt {
     void theory_str::pop_scope_eh(const unsigned num_scopes) {
         ast_manager &m = get_manager();
         STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-
         m_scope_level -= num_scopes;
 
         if (m_scope_level < uState.eqLevel) {
@@ -3674,6 +3841,7 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty())
             return FC_DONE;
 
@@ -3685,6 +3853,10 @@ namespace smt {
         vector<expr_ref_vector> cores;
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+        if (!newConstraintTriggered)
+            return FC_DONE;
+
+        newConstraintTriggered = false;
         dump_assignments();
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
@@ -12613,9 +12785,16 @@ namespace smt {
     }
 
     void theory_str::propagate() {
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
+
+        assert_cached_eq_state();
+
+        if (uState.reassertEQ && uState.eqLevel == 0)
+            assert_cached_diseq_state();
+
         context & ctx = get_context();
         while (can_propagate()) {
-            TRACE("str", tout << std::endl;);
+
 
             while(true) {
                 // this can potentially recursively activate itself
