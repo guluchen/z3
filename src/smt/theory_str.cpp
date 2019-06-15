@@ -4031,6 +4031,35 @@ namespace smt {
             if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
                 continue;
 
+            // skip x = "" . x
+            {
+                str::word_term lhs = e.lhs();
+                str::word_term rhs = e.rhs();
+                std::set<str::element> lhs_elements = lhs.variables();
+                std::set<str::element> rhs_elements = rhs.variables();
+                if (lhs_elements.size() != 0 && rhs_elements.size() != 0) {
+                    bool included = true;
+                    if (lhs_elements.size() < rhs_elements.size()) {
+                        for (const auto &el : lhs_elements)
+                            if (rhs_elements.find(el) == rhs_elements.end()) {
+                                included = false;
+                                break;
+                            }
+                    } else
+                        for (const auto &el : rhs_elements)
+                            if (lhs_elements.find(el) == lhs_elements.end()) {
+                                included = false;
+                                break;
+                            }
+
+                    if (included) {
+                        STRACE("str", tout << __LINE__ << " skip constraint " << e << std::endl;);
+                        continue;
+                    }
+                }
+            }
+
+
             if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
                 return false;
@@ -5859,6 +5888,7 @@ namespace smt {
             uState.disequalities.append(guessedDisEqs);
 
             bool axiomAdded = false;
+//            if (!is_weaker_expr_sets(coreCurr, corePrev)) {
             if (!is_equal(corePrev, coreCurr)) {
                 axiomAdded = true;
                 underapproximation_repeat();
@@ -14963,9 +14993,11 @@ namespace smt {
             for (const auto& e : eq.second) {
                 ptr_vector<expr> argVec;
                 get_nodes_in_concat(e, argVec);
-                for (int i = 0; i < argVec.size(); ++i)
-                    if (!u.str.is_string(argVec[i]))
-                        allvars.insert(argVec[i]);
+                for (int i = 0; i < argVec.size(); ++i) {
+                    bool isStr = u.str.is_string(argVec[i]);
+//                    if (!u.str.is_string(argVec[i]))
+                    allvars.insert(argVec[i]);
+                }
             }
         }
         return allvars;

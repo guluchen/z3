@@ -586,6 +586,9 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
                             return false;
                         }
+                        else {
+                            // it is ok if some elements missing because if its size = 0
+                        }
                     }
                 }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": Equal. " << std::endl;);

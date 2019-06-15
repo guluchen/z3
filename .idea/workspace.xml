@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="473">
-              <caret line="1356" column="64" selection-start-line="1356" selection-start-column="64" selection-end-line="1356" selection-end-column="64" />
+            <state relative-caret-position="451">
+              <caret line="4039" column="75" lean-forward="true" selection-start-line="4039" selection-start-column="75" selection-end-line="4039" selection-end-column="75" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -176,8 +176,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="486">
-              <caret line="1974" column="42" selection-start-line="1974" selection-start-column="42" selection-end-line="1974" selection-end-column="42" />
+            <state relative-caret-position="381">
+              <caret line="47" column="14" selection-start-line="47" selection-start-column="14" selection-end-line="47" selection-end-column="14" />
             </state>
           </provider>
         </entry>
@@ -195,8 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>init_underapprox</find>
-      <find>arrMap_reverse</find>
       <find>charAt</find>
       <find>collect_all_inequalities</find>
       <find>is_importantVar_recheck</find>
@@ -224,6 +222,8 @@
       <find>newConstraintTriggered</find>
       <find>get_nodes</find>
       <find>get_len</find>
+      <find>fetch_guessed_core_exprs</find>
+      <find>underapproximation</find>
       <find>is_contain</find>
     </findStrings>
   </component>
@@ -755,12 +755,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="681715000" />
+      <workItem from="1555596195940" duration="683858000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="826637000" />
+    <option name="totallyTimeSpent" value="828780000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="138" y="24" width="2560" height="1417" extended-state="0" />
@@ -1139,15 +1139,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="486">
-          <caret line="1974" column="42" selection-start-line="1974" selection-start-column="42" selection-end-line="1974" selection-end-column="42" />
+        <state relative-caret-position="381">
+          <caret line="47" column="14" selection-start-line="47" selection-start-column="14" selection-end-line="47" selection-end-column="14" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="473">
-          <caret line="1356" column="64" selection-start-line="1356" selection-start-column="64" selection-end-line="1356" selection-end-column="64" />
+        <state relative-caret-position="451">
+          <caret line="4039" column="75" lean-forward="true" selection-start-line="4039" selection-start-column="75" selection-end-line="4039" selection-end-column="75" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
