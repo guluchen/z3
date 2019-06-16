@@ -30,8 +30,7 @@ namespace smt {
 
 
     class theory_str2 : public theory {
-        typedef union_find<theory_str2> th_union_find;
-        typedef trail_stack<theory_str2> th_trail_stack;
+
 
 
         int m_scope_level = 0;
@@ -42,8 +41,6 @@ namespace smt {
         seq_util m_util_s;
         str::automaton_factory::sptr m_aut_imp;
         ast_manager& m;
-        th_union_find m_find;
-        th_trail_stack m_trail_stack;
 
 
         obj_hashtable<expr> axiomatized_terms;
@@ -97,10 +94,6 @@ namespace smt {
         expr_ref mk_len(expr* s) const { return expr_ref(m_util_s.str.mk_length(s), m); }
 
         void add_axiom(expr *e);
-        th_trail_stack& get_trail_stack() { return m_trail_stack; }
-        void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
-        void after_merge_eh(theory_var r1, theory_var r2, theory_var v1, theory_var v2) { }
-        void unmerge_eh(theory_var v1, theory_var v2) {}
 
 
         bool has_length(expr *e) const { return m_has_length.contains(e); }

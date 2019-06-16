@@ -22,7 +22,7 @@ namespace smt {
 
     theory_str2::theory_str2(ast_manager& m, const theory_str_params& params)
             : theory{m.mk_family_id("seq")}, m_params{params}, m_rewrite{m}, m_util_a{m},
-              m_util_s{m},m{m}, m_find{*this}, m_trail_stack(*this), m_length(m) {}
+              m_util_s{m},m{m}, m_length(m) {}
 
     void theory_str2::display(std::ostream& os) const {
         os << "theory_str display" << std::endl;
@@ -58,7 +58,6 @@ namespace smt {
         }
         else {
             theory_var v = theory::mk_var(n);
-            m_find.mk_var();
             get_context().attach_th_var(n, this, v);
             get_context().mark_as_relevant(n);
             return v;
@@ -405,11 +404,6 @@ namespace smt {
 
     void theory_str2::new_eq_eh(theory_var x, theory_var y) {
         m_word_eq_var_todo.push_back({x,y});
-        if (m_find.find(x) == m_find.find(y)) {
-            return;
-        }
-        m_find.merge(x, y);
-
 
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
@@ -574,6 +568,19 @@ namespace smt {
 
     final_check_status theory_str2::final_check_eh() {
         bool on_screen=false;
+        context& ctx = get_context();
+        expr_ref_vector Assigns(m),Literals(m);
+        ctx.get_guessed_literals(Literals);
+        ctx.get_assignments(Assigns);
+        for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
+            if(on_screen) std::cout<<"check_sat context from asserted:"<<mk_pp(ctx.get_asserted_formula(i),m)<<std::endl;
+
+        }
+        for (auto & e : Assigns){
+            if(ctx.is_relevant(e)) {
+                if(on_screen) std::cout << "check_sat context from assign:" << mk_pp(e, m) << std::endl;
+            }
+        }
 
         using namespace str;
         if (m_word_eq_todo.empty()) {
@@ -599,7 +606,9 @@ namespace smt {
         STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
-
+        if(on_screen&& is_over_approximation){
+            std::cout<<"Is over-approximation\n";
+        }
 
         if (root.unsolvable_by_inference() ) {
             STRACE("str", tout << "proved unsolvable by inference\n";);
@@ -791,8 +800,6 @@ namespace smt {
         SASSERT(!m_length.contains(l));
         m_length.push_back(l);
         m_has_length.insert(e);
-        m_trail_stack.push(insert_obj_trail<theory_str2, expr>(m_has_length, e));
-        m_trail_stack.push(push_back_vector<theory_str2, expr_ref_vector>(m_length));
     }
     /*
   ensure that all elements in equivalence class occur under an application of 'length'
