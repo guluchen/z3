@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="641">
-              <caret line="13274" column="71" lean-forward="true" selection-start-line="13274" selection-start-column="71" selection-end-line="13274" selection-end-column="71" />
+            <state relative-caret-position="243">
+              <caret line="15293" column="60" lean-forward="true" selection-start-line="15293" selection-start-column="60" selection-end-line="15293" selection-end-column="60" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -185,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="455">
-              <caret line="1770" column="17" selection-start-line="1770" selection-start-column="17" selection-end-line="1770" selection-end-column="17" />
+            <state relative-caret-position="397">
+              <caret line="1253" column="38" selection-start-line="1253" selection-start-column="38" selection-end-line="1253" selection-end-column="38" />
             </state>
           </provider>
         </entry>
@@ -195,11 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>startClock</find>
-      <find>assert_cac</find>
-      <find>assert_cached_eq_state</find>
-      <find>init_search</find>
-      <find>pop_scope</find>
       <find>final_check_eh</find>
       <find>new_eq_</find>
       <find>final_check_e</find>
@@ -216,15 +211,20 @@
       <find>handle_not</find>
       <find>final_check</find>
       <find>guessedDisEqs</find>
-      <find>mful_scope_levels</find>
       <find>new_diseq</find>
       <find>handle_diseq</find>
       <find>constStrAst = nullptr</find>
       <find>assert_cached_diseq_state</find>
       <find>core</find>
       <find>instantiate_axiom_contains</find>
-      <find>disequalities</find>
       <find>createSub</find>
+      <find>handle_notcontain</find>
+      <find>: mful_scope_levels)</find>
+      <find>: mful_scope_levels</find>
+      <find>mful_scope_levels</find>
+      <find>is_not_contain_consistent</find>
+      <find>disequalities</find>
+      <find>fetch_contain_related_vars</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -755,12 +755,12 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="699093000" />
+      <workItem from="1555596195940" duration="705838000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="844015000" />
+    <option name="totallyTimeSpent" value="850760000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="21" y="23" width="2560" height="1417" extended-state="0" />
@@ -1130,13 +1130,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="455">
-          <caret line="1770" column="17" selection-start-line="1770" selection-start-column="17" selection-end-line="1770" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -1144,10 +1137,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="397">
+          <caret line="1253" column="38" selection-start-line="1253" selection-start-column="38" selection-end-line="1253" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="641">
-          <caret line="13274" column="71" lean-forward="true" selection-start-line="13274" selection-start-column="71" selection-end-line="13274" selection-end-column="71" />
+        <state relative-caret-position="243">
+          <caret line="15293" column="60" lean-forward="true" selection-start-line="15293" selection-start-column="60" selection-end-line="15293" selection-end-column="60" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

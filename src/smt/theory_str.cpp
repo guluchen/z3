@@ -3987,7 +3987,9 @@ namespace smt {
         axiomAdded = axiomAdded || special_handling_for_charAt_family(eq_combination, causes);
         if (axiomAdded)
             return FC_CONTINUE;
-
+        axiomAdded = !is_notContain_consistent(eq_combination);
+        if (axiomAdded)
+            return FC_CONTINUE;
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
 
 
@@ -3998,6 +4000,83 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
+    }
+
+    bool theory_str::is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination){
+        for (const auto &wi : m_wi_expr_memo) {
+            if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
+                expr* lhs = wi.first.get();
+                expr* rhs = wi.second.get();
+
+                if (!is_notContain_consistent(lhs, rhs, eq_combination))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    bool theory_str::is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination){
+        ast_manager & m = get_manager();
+        expr* contain = nullptr;
+        expr* premise = createEqualOperator(lhs, rhs);
+        if (is_contain_equality(lhs, contain)) {
+            zstring value;
+            if (u.str.is_string(contain, value))
+                return is_notContain_const_consistent(rhs, value, premise, eq_combination);
+        }
+        else if (is_contain_equality(rhs, contain)) {
+            zstring value;
+            if (u.str.is_string(contain, value))
+                return is_notContain_const_consistent(lhs, value, premise, eq_combination);
+        }
+        return true;
+    }
+
+    bool theory_str::is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination){
+        // find all related nodes
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " contains(" << mk_pp(lhs, m) << ", " << containKey << ")" << std::endl;);
+        expr_ref_vector eqList(m), disEqList(m);
+        fetch_guessed_exprs_with_scopes(eqList, disEqList);
+        std::set<expr*> relatedExprs = fetch_contain_related_vars(lhs, containKey, eqList);
+        for (const auto& v : relatedExprs){
+            if (eq_combination.find(v) != eq_combination.end()) {
+                // collect all consts
+                std::set<zstring> constList = collect_all_const_in_eq_combination(v, eq_combination[v]);
+                for (const auto& c : constList)
+                    if (c.contains(containKey)){
+                        assert_axiom(premise);
+                        return false;
+                    }
+            }
+        }
+        return true;
+    }
+
+    std::set<zstring> theory_str::collect_all_const_in_eq_combination(expr* v, std::set<expr*> l){
+        std::set<zstring> ret;
+        std::set<zstring> tmp = collect_all_const_in_expr(v);
+        ret.insert(tmp.begin(), tmp.end());
+        for (const auto& e : l){
+            std::set<zstring> tmp = collect_all_const_in_expr(e);
+            ret.insert(tmp.begin(), tmp.end());
+        }
+        return ret;
+    }
+
+    std::set<zstring> theory_str::collect_all_const_in_expr(expr* v){
+        std::set<zstring> ret;
+        zstring value;
+        if (u.str.is_string(v, value))
+            ret.insert(value);
+        else if (u.str.is_concat(v)) {
+            ptr_vector<expr> childNodes;
+            get_nodes_in_concat(v, childNodes);
+            for (int i = 0; i < childNodes.size(); ++i)
+                if (u.str.is_string(childNodes[i], value))
+                    ret.insert(value);
+        }
+        return ret;
     }
 
     int theory_str::get_actual_trau_lvl(){
@@ -13264,6 +13343,28 @@ namespace smt {
                 expr* arg0 = to_app(substr)->get_arg(0);
                 expr* arg1 = to_app(substr)->get_arg(1);
                 expr* arg2 = to_app(substr)->get_arg(2);
+
+                // check the 2nd arg:
+                if (u.str.is_index(arg1)){
+                    app* indexOfApp = to_app(arg1);
+                    expr* arg2_arg0 = indexOfApp->get_arg(0);
+                    expr* arg2_arg1 = indexOfApp->get_arg(1);
+                    expr* arg2_arg2 = indexOfApp->get_arg(2);
+
+                    // same var, same keyword
+                    if (arg2_arg0 == arg0 && arg2_arg1 && ex->get_arg(1)){
+                        // 3rd arg = 0 || contain = true
+                        expr* e1 = createEqualOperator(arg2, mk_int(0));
+                        if (needleStr.length() > 0)
+                            assert_implication(e1, mk_not(m, ex));
+                        else
+                            assert_axiom(ex);
+
+                        expr* e2 = createGreaterEqOperator(arg2, mk_int(1));
+                        assert_implication(e2, ex);
+                    }
+                }
+
                 // check the third arg: + , -
                 if (m_autil.is_add(arg2) || m_autil.is_sub(arg2)) {
                     STRACE("str", tout << __LINE__ << " " << mk_pp(arg2, m) << std::endl;);
@@ -15148,6 +15249,110 @@ namespace smt {
 
         for (const auto& e : guessedExprs)
             STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(e, m) << std::endl;);
+    }
+
+    std::set<expr*> theory_str::fetch_contain_related_vars(
+            expr* v,
+            zstring replaceKey,
+            expr_ref_vector eqList){
+        ast_manager& m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
+        std::set<expr*> ret;
+        expr_ref_vector tmpEqList(m);
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(v, eqs);
+        for (int i = 0; i < eqs.size(); ++i)
+            ret.insert(eqs[i].get());
+        while (true) {
+            // collect all eq
+            for (const auto &e : eqList) {
+
+                bool adding = false;
+                expr *lhs = to_app(e)->get_arg(0);
+                expr *rhs = to_app(e)->get_arg(1);
+
+                // check rhs
+                if (u.str.is_replace(rhs)){
+                    expr* arg0 = to_app(rhs)->get_arg(0);
+                    expr* arg1 = to_app(rhs)->get_arg(1);
+                    expr* arg2 = to_app(rhs)->get_arg(2);
+                    zstring val;
+                    if (u.str.is_string(arg1, val)) {
+                        if (!replaceKey.contains(val)) {
+                            if (ret.find(arg0) != ret.end()){
+                                // add lhs
+                                expr_ref_vector eqSet(m);
+                                collect_eq_nodes(rhs, eqSet);
+                                for (int i = 0; i < eqSet.size(); ++i)
+                                    ret.insert(eqSet[i].get());
+                                adding = true;
+                            }
+                        }
+
+                        if (!val.contains(replaceKey)) {
+                            if (ret.find(rhs) != ret.end()){
+                                // add lhs
+                                expr_ref_vector eqSet(m);
+                                collect_eq_nodes(arg0, eqSet);
+                                for (int i = 0; i < eqSet.size(); ++i)
+                                    ret.insert(eqSet[i].get());
+                                adding = true;
+                            }
+                        }
+                    }
+
+                }
+
+                // check lhs
+                if (u.str.is_replace(lhs)){
+                    expr* arg0 = to_app(lhs)->get_arg(0);
+                    expr* arg1 = to_app(lhs)->get_arg(1);
+                    expr* arg2 = to_app(lhs)->get_arg(2);
+                    zstring val;
+                    if (u.str.is_string(arg1, val)) {
+                        if (!replaceKey.contains(val)) {
+                            if (ret.find(arg0) != ret.end()){
+                                // add lhs
+                                expr_ref_vector eqSet(m);
+                                collect_eq_nodes(lhs, eqSet);
+                                for (int i = 0; i < eqSet.size(); ++i)
+                                    ret.insert(eqSet[i].get());
+                                adding = true;
+                            }
+                        }
+
+                        if (!val.contains(replaceKey)) {
+                            if (ret.find(lhs) != ret.end()){
+                                // add lhs
+                                expr_ref_vector eqSet(m);
+                                collect_eq_nodes(arg0, eqSet);
+                                for (int i = 0; i < eqSet.size(); ++i)
+                                    ret.insert(eqSet[i].get());
+                                adding = true;
+                            }
+                        }
+                    }
+                }
+
+
+                if (adding == false)
+                    tmpEqList.push_back(e);
+            }
+
+            // check if no improvement
+            if (tmpEqList.size() == eqList.size())
+                break;
+
+            eqList.reset();
+            eqList.append(tmpEqList);
+            tmpEqList.reset();
+            tmpEqList.append(tmpEqList);
+        }
+
+        for (const auto& e : ret)
+            STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        return ret;
     }
 
     std::set<expr*> theory_str::collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){

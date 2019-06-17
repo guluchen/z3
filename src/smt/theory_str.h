@@ -1247,6 +1247,11 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
+                bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination);
+                bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination);
+                    std::set<zstring> collect_all_const_in_eq_combination(expr* v, std::set<expr*> l);
+                    std::set<zstring> collect_all_const_in_expr(expr* v);
             int get_actual_trau_lvl();
             bool at_same_state(str::state curr, str::state prev);
                 bool at_same_eq_state(str::state curr, str::state prev);
@@ -2250,6 +2255,10 @@ namespace smt {
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 expr_ref_vector &guessedExprs);
+        std::set<expr*> fetch_contain_related_vars(
+                expr* v,
+                zstring replaceKey,
+                expr_ref_vector eqList);
         std::set<expr*> collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
