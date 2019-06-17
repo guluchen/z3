@@ -1351,17 +1351,20 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> eq_combination);
             void init_underapprox_repeat();
 
-            void handle_diseq();
+            void handle_diseq(bool repeat = false);
                 void handle_NOTEqual();
+                void handle_NOTEqual_repeat();
                     void handle_NOTEqual(expr* lhs, expr* rhs);
                     void handle_NOTEqual_const(expr* lhs, zstring rhs);
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
                 void handle_NOTContain();
+                void handle_NOTContain_repeat();
                     void handle_NOTContain(expr* lhs, expr* rhs);
                     void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise);
                     void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise);
                     bool is_contain_equality(expr* n);
                     bool is_contain_equality(expr* n, expr* &contain);
+                    bool is_trivial_contain(zstring s);
                 void  init_connecting_size(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars, bool prep = true);
                     void static_analysis(std::map<expr*, std::set<expr*>> eq_combination);
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
@@ -1761,6 +1764,11 @@ namespace smt {
              *
              */
             app* createModOperator(expr* x, expr* y);
+
+            /*
+             *
+             */
+            app* createMinusOperator(expr* x, expr* y);
 
             /*
              *

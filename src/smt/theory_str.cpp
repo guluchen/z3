@@ -3431,7 +3431,7 @@ namespace smt {
             return;
         }
 
-        handle_diseq();
+        handle_diseq(true);
         uState.reassertDisEQ = true;
         uState.diseqLevel = get_actual_trau_lvl();
 
@@ -3877,7 +3877,7 @@ namespace smt {
 
                 if (!uState.reassertDisEQ){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
-                    handle_diseq();
+                    handle_diseq(true);
                     uState.diseqLevel = get_actual_trau_lvl();
                 }
 
@@ -3896,7 +3896,7 @@ namespace smt {
             }
 
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.eqLevel << std::endl;);
-            handle_diseq();
+            handle_diseq(true);
             uState.diseqLevel = get_actual_trau_lvl();
             uState.reassertDisEQ = true;
             uState.disequalities.reset();
@@ -4031,37 +4031,37 @@ namespace smt {
             if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
                 continue;
 
-            // skip x = "" . x
-            {
-                str::word_term lhs = e.lhs();
-                str::word_term rhs = e.rhs();
-                std::set<str::element> lhs_elements = lhs.variables();
-                std::set<str::element> rhs_elements = rhs.variables();
-                if (lhs_elements.size() != 0 && rhs_elements.size() != 0) {
-                    bool included = true;
-                    if (lhs_elements.size() < rhs_elements.size()) {
-                        for (const auto &el : lhs_elements)
-                            if (rhs_elements.find(el) == rhs_elements.end()) {
-                                included = false;
-                                break;
-                            }
-                    } else
-                        for (const auto &el : rhs_elements)
-                            if (lhs_elements.find(el) == lhs_elements.end()) {
-                                included = false;
-                                break;
-                            }
-
-                    if (included) {
-                        STRACE("str", tout << __LINE__ << " skip constraint " << e << std::endl;);
-                        continue;
-                    }
-                }
-            }
-
-
             if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
+
+                // skip x = "" . x
+                {
+                    str::word_term lhs = e.lhs();
+                    str::word_term rhs = e.rhs();
+                    std::set<str::element> lhs_elements = lhs.variables();
+                    std::set<str::element> rhs_elements = rhs.variables();
+                    if (lhs_elements.size() != 0 && rhs_elements.size() != 0) {
+                        bool included = true;
+                        if (lhs_elements.size() < rhs_elements.size()) {
+                            for (const auto &el : lhs_elements)
+                                if (rhs_elements.find(el) == rhs_elements.end()) {
+                                    included = false;
+                                    break;
+                                }
+                        } else
+                            for (const auto &el : rhs_elements)
+                                if (lhs_elements.find(el) == lhs_elements.end()) {
+                                    included = false;
+                                    break;
+                                }
+
+                        if (included) {
+                            STRACE("str", tout << __LINE__ << " skip constraint " << e << std::endl;);
+                            continue;
+                        }
+                    }
+                }
+
                 return false;
             }
         }
@@ -4196,7 +4196,7 @@ namespace smt {
         std::set<char> charDomain;
         for (const auto& v : eq_combination) {
             // skip if it is a simple case
-            if (v.second.size() == 1 && v.first == *(v.second.begin()))
+            if ((v.second.size() == 1 && v.first == *(v.second.begin())) || v.second.size() == 0)
                 continue;
 
             zstring value;
@@ -5892,13 +5892,13 @@ namespace smt {
             if (!is_equal(corePrev, coreCurr)) {
                 axiomAdded = true;
                 underapproximation_repeat();
-                handle_diseq();
+                handle_diseq(true);
                 uState.eqLevel = tmpz3State;
                 uState.diseqLevel = tmpz3State;
             }
             else if (!uState.reassertDisEQ){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
-                handle_diseq();
+                handle_diseq(true);
                 uState.diseqLevel = get_actual_trau_lvl();
                 axiomAdded = true;
             }
@@ -5993,10 +5993,18 @@ namespace smt {
         return true;
     }
 
-    void theory_str::handle_diseq(){
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " @lvl " << m_scope_level << "\n";);
-        handle_NOTEqual();
-        handle_NOTContain();
+    void theory_str::handle_diseq(bool repeat){
+//        return;
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " repeat = " << repeat << " @lvl " << m_scope_level << "\n";);
+        if (!repeat){
+//            handle_NOTEqual();
+            handle_NOTContain();
+        }
+        else {
+//            handle_NOTEqual_repeat();
+            handle_NOTContain_repeat();
+        }
+
     }
 
     void theory_str::handle_NOTEqual(){
@@ -6004,6 +6012,23 @@ namespace smt {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
+                expr* contain = nullptr;
+                if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+                    handle_NOTEqual(lhs, rhs);
+                }
+            }
+        }
+    }
+
+    void theory_str::handle_NOTEqual_repeat(){
+        for (const auto &wi : uState.disequalities) {
+            SASSERT(to_app(wi)->get_num_args() == 1);
+            expr* equality = to_app(wi)->get_arg(0);
+
+            SASSERT(to_app(equality)->get_num_args() == 2);
+            expr* lhs = to_app(equality)->get_arg(0);
+            expr* rhs = to_app(equality)->get_arg(1);
+            if (!u.str.is_empty(lhs) && !u.str.is_empty(lhs)) {
                 expr* contain = nullptr;
                 if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
                     handle_NOTEqual(lhs, rhs);
@@ -6144,6 +6169,19 @@ namespace smt {
         }
     }
 
+    void theory_str::handle_NOTContain_repeat(){
+        for (const auto &wi : uState.disequalities) {
+            SASSERT(to_app(wi)->get_num_args() == 1);
+            expr* equality = to_app(wi)->get_arg(0);
+
+            SASSERT(to_app(equality)->get_num_args() == 2);
+            expr* lhs = to_app(equality)->get_arg(0);
+            expr* rhs = to_app(equality)->get_arg(1);
+
+            handle_NOTContain(lhs, rhs);
+        }
+    }
+
     void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
         ast_manager & m = get_manager();
         expr* contain = nullptr;
@@ -6171,7 +6209,7 @@ namespace smt {
     void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise){
 
         ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
         int bound = -1;
 
         bool has_eqc_value = false;
@@ -6180,17 +6218,20 @@ namespace smt {
             zstring value;
 
             if (u.str.is_string(constValue, value)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "not contains (" << value << ", " << rhs << ")\n";);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << ")\n";);
                 if (value.indexof(rhs, 0) >= 0) {
+
                     expr_ref_vector ands(m);
                     ands.push_back(createEqualOperator(lhs, constValue));
-                    assert_implication(createAndOperator(ands), mk_contains(lhs, u.str.mk_string(rhs)));
+                    assert_axiom(createEqualOperator(premise, createAndOperator(ands)));
                 }
             }
             return;
         }
 
-        if (is_important(lhs, bound)){
+
+
+        if (is_important(lhs, bound) && !is_trivial_contain(rhs)){
             expr_ref_vector cases(m);
             expr* lenExpr = mk_strlen(lhs);
             expr* arr = getExprVarFlatArray(lhs);
@@ -6218,6 +6259,14 @@ namespace smt {
 //            expr_ref tmpAxiom(createEqualOperator(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);
 //            uState.addAssertingConstraints(axiom);
         }
+    }
+
+    bool theory_str::is_trivial_contain(zstring s){
+        for (int i = 0; i < s.length(); ++i)
+            if (sigmaDomain.find(s[i]) == sigmaDomain.end())
+                return  true;
+
+        return false;
     }
 
     bool theory_str::is_contain_equality(expr* n){
@@ -10610,6 +10659,21 @@ namespace smt {
     /*
      *
      */
+    app* theory_str::createMinusOperator(expr* x, expr* y){
+        rational tmpValue0, tmpValue1;
+        if (m_autil.is_numeral(x, tmpValue0) && m_autil.is_numeral(y, tmpValue1))
+            return m_autil.mk_int(tmpValue0 - tmpValue1);
+
+        expr* mul = createMultiplyOperator(mk_int(-1), y);
+        context & ctx   = get_context();
+        app* tmp = m_autil.mk_add(x, mul);
+        ctx.internalize(tmp, false);
+        return tmp;
+    }
+
+    /*
+     *
+     */
     app* theory_str::createAddOperator(expr* x, expr* y){
         rational tmpValue0, tmpValue1;
         if (m_autil.is_numeral(x, tmpValue0) && m_autil.is_numeral(y, tmpValue1))
@@ -12819,7 +12883,7 @@ namespace smt {
 
         assert_cached_eq_state();
 
-        if (uState.reassertEQ && uState.eqLevel == 0)
+//        if (uState.reassertEQ && uState.eqLevel == 0)
             assert_cached_diseq_state();
 
         context & ctx = get_context();
@@ -12871,8 +12935,6 @@ namespace smt {
                 // TODO we really only need to check the new ones on each pass
                 unsigned start_count = m_library_aware_axiom_todo.size();
                 STRACE("str", tout << __LINE__ << " m_library_aware_axiom_todo: size " << start_count << std::endl;);
-                for (int i = 0; i < m_library_aware_axiom_todo.size(); ++i)
-                    STRACE("str", tout << __LINE__ << mk_pp(m_library_aware_axiom_todo[i]->get_owner(), get_manager()) << std::endl;);
                 ptr_vector<enode> axioms_tmp(m_library_aware_axiom_todo);
                 for (auto const& e : axioms_tmp) {
                     STRACE("str", tout << __LINE__ << " instantiate_axiom" << std::endl;);
@@ -12884,8 +12946,9 @@ namespace smt {
 
                     STRACE("str", tout << __LINE__ << " instantiate_axiom not null" << e->get_num_args() << std::endl;);
                     app * a = e->get_owner();
-                    if (a == nullptr) {
+                    if (a == nullptr || a->get_num_args() == 0) {
                         STRACE("str", tout << __LINE__ << " instantiate_axiom null" << std::endl;);
+                        continue;
                     }
                     STRACE("str", tout << __LINE__ << " instantiate_axiom" << mk_pp(e->get_owner(), get_manager()) << std::endl;);
                     if (u.str.is_stoi(a)) {
@@ -13171,14 +13234,108 @@ namespace smt {
         // quick path, because this is necessary due to rewriter behaviour
         // at minimum it should fix z3str/concat-006.smt2
         zstring haystackStr, needleStr;
-        if (u.str.is_string(ex->get_arg(0), haystackStr) && u.str.is_string(ex->get_arg(1), needleStr)) {
-            TRACE("str", tout << "eval constant Contains term " << mk_pp(ex, m) << std::endl;);
-            if (haystackStr.contains(needleStr)) {
-                assert_axiom(ex);
-            } else {
-                assert_axiom(mk_not(m, ex));
+        if (u.str.is_string(ex->get_arg(1), needleStr)) {
+            if (u.str.is_string(ex->get_arg(0), haystackStr)) {
+                TRACE("str", tout << "eval constant Contains term " << mk_pp(ex, m) << std::endl;);
+                if (haystackStr.contains(needleStr)) {
+                    assert_axiom(ex);
+                } else {
+                    assert_axiom(mk_not(m, ex));
+                }
+                return;
+            } else if (u.str.is_concat(ex->get_arg(0))) {
+                // if it is a concat,
+                // collect all consts in concat, and check
+                ptr_vector<expr> childrenVector;
+                get_nodes_in_concat(ex->get_arg(0), childrenVector);
+                for (int i = 0; i < childrenVector.size(); ++i) {
+                    zstring value;
+                    if (u.str.is_string(childrenVector[i], value))
+                        if (value.contains(needleStr)) {
+                            assert_axiom(ex);
+                            return;
+                        }
+                }
             }
-            return;
+            else if (u.str.is_extract(ex->get_arg(0))){
+                // (str.contains (str.substr value1 0 (+ 1 (str.indexof value1 "J" 0))) "J")
+                expr* substr = ex->get_arg(0);
+                STRACE("str", tout << __LINE__ << " " << mk_pp(substr, m) << std::endl;);
+                expr* arg0 = to_app(substr)->get_arg(0);
+                expr* arg1 = to_app(substr)->get_arg(1);
+                expr* arg2 = to_app(substr)->get_arg(2);
+                // check the third arg: + , -
+                if (m_autil.is_add(arg2) || m_autil.is_sub(arg2)) {
+                    STRACE("str", tout << __LINE__ << " " << mk_pp(arg2, m) << std::endl;);
+                    bool found_indexof = false;
+                    bool completed = true;
+                    app* indexOfApp = nullptr;
+                    int sum = 0;
+                    app* arg2app = to_app(arg2);
+                    for (int i = 0; i < arg2app->get_num_args(); ++i) {
+
+                        if (u.str.is_index(arg2app->get_arg(i))){
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(arg2app->get_arg(i), m) << std::endl;);
+                            indexOfApp = to_app(arg2app->get_arg(i));
+                            expr* arg2_arg0 = indexOfApp->get_arg(0);
+                            expr* arg2_arg1 = indexOfApp->get_arg(1);
+                            expr* arg2_arg2 = indexOfApp->get_arg(2);
+                            if (arg2_arg0 == arg0){
+                                zstring indexOfStr;
+                                if (u.str.is_string(arg2_arg1, indexOfStr) && indexOfStr == needleStr) {
+                                    if (arg2_arg2 == arg1){
+                                        found_indexof = true;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            rational val;
+                            if (m_autil.is_numeral(arg2app->get_arg(i), val)) {
+                                sum = sum + val.get_int32();
+                            }
+                            else if (m_autil.is_mul(arg2app->get_arg(i))) {
+                                app* tmp = to_app(arg2app->get_arg(i));
+                                int mul = 1;
+                                for (int j = 0; j < tmp->get_num_parameters(); ++j)
+                                    if (m_autil.is_numeral(tmp->get_arg(j), val))
+                                        mul = mul * val.get_int32();
+                                    else {
+                                        completed = false;
+                                        break;
+                                    }
+
+                                if (completed){
+                                    sum += mul;
+                                }
+                                else
+                                    break;
+                            }
+                            else {
+                                completed = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (completed && found_indexof){
+                        // index >= 0
+                        expr* e1 = createGreaterEqOperator(indexOfApp, mk_int(0));
+                        STRACE("str", tout << __LINE__ << " " << mk_pp(e1, m) << std::endl;);
+                        // index + 1 >= arg2app
+                        if (sum >= 1) {
+                            // e1  --> contain = true
+                            assert_implication(e1, ex);
+                        }
+                        else {
+                            // index <= arg2app
+                            // e1 --> contain = false
+
+                            assert_implication(e1, mk_not(m, ex));
+                        }
+                    }
+                }
+            }
         }
 
         { // register Contains()
@@ -14930,8 +15087,15 @@ namespace smt {
                 expr *lhs = to_app(e)->get_arg(0);
                 expr *rhs = to_app(e)->get_arg(1);
 
+                // if they equal to const --> add it
+//                if (u.str.is_string(lhs) || u.str.is_string(rhs)){
+//                    ret.push_back(e);
+//                    adding = true;
+//                }
+
+
                 // check rhs
-                if (u.str.is_concat(rhs)) {
+                if (!adding && u.str.is_concat(rhs)) {
                     ptr_vector<expr> argVec;
                     get_nodes_in_concat(rhs, argVec);
                     if (check_intersection_not_empty(argVec, allvars)) {
@@ -14943,7 +15107,7 @@ namespace smt {
                 }
 
                 // check lhs
-                if ((u.str.is_concat(lhs)) && !adding) {
+                if (!adding && u.str.is_concat(lhs)) {
                     ptr_vector<expr> argVec;
                     get_nodes_in_concat(lhs, argVec);
                     if (check_intersection_not_empty(argVec, allvars)) {

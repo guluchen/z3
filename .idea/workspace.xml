@@ -101,11 +101,20 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="451">
-              <caret line="4039" column="75" lean-forward="true" selection-start-line="4039" selection-start-column="75" selection-end-line="4039" selection-end-column="75" />
+            <state relative-caret-position="641">
+              <caret line="13274" column="71" lean-forward="true" selection-start-line="13274" selection-start-column="71" selection-end-line="13274" selection-end-column="71" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="391">
+              <caret line="763" selection-start-line="763" selection-end-line="763" />
             </state>
           </provider>
         </entry>
@@ -168,7 +177,7 @@
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="391">
-              <caret line="285" column="13" selection-start-line="285" selection-start-column="13" selection-end-line="285" selection-end-column="13" />
+              <caret line="275" column="13" selection-start-line="275" selection-start-column="13" selection-end-line="275" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -176,17 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="381">
-              <caret line="47" column="14" selection-start-line="47" selection-start-column="14" selection-end-line="47" selection-end-column="14" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="2374" column="43" selection-start-line="2374" selection-start-column="43" selection-end-line="2374" selection-end-column="43" />
+            <state relative-caret-position="455">
+              <caret line="1770" column="17" selection-start-line="1770" selection-start-column="17" selection-end-line="1770" selection-end-column="17" />
             </state>
           </provider>
         </entry>
@@ -195,22 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>charAt</find>
-      <find>collect_all_inequalities</find>
-      <find>is_importantVar_recheck</find>
-      <find>refine_important_vars</find>
-      <find>11777</find>
-      <find>collect_not_charAt</find>
-      <find>collect_eq</find>
-      <find>underapproximation_repeat</find>
-      <find>contain</find>
-      <find>mk_not(m,</find>
-      <find>assert_cached_diseq_state</find>
-      <find>if (uState.reassertEQ &amp;&amp; uState</find>
-      <find>propagatio</find>
-      <find>propagation</find>
-      <find>time:</find>
-      <find>final_chec</find>
       <find>startClock</find>
       <find>assert_cac</find>
       <find>assert_cached_eq_state</find>
@@ -225,6 +209,22 @@
       <find>fetch_guessed_core_exprs</find>
       <find>underapproximation</find>
       <find>is_contain</find>
+      <find>string axiom</find>
+      <find>m_library_aware_axiom_todo</find>
+      <find>get_nodes_in_concat</find>
+      <find>is_trivial</find>
+      <find>handle_not</find>
+      <find>final_check</find>
+      <find>guessedDisEqs</find>
+      <find>mful_scope_levels</find>
+      <find>new_diseq</find>
+      <find>handle_diseq</find>
+      <find>constStrAst = nullptr</find>
+      <find>assert_cached_diseq_state</find>
+      <find>core</find>
+      <find>instantiate_axiom_contains</find>
+      <find>disequalities</find>
+      <find>createSub</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -249,8 +249,8 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="138" />
-    <option name="y" value="24" />
+    <option name="x" value="21" />
+    <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -755,18 +755,18 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="683858000" />
+      <workItem from="1555596195940" duration="699093000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="828780000" />
+    <option name="totallyTimeSpent" value="844015000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="138" y="24" width="2560" height="1417" extended-state="0" />
+    <frame x="21" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.4979525" visible="true" weight="0.17156473" />
       <window_info id="Structure" order="1" sideWeight="0.5020475" side_tool="true" visible="true" weight="0.17156473" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -783,7 +783,7 @@
       <window_info anchor="bottom" id="CMake" order="11" weight="0.25207546" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
       <window_info anchor="right" id="Database" order="3" />
     </layout>
   </component>
@@ -879,13 +879,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="218">
           <caret line="2732" column="4" selection-start-line="2732" selection-start-column="4" selection-end-line="2732" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="276">
-          <caret line="3086" column="40" selection-start-line="3086" selection-start-column="28" selection-end-line="3086" selection-end-column="40" />
         </state>
       </provider>
     </entry>
@@ -1095,13 +1088,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="285" column="13" selection-start-line="285" selection-start-column="13" selection-end-line="285" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/obj_ref.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="398">
@@ -1137,17 +1123,31 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="275" column="13" selection-start-line="275" selection-start-column="13" selection-end-line="275" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="381">
-          <caret line="47" column="14" selection-start-line="47" selection-start-column="14" selection-end-line="47" selection-end-column="14" />
+        <state relative-caret-position="455">
+          <caret line="1770" column="17" selection-start-line="1770" selection-start-column="17" selection-end-line="1770" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="763" selection-start-line="763" selection-end-line="763" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="451">
-          <caret line="4039" column="75" lean-forward="true" selection-start-line="4039" selection-start-column="75" selection-end-line="4039" selection-end-column="75" />
+        <state relative-caret-position="641">
+          <caret line="13274" column="71" lean-forward="true" selection-start-line="13274" selection-start-column="71" selection-end-line="13274" selection-end-column="71" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
