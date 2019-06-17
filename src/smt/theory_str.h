@@ -1262,6 +1262,7 @@ namespace smt {
             std::set<char> collect_char_domain_from_strs();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
             bool special_handling_for_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
+                expr* optimize_combination(expr* x, expr* y);
             bool special_handling_for_charAt_family(
                 std::map<expr *, std::set<expr *>> eq_combination,
                 std::map<expr*, expr*> causes);

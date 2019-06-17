@@ -4330,31 +4330,12 @@ namespace smt {
             if (v.second.size() > 1) {
                 std::vector<expr *> tmpVector;
                 tmpVector.insert(tmpVector.end(), v.second.begin(), v.second.end());
-                for (int i = 0; i < tmpVector.size(); ++i) {
-                    ptr_vector<expr> nodes_i;
-                    get_nodes_in_concat(tmpVector[i], nodes_i);
-                    if (nodes_i.size() > 1) { // index, replace, contain
-                        std::string name_i = expr2str(nodes_i[0]);
-                        if (name_i.find("indexOf1") == 0 || name_i.find("replace1") == 0 || name_i.find("pre_contain") == 0 ) {
-                            expr_ref_vector eqNodes1(m), eqNodes0(m);
-                            collect_eq_nodes(nodes_i[1], eqNodes1);
-                            collect_eq_nodes(nodes_i[0], eqNodes0);
-
-                            for (int j = i + 1; j < tmpVector.size(); ++j) {
-                                ptr_vector<expr> nodes_j;
-                                get_nodes_in_concat(tmpVector[j], nodes_j);
-                                if (nodes_j.size() > 1) {
-                                    std::string name_j = expr2str(nodes_j[0]);
-                                    if (name_j.find("indexOf1") == 0 || name_j.find("replace1") == 0 ||
-                                        name_j.find("pre_contain") == 0) {
-                                        if (eqNodes1.contains(nodes_j[1]) && !eqNodes0.contains(nodes_j[0]))
-                                            ands.push_back(createEqualOperator(nodes_i[0], nodes_j[0]));
-                                    }
-                                }
-                            }
-                        }
+                for (int i = 0; i < tmpVector.size(); ++i)
+                    for (int j = i + 1; j < tmpVector.size(); ++j) {
+                        expr* tmp = optimize_combination(tmpVector[i], tmpVector[j]);
+                        if (tmp != nullptr)
+                            ands.push_back(tmp);
                     }
-                }
             }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         if (ands.size() > 0) {
@@ -4363,6 +4344,37 @@ namespace smt {
             return true;
         }
         else return false;
+    }
+
+    expr* theory_str::optimize_combination(expr* x, expr* y){
+        ast_manager & m = get_manager();
+        ptr_vector<expr> nodes_x;
+        get_nodes_in_concat(x, nodes_x);
+
+        ptr_vector<expr> nodes_y;
+        get_nodes_in_concat(y, nodes_y);
+
+        // remove all prefixes
+        int pos = 0;
+        for (pos = 0; pos < std::min(nodes_x.size(), nodes_y.size()); ++pos) {
+            expr_ref_vector eqs(m);
+            collect_eq_nodes(nodes_x[pos], eqs);
+            if (!eqs.contains(nodes_y[pos]))
+                break;
+        }
+
+        if (pos >= std::min(nodes_x.size(), nodes_y.size() - 1))
+            return nullptr;
+        else {
+            std::string name_x = expr2str(nodes_x[pos]);
+            std::string name_y = expr2str(nodes_y[pos]);
+            if (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 )
+                if (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 ||
+                        name_y.find("pre_contain") == 0)
+                    if (nodes_x[pos + 1] == nodes_y[pos + 1])
+                        return createEqualOperator(nodes_x[pos], nodes_y[pos]);
+        }
+        return nullptr;
     }
 
     /*
@@ -6063,7 +6075,7 @@ namespace smt {
 
             literal assertLiteral = ctx.get_literal(a);
             if (m.is_and(a))
-                assert_axiom(a, causexpr);
+                assert_axiom(createEqualOperator(a, causexpr));
 //                ctx.assign(assertLiteral, b_justification(causeLiteral), false);
             else
                 assert_axiom(a);
@@ -6286,7 +6298,9 @@ namespace smt {
     }
 
     void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise){
-
+        zstring tmp("U");
+        if (rhs == tmp)
+            return;
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
         int bound = -1;
@@ -6320,7 +6334,7 @@ namespace smt {
 
             for (unsigned i = rhs.length(); i <= bound; ++i){
                 expr_ref_vector subcases(m);
-                subcases.push_back(createLessEqOperator(lenExpr, mk_int(i - 1)));
+//                subcases.push_back(createLessEqOperator(lenExpr, mk_int(i - 1)));
                 for (unsigned k = 0; k < rhs.length(); ++k) {
                     unsigned pos = k + i - rhs.length();
                     subcases.push_back(mk_not(m, createEqualOperator(
@@ -9447,8 +9461,8 @@ namespace smt {
 
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
             if (consideredSize >= connectingSize) {
-                andConstraints.push_back(createLessEqOperator(lenRhs, mk_int(connectingSize - 1)));
-                andConstraints.push_back(createLessEqOperator(lenLhs, mk_int(connectingSize - 1)));
+                andConstraints.push_back(createLessEqOperator(lenRhs, mk_int(connectingSize)));
+                andConstraints.push_back(createLessEqOperator(lenLhs, mk_int(connectingSize)));
             }
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(createAndOperator(andConstraints), m) << std::endl;);
         }
@@ -15240,9 +15254,14 @@ namespace smt {
         for (const auto& e : orgExprs){
             expr *lhs = to_app(e)->get_arg(0);
             expr *rhs = to_app(e)->get_arg(1);
-            if (u.str.is_string(lhs) && allvars.find(rhs) != allvars.end())
+            zstring valueLhs, valueRhs;
+            bool lhsStr = u.str.is_string(lhs, valueLhs);
+            bool rhsStr = u.str.is_string(rhs, valueRhs);
+            if ((lhsStr && valueLhs.length() == 0) || (rhsStr && valueRhs.length() == 0))
                 guessedExprs.push_back(e);
-            else if (u.str.is_string(rhs) && allvars.find(lhs) != allvars.end())
+            else if (lhsStr && allvars.find(rhs) != allvars.end())
+                guessedExprs.push_back(e);
+            else if (rhsStr && allvars.find(lhs) != allvars.end())
                 guessedExprs.push_back(e);
         }
 
