@@ -4401,9 +4401,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
             expr_ref toAssert(createAndOperator(ands), m);
             assert_axiom(toAssert.get());
-            uState.addAssertingConstraints(toAssert);
-//            literal l = ctx.get_literal(createAndOperator(ands));
-//            ctx.assign(l, b_justification::mk_axiom(), false);
+//            uState.addAssertingConstraints(toAssert);
             return true;
         }
         else return false;
@@ -4492,20 +4490,21 @@ namespace smt {
                                                     // indexof vs string
                                                     zstring valueIndexof = value_i.extract(0, 1);
                                                     if (causes.find(v.first) != causes.end()) {
-                                                        // implication
-                                                        expr_ref_vector ors(m);
-                                                        ors.push_back(mk_not(m, causes[v.first]));
-                                                        expr* tmp = createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]);
-                                                        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                                                        if (tmp != m.mk_true()) {
+                                                        if (!are_equal_exprs(nodes_j[0], u.str.mk_string(valueIndexof))) {
+                                                            // implication
+                                                            expr_ref_vector ors(m);
+                                                            ors.push_back(mk_not(m, causes[v.first]));
+
+                                                            expr* tmp = createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]);
+                                                            STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
                                                             ors.push_back(tmp);
                                                             ands.push_back(createOrOperator(ors));
                                                         }
                                                     }
                                                     else {
-                                                        expr* tmp = createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]);
-                                                        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                                                        if (tmp != m.mk_true()) {
+                                                        if (!are_equal_exprs(nodes_j[0], u.str.mk_string(valueIndexof))) {
+                                                            expr* tmp = createEqualOperator(u.str.mk_string(valueIndexof), nodes_j[0]);
+                                                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
                                                             ands.push_back(tmp);
                                                         }
                                                     }
@@ -4514,24 +4513,23 @@ namespace smt {
                                                     // indexof vs string
                                                     zstring valueIndexof = value_j.extract(0, 1);
                                                     if (causes.find(v.first) != causes.end()) {
-                                                        // implication
-                                                        expr_ref_vector ors(m);
-                                                        ors.push_back(mk_not(m, causes[v.first]));
-                                                        ors.push_back(createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof)));
-                                                        ands.push_back(createOrOperator(ors));
+                                                        if (!are_equal_exprs(nodes_i[0], u.str.mk_string(valueIndexof))) {
+                                                            // implication
+                                                            expr_ref_vector ors(m);
+                                                            ors.push_back(mk_not(m, causes[v.first]));
 
-                                                        expr* tmp = createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof));
-                                                        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                                                        if (tmp != m.mk_true()) {
+                                                            expr* tmp = createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof));
+                                                            STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
+
                                                             ors.push_back(tmp);
                                                             ands.push_back(createOrOperator(ors));
                                                         }
 
                                                     }
                                                     else {
-                                                        expr* tmp = createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof));
-                                                        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                                                        if (tmp != m.mk_true()) {
+                                                        if (!are_equal_exprs(nodes_i[0], u.str.mk_string(valueIndexof))) {
+                                                            expr* tmp = createEqualOperator(nodes_i[0], u.str.mk_string(valueIndexof));
+                                                            STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
                                                             ands.push_back(tmp);
                                                         }
                                                     }
@@ -6426,8 +6424,8 @@ namespace smt {
 
         ast_manager & m = get_manager();
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
-
+//        collect_eq_nodes(n, eqs);
+        eqs.push_back(n);
         for  (const auto& nn : eqs) {
             if (u.str.is_concat(nn)) {
                 STRACE("str",
@@ -11916,11 +11914,11 @@ namespace smt {
             if (notImportant.find(v.first) == notImportant.end()) {
                 if (v.second == -1) {
                     expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(rootTmp, m) << " eq_combination size: " << eq_combination[rootTmp].size()
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(v.first, m) << " eq_combination size: " << eq_combination[rootTmp].size()
                                        << std::endl;);
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
                         eq_combination[rootTmp].size() <= 20 &&
-                        !is_contain_equality(rootTmp)) {
+                        !is_contain_equality(v.first)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
@@ -12533,8 +12531,23 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         ast_manager &m = get_manager();
 
+        std::set<expr*> notImportantVars_filtered;
         for (const auto& n : notImportantVars) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": notImportantVars  " << mk_pp(n, m) << std::endl;);
+            if (u.str.is_concat(n)){
+                ptr_vector<expr> childrenVector;
+                get_all_nodes_in_concat(n, childrenVector);
+
+                bool shouldSkip = false;
+                // if none of child nodes are not important
+                for (const auto& nn : childrenVector)
+                    if (is_important(nn, importantVars)){
+                        shouldSkip = true;
+                        break;
+                    }
+                if (!shouldSkip)
+                    notImportantVars_filtered.insert(n);
+            }
         }
 
         std::set<expr*> toRemove;
@@ -12544,7 +12557,7 @@ namespace smt {
             if (is_trivial_combination(c.first, c.second, importantVars))
                 continue;
 
-            std::set<expr*> tmpSet = refine_eq_set(c.second, notImportantVars);
+            std::set<expr*> tmpSet = refine_eq_set(c.second, notImportantVars_filtered);
             // remove some imp vars
             if (c.second.size() > 20 && tmpSet.size() <= 20) {
                 expr_ref_vector eqs(m);
@@ -12563,12 +12576,10 @@ namespace smt {
                     if (u.str.is_concat(c.first)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
                         // check if it is an important concat
-                        bool importantConcat = false;
                         ptr_vector<expr> childrenVector;
                         get_all_nodes_in_concat(c.first, childrenVector);
                         for (const auto& v : importantVars)
                             if (childrenVector.contains(v.first)) {
-                                importantConcat = true;
                                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.first, get_manager()) << std::endl;);
                                 break;
                             }
@@ -12660,7 +12671,7 @@ namespace smt {
                 for (const auto&  notimp : notImportantVars)
                     if (childrenVector.contains(notimp)) {
                         if (!appear_in_all_eqs(s, notimp)) {
-//                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
                             notAdd = true;
                             break;
                         }
