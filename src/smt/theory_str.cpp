@@ -6088,11 +6088,11 @@ namespace smt {
 //        return;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " repeat = " << repeat << " @lvl " << m_scope_level << "\n";);
         if (!repeat){
-//            handle_NOTEqual();
+            handle_NOTEqual();
             handle_NOTContain();
         }
         else {
-//            handle_NOTEqual_repeat();
+            handle_NOTEqual_repeat();
             handle_NOTContain_repeat();
         }
 
