@@ -1960,7 +1960,9 @@ namespace smt {
                 bool is_important_concat(expr* e, std::set<std::pair<expr*, int>> importantVars);
                 bool is_trivial_combination(expr* v, std::set<expr*> eq, std::set<std::pair<expr*, int>> importantVars);
                 std::set<expr*> refine_eq_set(
+                        expr* var,
                     std::set<expr*> s,
+                        std::set<std::pair<expr*, int>> importantVars,
                     std::set<expr*> notImportantVars);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,

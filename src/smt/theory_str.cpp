@@ -6424,8 +6424,8 @@ namespace smt {
 
         ast_manager & m = get_manager();
         expr_ref_vector eqs(m);
-//        collect_eq_nodes(n, eqs);
-        eqs.push_back(n);
+        collect_eq_nodes(n, eqs);
+//        eqs.push_back(n);
         for  (const auto& nn : eqs) {
             if (u.str.is_concat(nn)) {
                 STRACE("str",
@@ -12557,7 +12557,7 @@ namespace smt {
             if (is_trivial_combination(c.first, c.second, importantVars))
                 continue;
 
-            std::set<expr*> tmpSet = refine_eq_set(c.second, notImportantVars_filtered);
+            std::set<expr*> tmpSet = refine_eq_set(c.first, c.second, importantVars, notImportantVars_filtered);
             // remove some imp vars
             if (c.second.size() > 20 && tmpSet.size() <= 20) {
                 expr_ref_vector eqs(m);
@@ -12656,7 +12656,9 @@ namespace smt {
     }
 
     std::set<expr*> theory_str::refine_eq_set(
+            expr* var,
             std::set<expr*> s,
+            std::set<std::pair<expr*, int>> importantVars,
             std::set<expr*> notImportantVars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         ast_manager &m = get_manager();
@@ -12667,15 +12669,32 @@ namespace smt {
                 get_all_nodes_in_concat(*it, childrenVector);
 
                 bool notAdd = false;
-                // check if it contains a nonimportantVar
-                for (const auto&  notimp : notImportantVars)
-                    if (childrenVector.contains(notimp)) {
-                        if (!appear_in_all_eqs(s, notimp)) {
-                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
-                            notAdd = true;
+
+                if (are_equal_exprs(var, *it)) {
+                    // do not have const or important var
+                    bool found = false;
+                    ptr_vector<expr> v;
+                    get_nodes_in_concat(*it, v);
+                    for (const auto& nn : v)
+                        if (u.str.is_string(nn) || is_important(nn, importantVars)){
+                            found = true;
                             break;
                         }
-                    }
+                    if (found)
+                        notAdd = false;
+                    else
+                        notAdd = true;
+                }
+                // check if it contains a nonimportantVar
+                if (!notAdd)
+                    for (const auto&  notimp : notImportantVars)
+                        if (childrenVector.contains(notimp)) {
+                            if (!appear_in_all_eqs(s, notimp)) {
+                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
+                                notAdd = true;
+                                break;
+                            }
+                        }
 
                 if (!notAdd)
                     ret.insert(*it);
