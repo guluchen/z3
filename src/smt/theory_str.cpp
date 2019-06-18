@@ -1231,11 +1231,12 @@ namespace smt {
             return;
         }
 
-        underapproximation_repeat();
-        uState.reassertEQ = true;
-        int tmpz3State = get_actual_trau_lvl();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
-        uState.eqLevel = tmpz3State;
+        if (underapproximation_repeat()) {
+            uState.reassertEQ = true;
+            int tmpz3State = get_actual_trau_lvl();
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
+            uState.eqLevel = tmpz3State;
+        }
     }
 
     void theory_str::handle_equality(expr * lhs, expr * rhs) {
@@ -1417,6 +1418,60 @@ namespace smt {
                     }
 
                 }
+        }
+
+        special_assertion_for_contain_vs_substr(lhs, rhs);
+        special_assertion_for_contain_vs_substr(rhs, lhs);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " end of " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+    }
+
+    void theory_str::special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs){
+        ast_manager & m = get_manager();
+        // (str.++ replace1!tmp0 (str.++ "A" replace2!tmp1)) == (str.substr url 0 (+ 1 (str.indexof url "A" 0)))
+        expr* contain = nullptr;
+        if (is_contain_equality(lhs, contain)) {
+            if (u.str.is_extract(rhs)) {
+                expr* arg0 = to_app(rhs)->get_arg(0);
+                expr* arg1 = to_app(rhs)->get_arg(1);
+                expr* arg2 = to_app(rhs)->get_arg(2);
+                rational value;
+                if (m_autil.is_numeral(arg1, value) && value.get_int32() == 0) {
+                    // check 3rd arg
+                    if (u.str.is_index(arg2)) {
+                        app* indexApp = to_app(arg2);
+                        expr* arg0_index = indexApp->get_arg(0);
+                        expr* arg1_index = indexApp->get_arg(1);
+                        expr* arg2_index = indexApp->get_arg(2);
+                        if (arg1_index == contain && arg2_index == arg1){
+                            assert_axiom(mk_not(m, createEqualOperator(lhs, rhs)));
+                        }
+                    }
+                    else {
+                        bool found_index = false;
+                        for (int i = 0; i < to_app(arg2)->get_num_args(); ++i)
+                            if (u.str.is_index(to_app(arg2)->get_arg(i))){
+                                app* indexApp = to_app(to_app(arg2)->get_arg(i));
+                                expr* arg0_index = indexApp->get_arg(0);
+                                expr* arg1_index = indexApp->get_arg(1);
+                                expr* arg2_index = indexApp->get_arg(2);
+                                if (arg1_index == contain && arg2_index == arg1) {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " end of " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+                                    // same containKey, same pos
+                                    // get all str in lhs, take the last one
+                                    ptr_vector<expr> exprVector;
+                                    get_nodes_in_concat(lhs, exprVector);
+                                    SASSERT(exprVector.size() == 3);
+
+                                    // len3rd = arg2 - index - 1
+                                    expr* len3rd = createMinusOperator(arg2, createAddOperator(to_app(arg2)->get_arg(i), mk_int(1)));
+                                    expr* cause = createEqualOperator(lhs, rhs);
+                                    assert_implication(cause, createEqualOperator(mk_strlen(exprVector[2]), len3rd));
+                                    return;
+                                }
+                            }
+                    }
+                }
+            }
         }
     }
 
@@ -3853,11 +3908,12 @@ namespace smt {
         vector<expr_ref_vector> cores;
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-        if (!newConstraintTriggered)
+        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
             return FC_DONE;
 
         newConstraintTriggered = false;
         dump_assignments();
+        dump_literals();
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
@@ -3985,11 +4041,13 @@ namespace smt {
 
         bool axiomAdded = special_handling_for_contain_family(eq_combination);
         axiomAdded = axiomAdded || special_handling_for_charAt_family(eq_combination, causes);
-        if (axiomAdded)
+        if (axiomAdded) {
             return FC_CONTINUE;
+        }
         axiomAdded = !is_notContain_consistent(eq_combination);
-        if (axiomAdded)
+        if (axiomAdded) {
             return FC_CONTINUE;
+        }
         axiomAdded = underapproximation(eq_combination, causes, importantVars);
 
 
@@ -4339,8 +4397,13 @@ namespace smt {
             }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         if (ands.size() > 0) {
+            context & ctx = get_context();
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
-            assert_axiom(createAndOperator(ands), m.mk_true());
+            expr_ref toAssert(createAndOperator(ands), m);
+            assert_axiom(toAssert.get());
+            uState.addAssertingConstraints(toAssert);
+//            literal l = ctx.get_literal(createAndOperator(ands));
+//            ctx.assign(l, b_justification::mk_axiom(), false);
             return true;
         }
         else return false;
@@ -6069,8 +6132,9 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << " @lvl " << m_scope_level << std::endl;);
         init_underapprox_repeat();
         literal causeLiteral = ctx.get_literal(causexpr);
-
+        bool axiomAdded = false;
         for (const auto& a : uState.assertingConstraints){
+            axiomAdded = true;
             ensure_enode(a);
 
             literal assertLiteral = ctx.get_literal(a);
@@ -6081,7 +6145,7 @@ namespace smt {
                 assert_axiom(a);
 //                ctx.assign(assertLiteral, b_justification::mk_axiom(), false);
         }
-        return true;
+        return axiomAdded;
     }
 
     void theory_str::handle_diseq(bool repeat){
@@ -6182,9 +6246,7 @@ namespace smt {
             expr_ref notcause(createEqualOperator(lhs, rhs), m);
             expr_ref cause(mk_not(notcause), m);
             ensure_enode(cause.get());
-            literal causeLiteral = ctx.get_literal(cause.get());
             expr* assertExpr = createOrOperator(cases);
-            literal assertLiteral = ctx.get_literal(assertExpr);
 
             assert_axiom(assertExpr, cause.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr), m);
@@ -6228,12 +6290,10 @@ namespace smt {
             expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
             expr_ref cause(mk_not(notcause), m);
             ensure_enode(cause.get());
-            literal causeLiteral = ctx.get_literal(cause.get());
             expr_ref assertExpr(createOrOperator(cases), m);
 
             assert_axiom(assertExpr.get());
             expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr.get()), m);
-//            uState.addAssertingConstraints(tmpAxiom);
 
 //            literal assertLiteral = ctx.get_literal(assertExpr);
 //            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
@@ -13366,7 +13426,7 @@ namespace smt {
                     expr* arg2_arg2 = indexOfApp->get_arg(2);
 
                     // same var, same keyword
-                    if (arg2_arg0 == arg0 && arg2_arg1 && ex->get_arg(1)){
+                    if (arg2_arg0 == arg0 && arg2_arg1 == ex->get_arg(1)){
                         // 3rd arg = 0 || contain = true
                         expr* e1 = createEqualOperator(arg2, mk_int(0));
                         if (needleStr.length() > 0)
@@ -15174,7 +15234,7 @@ namespace smt {
                 for (int i = 0; i < tmpExprs.size(); ++i) {
                     literal tmp = ctx.get_literal(tmpExprs[i].get());
                     int assignLvl = ctx.get_assign_level(tmp);
-                    if (ctx.get_assignment(tmpExprs[i].get()) == l_true){
+                    if (ctx.get_assignment(tmpExprs[i].get()) == l_true && !m.is_or(tmpExprs[i].get()) && !m.is_and(tmpExprs[i].get()) && !m.is_ite(tmpExprs[i].get())){
                         STRACE("str", tout << __LINE__ << " guessed literal " << mk_pp(tmpExprs[i].get(), m)
                                            << ", assignLevel = " << assignLvl << std::endl;);
                     }
