@@ -84,7 +84,6 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
             # print(f'unexpected output: {out}')
 
         if result_except:
-            out_err = str(err.output)
             out = 'exception'
 
         # detect error message
