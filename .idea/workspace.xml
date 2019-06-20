@@ -98,11 +98,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="377">
-              <caret line="12559" column="44" selection-start-line="12559" selection-start-column="44" selection-end-line="12559" selection-end-column="44" />
+            <state relative-caret-position="722">
+              <caret line="4460" column="75" selection-start-line="4460" selection-start-column="75" selection-end-line="4460" selection-end-column="75" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -173,11 +173,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="406">
-              <caret line="1962" column="30" selection-start-line="1962" selection-start-column="30" selection-end-line="1962" selection-end-column="30" />
+            <state relative-caret-position="382">
+              <caret line="1972" column="64" selection-start-line="1972" selection-start-column="64" selection-end-line="1972" selection-end-column="64" />
             </state>
           </provider>
         </entry>
@@ -186,25 +186,9 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>handle_notcontain</find>
-      <find>: mful_scope_levels)</find>
-      <find>: mful_scope_levels</find>
-      <find>mful_scope_levels</find>
-      <find>is_not_contain_consistent</find>
-      <find>fetch_contain_related_vars</find>
-      <find>ctx</find>
-      <find>ite</find>
-      <find>br</find>
-      <find>pri</find>
-      <find>branch</find>
-      <find>split</find>
-      <find>assert_ca</find>
-      <find>priority</find>
-      <find>reateLessEqOperator(</find>
       <find>disequalities</find>
       <find>handle_trivial_diseq</find>
       <find>tx.assign(assertLiteral, b_justification::mk_axiom(), false);</find>
-      <find>special_handling_for_contain_family</find>
       <find>check_contain_by_eq_nodes</find>
       <find>unsat_co</find>
       <find>final_check</find>
@@ -215,7 +199,23 @@
       <find>is_contain_equality</find>
       <find>tmpSet</find>
       <find>createminu</find>
+      <find>init_in</find>
+      <find>v1</find>
+      <find>underapproximation</find>
+      <find>is_importantVar</find>
+      <find>ctx</find>
+      <find>assertingConstraints</find>
+      <find>optimize_e</find>
+      <find>for (const auto &amp;c : eq_combination) {</find>
+      <find>fetch_contain_related_vars</find>
+      <find>is_notContain_const_consistent</find>
+      <find>is_notContain_consistent</find>
+      <find>collect_ine</find>
+      <find>is_trivial_ine</find>
       <find>refine_eq_set</find>
+      <find>refine_all_duplication</find>
+      <find>optimizeEquality</find>
+      <find>special_handling_for_contain_family</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -233,15 +233,15 @@
         <option value="$PROJECT_DIR$/src/smt/theory_seq.cpp" />
         <option value="$PROJECT_DIR$/src/smt/smt_model_generator.cpp" />
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
       </list>
     </option>
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="224" />
-    <option name="y" value="209" />
+    <option name="x" value="235" />
+    <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -746,15 +746,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="728293000" />
+      <workItem from="1555596195940" duration="750050000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="873215000" />
+    <option name="totallyTimeSpent" value="894972000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="224" y="209" width="2560" height="1417" extended-state="0" />
+    <frame x="235" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.497545" visible="true" weight="0.17156473" />
@@ -1128,20 +1128,20 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="377">
-          <caret line="12559" column="44" selection-start-line="12559" selection-start-column="44" selection-end-line="12559" selection-end-column="44" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="382">
+          <caret line="1972" column="64" selection-start-line="1972" selection-start-column="64" selection-end-line="1972" selection-end-column="64" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="406">
-          <caret line="1962" column="30" selection-start-line="1962" selection-start-column="30" selection-end-line="1962" selection-end-column="30" />
+        <state relative-caret-position="722">
+          <caret line="4460" column="75" selection-start-line="4460" selection-start-column="75" selection-end-line="4460" selection-end-column="75" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

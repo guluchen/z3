@@ -1247,6 +1247,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination);
@@ -1893,21 +1894,26 @@ namespace smt {
             /*
              * cut the same prefix and suffix
              */
-            void optimizeEquality(
+            void optimize_equality(
                     expr* lhs,
                     expr* rhs,
                     ptr_vector<expr> &new_lhs,
                     ptr_vector<expr> &new_rhs);
-
+                bool have_same_len(expr* lhs, expr* rhs);
             /*
              * cut the same prefix and suffix
              */
-            void optimizeEquality(
+            void optimize_equality(
                     expr* lhs,
                     std::vector<expr*> rhs,
                     ptr_vector<expr> &new_lhs,
                     ptr_vector<expr> &new_rhs);
-
+            /*
+             * cut the same prefix and suffix
+             */
+            bool propagate_equality(
+                        expr* lhs,
+                        expr* rhs);
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
@@ -1964,6 +1970,8 @@ namespace smt {
                     std::set<expr*> s,
                         std::set<std::pair<expr*, int>> importantVars,
                     std::set<expr*> notImportantVars);
+                    std::set<expr*> refine_all_duplication(std::set<expr*> s);
+                    bool are_equal_concat(expr* lhs, expr* rhs);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,
                     std::set<std::pair<expr*, int>> importantVars);
