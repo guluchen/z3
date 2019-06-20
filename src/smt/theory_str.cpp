@@ -12876,7 +12876,8 @@ namespace smt {
         for (int i = 0; i < v.size(); ++i) {
             bool eq = false;
             for (int j = i + 1; j < v.size(); ++j)
-                if (!are_equal_concat(v[i], v[j])) {
+                if (are_equal_concat(v[i], v[j])) {
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager()) << " " << mk_pp(v[j], get_manager()) << std::endl;);
                     eq = true;
                     break;
                 }
@@ -12897,11 +12898,13 @@ namespace smt {
         ptr_vector<expr> vRhs;
         get_nodes_in_concat(rhs, vRhs);
 
-        if (vLhs.size() == vRhs.size())
+        if (vLhs.size() == vRhs.size()) {
             for (int i = 0; i < vLhs.size(); ++i)
                 if (!are_equal_exprs(vLhs[i], vRhs[i]))
                     return false;
-
+        }
+        else
+            return false;
         return true;
     }
 
