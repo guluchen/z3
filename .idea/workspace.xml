@@ -83,8 +83,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="542">
-              <caret line="12904" column="9" selection-start-line="12904" selection-start-column="9" selection-end-line="12904" selection-end-column="9" />
+            <state relative-caret-position="940">
+              <caret line="6116" column="27" lean-forward="true" selection-start-line="6116" selection-start-column="27" selection-end-line="6116" selection-end-column="27" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -138,8 +140,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="377">
-              <caret line="320" column="14" selection-start-line="320" selection-start-column="12" selection-end-line="320" selection-end-column="14" />
+            <state relative-caret-position="-361">
+              <caret line="31" column="10" selection-start-line="31" selection-start-column="10" selection-end-line="31" selection-end-column="10" />
             </state>
           </provider>
         </entry>
@@ -174,8 +176,13 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="382">
-              <caret line="1972" column="64" selection-start-line="1972" selection-start-column="64" selection-end-line="1972" selection-end-column="64" />
+            <state relative-caret-position="288">
+              <caret line="1190" column="13" selection-start-line="1190" selection-start-column="13" selection-end-line="1190" selection-end-column="13" />
+              <folding>
+                <element signature="e#9699#19701#1" />
+                <element signature="e#19712#24622#1" />
+                <element signature="e#24633#52784#1" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -184,25 +191,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>disequalities</find>
-      <find>handle_trivial_diseq</find>
-      <find>tx.assign(assertLiteral, b_justification::mk_axiom(), false);</find>
-      <find>check_contain_by_eq_nodes</find>
-      <find>unsat_co</find>
-      <find>final_check</find>
-      <find>str.is_extract(</find>
-      <find>get_nodes</find>
-      <find>expr* prec</find>
-      <find>recheck</find>
-      <find>is_contain_equality</find>
-      <find>tmpSet</find>
-      <find>createminu</find>
-      <find>init_in</find>
-      <find>v1</find>
-      <find>underapproximation</find>
-      <find>is_importantVar</find>
-      <find>ctx</find>
-      <find>assertingConstraints</find>
       <find>optimize_e</find>
       <find>for (const auto &amp;c : eq_combination) {</find>
       <find>fetch_contain_related_vars</find>
@@ -212,8 +200,27 @@
       <find>is_trivial_ine</find>
       <find>refine_eq_set</find>
       <find>refine_all_duplication</find>
-      <find>optimizeEquality</find>
       <find>special_handling_for_contain_family</find>
+      <find>have_same_lenpost_contain</find>
+      <find>final_check</find>
+      <find>uState.addAssertingConstrain</find>
+      <find>fetch_guessed_literals_with_scopes</find>
+      <find>fetch_guessed_exprs_with_scopes</find>
+      <find>14529</find>
+      <find>assert_cached_diseq_state</find>
+      <find>core</find>
+      <find>have_same_le</find>
+      <find>guessedEqs</find>
+      <find>propagate_eq_combination</find>
+      <find>optimize_equality</find>
+      <find>propagate_equality</find>
+      <find>have_same_len</find>
+      <find>underapproximation(</find>
+      <find>propagate_eq</find>
+      <find>special_hand</find>
+      <find>br</find>
+      <find>optimizeEquality</find>
+      <find>impliedFacts</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -238,7 +245,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="235" />
+    <option name="x" value="192" />
     <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
@@ -744,15 +751,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="751601000" />
+      <workItem from="1555596195940" duration="764330000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="896523000" />
+    <option name="totallyTimeSpent" value="909252000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="235" y="23" width="2560" height="1417" extended-state="0" />
+    <frame x="192" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.497545" visible="true" weight="0.17156473" />
@@ -1077,13 +1084,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="377">
-          <caret line="320" column="14" selection-start-line="320" selection-start-column="12" selection-end-line="320" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="373">
@@ -1112,13 +1112,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="382">
-          <caret line="3738" column="27" selection-start-line="3738" selection-start-column="16" selection-end-line="3738" selection-end-column="27" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/set">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="399">
@@ -1126,17 +1119,36 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="382">
-          <caret line="1972" column="64" selection-start-line="1972" selection-start-column="64" selection-end-line="1972" selection-end-column="64" />
+          <caret line="3738" column="27" selection-start-line="3738" selection-start-column="16" selection-end-line="3738" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-361">
+          <caret line="31" column="10" selection-start-line="31" selection-start-column="10" selection-end-line="31" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="288">
+          <caret line="1190" column="13" selection-start-line="1190" selection-start-column="13" selection-end-line="1190" selection-end-column="13" />
+          <folding>
+            <element signature="e#9699#19701#1" />
+            <element signature="e#19712#24622#1" />
+            <element signature="e#24633#52784#1" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="542">
-          <caret line="12904" column="9" selection-start-line="12904" selection-start-column="9" selection-end-line="12904" selection-end-column="9" />
+        <state relative-caret-position="940">
+          <caret line="6116" column="27" lean-forward="true" selection-start-line="6116" selection-start-column="27" selection-end-line="6116" selection-end-column="27" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

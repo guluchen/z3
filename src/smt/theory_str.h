@@ -1247,7 +1247,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
-            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
+            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination);
@@ -1913,7 +1913,8 @@ namespace smt {
              */
             bool propagate_equality(
                         expr* lhs,
-                        expr* rhs);
+                        expr* rhs,
+                        expr* premise);
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
@@ -2257,6 +2258,9 @@ namespace smt {
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;
+
+
+        expr_ref_vector impliedFacts;
     private:
         clock_t startClock;
         bool newConstraintTriggered = false;
@@ -2275,6 +2279,7 @@ namespace smt {
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
         void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs);
+        void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void dump_bool_vars();
