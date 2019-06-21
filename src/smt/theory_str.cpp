@@ -4084,9 +4084,11 @@ namespace smt {
      * a . b = c .d && |a| = |b| --> a = b
      */
     bool theory_str::propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs){
-        bool axiomAdded = false;
         fetch_guessed_core_exprs(eq_combination, guessedEqs);
         expr* coreExpr = createAndOperator(guessedEqs);
+
+        ast_manager & m = get_manager();
+        expr_ref_vector impliedEqualites(m);
         for (const auto &c : eq_combination) {
             std::vector<expr*> tmp;
             for (const auto& e : c.second)
@@ -4098,12 +4100,18 @@ namespace smt {
 
             for (int i = 0; i < tmp.size(); ++i)
                 for (int j = i + 1; j < tmp.size(); ++j) {
-                    if (propagate_equality(tmp[i], tmp[j], coreExpr)){
-                        axiomAdded = true;
-                    }
+                    propagate_equality(tmp[i], tmp[j], impliedEqualites);
                 }
         }
-        return axiomAdded;
+        if (impliedEqualites.size() > 0){
+            expr* tmp = createAndOperator(impliedEqualites);
+            expr* assertingExpr = createImpliesOperator(coreExpr, tmp);
+            assert_axiom(assertingExpr);
+            impliedFacts.push_back(assertingExpr);
+            return true;
+        }
+        else
+            return false;
     }
 
     bool theory_str::is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination){
@@ -6592,7 +6600,14 @@ namespace smt {
             }
         }
 
-        connectingSize = std::min(maxInt + (int)allStrExprs.size() + sumConst, 300);
+        // count non internal var
+        int cnt = 10;
+        for (const auto& v: allStrExprs){
+            if (!isInternalVar(v))
+                cnt++;
+        }
+
+        connectingSize = std::min(maxInt + cnt + sumConst, 300);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
@@ -11898,10 +11913,10 @@ namespace smt {
     /*
      * cut the same prefix and suffix
      */
-    bool theory_str::propagate_equality(
+    void theory_str::propagate_equality(
             expr* lhs,
             expr* rhs,
-            expr* premise){
+            expr_ref_vector &impliedEqualities){
         ast_manager &m = get_manager();
         /* cut prefix */
         ptr_vector<expr> lhsVec;
@@ -11909,21 +11924,18 @@ namespace smt {
 
         ptr_vector<expr> rhsVec;
         get_nodes_in_concat(rhs, rhsVec);
-        bool axiomAdded = false;
 
         /* cut prefix */
         int prefix = -1;
+
+        bool foundExpr = false;
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
             else if (have_same_len(lhsVec[i], rhsVec[i])){
+                foundExpr = true;
                 prefix = i;
-                expr_ref tmp(createImpliesOperator(premise, createEqualOperator(lhsVec[i], rhsVec[i])), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-                axiomAdded = true;
+                impliedEqualities.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
             }
             else
                 break;
@@ -11934,33 +11946,21 @@ namespace smt {
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
+                foundExpr = true;
                 suffix = i;
-                expr_ref tmp(createImpliesOperator(premise, createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp);
-                axiomAdded = true;
+                impliedEqualities.push_back(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
             }
             else
                 break;
 
-        if (axiomAdded && lhsVec.size() == rhsVec.size()) {
+        if (foundExpr && lhsVec.size() == rhsVec.size()) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2 && prefix + 1 ==  (int)rhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
-                    expr_ref tmp(
-                            createImpliesOperator(premise, createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1])),
-                            m);
-
-                    assert_axiom(tmp.get());
-                    impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-                    axiomAdded = true;
+                    impliedEqualities.push_back(createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
                 }
         }
-        return axiomAdded;
     }
 
     bool theory_str::have_same_len(expr* lhs, expr* rhs){

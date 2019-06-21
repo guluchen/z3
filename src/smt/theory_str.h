@@ -1911,10 +1911,10 @@ namespace smt {
             /*
              * cut the same prefix and suffix
              */
-            bool propagate_equality(
+            void propagate_equality(
                         expr* lhs,
                         expr* rhs,
-                        expr* premise);
+                        expr_ref_vector &imppliedEqualities);
             std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
