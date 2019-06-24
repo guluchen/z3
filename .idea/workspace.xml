@@ -86,7 +86,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -101,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1031">
-              <caret line="6603" column="20" selection-start-line="6603" selection-start-column="20" selection-end-line="6603" selection-end-column="20" />
+            <state relative-caret-position="160">
+              <caret line="4040" column="17" selection-start-line="4040" selection-start-column="17" selection-end-line="4040" selection-end-column="17" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -191,10 +190,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>for (const auto &amp;c : eq_combination) {</find>
-      <find>fetch_contain_related_vars</find>
-      <find>is_notContain_const_consistent</find>
-      <find>is_notContain_consistent</find>
       <find>collect_ine</find>
       <find>is_trivial_ine</find>
       <find>refine_eq_set</find>
@@ -210,7 +205,6 @@
       <find>core</find>
       <find>have_same_le</find>
       <find>guessedEqs</find>
-      <find>propagate_eq_combination</find>
       <find>optimize_equality</find>
       <find>have_same_len</find>
       <find>underapproximation(</find>
@@ -220,7 +214,12 @@
       <find>impliedFacts</find>
       <find>impliedfa</find>
       <find>optimizeEquality</find>
+      <find>propagate</find>
       <find>propagate_equality</find>
+      <find>propagate_eq_combination</find>
+      <find>construct_eq_combination</find>
+      <find>special_handling_for_charAt_family</find>
+      <find>ssert_cached</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -245,7 +244,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="704" />
+    <option name="x" value="23" />
     <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
@@ -751,15 +750,15 @@
       <option name="presentableId" value="Default" />
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
-      <workItem from="1555596195940" duration="766438000" />
+      <workItem from="1555596195940" duration="774141000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="911360000" />
+    <option name="totallyTimeSpent" value="919063000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="704" y="23" width="2560" height="1417" extended-state="0" />
+    <frame x="23" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.497545" visible="true" weight="0.17156473" />
@@ -1147,8 +1146,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1031">
-          <caret line="6603" column="20" selection-start-line="6603" selection-start-column="20" selection-end-line="6603" selection-end-column="20" />
+        <state relative-caret-position="160">
+          <caret line="4040" column="17" selection-start-line="4040" selection-start-column="17" selection-end-line="4040" selection-end-column="17" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

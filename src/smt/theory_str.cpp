@@ -3487,11 +3487,11 @@ namespace smt {
     }
 
     void theory_str::assert_cached_diseq_state(){
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
         if (uState.reassertDisEQ) {
             return;
         }
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         handle_diseq(true);
         uState.reassertDisEQ = true;
         uState.diseqLevel = get_actual_trau_lvl();
@@ -4029,6 +4029,7 @@ namespace smt {
                    });
         }
 
+        bool axiomAdded = false;
         // enhancement: propagation of value/length information
         {
             std::set<expr*> varSet;
@@ -4037,8 +4038,8 @@ namespace smt {
 
             bool propagation_occurred = propagate_eq_combination(eq_combination, guessedEqs);
             if (propagation_occurred) {
-                TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
-                return FC_CONTINUE;
+                STRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
+                axiomAdded = true;
             }
         }
 
@@ -4059,8 +4060,12 @@ namespace smt {
             causes[com.first] = createAndOperator(guessedEqs);
         }
 
-        bool axiomAdded = special_handling_for_contain_family(eq_combination);
-        axiomAdded = axiomAdded || special_handling_for_charAt_family(eq_combination, causes);
+        if (special_handling_for_contain_family(eq_combination))
+            axiomAdded = true;
+
+        if (special_handling_for_charAt_family(eq_combination, causes))
+            axiomAdded = true;
+
         if (axiomAdded) {
             return FC_CONTINUE;
         }
@@ -4072,6 +4077,10 @@ namespace smt {
 
 
         if (axiomAdded) {
+            uState.eqLevel = get_actual_trau_lvl();
+            uState.diseqLevel = get_actual_trau_lvl();
+            uState.reassertEQ = true;
+            uState.reassertDisEQ = true;
             STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
             return FC_CONTINUE;
         } else {
@@ -4294,7 +4303,7 @@ namespace smt {
             // check all starts
             for (int i = 0; i < starts.size(); ++i)
                 for (int j = i + 1; j < starts.size(); ++j)
-                    if (starts[i].indexof(starts[j], 0) == 0 || starts[j].indexof(starts[i], 0) == 0) {
+                    if (starts[i].prefixof(starts[j]) || starts[j].prefixof(starts[i])) {
 
                     }
                     else {
@@ -4306,7 +4315,7 @@ namespace smt {
             // check all ends
             for (int i = 0; i < ends.size(); ++i)
                 for (int j = i + 1; j < ends.size(); ++j)
-                    if (ends[i].indexof(ends[j], 0) == 0 || ends[j].indexof(ends[i], 0) == 0) {
+                    if (ends[i].suffixof(ends[j]) || ends[j].suffixof(ends[i])) {
 
                     }
                     else {
@@ -4456,7 +4465,7 @@ namespace smt {
             expr_ref_vector cores(m);
             fetch_guessed_exprs_with_scopes(cores);
             fetch_guessed_core_exprs(eq_combination, cores);
-            expr_ref toAssert(createImpliesOperator(createAndOperator(cores), createAndOperator(ands)), m);
+            expr_ref toAssert(createAndOperator(ands), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
 //            uState.addAssertingConstraints(toAssert);
@@ -4500,7 +4509,7 @@ namespace smt {
     bool theory_str::special_handling_for_charAt_family(
             std::map<expr *, std::set<expr *>> eq_combination,
             std::map<expr*, expr*> causes) {
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         clock_t t = clock();
         ast_manager & m = get_manager();
         expr_ref_vector ands(m);
@@ -4606,7 +4615,7 @@ namespace smt {
             expr_ref_vector cores(m);
             fetch_guessed_exprs_with_scopes(cores);
             fetch_guessed_core_exprs(eq_combination, cores);
-            expr_ref toAssert(createImpliesOperator(createAndOperator(cores), createAndOperator(ands)), m);
+            expr_ref toAssert(createAndOperator(ands), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
             return true;
@@ -11933,9 +11942,11 @@ namespace smt {
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
             else if (have_same_len(lhsVec[i], rhsVec[i])){
-                foundExpr = true;
                 prefix = i;
-                impliedEqualities.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
+                foundExpr = true;
+                expr* tmp = createEqualOperator(lhsVec[i], rhsVec[i]);
+                if (!impliedEqualities.contains(tmp))
+                    impliedEqualities.push_back(tmp);
             }
             else
                 break;
@@ -11948,7 +11959,9 @@ namespace smt {
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
                 foundExpr = true;
                 suffix = i;
-                impliedEqualities.push_back(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
+                expr* tmp = createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]);
+                if (!impliedEqualities.contains(tmp))
+                    impliedEqualities.push_back(tmp);
             }
             else
                 break;
@@ -11958,7 +11971,9 @@ namespace smt {
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2 && prefix + 1 ==  (int)rhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
-                    impliedEqualities.push_back(createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
+                    expr* tmp = createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]);
+                    if (!impliedEqualities.contains(tmp))
+                        impliedEqualities.push_back(tmp);
                 }
         }
     }
@@ -13309,13 +13324,13 @@ namespace smt {
     }
 
     void theory_str::propagate() {
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
+
 
         assert_cached_eq_state();
 
         if (uState.reassertEQ)
             assert_cached_diseq_state();
-
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
         context & ctx = get_context();
         while (can_propagate()) {
 
