@@ -2017,8 +2017,6 @@ namespace smt {
         SASSERT(len_rhs);
         expr_ref conclusion(ctx.mk_eq_atom(len_lhs, len_rhs), m);
 
-        TRACE("str", tout << "string-eq length-eq axiom: "
-                          << mk_ismt2_pp(premise, m) << " -> " << mk_ismt2_pp(conclusion, m) << std::endl;);
         assert_implication(premise, conclusion);
     };
 
@@ -6610,7 +6608,7 @@ namespace smt {
         }
 
         // count non internal var
-        int cnt = 10;
+        int cnt = 5;
         for (const auto& v: allStrExprs){
             if (!isInternalVar(v))
                 cnt++;
@@ -11966,7 +11964,7 @@ namespace smt {
             else
                 break;
 
-        if (foundExpr && lhsVec.size() == rhsVec.size()) {
+        if (lhsVec.size() == rhsVec.size()) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2 && prefix + 1 ==  (int)rhsVec.size() - suffix - 2)
