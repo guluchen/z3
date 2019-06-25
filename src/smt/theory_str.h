@@ -563,10 +563,10 @@ namespace smt {
                     return false;
                 }
 
-                if (state.importantVars.size() != importantVars.size()) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.importantVars.size() << " vs " << importantVars.size() <<  std::endl;);
-                    return false;
-                }
+//                if (state.importantVars.size() != importantVars.size()) {
+//                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.importantVars.size() << " vs " << importantVars.size() <<  std::endl;);
+//                    return false;
+//                }
 
                 for (const auto& v : importantVars)
                     if (state.importantVars.find(v) == state.importantVars.end()) {
@@ -1249,7 +1249,7 @@ namespace smt {
         final_check_status final_check_eh() override;
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
-                bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination);
+                bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination);
                     std::set<zstring> collect_all_const_in_eq_combination(expr* v, std::set<expr*> l);
                     std::set<zstring> collect_all_const_in_expr(expr* v);
@@ -2271,10 +2271,9 @@ namespace smt {
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 expr_ref_vector &guessedExprs);
-        std::set<expr*> fetch_contain_related_vars(
+        expr_ref_vector fetch_contain_related_vars(
                 expr* v,
-                zstring replaceKey,
-                expr_ref_vector eqList);
+                zstring replaceKey);
         std::set<expr*> collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
