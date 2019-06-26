@@ -1247,10 +1247,11 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination, expr* core);
-                bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination);
+                bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise, std::map<expr *, std::set<expr *>> eq_combination);
                     std::set<zstring> collect_all_const_in_eq_combination(expr* v, std::set<expr*> l);
                     std::set<zstring> collect_all_const_in_expr(expr* v);
             int get_actual_trau_lvl();

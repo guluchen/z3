@@ -1232,6 +1232,8 @@ namespace smt {
             for (const auto& e : impliedFacts) {
                 assert_axiom(e);
             }
+            if (uState.eqLevel == 0)
+                impliedFacts.reset();
         }
 
     }
@@ -4065,11 +4067,15 @@ namespace smt {
             axiomAdded = true;
 
         if (axiomAdded) {
+            update_state();
+            STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
             return FC_CONTINUE;
         }
 
         axiomAdded = !is_notContain_consistent(eq_combination);
         if (axiomAdded) {
+            update_state();
+            STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
             return FC_CONTINUE;
         }
 
@@ -4077,16 +4083,20 @@ namespace smt {
 
 
         if (axiomAdded) {
-            uState.eqLevel = get_actual_trau_lvl();
-            uState.diseqLevel = get_actual_trau_lvl();
-            uState.reassertEQ = true;
-            uState.reassertDisEQ = true;
+            update_state();
             STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
             return FC_CONTINUE;
         } else {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
             return FC_DONE;
         }
+    }
+
+    void theory_str::update_state(){
+        uState.eqLevel = get_actual_trau_lvl();
+        uState.diseqLevel = get_actual_trau_lvl();
+        uState.reassertEQ = true;
+        uState.reassertDisEQ = true;
     }
 
     /*
@@ -4144,7 +4154,10 @@ namespace smt {
     bool theory_str::is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination, expr* core){
         ast_manager & m = get_manager();
         expr* contain = nullptr;
-        expr* premise = createImpliesOperator(core, createEqualOperator(lhs, rhs));
+        expr_ref_vector ands(m);
+        ands.push_back(core);
+        ands.push_back(mk_not(m, createEqualOperator(lhs, rhs)));
+        expr_ref premise(mk_not(m, createAndOperator(ands)), m);
 
         if (is_contain_equality(lhs, contain)) {
             zstring value;
@@ -4159,7 +4172,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_str::is_notContain_const_consistent(expr* lhs, zstring containKey, expr* premise, std::map<expr *, std::set<expr *>> eq_combination){
+    bool theory_str::is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise, std::map<expr *, std::set<expr *>> eq_combination){
         // find all related nodes
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " contains(" << mk_pp(lhs, m) << ", " << containKey << ")" << std::endl;);
@@ -4170,8 +4183,7 @@ namespace smt {
             if (u.str.is_string(v, value))
                 if (value.contains(containKey)){
                     assert_axiom(premise);
-                    expr_ref tmp(premise, m);
-                    uState.addAssertingConstraints(tmp);
+                    impliedFacts.push_back(premise);
                     return false;
                 }
 
@@ -4181,8 +4193,7 @@ namespace smt {
                 for (const auto& c : constList)
                     if (c.contains(containKey)){
                         assert_axiom(premise);
-                        expr_ref tmp(premise, m);
-                        uState.addAssertingConstraints(tmp);
+                        impliedFacts.push_back(premise);
                         return false;
                     }
             }
@@ -13205,11 +13216,13 @@ namespace smt {
                     eqRhs.insert(arg1);
                 }
 
-                if (is_important(arg1, importantVars))
+                if (is_important(arg1, importantVars) && !has_empty_vars(to_app(*it)->get_arg(1))) {
                     eqRhs = {to_app(*it)->get_arg(1)};
+                }
 
-                if (is_important(arg0, importantVars))
+                if (is_important(arg0, importantVars) && !has_empty_vars(to_app(*it)->get_arg(0))) {
                     eqLhs = {to_app(*it)->get_arg(0)};
+                }
 
                 causes[object].insert(createEqualOperator(arg0, to_app(*it)->get_arg(0)));
                 causes[object].insert(createEqualOperator(arg1, to_app(*it)->get_arg(1)));
@@ -15259,7 +15272,8 @@ namespace smt {
      * Collect constant strings (from left to right) in an AST node.
      */
     void theory_str::get_const_regex_str_asts_in_node(expr * node, expr_ref_vector & astList) {
-        if (u.str.is_string(node)) {
+        zstring value;
+        if (u.str.is_string(node, value) && value.length() > 0) {
             astList.push_back(node);
         } else if (is_app(node)) {
             app * func_app = to_app(node);
@@ -15685,8 +15699,8 @@ namespace smt {
 //        }
 
 
-        for (int i = 0; i < guessedExprs.size(); ++i)
-            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
+//        for (int i = 0; i < guessedExprs.size(); ++i)
+//            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
     }
 
     /**
@@ -15728,6 +15742,7 @@ namespace smt {
             collect_eq_nodes(tmp, tmpVector); // var in class of tmp also does not contain containkey
             for (int i = 0; i  < tmpVector.size(); ++i)
                 if (!ret.contains(tmpVector[i].get())){
+                    STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " == " << mk_pp(tmpVector[i].get(), m) << std::endl;);
                     ptr_vector<expr> childrenVector;
                     get_all_nodes_in_concat(tmpVector[i].get(), childrenVector);
                     for (int j = 0; j < childrenVector.size(); ++j)
