@@ -4170,6 +4170,8 @@ namespace smt {
             if (u.str.is_string(v, value))
                 if (value.contains(containKey)){
                     assert_axiom(premise);
+                    expr_ref tmp(premise, m);
+                    uState.addAssertingConstraints(tmp);
                     return false;
                 }
 
@@ -4179,6 +4181,8 @@ namespace smt {
                 for (const auto& c : constList)
                     if (c.contains(containKey)){
                         assert_axiom(premise);
+                        expr_ref tmp(premise, m);
+                        uState.addAssertingConstraints(tmp);
                         return false;
                     }
             }
@@ -13297,6 +13301,8 @@ namespace smt {
                  (!u.str.is_nth(nn))) ||
                  u.str.is_concat(nn))
             {
+                if (has_empty_vars(nn))
+                    continue;
                 STRACE("str", tout << __LINE__ << mk_pp(object, m) << " = " << mk_pp(nn, m) << std::endl;);
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
@@ -15271,6 +15277,21 @@ namespace smt {
                 }
             }
         }
+    }
+
+    /*
+     * Check if there are empty vars in an AST node.
+     */
+    bool theory_str::has_empty_vars(expr * node) {
+        ptr_vector<expr> vars;
+        get_nodes_in_concat(node, vars);
+        rational vLen;
+        for (int i = 0; i < vars.size(); ++i){
+            if (get_len_value(vars[i], vLen))
+                if (vLen.get_int32() == 0)
+                    return true;
+        }
+        return false;
     }
 
     /*

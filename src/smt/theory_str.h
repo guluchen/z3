@@ -2138,6 +2138,11 @@ namespace smt {
         void get_const_regex_str_asts_in_node(expr * node, expr_ref_vector & astList);
 
         /*
+         * Check if there are empty vars in an AST node.
+         */
+        bool has_empty_vars(expr * node);
+
+        /*
          * Collect important vars in AST node
          */
         void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> importantVars, expr_ref_vector & astList, bool consider_itself = false);
