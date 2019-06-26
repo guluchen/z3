@@ -1250,9 +1250,8 @@ namespace smt {
             void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
-                bool is_notContain_consistent(expr* lhs, expr* rhs, std::map<expr *, std::set<expr *>> eq_combination, expr* core);
-                bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise, std::map<expr *, std::set<expr *>> eq_combination);
-                    std::set<zstring> collect_all_const_in_eq_combination(expr* v, std::set<expr*> l);
+                bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
+                bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
                     std::set<zstring> collect_all_const_in_expr(expr* v);
             int get_actual_trau_lvl();
             bool at_same_state(str::state curr, str::state prev);
@@ -1346,6 +1345,8 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
+                bool is_equal(UnderApproxState preState, UnderApproxState currState);
+                    bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat();
@@ -2277,12 +2278,16 @@ namespace smt {
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 expr_ref_vector &guessedExprs);
-        expr_ref_vector fetch_contain_related_vars(
+        void fetch_related_exprs(
+                expr_ref_vector allvars,
+                expr_ref_vector &guessedExprs);
+        expr_ref_vector check_contain_related_vars(
                 expr* v,
                 zstring replaceKey);
         std::set<expr*> collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
+        bool check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars);
         void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
