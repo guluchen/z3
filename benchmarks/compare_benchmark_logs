@@ -97,9 +97,13 @@ def main(argv):
                             help="Filename of benchmark check log without extensions (before '.')")
     args = arg_parser.parse_args()
 
+    if "." in args.benchmark_log_name:
+        benchmark_log_name = args.benchmark_log_name.split('.')[0]
+    else:
+        benchmark_log_name = args.benchmark_log_name
     # prepare benchmark
     all_log_files = [f for f in os.listdir('.')
-                     if re.match(re.escape(args.benchmark_log_name) + r'\.[0-9]+\.[a-zA-z0-9]+\.log$', f)]
+                     if re.match(re.escape(benchmark_log_name) + r'\.[0-9]+\.[a-zA-z0-9]+\.log$', f)]
     print('log files read:')
     print('  ' + '\n  '.join(all_log_files))
 

@@ -76,11 +76,13 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
             res = 'timeout'
         elif out == 'exception':
             res = 'exception'
+            result_except = True
         elif 'unknown' in out:
             result_except = False
             res = 'unknown'
         else:  # should not encounter this case
             res = '???'
+            result_except = True
             # print(f'unexpected output: {out}')
 
         if result_except:
@@ -96,11 +98,9 @@ def check(tool_name: str, command: List[str], benchmark_files: List[str], time_o
         fp.write(f'{log_str}\n')
 
         # Record every output to fp_err
-        if res == 'error' or res == 'exception':
+        if result_except:
             print(f'ERROR_REPORT: {out_err}')
-        if res == '???':  # should not encounter this case
-            print(f'UNEXPECTED_OUTPUT: {out}')
-        fp_err.write(f'{log_str}\nstdout: {out}\nstderr: {out_err}\n\n')
+        fp_err.write(f'{log_str}\nstdout: {out}\n\n')
 
         # Store -tr:strg to trace/
         if "trauc" in command[0]:
@@ -141,9 +141,27 @@ def main(argv):
     args = arg_parser.parse_args()
 
     # prepare benchmark
-    benchmark_path = os.path.normpath(args.benchmark_path)
-    benchmark_files = sorted([os.path.join(root, file)
+    benchmark_target = args.benchmark_path
+    if "." in benchmark_target:
+        benchmark_name, split, mod = benchmark_target.split(".")
+        split = int(split)
+        mod = int(mod)
+        benchmark_path = os.path.normpath(benchmark_name)
+    else:
+        split = 1
+        mod = 1
+        benchmark_path = os.path.normpath(args.benchmark_path)
+
+    files = sorted([os.path.join(root, file)
                               for root, dirs, files in os.walk(benchmark_path) for file in files])
+    if split == 1:
+        benchmark_files = files
+    else:
+        benchmark_files = []
+        cnt = 0
+        for benchmark in files:
+            if cnt % split == mod:
+                benchmark_files.append(benchmark)
     benchmark_size = len(benchmark_files)
     print(f'benchmark_path: {os.path.realpath(benchmark_path)}')
     print(f'benchmark_size: {benchmark_size}')
