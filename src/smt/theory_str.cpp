@@ -4057,8 +4057,38 @@ namespace smt {
 
         std::set<expr*> notImportant;
         refine_important_vars(importantVars, notImportant, eq_combination);
-        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
+        for (const auto& com : eq_combination){
+            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            for (const auto& e : com.second)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
+        }
 
+        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
+        for (const auto& com : eq_combination){
+            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            for (const auto& e : com.second)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
+        }
         std::map<expr*, expr*> causes;
         fetch_guessed_core_exprs(eq_combination, guessedEqs);
         for (const auto& com : eq_combination){
@@ -4202,6 +4232,26 @@ namespace smt {
 
     bool theory_str::at_same_eq_state(str::state curr, str::state prev) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+        ast_manager & m = get_manager();
+        expr_ref_vector guessedExprs(m);
+        fetch_guessed_exprs_with_scopes(guessedExprs);
+
+        expr_ref_vector prev_guessedExprs(m);
+        fetch_guessed_exprs_from_cache(prev_guessedExprs);
+
+        if (uState.equalities.size() == 0 && uState.disequalities.size() == 0)
+            return false;
+
+        // compare all eq
+        for(const auto& e : prev_guessedExprs){
+            if (!guessedExprs.contains(e)) {
+                STRACE("str", tout << __LINE__ <<  " not at_same_state " << mk_pp(e, m) << std::endl;);
+                return false;
+            }
+        }
+
+        return true;
+
         // compare all eq
         for(const auto& e : prev.m_wes_to_satisfy){
             if (curr.m_wes_to_satisfy.find(e) == curr.m_wes_to_satisfy.end()) {
@@ -6165,10 +6215,13 @@ namespace smt {
                 }
             }
 
+        std::set<expr*> checked;
+
         for (const auto& n : currState.eq_combination) {
             std::set<expr*> comb;
             if (_eq_combination.find(n.first) != _eq_combination.end()) {
                 comb = _eq_combination[n.first];
+                checked.insert(n.first);
             }
             else {
                 // check if there are any equivalent combinations
@@ -6177,6 +6230,7 @@ namespace smt {
                 for (const auto& eq : eqs)
                     if (_eq_combination.find(eq) != _eq_combination.end()){
                         comb = _eq_combination[eq];
+                        checked.insert(eq);
                         break;
                     }
             }
@@ -6197,6 +6251,16 @@ namespace smt {
                     // it is ok if some elements missing because if its size = 0
                 }
             }
+        }
+
+        if (currState.eq_combination < preState.eq_combination) {
+            // check if all missing combinations are trivial
+            for (const auto& n : preState.eq_combination)
+                if (checked.find(n.first) == checked.end()) {
+                    // it is not in currState.eq_combination
+                    if (!is_trivial_combination(n.first, n.second, currState.importantVars))
+                        return false;
+                }
         }
 
         return true;
@@ -12018,6 +12082,8 @@ namespace smt {
         ptr_vector<expr> rhsVec;
         get_nodes_in_concat(rhs, rhsVec);
 
+        expr_ref_vector andLhs(m);
+        expr_ref_vector andRhs(m);
         /* cut prefix */
         int prefix = -1;
 
@@ -12025,8 +12091,9 @@ namespace smt {
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
             else if (have_same_len(lhsVec[i], rhsVec[i])){
+                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_strlen(rhsVec[i])));
                 prefix = i;
-                expr* tmp = createEqualOperator(lhsVec[i], rhsVec[i]);
+                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
             }
@@ -12039,20 +12106,24 @@ namespace smt {
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
+                andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_strlen(rhsVec[rhsVec.size() - 1 - i])));
                 suffix = i;
-                expr* tmp = createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]);
+                expr* tmp = createImpliesOperator(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
             }
             else
                 break;
 
+        andLhs.append(andRhs);
+
         if (lhsVec.size() == rhsVec.size()) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2 && prefix + 1 ==  (int)rhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
-                    expr* tmp = createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]);
+                    andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[prefix + 1]), mk_strlen(rhsVec[prefix + 1])));
+                    expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
                     if (!impliedEqualities.contains(tmp))
                         impliedEqualities.push_back(tmp);
                 }
@@ -12062,7 +12133,8 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(rhsVec[prefix + 1], rhsVec[prefix + 2]);
             if (!are_equal_exprs(lhsVec[prefix + 1], concatTmp)) {
-                expr* tmp = createEqualOperator(lhsVec[prefix + 1], concatTmp);
+                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[prefix + 1]), mk_strlen(concatTmp)));
+                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
@@ -12073,7 +12145,8 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(lhsVec[prefix + 1], lhsVec[prefix + 2]);
             if (!are_equal_exprs(rhsVec[prefix + 1], concatTmp)) {
-                expr* tmp = createEqualOperator(rhsVec[prefix + 1], concatTmp);
+                andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[prefix + 1]), mk_strlen(concatTmp)));
+                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(rhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
@@ -12879,9 +12952,10 @@ namespace smt {
 
         std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
             if (is_trivial_combination(c.first, c.second, importantVars))
                 continue;
-
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
             std::set<expr*> tmpSet = refine_eq_set(c.first, c.second, importantVars, notImportantVars_filtered);
             // remove some imp vars
             if (c.second.size() > 20 && tmpSet.size() <= 20) {
@@ -12893,6 +12967,7 @@ namespace smt {
             bool important = is_important(c.first, importantVars);
             if (!important) {
 
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
                 if (tmpSet.size() > 20) {
                     importantVars.insert(std::make_pair(c.first, -1));
                     ret[c.first] = tmpSet;
@@ -12946,7 +13021,7 @@ namespace smt {
         importantVars = tmp;
         TRACE("str", tout << __FUNCTION__ << std::endl;);
         for (const auto& nn : importantVars)
-        STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+            STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
         return ret;
     }
 
@@ -12968,14 +13043,29 @@ namespace smt {
         if (eq.size() == 0)
             return true;
 
-        if (is_important(v, importantVars))
+        if (is_important(v, importantVars)) {
+            if (eq.size() == 1) {
+                // if it is equal to itself only
+                expr_ref_vector eqs(get_manager());
+                collect_eq_nodes(v, eqs);
+                if (eqs.size() == 1)
+                    return true;
+            }
             return false;
+        }
 
         if (eq.size() == 1 && v == *(eq.begin()))
             return true;
 
-        if (eq.size() == 1 && is_trivial_eq_concat(v, *(eq.begin())))
-            return true;
+        if (eq.size() == 1 && is_trivial_eq_concat(v, *(eq.begin()))) {
+            ptr_vector<expr> v1;
+            get_nodes_in_concat(v, v1);
+
+            ptr_vector<expr> v2;
+            get_nodes_in_concat(*(eq.begin()), v2);
+            if (v1.size() == v2.size())
+                return true;
+        }
 
         return false;
     }
@@ -13025,7 +13115,7 @@ namespace smt {
                 if (!notAdd)
                     ret.insert(*it);
             }
-            else
+            else if (is_important(*it, importantVars)  || u.str.is_string(*it))
                 ret.insert(*it);
         }
         return ret;
@@ -15712,12 +15802,12 @@ namespace smt {
 
                 if (!adding){
                     if (!u.str.is_concat(lhs) && !u.str.is_concat(rhs)) {
-                        if (allvars.find(lhs) != allvars.end()){
+                        if (!u.str.is_string(lhs) && allvars.find(lhs) != allvars.end()){
                             ret.push_back(e);
                             adding = true;
                             allvars.insert(rhs);
                         }
-                        else if (allvars.find(rhs) != allvars.end()){
+                        else if (!u.str.is_string(rhs) && allvars.find(rhs) != allvars.end()){
                             ret.push_back(e);
                             adding = true;
                             allvars.insert(lhs);
@@ -15740,10 +15830,16 @@ namespace smt {
             tmpGuessedExprs.append(tmpGuessedExprs);
         }
 
+        rational len;
+        for (const auto& v : allvars)
+            if (get_len_value(v, len) && len.get_int32() == 0){
+                ret.push_back(createEqualOperator(v, mk_string("")));
+            }
+
         guessedExprs.reset();
         guessedExprs.append(ret);
-//        for (int i = 0; i < guessedExprs.size(); ++i)
-//            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
+        for (int i = 0; i < guessedExprs.size(); ++i)
+            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
     }
 
     void theory_str::fetch_related_exprs(
@@ -15890,8 +15986,9 @@ namespace smt {
 
     bool theory_str::check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars){
         for (int i = 0; i < v.size(); ++i)
-            if (allvars.find(v[i]) != allvars.end())
-                return true;
+            if (!u.str.is_string(v[i]))
+                if (allvars.find(v[i]) != allvars.end())
+                    return true;
         return false;
     }
 
