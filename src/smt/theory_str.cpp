@@ -2018,7 +2018,11 @@ namespace smt {
         SASSERT(len_rhs);
         expr_ref conclusion(ctx.mk_eq_atom(len_lhs, len_rhs), m);
 
-        assert_implication(premise, conclusion);
+        expr* empty = mk_string("");
+        if (a_lhs == empty || a_rhs == empty)
+            assert_axiom(createEqualOperator(premise.get(), conclusion.get()));
+        else
+            assert_implication(premise, conclusion);
     };
 
     /*
@@ -3519,6 +3523,13 @@ namespace smt {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
+        rational lenLhs, lenRhs;
+        if (get_len_value(lhs, lenLhs) && get_len_value(rhs, lenRhs))
+            if (lenLhs != lenRhs) {
+                skip = true;
+                return;
+            }
+
         // build conclusion: not (lhs == rhs)
         expr_ref conclusion01(mk_not(m, ctx.mk_eq_atom(lhs, rhs)), m);
 
@@ -3535,7 +3546,11 @@ namespace smt {
 
         expr_ref premise01(mk_not(m, ctx.mk_eq_atom(len_lhs, len_rhs)), m);
 
-        assert_implication(premise01, conclusion01);
+        expr* empty = mk_string("");
+        if (lhs == empty || rhs == empty)
+            assert_axiom(createEqualOperator(premise01, conclusion01));
+        else
+            assert_implication(premise01, conclusion01);
 
         // check all combinations
         zstring value;
@@ -3543,7 +3558,7 @@ namespace smt {
             expr* extraAssert = handle_trivial_diseq(rhs, value);
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_axiom(extraAssert);
+                assert_implication(conclusion01, extraAssert);
                 skip = true;
             }
         }
@@ -3551,7 +3566,7 @@ namespace smt {
             expr* extraAssert = handle_trivial_diseq(lhs, value);
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_axiom(extraAssert);
+                assert_implication(conclusion01, extraAssert);
                 skip = true;
             }
         }
@@ -4247,7 +4262,7 @@ namespace smt {
 
         // compare all eq
         for(const auto& e : prev_guessedExprs){
-            if (!guessedExprs.contains(e)) {
+            if (e != m.mk_true() && !guessedExprs.contains(e) ) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state " << mk_pp(e, m) << std::endl;);
                 return false;
             }
@@ -4656,7 +4671,7 @@ namespace smt {
             expr_ref_vector cores(m);
             fetch_guessed_exprs_with_scopes(cores);
             fetch_guessed_core_exprs(eq_combination, cores);
-            expr_ref toAssert(createAndOperator(ands), m);
+            expr_ref toAssert(createImpliesOperator(createAndOperator(cores), createAndOperator(ands)), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
             return true;
@@ -6445,11 +6460,6 @@ namespace smt {
     void theory_str::handle_NOTEqual_var(expr* lhs, expr* rhs){
         return;
 
-
-
-
-
-
         ast_manager & m = get_manager();
         context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
@@ -6521,19 +6531,16 @@ namespace smt {
                 subcases.push_back(mk_not(m, tmp));
                 cases.push_back(createAndOperator(subcases));
             }
-            expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
-            expr_ref cause(mk_not(notcause), m);
-            ensure_enode(cause.get());
-            expr_ref assertExpr(createOrOperator(cases), m);
+            expr_ref premise(mk_not(m, createEqualOperator(lhs, u.str.mk_string(rhs))), m);
+            ensure_enode(premise.get());
+            expr_ref conclusion(createOrOperator(cases), m);
 
-            assert_axiom(assertExpr.get());
-            expr_ref tmpAxiom(createEqualOperator(cause.get(), assertExpr.get()), m);
+
+            expr_ref tmpAxiom(createEqualOperator(premise.get(), conclusion.get()), m);
+            assert_axiom(tmpAxiom.get());
 
 //            literal assertLiteral = ctx.get_literal(assertExpr);
 //            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
-
-
-
 
 //            expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
 //            expr_ref axiom(createEqualOperator(mk_not(notcause), createOrOperator(cases)), m);
@@ -12155,12 +12162,16 @@ namespace smt {
             else
                 break;
 
+        // reach the end of equality
+        if (prefix == std::min(lhsVec.size(), rhsVec.size()) - 1 || suffix == std::min(lhsVec.size(), rhsVec.size()) - 1)
+            return true;
+
         andLhs.append(andRhs);
 
         if (lhsVec.size() == rhsVec.size()) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
-            if (prefix + 1 == (int)lhsVec.size() - suffix - 2 && prefix + 1 ==  (int)rhsVec.size() - suffix - 2)
+            if (prefix + 1 == (int)lhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
                     andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[prefix + 1]), mk_strlen(rhsVec[prefix + 1])));
                     expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
@@ -15812,6 +15823,9 @@ namespace smt {
         while (true) {
             // collect all eq
             for (const auto &e : guessedExprs) {
+                if (to_app(e)->get_num_args() != 2) {
+                    continue;
+                }
 
                 bool adding = false;
                 expr *lhs = to_app(e)->get_arg(0);
@@ -15826,6 +15840,7 @@ namespace smt {
                         ret.push_back(e);
                         adding = true;
                         update_all_vars(allvars, lhs);
+                        update_all_vars(allvars, rhs);
                     }
                 }
 
@@ -15838,6 +15853,7 @@ namespace smt {
                         ret.push_back(e);
                         adding = true;
                         update_all_vars(allvars, rhs);
+                        update_all_vars(allvars, lhs);
                     }
                 }
 
@@ -15872,11 +15888,12 @@ namespace smt {
         }
 
         rational len;
-        for (const auto& v : allvars)
-            if (get_len_value(v, len) && len.get_int32() == 0){
+        for (const auto& v : allvars) {
+            STRACE("str", tout << __LINE__ << " core var " << mk_pp(v, m) << std::endl;);
+            if (get_len_value(v, len) && len.get_int32() == 0) {
                 ret.push_back(createEqualOperator(v, mk_string("")));
             }
-
+        }
         guessedExprs.reset();
         guessedExprs.append(ret);
         for (int i = 0; i < guessedExprs.size(); ++i)
