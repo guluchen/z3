@@ -3938,7 +3938,9 @@ namespace smt {
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
 
         const str::state &root = build_state_from_memo();
-        if (at_same_state(root, uState.currState)) {
+
+        bool atSameEQState = at_same_eq_state(root, uState.currState);
+        if (atSameEQState && at_same_diseq_state(root, uState.currState)) {
             if (uState.reassertDisEQ && uState.reassertEQ) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
                 return FC_DONE;
@@ -3962,7 +3964,7 @@ namespace smt {
                 return FC_CONTINUE;
             }
         }
-        else if (at_same_eq_state(root, uState.currState)){
+        else if (atSameEQState){
             if (!uState.reassertEQ){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertEQ = false " << uState.eqLevel << std::endl;);
                 underapproximation_repeat();
@@ -4263,8 +4265,20 @@ namespace smt {
         // compare all eq
         for(const auto& e : prev_guessedExprs){
             if (e != m.mk_true() && !guessedExprs.contains(e) ) {
-                STRACE("str", tout << __LINE__ <<  " not at_same_state " << mk_pp(e, m) << std::endl;);
-                return false;
+                // check the case where some var disappear because of len = 0
+                expr* lhs = simplify_concat(to_app(e)->get_arg(0));
+                expr* rhs = simplify_concat(to_app(e)->get_arg(1));
+                expr* eq = createEqualOperator(lhs, rhs);
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(lhs, eqs);
+                if (eq != m.mk_true() && !eqs.contains(rhs)) {
+                    STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
+                    for (const auto& s: eqs)
+                        STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(lhs, m) << " " << mk_pp(s, m) << std::endl;);
+                    return false;
+                }
+                else
+                    STRACE("str", tout << __LINE__ << " does contain expr at_same_state " << mk_pp(e, m) << " --> " << mk_pp(eq, m)<< std::endl;);
             }
         }
 
