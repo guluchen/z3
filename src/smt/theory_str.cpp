@@ -3558,7 +3558,7 @@ namespace smt {
             expr* extraAssert = handle_trivial_diseq(rhs, value);
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_implication(conclusion01, extraAssert);
+                assert_axiom(createEqualOperator(conclusion01, extraAssert));
                 skip = true;
             }
         }
@@ -3566,7 +3566,7 @@ namespace smt {
             expr* extraAssert = handle_trivial_diseq(lhs, value);
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_implication(conclusion01, extraAssert);
+                assert_axiom(createEqualOperator(conclusion01, extraAssert));
                 skip = true;
             }
         }
@@ -13184,6 +13184,23 @@ namespace smt {
             else if (is_important(*it, importantVars)  || u.str.is_string(*it))
                 ret.insert(*it);
         }
+
+        if (ret.size() == 1 && !is_important(var, importantVars)) {
+            // check if none of variable is really important
+            ptr_vector<expr> v;
+            get_all_nodes_in_concat(*ret.begin(), v);
+            bool shouldKeep = false;
+            for (const auto& nn : v) {
+                int tmp;
+                if (is_important(nn, importantVars, tmp) && tmp == -1){
+                    shouldKeep = true;
+                    break;
+                }
+            }
+
+            if (!shouldKeep)
+                ret.clear();
+        }
         return ret;
     }
 
@@ -13317,6 +13334,16 @@ namespace smt {
     bool theory_str::is_important(expr *n, std::set<std::pair<expr*, int>> importantVars) {
         for (const auto& p : importantVars){
             if (p.first == n){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool theory_str::is_important(expr *n, std::set<std::pair<expr*, int>> importantVars, int &l) {
+        for (const auto& p : importantVars){
+            if (p.first == n){
+                l = p.second;
                 return true;
             }
         }
@@ -16030,6 +16057,9 @@ namespace smt {
         ast_manager& m = get_manager();
         std::set<expr*> allvars;
         for (const auto& eq : eq_combination){
+            // collect vars or not
+            // not collect if it is not important, and none of variable is really important
+
             for (const auto& e : eq.second) {
                 ptr_vector<expr> argVec;
                 get_nodes_in_concat(e, argVec);

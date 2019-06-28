@@ -83,8 +83,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="632">
-              <caret line="4272" column="43" lean-forward="true" selection-start-line="4272" selection-start-column="43" selection-end-line="4272" selection-end-column="43" />
+            <state relative-caret-position="704">
+              <caret line="3560" column="77" selection-start-line="3560" selection-start-column="77" selection-end-line="3560" selection-end-column="77" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -165,17 +167,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="11610">
+            <state relative-caret-position="373">
               <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="252" column="14" selection-start-line="252" selection-start-column="14" selection-end-line="252" selection-end-column="14" />
             </state>
           </provider>
         </entry>
@@ -184,7 +177,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="382">
-              <caret line="2023" column="29" selection-start-line="2023" selection-start-column="29" selection-end-line="2023" selection-end-column="29" />
+              <caret line="1982" column="21" selection-start-line="1982" selection-start-column="21" selection-end-line="1982" selection-end-column="21" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -196,12 +189,7 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collect_all_const_in_eq_combination</find>
-      <find>allvars</find>
-      <find>check_contain_related_vars</find>
-      <find>is_notContain_const_consistent</find>
       <find>check_intersection_not_empty</find>
-      <find>fetch_guessed_core_exprs</find>
       <find>fetch_guessed_</find>
       <find>friend</find>
       <find>collect_eq_nodes</find>
@@ -223,9 +211,14 @@
       <find>cases</find>
       <find>new_diseq_eh</find>
       <find>underapproximation</find>
-      <find>propagate_equality</find>
       <find>simplify_concat</find>
       <find>at_same_eq_state</find>
+      <find>collect_all_vars_in_eq_combination</find>
+      <find>fetch_guessed_core_exprs</find>
+      <find>refine_eq</find>
+      <find>is_important</find>
+      <find>refine_eq_com</find>
+      <find>propagate_equality</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -249,9 +242,9 @@
     </option>
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="23" />
-    <option name="y" value="23" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="336" />
+    <option name="y" value="430" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -757,15 +750,15 @@
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
       <workItem from="1555596195940" duration="785004000" />
-      <workItem from="1561472013501" duration="60228000" />
+      <workItem from="1561472013501" duration="62979000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="990154000" />
+    <option name="totallyTimeSpent" value="992905000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="24" width="2560" height="1417" extended-state="6" />
+    <frame x="336" y="430" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4967267" visible="true" weight="0.17275615" />
@@ -1111,10 +1104,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="11610">
-          <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
+        <state relative-caret-position="314">
+          <caret line="3552" selection-start-line="3552" selection-end-line="3552" />
         </state>
       </provider>
     </entry>
@@ -1125,10 +1118,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="314">
-          <caret line="3552" selection-start-line="3552" selection-end-line="3552" />
+        <state relative-caret-position="373">
+          <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
         </state>
       </provider>
     </entry>
@@ -1142,7 +1135,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="382">
-          <caret line="2023" column="29" selection-start-line="2023" selection-start-column="29" selection-end-line="2023" selection-end-column="29" />
+          <caret line="1982" column="21" selection-start-line="1982" selection-start-column="21" selection-end-line="1982" selection-end-column="21" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1151,8 +1144,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="632">
-          <caret line="4272" column="43" lean-forward="true" selection-start-line="4272" selection-start-column="43" selection-end-line="4272" selection-end-column="43" />
+        <state relative-caret-position="704">
+          <caret line="3560" column="77" selection-start-line="3560" selection-start-column="77" selection-end-line="3560" selection-end-column="77" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

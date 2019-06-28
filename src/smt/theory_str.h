@@ -1980,6 +1980,7 @@ namespace smt {
                     std::set<expr*> s,
                     std::set<std::pair<expr*, int>> importantVars);
                 bool is_important(expr *n, std::set<std::pair<expr*, int>> importantVars);
+                bool is_important(expr *n, std::set<std::pair<expr*, int>> importantVars, int &l);
                 std::set<expr*> extend_object(
                     expr* object,
                     std::map<expr*, std::set<expr*>> &combinations,
