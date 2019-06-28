@@ -142,6 +142,7 @@ def main(argv):
 
     # prepare benchmark
     benchmark_target = args.benchmark_path
+    benchmark_target = benchmark_target.replace("/", "", -1)
     if "." in benchmark_target:
         benchmark_name, split, mod = benchmark_target.split(".")
         split = int(split)
@@ -162,6 +163,7 @@ def main(argv):
         for benchmark in files:
             if cnt % split == mod:
                 benchmark_files.append(benchmark)
+            cnt += 1
     benchmark_size = len(benchmark_files)
     print(f'benchmark_path: {os.path.realpath(benchmark_path)}')
     print(f'benchmark_size: {benchmark_size}')
@@ -190,7 +192,7 @@ def main(argv):
         command = [args.cmd]
 
     cmd_log = re.sub(r"[^A-Za-z0-9]", "", args.cmd)
-    log_file = f'{os.path.basename(benchmark_path)}.{check_date}.{cmd_log}.log'
+    log_file = f'{os.path.basename(benchmark_target)}.{check_date}.{cmd_log}.log'
     trace_dir = _base_dir + "/trace"
     os.system("rm -rf " + trace_dir + " && mkdir -p " + trace_dir)
     print(f'log file: {log_file}')

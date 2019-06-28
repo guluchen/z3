@@ -94,13 +94,16 @@ def main(argv):
                                             "other string solvers.",
                                 epilog=None)
     arg_parser.add_argument("benchmark_log_name",
-                            help="Filename of benchmark check log without extensions (before '.')")
+                            help="Filename of benchmark check log without extensions (before '.<date>.<tool>.log*')")
     args = arg_parser.parse_args()
 
+    """
     if "." in args.benchmark_log_name:
         benchmark_log_name = args.benchmark_log_name.split('.')[0]
     else:
         benchmark_log_name = args.benchmark_log_name
+    """
+    benchmark_log_name = args.benchmark_log_name
     # prepare benchmark
     all_log_files = [f for f in os.listdir('.')
                      if re.match(re.escape(benchmark_log_name) + r'\.[0-9]+\.[a-zA-z0-9]+\.log$', f)]
