@@ -4146,7 +4146,10 @@ namespace smt {
 
             for (int i = 0; i < tmp.size(); ++i)
                 for (int j = i + 1; j < tmp.size(); ++j) {
-                    propagate_equality(tmp[i], tmp[j], impliedEqualites);
+                    if (!propagate_equality(tmp[i], tmp[j], impliedEqualites)){
+                        // found some inconsistence
+                        return true;
+                    }
                 }
         }
         if (impliedEqualites.size() > 0){
@@ -4324,6 +4327,7 @@ namespace smt {
         for (const auto& c : eq_combination) {
             std::vector<zstring> starts;
             std::vector<zstring> ends;
+            zstring constStr;
             for (const auto& concat : c.second)
                 if (u.str.is_concat(concat)){
                     ptr_vector<expr> childNodes;
@@ -4333,6 +4337,10 @@ namespace smt {
                         starts.push_back(value);
                     if (u.str.is_string(childNodes[childNodes.size() - 1], value))
                         ends.push_back(value);
+                }
+                else if (u.str.is_string(concat, constStr)) {
+                    starts.push_back(constStr);
+                    ends.push_back(constStr);
                 }
             // check all starts
             for (int i = 0; i < starts.size(); ++i)
@@ -7345,8 +7353,8 @@ namespace smt {
     void theory_str::negate_context(){
         context & ctx = get_context();
         ast_manager &m = get_manager();
-        expr_ref_vector guessedEqs(m), guessedDisEqs(m);
-        fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
+        expr_ref_vector guessedEqs(m);
+        fetch_guessed_exprs_with_scopes(guessedEqs);
         expr_ref tmp(mk_not(m, createAndOperator(guessedEqs)), m);
         assert_axiom(tmp.get());
 //        uState.addAssertingConstraints(tmp);
@@ -7357,6 +7365,16 @@ namespace smt {
 //                ctx.mk_justification(
 //                        ext_theory_conflict_justification(
 //                                get_id(), ctx.get_region(), lits.size(), lits.c_ptr(), eqs.size(), eqs.c_ptr(), 0, nullptr)));
+    }
+
+    void theory_str::negate_context(expr_ref_vector v){
+        context & ctx = get_context();
+        ast_manager &m = get_manager();
+        expr_ref_vector guessedEqs(m);
+        fetch_guessed_exprs_with_scopes(guessedEqs);
+        guessedEqs.append(v);
+        expr_ref tmp(mk_not(m, createAndOperator(guessedEqs)), m);
+        assert_axiom(tmp.get());
     }
 
     expr* theory_str::find_equivalent_variable(expr* e){
@@ -12069,8 +12087,9 @@ namespace smt {
 
     /*
      * cut the same prefix and suffix
+     * return false if some inconsistence found
      */
-    void theory_str::propagate_equality(
+    bool theory_str::propagate_equality(
             expr* lhs,
             expr* rhs,
             expr_ref_vector &impliedEqualities){
@@ -12087,9 +12106,20 @@ namespace smt {
         /* cut prefix */
         int prefix = -1;
 
+        zstring lValue, rValue;
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
+            else if (u.str.is_string(lhsVec[i], lValue) && u.str.is_string(rhsVec[i], rValue)) {
+                if (!lValue.prefixof(rValue) && !rValue.prefixof(lValue)) {
+                    // thing goes wrong
+                    negate_context(andLhs);
+                    return false;
+                }
+
+                if (lValue == rValue)
+                    prefix = i;
+            }
             else if (have_same_len(lhsVec[i], rhsVec[i])){
                 andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_strlen(rhsVec[i])));
                 prefix = i;
@@ -12105,6 +12135,16 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
+            else if (u.str.is_string(lhsVec[lhsVec.size() - 1 - i], lValue) && u.str.is_string(rhsVec[rhsVec.size() - 1 - i], rValue)) {
+                if (!lValue.prefixof(rValue) && !rValue.prefixof(lValue)) {
+                    // thing goes wrong
+                    negate_context(andRhs);
+                    return false;
+                }
+
+                if (lValue == rValue)
+                    suffix = i;
+            }
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
                 andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_strlen(rhsVec[rhsVec.size() - 1 - i])));
                 suffix = i;
@@ -12152,6 +12192,7 @@ namespace smt {
                     impliedEqualities.push_back(tmp);
             }
         }
+        return true;
     }
 
     bool theory_str::have_same_len(expr* lhs, expr* rhs){

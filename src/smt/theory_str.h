@@ -1382,6 +1382,7 @@ namespace smt {
                 void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes);
                 void negate_context();
+                void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
                 bool isInternalVar(expr* e);
                 bool isInternalRegexVar(expr* e);
@@ -1913,7 +1914,7 @@ namespace smt {
             /*
              * cut the same prefix and suffix
              */
-            void propagate_equality(
+            bool propagate_equality(
                         expr* lhs,
                         expr* rhs,
                         expr_ref_vector &imppliedEqualities);
