@@ -83,10 +83,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -101,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="704">
-              <caret line="3560" column="77" selection-start-line="3560" selection-start-column="77" selection-end-line="3560" selection-end-column="77" />
+            <state relative-caret-position="470">
+              <caret line="12160" column="65" selection-start-line="12160" selection-start-column="65" selection-end-line="12160" selection-end-column="65" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -200,7 +198,6 @@
       <find>is_trivial_eq_concat</find>
       <find>is_equal</find>
       <find>final_check</find>
-      <find>have_same_len</find>
       <find>propagate_eq_combination</find>
       <find>propagate_eq</find>
       <find>underapproximatio</find>
@@ -219,6 +216,7 @@
       <find>is_important</find>
       <find>refine_eq_com</find>
       <find>propagate_equality</find>
+      <find>have_same_len</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -243,8 +241,8 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="336" />
-    <option name="y" value="430" />
+    <option name="x" value="14" />
+    <option name="y" value="120" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -750,15 +748,15 @@
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
       <workItem from="1555596195940" duration="785004000" />
-      <workItem from="1561472013501" duration="62979000" />
+      <workItem from="1561472013501" duration="64219000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="992905000" />
+    <option name="totallyTimeSpent" value="994145000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="336" y="430" width="2560" height="1417" extended-state="0" />
+    <frame x="313" y="496" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4967267" visible="true" weight="0.17275615" />
@@ -1144,8 +1142,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="704">
-          <caret line="3560" column="77" selection-start-line="3560" selection-start-column="77" selection-end-line="3560" selection-end-column="77" />
+        <state relative-caret-position="470">
+          <caret line="12160" column="65" selection-start-line="12160" selection-start-column="65" selection-end-line="12160" selection-end-column="65" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

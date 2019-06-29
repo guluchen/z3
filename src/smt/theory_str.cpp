@@ -12134,6 +12134,7 @@ namespace smt {
             else if (u.str.is_string(lhsVec[i], lValue) && u.str.is_string(rhsVec[i], rValue)) {
                 if (!lValue.prefixof(rValue) && !rValue.prefixof(lValue)) {
                     // thing goes wrong
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " goes wrong " << mk_pp(lhsVec[i], m) << " == " << mk_pp(rhsVec[i], m) << std::endl;);
                     negate_context(andLhs);
                     return false;
                 }
@@ -12157,8 +12158,9 @@ namespace smt {
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
             else if (u.str.is_string(lhsVec[lhsVec.size() - 1 - i], lValue) && u.str.is_string(rhsVec[rhsVec.size() - 1 - i], rValue)) {
-                if (!lValue.prefixof(rValue) && !rValue.prefixof(lValue)) {
+                if (!lValue.suffixof(rValue) && !rValue.suffixof(lValue)) {
                     // thing goes wrong
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " goes wrong " << mk_pp(lhsVec[lhsVec.size() - 1 - i], m) << " == " << mk_pp(rhsVec[rhsVec.size() - 1 - i], m) << std::endl;);
                     negate_context(andRhs);
                     return false;
                 }
