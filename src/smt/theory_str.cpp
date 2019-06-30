@@ -4201,22 +4201,22 @@ namespace smt {
     bool theory_str::is_notContain_consistent(expr* lhs, expr* rhs, expr* core){
         ast_manager & m = get_manager();
         expr* contain = nullptr;
-        expr_ref premise(mk_not(m, createEqualOperator(lhs, rhs)), m);
+        expr_ref conclusion(createEqualOperator(lhs, rhs), m);
 
         if (is_contain_equality(lhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
-                return is_notContain_const_consistent(rhs, value, premise);
+                return is_notContain_const_consistent(rhs, value, conclusion);
         }
         else if (is_contain_equality(rhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
-                return is_notContain_const_consistent(lhs, value, premise);
+                return is_notContain_const_consistent(lhs, value, conclusion);
         }
         return true;
     }
 
-    bool theory_str::is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise){
+    bool theory_str::is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref conclusion){
         // find all related nodes
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " contains(" << mk_pp(lhs, m) << ", " << containKey << ")" << std::endl;);
@@ -4226,9 +4226,9 @@ namespace smt {
             fetch_guessed_exprs_with_scopes(eqs);
             fetch_related_exprs(relatedVars, eqs);
 
-            eqs.push_back(premise.get());
-            assert_axiom(mk_not(m, createAndOperator(eqs)));
-            impliedFacts.push_back(premise);
+            expr_ref toAssert(createImpliesOperator(createAndOperator(eqs), conclusion), m);
+            assert_axiom(toAssert);
+            impliedFacts.push_back(toAssert);
             return false;
         }
         return true;
