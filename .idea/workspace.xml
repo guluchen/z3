@@ -86,6 +86,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,11 +101,20 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="382">
-              <caret line="12265" column="28" selection-start-line="12265" selection-start-column="16" selection-end-line="12265" selection-end-column="28" />
+            <state relative-caret-position="694">
+              <caret line="1474" column="75" selection-start-line="1474" selection-start-column="75" selection-end-line="1474" selection-end-column="75" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/util/obj_pair_hashtable.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="391">
+              <caret line="87" column="15" selection-start-line="87" selection-start-column="15" selection-end-line="87" selection-end-column="15" />
             </state>
           </provider>
         </entry>
@@ -175,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="382">
-              <caret line="1982" column="21" selection-start-line="1982" selection-start-column="21" selection-end-line="1982" selection-end-column="21" />
+            <state relative-caret-position="397">
+              <caret line="2001" column="16" selection-start-line="2001" selection-start-column="16" selection-end-line="2001" selection-end-column="16" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -188,14 +198,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>fetch_guessed_</find>
-      <find>friend</find>
-      <find>collect_eq_nodes</find>
-      <find>fetch_guessed_exprs_with_scopes</find>
-      <find>bool theory_str::is_eq</find>
-      <find>is_weaker_expr_sets</find>
-      <find>refine_eq_combination</find>
-      <find>is_trivial_eq_concat</find>
       <find>is_equal</find>
       <find>final_check</find>
       <find>propagate_eq_combination</find>
@@ -206,7 +208,6 @@
       <find>void theory_str::update_all_vars(std:</find>
       <find>assert_ax</find>
       <find>cases</find>
-      <find>new_diseq_eh</find>
       <find>underapproximation</find>
       <find>simplify_concat</find>
       <find>at_same_eq_state</find>
@@ -215,9 +216,18 @@
       <find>refine_eq</find>
       <find>is_important</find>
       <find>refine_eq_com</find>
-      <find>propagate_equality</find>
       <find>have_same_len</find>
       <find>impliedFacts</find>
+      <find>inconsistency detected:</find>
+      <find>new_diseq_eh</find>
+      <find>contain_Eq</find>
+      <find>is_contain_equality</find>
+      <find>is_inconsiste</find>
+      <find>new_eq_check_wrt_disequalities</find>
+      <find>cc</find>
+      <find>propagate_non</find>
+      <find>concat_astNode_map</find>
+      <find>propagate_equality</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -242,8 +252,8 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="478" />
-    <option name="y" value="229" />
+    <option name="x" value="539" />
+    <option name="y" value="175" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -749,15 +759,15 @@
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
       <workItem from="1555596195940" duration="785004000" />
-      <workItem from="1561472013501" duration="66197000" />
+      <workItem from="1561472013501" duration="75469000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="996123000" />
+    <option name="totallyTimeSpent" value="1005395000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="478" y="229" width="2560" height="1417" extended-state="0" />
+    <frame x="539" y="175" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4967267" visible="true" weight="0.17275615" />
@@ -785,13 +795,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_eq.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="965">
-          <caret line="364" column="46" selection-start-line="364" selection-start-column="30" selection-end-line="364" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_eq_justification.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="686">
@@ -1131,10 +1134,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/util/obj_pair_hashtable.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="87" column="15" selection-start-line="87" selection-start-column="15" selection-end-line="87" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="382">
-          <caret line="1982" column="21" selection-start-line="1982" selection-start-column="21" selection-end-line="1982" selection-end-column="21" />
+        <state relative-caret-position="397">
+          <caret line="2001" column="16" selection-start-line="2001" selection-start-column="16" selection-end-line="2001" selection-end-column="16" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1143,8 +1153,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="382">
-          <caret line="12265" column="28" selection-start-line="12265" selection-start-column="16" selection-end-line="12265" selection-end-column="28" />
+        <state relative-caret-position="694">
+          <caret line="1474" column="75" selection-start-line="1474" selection-start-column="75" selection-end-line="1474" selection-end-column="75" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

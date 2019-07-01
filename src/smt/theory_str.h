@@ -1229,6 +1229,7 @@ namespace smt {
             */
             bool is_trivial_eq_concat(expr* x, expr* y);
         void new_diseq_eh(theory_var, theory_var) override;
+            bool is_inconsistent_inequality(expr* lhs, expr* rhs);
             bool is_not_added_diseq(expr_ref n1, expr_ref n2);
             void assert_cached_diseq_state();
             void breakdown_cached_diseq(expr* n1, expr* n2);
@@ -1998,6 +1999,7 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
+            bool new_eq_check_wrt_disequalities(expr* n, expr_ref_vector premises, zstring containKey, expr_ref conclusion);
             void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
@@ -2055,6 +2057,7 @@ namespace smt {
          * Then add an assertion: (y2 == (Concat ce m2)) AND ("str3" == (Concat abc x2)) -> (y2 != "str3")
          */
         bool new_eq_check(expr * lhs, expr * rhs);
+            expr* collect_empty_node_in_concat(expr* n);
             void propagate_const_str(expr * lhs, expr * rhs, zstring value);
             void propagate_non_const(expr_ref_vector litems, expr * concat, expr * new_concat);
         void check_regex_in(expr * nn1, expr * nn2);

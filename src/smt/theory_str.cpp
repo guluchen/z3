@@ -1288,6 +1288,26 @@ namespace smt {
             return;
         }
 
+        expr* containKey;
+        if (is_contain_equality(lhs, containKey)) {
+            zstring keyStr;
+            expr_ref conclusion(mk_not(m, createEqualOperator(lhs, rhs)), m);
+            expr_ref_vector premises(m);
+            if (u.str.is_string(containKey, keyStr))
+                if (new_eq_check_wrt_disequalities(rhs, premises, keyStr, conclusion)){
+                    return;
+                }
+        }
+        else if (is_contain_equality(rhs, containKey)){
+            zstring keyStr;
+            expr_ref conclusion(mk_not(m, createEqualOperator(lhs, rhs)), m);
+            expr_ref_vector premises(m);
+            if (u.str.is_string(containKey, keyStr))
+                if (new_eq_check_wrt_disequalities(lhs, premises, keyStr, conclusion)){
+                    return;
+                }
+        }
+
         // BEGIN new_eq_handler() in strTheory
 
         // Check that a string's length can be 0 iff it is the empty string.
@@ -1421,6 +1441,67 @@ namespace smt {
 
         special_assertion_for_contain_vs_substr(lhs, rhs);
         special_assertion_for_contain_vs_substr(rhs, lhs);
+    }
+
+    bool theory_str::new_eq_check_wrt_disequalities(expr* n, expr_ref_vector premises, zstring containKey, expr_ref conclusion){
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(n, m) << std::endl;);
+
+        expr_ref_vector eqs(m);
+        expr *value = collect_eq_nodes(n, eqs);
+        for (expr_ref_vector::iterator itor = eqs.begin(); itor != eqs.end(); itor++) {
+            for (const auto& nn : m_wi_expr_memo) {
+                expr* key;
+                if (*itor == nn.second.get() && is_contain_equality(nn.first.get(), key)){ // itor not contain key
+                    zstring keyStr;
+                    if (u.str.is_string(key, keyStr) && containKey.contains(keyStr)){ // containKey contains key
+                        expr* ineq = mk_not(m, createEqualOperator(nn.first.get(), nn.second.get()));
+                        premises.push_back(ineq);
+                        if (*itor != n)
+                            premises.push_back(createEqualOperator(n, *itor));
+
+                        assert_implication(createAndOperator(premises), conclusion.get());
+
+                        return false;
+                    }
+                }
+                else if (*itor == nn.first.get() && is_contain_equality(nn.second.get(), key)){
+                    zstring keyStr;
+                    if (u.str.is_string(key, keyStr) && containKey.contains(keyStr)){
+                        expr* ineq = mk_not(m, createEqualOperator(nn.first.get(), nn.second.get()));
+                        premises.push_back(ineq);
+                        if (*itor != n)
+                            premises.push_back(createEqualOperator(n, *itor));
+
+                        assert_implication(createAndOperator(premises), conclusion.get());
+
+                        return false;
+                    }
+                }
+            }
+
+            // upward propagation
+            for (const auto & it : concat_astNode_map)
+                if (!eqs.contains(it.get_value())){ // this to break the case: "" . x = x
+                    expr *ts0 = it.get_key1();
+                    expr *ts1 = it.get_key2();
+
+
+                    // propagate
+                    if (ts0 == *itor || ts1 == *itor) {
+                        if (*itor != n)
+                            premises.push_back(createEqualOperator(n, *itor));
+                        // check if it is feasible or not
+                        if (!new_eq_check_wrt_disequalities(it.get_value(), premises, containKey, conclusion))
+                            return false;
+
+                        if (*itor != n)
+                            premises.pop_back();
+                    }
+                }
+        }
+        return true;
     }
 
     void theory_str::special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs){
@@ -2263,6 +2344,8 @@ namespace smt {
                     if (rhs != eqc_nn2)
                         litems.push_back(ctx.mk_eq_atom(rhs, eqc_nn2));
 
+                    litems.push_back(collect_empty_node_in_concat(lhs));
+                    litems.push_back(collect_empty_node_in_concat(rhs));
                     expr_ref implyL(mk_and(litems), m);
                     assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(lhs, rhs)));
                     // this shouldn't use the integer theory at all, so we don't allow the option of quick-return
@@ -2293,6 +2376,20 @@ namespace smt {
         // okay, all checks here passed
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return true;
+    }
+
+    expr* theory_str::collect_empty_node_in_concat(expr* n){
+        ptr_vector <expr> nodes;
+        get_nodes_in_concat(n, nodes);
+        rational ra;
+        expr_ref_vector ands(get_manager());
+        for (const auto& nn : nodes) {
+            if (get_len_value(nn, ra) && ra.get_int32() == 0){
+                ands.push_back(createEqualOperator(mk_strlen(nn), mk_int(0)));
+            }
+        }
+
+        return createAndOperator(ands);
     }
 
     void theory_str::propagate_const_str(expr * lhs, expr * rhs, zstring value){
@@ -2457,10 +2554,9 @@ namespace smt {
                     assert_implication(implyL, ctx.mk_eq_atom(ts01, ts1exprValue));
                 }
                 else {
-                    litems.push_back(ctx.mk_eq_atom(concat, value));
+                    expr* conclusion = mk_not(m, createEqualOperator(concat, value));
                     expr_ref implyL(mk_and(litems), m);
-                    assert_axiom(mk_not(implyL));
-                    STRACE("str", tout << "assert: " << mk_ismt2_pp(mk_not(implyL), m) << std::endl;);
+                    assert_implication(implyL, conclusion);
                 }
             }
 
@@ -2476,10 +2572,9 @@ namespace smt {
                     assert_implication(implyL, ctx.mk_eq_atom(ts00, ts0exprValue));
                 }
                 else {
-                    litems.push_back(ctx.mk_eq_atom(concat, value));
+                    expr* conclusion = mk_not(m, createEqualOperator(concat, value));
                     expr_ref implyL(mk_and(litems), m);
-                    assert_axiom(mk_not(implyL));
-                    STRACE("str", tout << "assert: " << mk_ismt2_pp(mk_not(implyL), m) << std::endl;);
+                    assert_implication(implyL, conclusion);
                 }
             }
 
@@ -3427,7 +3522,9 @@ namespace smt {
 
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << " @ lvl " << m_scope_level << std::endl;);
-
+        if (is_inconsistent_inequality(n1, n2)){
+            return;
+        }
         bool skip = false;
         {
             zstring value;
@@ -3477,6 +3574,62 @@ namespace smt {
             STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
                                << mk_ismt2_pp(n2, m) << std::endl;);
         }
+    }
+
+    bool theory_str::is_inconsistent_inequality(expr* lhs, expr* rhs){
+        expr* str;
+        if (is_contain_equality(lhs, str)){
+            zstring key;
+            if (u.str.is_string(str, key)) {
+                expr_ref_vector eqs(get_manager());
+                collect_eq_nodes(rhs, eqs);
+                for (const auto& eq : eqs) {
+                    ptr_vector<expr> v;
+                    get_nodes_in_concat(eq, v);
+                    for (const auto &n : v) {
+                        zstring tmp;
+                        if (u.str.is_string(n, tmp))
+                            if (tmp.contains(key)) {
+                                expr* conclusion = createEqualOperator(lhs, rhs);
+                                if (eq != rhs){
+                                    expr* premise = createEqualOperator(rhs, eq);
+                                    assert_implication(premise, conclusion);
+                                }
+                                else
+                                    assert_axiom(conclusion);
+                                return true;
+                            }
+                    }
+                }
+            }
+        }
+
+        if (is_contain_equality(rhs, str)){
+            zstring key;
+            if (u.str.is_string(str, key)) {
+                expr_ref_vector eqs(get_manager());
+                collect_eq_nodes(lhs, eqs);
+                for (const auto& eq : eqs) {
+                    ptr_vector<expr> v;
+                    get_nodes_in_concat(eq, v);
+                    for (const auto &n : v) {
+                        zstring tmp;
+                        if (u.str.is_string(n, tmp))
+                            if (tmp.contains(key)) {
+                                expr* conclusion = createEqualOperator(lhs, rhs);
+                                if (eq != rhs){
+                                    expr* premise = createEqualOperator(lhs, eq);
+                                    assert_implication(premise, conclusion);
+                                }
+                                else
+                                    assert_axiom(conclusion);
+                                return true;
+                            }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     bool theory_str::is_not_added_diseq(expr_ref n1, expr_ref n2){
