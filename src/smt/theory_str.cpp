@@ -1289,7 +1289,9 @@ namespace smt {
         }
 
         expr* containKey;
-        if (is_contain_equality(lhs, containKey)) {
+        expr* simplifiedLhs = simplify_concat(lhs);
+        expr* simplifiedRhs = simplify_concat(rhs);
+        if (is_contain_equality(simplifiedLhs, containKey)) {
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOperator(lhs, rhs)), m);
             expr_ref_vector premises(m);
@@ -1298,7 +1300,7 @@ namespace smt {
                     return;
                 }
         }
-        else if (is_contain_equality(rhs, containKey)){
+        else if (is_contain_equality(simplifiedRhs, containKey)){
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOperator(lhs, rhs)), m);
             expr_ref_vector premises(m);
@@ -3578,7 +3580,9 @@ namespace smt {
 
     bool theory_str::is_inconsistent_inequality(expr* lhs, expr* rhs){
         expr* str;
-        if (is_contain_equality(lhs, str)){
+        expr* simplifiedLhs = simplify_concat(lhs);
+        expr* simplifiedRhs = simplify_concat(rhs);
+        if (is_contain_equality(simplifiedLhs, str)){
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(get_manager());
@@ -3604,7 +3608,7 @@ namespace smt {
             }
         }
 
-        if (is_contain_equality(rhs, str)){
+        if (is_contain_equality(simplifiedRhs, str)){
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(get_manager());
@@ -4158,6 +4162,9 @@ namespace smt {
             else if (get_len_value(n, vLen)) {
                 STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
             }
+            else if (lower_bound(n, vLen)){
+                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " lower_bound = " << vLen << std::endl;);
+            }
         }
 
         for (const auto& we: non_membership_memo) {
@@ -4355,13 +4362,14 @@ namespace smt {
         ast_manager & m = get_manager();
         expr* contain = nullptr;
         expr_ref conclusion(createEqualOperator(lhs, rhs), m);
-
-        if (is_contain_equality(lhs, contain)) {
+        expr* simplifiedLhs = simplify_concat(lhs);
+        expr* simplifiedRhs = simplify_concat(rhs);
+        if (is_contain_equality(simplifiedLhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
                 return is_notContain_const_consistent(rhs, value, conclusion);
         }
-        else if (is_contain_equality(rhs, contain)) {
+        else if (is_contain_equality(simplifiedRhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
                 return is_notContain_const_consistent(lhs, value, conclusion);
@@ -12204,6 +12212,48 @@ namespace smt {
     }
 
     /*
+     * cut the same prefix and suffix and check if var is still there
+     */
+    bool theory_str::check_var_after_optimizing(
+            expr* lhs,
+            expr* rhs,
+            expr* var){
+        ast_manager &m = get_manager();
+        /* cut prefix */
+        ptr_vector<expr> lhsVec;
+        get_nodes_in_concat(lhs, lhsVec);
+
+        ptr_vector<expr> rhsVec;
+        get_nodes_in_concat(rhs, rhsVec);
+
+        /* cut prefix */
+        int prefix = -1;
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (are_equal_exprs(lhsVec[i], rhsVec[i]))
+                prefix = i;
+            else
+                break;
+
+        /* cut suffix */
+        int suffix = -1;
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
+                suffix = i;
+            else
+                break;
+
+        for (unsigned i = prefix + 1; i < lhsVec.size() - suffix - 1; ++i)
+            if (var == lhsVec[i])
+                return true;
+
+        for (unsigned i = prefix + 1; i < rhsVec.size() - suffix - 1; ++i)
+            if (var == rhsVec[i])
+                return true;
+
+        return false;
+    }
+
+    /*
      * cut the same prefix and suffix
      */
     void theory_str::optimize_equality(
@@ -12696,16 +12746,46 @@ namespace smt {
     std::map<expr*, int> theory_str::countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination) {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         std::map<expr*, int> ret;
+
         for (const auto& v : eq_combination){
-            for (const auto& e : v.second) {
-                ptr_vector<expr> nodes;
-                get_nodes_in_concat(e, nodes);
-                for (int i  = 0; i < nodes.size(); ++i)
-                    if (ret.find(nodes[i]) != ret.end())
-                        ret[nodes[i]]++;
-                    else
-                        ret[nodes[i]] = 1;
-            }
+            // inside one variable
+            std::map<expr*, expr*> occurrenceLocation;
+            if (!(v.second.size() >= 2 || u.str.is_string(v.first)))
+                continue;
+
+            for (const auto& e : v.second)
+                if (u.str.is_concat(e)){
+                    {
+                        ptr_vector<expr> nodes;
+                        get_nodes_in_concat(e, nodes);
+                        for (int i  = 0; i < nodes.size(); ++i)
+                            if (!u.str.is_string(nodes[i])){
+                                if (ret.find(nodes[i]) != ret.end()){
+                                    if (occurrenceLocation.find(nodes[i]) == occurrenceLocation.end()) {
+                                        ret[nodes[i]]++;
+                                        if (ret[nodes[i]] >= 2){
+                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nodes[i], get_manager()) <<  " @ " << mk_pp(e, get_manager()) << std::endl;);
+                                        }
+                                    }
+                                    else {
+                                        // compare two equalities
+                                        if (check_var_after_optimizing(e, occurrenceLocation[nodes[i]], nodes[i])){
+                                            ret[nodes[i]]++;
+                                            if (ret[nodes[i]] >= 2){
+                                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nodes[i], get_manager()) <<  " @ " << mk_pp(occurrenceLocation[nodes[i]], get_manager()) << " and @ " << mk_pp(e, get_manager()) << std::endl;);
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                                else {
+                                    ret[nodes[i]] = 1;
+                                    occurrenceLocation[nodes[i]] = e;
+                                }
+                            }
+                    }
+                }
         }
         return ret;
     }
@@ -12737,7 +12817,7 @@ namespace smt {
             if (eqNodeSet.contains(we.first.get())){
                 zstring value;
                 if (u.str.is_string(we.second.get(), value))
-                    if (!is_trivial_inequality(value)){
+                    if (!is_trivial_inequality(we.first.get(), value)){
                         if (diffLen < (int)value.length()) {
                             diffLen = (int) value.length();
                             maxDiffStrs.clear();
@@ -12757,7 +12837,7 @@ namespace smt {
                 if (u.str.is_string(we.first.get(), value)) {
                     STRACE("str",
                            tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << std::endl;);
-                    if (!is_trivial_inequality(value)) {
+                    if (!is_trivial_inequality(we.second.get(), value)) {
                         if (diffLen < (int) value.length()) {
                             diffLen = (int) value.length();
                             maxDiffStrs.clear();
@@ -12791,7 +12871,7 @@ namespace smt {
         return createAndOperator(ands);
     }
 
-    bool theory_str::is_trivial_inequality(zstring s){
+    bool theory_str::is_trivial_inequality(expr* n, zstring s){
         if (s.length() == 0)
             return true;
 
@@ -12799,6 +12879,15 @@ namespace smt {
             if (sigmaDomain.find(s[i]) == sigmaDomain.end())
                 return  true;
 
+        rational lenVal, lowerBoundVal, upperBoundVal;
+        if (get_len_value(n, lenVal) && lenVal != s.length())
+            return true;
+
+        if (lower_bound(n, lowerBoundVal) && lowerBoundVal > s.length())
+            return true;
+
+        if (upper_bound(n, upperBoundVal) && upperBoundVal < s.length())
+            return true;
         return false;
     }
 
@@ -13167,6 +13256,8 @@ namespace smt {
                 if (!shouldSkip)
                     notImportantVars_filtered.insert(n);
             }
+            else
+                notImportantVars_filtered.insert(n);
         }
 
         std::set<expr*> toRemove;
@@ -13322,16 +13413,31 @@ namespace smt {
                     else
                         notAdd = true;
                 }
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
                 // check if it contains a nonimportantVar
-                if (!notAdd)
-                    for (const auto&  notimp : notImportantVars)
+                if (!notAdd) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+//                    for (const auto &notimp : notImportantVars)
+//                        if (childrenVector.contains(notimp)) {
+//                            notAdd = true;
+//                            if (!appear_in_eqs(ret, notimp)) {
+//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(*it, m)
+//                                                   << " because of " << mk_pp(notimp, m) << std::endl;);
+//                                notAdd = false;
+//                                break;
+//                            }
+//                        }
+                    for (const auto &notimp : notImportantVars)
                         if (childrenVector.contains(notimp)) {
-                            if (!appear_in_all_eqs(s, notimp)) {
-                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(*it, m) << " because of " << mk_pp(notimp, m) << std::endl;);
-                                notAdd = true;
+                            notAdd = true;
+                            if (!appear_in_eqs(ret, notimp)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(*it, m)
+                                                   << " because of " << mk_pp(notimp, m) << std::endl;);
+                                notAdd = false;
                                 break;
                             }
                         }
+                }
 
                 if (!notAdd)
                     ret.insert(*it);
@@ -13348,8 +13454,10 @@ namespace smt {
             for (const auto& nn : v) {
                 int tmp;
                 if (is_important(nn, importantVars, tmp) && tmp == -1){
-                    shouldKeep = true;
-                    break;
+                    if (u.str.is_string(var)){
+                        shouldKeep = true;
+                        break;
+                    }
                 }
             }
 
@@ -13404,8 +13512,19 @@ namespace smt {
     }
 
     /*
-     * true if var does not appear in all eqs
+     * true if var does appear in eqs
      */
+    bool theory_str::appear_in_eqs(std::set<expr*> s, expr* var){
+        for (const auto& eq : s)
+            if (u.str.is_concat(eq)) {
+                ptr_vector<expr> childrenVector;
+                get_all_nodes_in_concat(eq, childrenVector);
+                if (childrenVector.contains(var))
+                    return true;
+            }
+        return false;
+    }
+
     bool theory_str::appear_in_all_eqs(std::set<expr*> s, expr* var){
         for (const auto& eq : s)
             if (u.str.is_concat(eq)) {

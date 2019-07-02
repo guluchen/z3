@@ -1895,6 +1895,14 @@ namespace smt {
                 void reuseInternalVar(expr* v);
             std::vector<expr*> set2vector(std::set<expr*> s);
             unsigned findMaxP(std::vector<expr*> v);
+
+            /*
+             * cut the same prefix and suffix and check if var is still there
+             */
+            bool check_var_after_optimizing(
+                expr* lhs,
+                expr* rhs,
+                expr* var);
             /*
              * cut the same prefix and suffix
              */
@@ -1927,7 +1935,7 @@ namespace smt {
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 std::vector<zstring> collect_all_inequalities(expr* nn);
                 expr* create_conjuct_all_inequalities(expr* nn);
-                    bool is_trivial_inequality(zstring s);
+                    bool is_trivial_inequality(expr* n, zstring s);
                 bool collect_not_contains(expr* nn);
                 bool collect_not_charAt(expr* nn, int &maxCharAt);
                 bool more_than_two_occurrences(expr* n, std::map<expr*, int> occurrences);
@@ -1960,8 +1968,10 @@ namespace smt {
                         std::set<expr*> notImportantVars
                 );
                 /*
-                * true if var does not appear in all eqs
+                * true if var does not appear in eqs
                 */
+                bool appear_in_eqs(std::set<expr*> s, expr* var);
+
                 bool appear_in_all_eqs(std::set<expr*> s, expr* var);
 
                 /*

@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="694">
-              <caret line="1474" column="75" selection-start-line="1474" selection-start-column="75" selection-end-line="1474" selection-end-column="75" />
+            <state relative-caret-position="627">
+              <caret line="13259" column="32" lean-forward="true" selection-start-line="13259" selection-start-column="32" selection-end-line="13259" selection-end-column="32" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -185,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="397">
-              <caret line="2001" column="16" selection-start-line="2001" selection-start-column="16" selection-end-line="2001" selection-end-column="16" />
+            <state relative-caret-position="412">
+              <caret line="1974" column="21" selection-start-line="1974" selection-start-column="21" selection-end-line="1974" selection-end-column="21" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -198,18 +198,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>is_equal</find>
-      <find>final_check</find>
-      <find>propagate_eq_combination</find>
-      <find>propagate_eq</find>
-      <find>underapproximatio</find>
-      <find>negate_context</find>
-      <find>update_all_vars</find>
-      <find>void theory_str::update_all_vars(std:</find>
-      <find>assert_ax</find>
-      <find>cases</find>
-      <find>underapproximation</find>
-      <find>simplify_concat</find>
       <find>at_same_eq_state</find>
       <find>collect_all_vars_in_eq_combination</find>
       <find>fetch_guessed_core_exprs</find>
@@ -223,11 +211,23 @@
       <find>contain_Eq</find>
       <find>is_contain_equality</find>
       <find>is_inconsiste</find>
-      <find>new_eq_check_wrt_disequalities</find>
       <find>cc</find>
       <find>propagate_non</find>
       <find>concat_astNode_map</find>
+      <find>new_eq_check_wrt_disequalities</find>
+      <find>is_notContain_const_consistent</find>
+      <find>get_lower</find>
+      <find>is_trivial_in</find>
+      <find>is_trivial_inequality</find>
+      <find>countOccurrences_from_root</find>
+      <find>countOccurrences</find>
+      <find>occurrences</find>
+      <find>countOccurrences_from_combination</find>
+      <find>refine_important_vars</find>
+      <find>notimp</find>
+      <find>notImportantVars_filtered</find>
       <find>propagate_equality</find>
+      <find>refine_eq_set</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -252,8 +252,8 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="539" />
-    <option name="y" value="175" />
+    <option name="x" value="510" />
+    <option name="y" value="23" />
     <option name="width" value="2560" />
     <option name="height" value="1417" />
   </component>
@@ -759,15 +759,15 @@
       <updated>1552918845843</updated>
       <workItem from="1552918847186" duration="144922000" />
       <workItem from="1555596195940" duration="785004000" />
-      <workItem from="1561472013501" duration="75469000" />
+      <workItem from="1561472013501" duration="84934000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1005395000" />
+    <option name="totallyTimeSpent" value="1014860000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="539" y="175" width="2560" height="1417" extended-state="0" />
+    <frame x="510" y="23" width="2560" height="1417" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4967267" visible="true" weight="0.17275615" />
@@ -787,7 +787,7 @@
       <window_info anchor="bottom" id="CMake" order="11" weight="0.25207546" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24980143" />
       <window_info anchor="right" id="Database" order="3" />
     </layout>
   </component>
@@ -1143,8 +1143,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="397">
-          <caret line="2001" column="16" selection-start-line="2001" selection-start-column="16" selection-end-line="2001" selection-end-column="16" />
+        <state relative-caret-position="412">
+          <caret line="1974" column="21" selection-start-line="1974" selection-start-column="21" selection-end-line="1974" selection-end-column="21" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1153,8 +1153,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="694">
-          <caret line="1474" column="75" selection-start-line="1474" selection-start-column="75" selection-end-line="1474" selection-end-column="75" />
+        <state relative-caret-position="627">
+          <caret line="13259" column="32" lean-forward="true" selection-start-line="13259" selection-start-column="32" selection-end-line="13259" selection-end-column="32" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
