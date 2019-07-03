@@ -57,6 +57,7 @@ namespace smt {
 
         scoped_vector<str::expr_pair> m_word_eq_todo;
         scoped_vector<str::expr_pair> m_word_diseq_todo;
+        scoped_vector<str::expr_pair> m_not_contains_todo;
         scoped_vector<str::expr_pair> m_membership_todo;
     public:
         char const * get_name() const override { return "trau"; }
@@ -94,6 +95,10 @@ namespace smt {
         expr_ref mk_len(expr* s) const { return expr_ref(m_util_s.str.mk_length(s), m); }
 
         void add_axiom(expr *e);
+        literal mk_eq_empty(expr* n, bool phase = true);
+        expr_ref mk_last(expr* e);
+        expr_ref mk_first(expr* e);
+        expr_ref mk_concat(expr* e1, expr* e2);
 
 
         bool has_length(expr *e) const { return m_has_length.contains(e); }
@@ -111,7 +116,7 @@ namespace smt {
         bool_var mk_bool_var(expr *e);
         str::word_term mk_word_term(expr *e) const;
         str::state mk_state_from_todo();
-        void add_clause(std::initializer_list<literal> ls);
+        void add_axiom(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
         void handle_substr(expr *e);
         void handle_index_of(expr *i);

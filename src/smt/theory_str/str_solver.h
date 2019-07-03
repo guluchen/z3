@@ -68,6 +68,8 @@ namespace smt {
             const zstring& value() const { return m_value; }
             const string& shortname() const { return m_shortname; }
             const std::list<expr*>& origin_expr() const { return m_expr; }
+            const expr_ref length_expr(ast_manager& m) const;
+
             bool typed(const element::t& t) const { return m_type == t; }
             bool operator==(const element& other) const;
             bool operator!=(const element& other) const { return !(*this == other); }
@@ -137,7 +139,6 @@ namespace smt {
             word_term m_lhs;
             word_term m_rhs;
         public:
-           ;
             word_equation(const word_term& lhs, const word_term& rhs);
             element::pair heads() const { return {m_lhs.head(), m_rhs.head()}; }
             std::size_t count_var(const element& e) const;
@@ -248,6 +249,28 @@ namespace smt {
             ptr mk_ptr(basic_memberships* m) const;
             automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
+
+        class contains {
+        private:
+            word_term m_superstring;
+            word_term m_substring;
+        public:
+            contains(const word_term& superstring, const word_term& substring);
+            const word_term& super() const { return m_superstring; }
+            const word_term& sub() const { return m_substring; }
+
+            contains replace(const element& tgt, const word_term& subst) const;
+            contains remove(const element& tgt) const;
+            contains remove_all(const std::set<element>& tgt) const;
+
+            bool operator==(const contains& other) const;
+            bool operator!=(const contains& other) const { return !(*this == other); }
+            bool operator<(const contains& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const contains& we);
+        };
+
+
+
         class length_constraints {
         private:
 
@@ -378,6 +401,8 @@ namespace smt {
 
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
+            std::set<contains> m_not_contains;
+
             memberships::sptr m_memberships;
             length_constraints m_length;
             std::map<element, word_term> m_model;
@@ -389,6 +414,7 @@ namespace smt {
             bool has_non_quadratic_var(const word_term& wt);
             word_term find_alternative_term(const word_term&,const word_term&);
             static void merge_list_of_elements(std::set<word_equation>&, const std::list<element>&);
+
         public:
             explicit state(memberships::sptr m) : m_strategy{state::transform_strategy::dynamic_empty_var_detection},m_memberships{std::move(m)} {}
             std::size_t word_eq_num() const { return m_eq_wes.size(); }
@@ -426,6 +452,9 @@ namespace smt {
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
             void add_membership(const element& var, expr * re);
+            void add_not_contains(const contains& nc);
+
+
             state assign_empty(const element& var, const element& non_zero_var=element::null()) const;
             state assign_empty_all(const std::set<element>& vars) const;
             state assign_const(const element& var, const word_term& tgt) const;

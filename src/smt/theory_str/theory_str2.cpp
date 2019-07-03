@@ -391,8 +391,7 @@ namespace smt {
             if (is_true) {
                 handle_contains(e);
             } else {
-                TRACE("str", tout << "TODO: not contains " << mk_pp(e, m) << "\n";);
-                is_over_approximation=true;
+                m_not_contains_todo.push_back({{e1,m},{e2,m}});
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);
@@ -415,7 +414,7 @@ namespace smt {
 
             literal l_eq_r = mk_eq(l,r,false);
             literal len_l_eq_len_r = mk_eq(m_util_s.str.mk_length(l),m_util_s.str.mk_length(r),false);
-            add_clause({~l_eq_r, len_l_eq_len_r});
+            add_axiom({~l_eq_r, len_l_eq_len_r});
         }
         m_word_eq_todo.push_back({l, r});
         STRACE("str", tout << "new_eq: " << l << " = " << r << '\n';);
@@ -557,8 +556,6 @@ namespace smt {
             if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
             return m_int_solver.check_sat(lenc_res)==lbool::l_true;
 
-
-
         }
 
 
@@ -567,20 +564,7 @@ namespace smt {
     }
 
     final_check_status theory_str2::final_check_eh() {
-        bool on_screen=false;
-        context& ctx = get_context();
-        expr_ref_vector Assigns(m),Literals(m);
-        ctx.get_guessed_literals(Literals);
-        ctx.get_assignments(Assigns);
-        for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
-            if(on_screen) std::cout<<"check_sat context from asserted:"<<mk_pp(ctx.get_asserted_formula(i),m)<<std::endl;
-
-        }
-        for (auto & e : Assigns){
-            if(ctx.is_relevant(e)) {
-                if(on_screen) std::cout << "check_sat context from assign:" << mk_pp(e, m) << std::endl;
-            }
-        }
+        bool on_screen=true;
 
         using namespace str;
         if (m_word_eq_todo.empty()) {
@@ -602,8 +586,8 @@ namespace smt {
         STRACE("strg", tout << "root original:\n" << root <<std::endl;);
         root.remove_single_variable_word_term();
         STRACE("strg", tout << "root removed single var:\n" << root <<std::endl;);
-        root.merge_elements();
-        STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
+//        root.merge_elements();
+//        STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
         if(on_screen&& is_over_approximation){
@@ -842,6 +826,15 @@ namespace smt {
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
         }
 
+        STRACE("str", tout << "not contains todo:\n";);
+        STRACE("str", if (m_not_contains_todo.empty()) tout << "--\n";);
+        for (const auto& nc : m_not_contains_todo) {
+            result.add_not_contains({mk_word_term(nc.first), mk_word_term(nc.second)});
+            STRACE("str", tout << "not_contains("<< nc.first << ", " << nc.second << ")\n";);
+        }
+
+
+
         result.initialize_length_constraint(result.variables());
         result.remove_useless_diseq();
         result.initialize_model_map(result.variables());
@@ -872,7 +865,7 @@ namespace smt {
         }
     }
 
-    void theory_str2::add_clause(std::initializer_list<literal> ls) {
+    void theory_str2::add_axiom(std::initializer_list<literal> ls) {
         bool on_screen =true;
 
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
@@ -917,12 +910,12 @@ namespace smt {
         literal i_ge_0 = mk_literal(m_util_a.mk_ge(i, zero));
         literal i_ge_len_s = mk_literal(m_util_a.mk_ge(mk_sub(i, m_util_s.str.mk_length(s)), zero));
 
-        add_clause({~i_ge_0, i_ge_len_s, mk_eq(s, xey, false)});
-        add_clause({~i_ge_0, i_ge_len_s, mk_eq(one, len_e, false)});
-        add_clause({~i_ge_0, i_ge_len_s, mk_eq(i, len_x, false)});
+        add_axiom({~i_ge_0, i_ge_len_s, mk_eq(s, xey, false)});
+        add_axiom({~i_ge_0, i_ge_len_s, mk_eq(one, len_e, false)});
+        add_axiom({~i_ge_0, i_ge_len_s, mk_eq(i, len_x, false)});
 
-        add_clause({i_ge_0, mk_eq(e, emp, false)});
-        add_clause({~i_ge_len_s, mk_eq(e, emp, false)});
+        add_axiom({i_ge_0, mk_eq(e, emp, false)});
+        add_axiom({~i_ge_len_s, mk_eq(e, emp, false)});
     }
 
     /*
@@ -979,14 +972,14 @@ namespace smt {
             literal l_ge_zero = mk_literal(m_util_a.mk_ge(l, zero));
             literal ls_le_0 = mk_literal(m_util_a.mk_le(ls, zero));
 
-            add_clause({~i_ge_0, ~ls_le_i, mk_eq(xey, s, false)});
-            add_clause({~i_ge_0, ~ls_le_i, mk_eq(lx, i, false)});
-            add_clause({~i_ge_0, ~ls_le_i, ~l_ge_zero, ~li_ge_ls, mk_eq(le, l, false)});
-            add_clause({~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, mk_sub(ls, i), false)});
-            add_clause({~i_ge_0, ~ls_le_i, l_ge_zero, mk_eq(le, zero, false)});
-            add_clause({i_ge_0, mk_eq(le, zero, false)});
-            add_clause({ls_le_i, mk_eq(le, zero, false)});
-            add_clause({~ls_le_0, mk_eq(le, zero, false)});
+            add_axiom({~i_ge_0, ~ls_le_i, mk_eq(xey, s, false)});
+            add_axiom({~i_ge_0, ~ls_le_i, mk_eq(lx, i, false)});
+            add_axiom({~i_ge_0, ~ls_le_i, ~l_ge_zero, ~li_ge_ls, mk_eq(le, l, false)});
+            add_axiom({~i_ge_0, ~ls_le_i, li_ge_ls, mk_eq(le, mk_sub(ls, i), false)});
+            add_axiom({~i_ge_0, ~ls_le_i, l_ge_zero, mk_eq(le, zero, false)});
+            add_axiom({i_ge_0, mk_eq(le, zero, false)});
+            add_axiom({ls_le_i, mk_eq(le, zero, false)});
+            add_axiom({~ls_le_0, mk_eq(le, zero, false)});
         }
     }
 
@@ -1011,8 +1004,8 @@ namespace smt {
             literal s_eq_empty = mk_eq(s, emp, false);
             literal t_eq_empty = mk_eq(t, emp, false);
 
-            add_clause({cnt, i_eq_m1});
-            add_clause({~t_eq_empty, s_eq_empty, i_eq_m1});
+            add_axiom({cnt, i_eq_m1});
+            add_axiom({~t_eq_empty, s_eq_empty, i_eq_m1});
 
             if (!offset || (m_util_a.is_numeral(offset, r) && r.is_zero())) {
                 expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s);
@@ -1023,12 +1016,10 @@ namespace smt {
                 // |s| = 0 => indexof(t,s,0) = 0
                 // contains(t,s) & |s| != 0 => t = xsy & indexof(t,s,0) = |x|
                 expr_ref lenx(m_util_s.str.mk_length(x), m);
-                add_clause({~s_eq_empty, i_eq_0});
-                add_clause({~cnt, s_eq_empty, mk_eq(t, xsy, false)});
-                add_clause({~cnt, s_eq_empty, mk_eq(i, lenx, false)});
-                add_clause({~cnt, mk_literal(m_util_a.mk_ge(i, zero))});
-                TRACE("str", tout << "TODO: ignore tightest_prefix\n";);
-                is_over_approximation=true;
+                add_axiom({~s_eq_empty, i_eq_0});
+                add_axiom({~cnt, s_eq_empty, mk_eq(t, xsy, false)});
+                add_axiom({~cnt, s_eq_empty, mk_eq(i, lenx, false)});
+                add_axiom({~cnt, mk_literal(m_util_a.mk_ge(i, zero))});
 
                 tightest_prefix(s, x);
             } else {
@@ -1036,9 +1027,9 @@ namespace smt {
                 literal offset_ge_len = mk_literal(m_util_a.mk_ge(mk_sub(offset, len_t), zero));
                 literal offset_le_len = mk_literal(m_util_a.mk_le(mk_sub(offset, len_t), zero));
                 literal i_eq_offset = mk_eq(i, offset, false);
-                add_clause({~offset_ge_len, s_eq_empty, i_eq_m1});
-                add_clause({offset_le_len, i_eq_m1});
-                add_clause({~offset_ge_len, ~offset_le_len, ~s_eq_empty, i_eq_offset});
+                add_axiom({~offset_ge_len, s_eq_empty, i_eq_m1});
+                add_axiom({offset_le_len, i_eq_m1});
+                add_axiom({~offset_ge_len, ~offset_le_len, ~s_eq_empty, i_eq_offset});
 
                 expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s, offset);
                 expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s, offset);
@@ -1048,31 +1039,78 @@ namespace smt {
                 expr_ref indexof0(m_util_s.str.mk_index(y, s, zero), m);
                 expr_ref offset_p_indexof0(m_util_a.mk_add(offset, indexof0), m);
                 literal offset_ge_0 = mk_literal(m_util_a.mk_ge(offset, zero));
-                add_clause(
+                add_axiom(
                         {~offset_ge_0, offset_ge_len, mk_eq(t, xy, false)});
-                add_clause(
+                add_axiom(
                         {~offset_ge_0, offset_ge_len, mk_eq(m_util_s.str.mk_length(x), offset, false)});
-                add_clause({~offset_ge_0, offset_ge_len, ~mk_eq(indexof0, minus_one, false), i_eq_m1});
-                add_clause({~offset_ge_0, offset_ge_len, ~mk_literal(m_util_a.mk_ge(indexof0, zero)),
+                add_axiom({~offset_ge_0, offset_ge_len, ~mk_eq(indexof0, minus_one, false), i_eq_m1});
+                add_axiom({~offset_ge_0, offset_ge_len, ~mk_literal(m_util_a.mk_ge(indexof0, zero)),
                             mk_eq(offset_p_indexof0, i, false)});
 
                 // offset < 0 => -1 = i
-                add_clause({offset_ge_0, i_eq_m1});
+                add_axiom({offset_ge_0, i_eq_m1});
             }
         }
     }
 
     void theory_str2::tightest_prefix(expr* s, expr* x) {
-//        ast_manager &m = get_manager();
-//
-//        expr_ref s1 = mk_first(s);
-//        expr_ref c  = mk_last(s);
-//        expr_ref s1c = m_util_s.str.mk_concat(s1, m_util_s.str.mk_unit(c));
-//        expr_ref emp(m_util_s.str.mk_empty(m.get_sort(s)), m);
-//        literal s_eq_emp = mk_eq_empty(s);
-//        add_axiom(s_eq_emp, mk_eq(s, s1c, false));
-//        add_axiom(s_eq_emp, ~mk_literal(m_util_s.str.mk_contains(m_util_s.str.mk_concat(x, s1), s)));
+        expr_ref s1 = mk_first(s);
+        expr_ref c  = mk_last(s);
+        expr_ref s1c = mk_concat(s1, m_util_s.str.mk_unit(c));
+        literal s_eq_emp = mk_eq_empty(s);
+        add_axiom({s_eq_emp, mk_eq(s, s1c,true)});
+        add_axiom({s_eq_emp, ~mk_literal(m_util_s.str.mk_contains(mk_concat(x, s1), s))});
     }
+
+    expr_ref theory_str2::mk_first(expr* s) {
+        zstring str;
+        if (m_util_s.str.is_string(s, str) && str.length() > 0) {
+            return expr_ref(m_util_s.str.mk_string(str.extract(0, str.length()-1)), m);
+        }
+        return mk_skolem(symbol("seq_first"), s);
+    }
+
+    expr_ref theory_str2::mk_last(expr* s) {
+        zstring str;
+        if (m_util_s.str.is_string(s, str) && str.length() > 0) {
+            return expr_ref(m_util_s.str.mk_char(str, str.length()-1), m);
+        }
+        sort* char_sort = nullptr;
+        VERIFY(m_util_s.is_seq(m.get_sort(s), char_sort));
+        return mk_skolem(symbol("seq_last"), s, nullptr, nullptr, nullptr, char_sort);
+    }
+
+    expr_ref theory_str2::mk_concat(expr* e1, expr* e2) {
+        return expr_ref(m_util_s.str.mk_concat(e1, e2), m);
+    }
+
+    literal theory_str2::mk_eq_empty(expr* _e, bool phase) {
+        context& ctx = get_context();
+        expr_ref e(_e, m);
+        SASSERT(m_util_s.is_seq(e));
+        expr_ref emp(m);
+        zstring s;
+        if (m_util_s.str.is_empty(e)) {
+            return true_literal;
+        }
+        expr_ref_vector concats(m);
+        m_util_s.str.get_concat(e, concats);
+        for (auto c : concats) {
+            if (m_util_s.str.is_unit(c)) {
+                return false_literal;
+            }
+            if (m_util_s.str.is_string(c, s) && s.length() > 0) {
+                return false_literal;
+            }
+        }
+        emp = m_util_s.str.mk_empty(m.get_sort(e));
+
+        literal lit = mk_eq(e, emp, false);
+        ctx.force_phase(phase?lit:~lit);
+        ctx.mark_as_relevant(lit);
+        return lit;
+    }
+
 
     // e = prefix(x, y), check if x is a prefix of y
     void theory_str2::handle_prefix(expr *e) {
@@ -1087,7 +1125,7 @@ namespace smt {
             expr_ref xs(m_util_s.str.mk_concat(x, s), m);
             string_theory_propagation(xs);
             literal not_e = mk_literal(mk_not({e, m}));
-            add_clause({not_e, mk_eq(y, xs, false)});
+            add_axiom({not_e, mk_eq(y, xs, false)});
         }
     }
 
@@ -1128,11 +1166,11 @@ namespace smt {
             literal eq_mx_my = mk_eq(mx, my,false);
 
             literal lit_e = mk_literal(e);
-            add_clause({lit_e, len_y_gt_len_x, x_eq_pmq});
-            add_clause({lit_e, len_y_gt_len_x, y_eq_pmq});
-            add_clause({lit_e, len_y_gt_len_x, len_mx_is_one});
-            add_clause({lit_e, len_y_gt_len_x, len_my_is_one});
-            add_clause({lit_e, len_y_gt_len_x, ~eq_mx_my});
+            add_axiom({lit_e, len_y_gt_len_x, x_eq_pmq});
+            add_axiom({lit_e, len_y_gt_len_x, y_eq_pmq});
+            add_axiom({lit_e, len_y_gt_len_x, len_mx_is_one});
+            add_axiom({lit_e, len_y_gt_len_x, len_my_is_one});
+            add_axiom({lit_e, len_y_gt_len_x, ~eq_mx_my});
         }
     }
 
@@ -1149,7 +1187,7 @@ namespace smt {
             expr_ref px(m_util_s.str.mk_concat(p, x), m);
             string_theory_propagation(px);
             literal not_e = mk_literal(mk_not({e, m}));
-            add_clause({not_e, mk_eq(y, px, false)});
+            add_axiom({not_e, mk_eq(y, px, false)});
         }
     }
 
@@ -1192,11 +1230,11 @@ namespace smt {
             literal eq_mx_my = mk_eq(mx, my,false);
 
             literal lit_e = mk_literal(e);
-            add_clause({lit_e, len_y_gt_len_x, x_eq_pmq});
-            add_clause({lit_e, len_y_gt_len_x, y_eq_pmq});
-            add_clause({lit_e, len_y_gt_len_x, len_mx_is_one});
-            add_clause({lit_e, len_y_gt_len_x, len_my_is_one});
-            add_clause({lit_e, len_y_gt_len_x, ~eq_mx_my});
+            add_axiom({lit_e, len_y_gt_len_x, x_eq_pmq});
+            add_axiom({lit_e, len_y_gt_len_x, y_eq_pmq});
+            add_axiom({lit_e, len_y_gt_len_x, len_mx_is_one});
+            add_axiom({lit_e, len_y_gt_len_x, len_my_is_one});
+            add_axiom({lit_e, len_y_gt_len_x, ~eq_mx_my});
         }
     }
 
@@ -1215,7 +1253,7 @@ namespace smt {
 //            expr_ref not_e(m.mk_not(e),m);
 //            add_axiom(m.mk_or(not_e, m.mk_eq(y, pys)));
             literal not_e = mk_literal(mk_not({e, m}));
-            add_clause({not_e, mk_eq(x, pys, false)});
+            add_axiom({not_e, mk_eq(x, pys, false)});
         }
 
     }
