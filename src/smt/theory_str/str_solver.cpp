@@ -38,6 +38,23 @@ namespace smt {
             return e;
         }
 
+        const expr_ref element::length_expr(ast_manager& m) const{
+            expr_ref ret{m};
+            seq_util m_util_s(m);
+            arith_util m_util_a(m);
+
+            if(m_type==t::CONST){
+                ret = {m_util_a.mk_int(1),m};
+            }else{
+                for(auto& expr:origin_expr()){
+                    if(!ret) ret = {m_util_s.str.mk_length(expr), m};
+                    else ret = {m_util_a.mk_add(ret, m_util_s.str.mk_length(expr)), m};
+                }
+
+            }
+            return ret;
+        }
+
         bool element::operator==(const element& other) const {
             return other.m_type == m_type && other.m_value == m_value;
         }
@@ -415,6 +432,47 @@ namespace smt {
                 std::swap(m_lhs, m_rhs);
             }
         }
+
+        contains::contains(const word_term& superstring, const word_term& substring) {
+            m_superstring=superstring;
+            m_substring=substring;
+        }
+
+        contains contains::replace(const element& tgt, const word_term& subst) const {
+            contains result{*this};
+            result.m_superstring.replace(tgt, subst);
+            result.m_substring.replace(tgt, subst);
+            return result;
+        }
+
+        contains contains::remove(const element& tgt) const {
+            return replace(tgt, {});
+        }
+
+        contains contains::remove_all(const std::set<element>& tgt) const {
+            contains result{*this};
+            for (const auto& e : tgt) {
+                result.m_superstring.replace(e, {});
+                result.m_substring.replace(e, {});
+            }
+            return result;
+        }
+
+        bool contains::operator==(const contains& other) const {
+            return m_superstring == other.m_superstring && m_substring == other.m_substring;
+        }
+
+        bool contains::operator<(const contains& other) const {
+            if (m_superstring < other.m_superstring) return true;
+            if (other.m_superstring < m_superstring) return false;
+            return m_substring < other.m_substring;
+        }
+
+        std::ostream& operator<<(std::ostream& os, const contains& we) {
+            os << "not_contains(" <<we.m_superstring << "," << we.m_substring<<")";
+            return os;
+        }
+
 
         var_relation::var_relation(const state& s) {
             SASSERT(s.in_definition_form());
@@ -1029,6 +1087,11 @@ namespace smt {
 
         }
 
+        void state::add_not_contains(const smt::str::contains &nc) {
+            m_not_contains.insert(std::move(nc));
+        }
+
+
 
         void str::state::remove_useless_diseq(){
             std::set<word_equation> to_remove;
@@ -1077,6 +1140,9 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.remove(var));
             }
+            for (const auto& nc : m_not_contains) {
+                result.add_not_contains(nc.remove(var));
+            }
             result.set_length(m_length.assign_empty(var,non_zero_var));
 
 
@@ -1111,6 +1177,9 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.remove_all(vars));
             }
+            for (const auto& nc : m_not_contains) {
+                result.add_not_contains(nc.remove_all(vars));
+            }
             result.set_length(m_length.assign_empty_all(vars));
 
             return result;
@@ -1139,6 +1208,9 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.replace(var, tgt));
             }
+            for (const auto& nc : m_not_contains) {
+                result.add_not_contains(nc.replace(var, tgt));
+            }
             result.set_length(m_length.assign_const(var,tgt));
 
             return result;
@@ -1166,6 +1238,10 @@ namespace smt {
             for (const auto& we : m_diseq_wes) {
                 result.add_word_diseq(we.replace(var, {as_var}));
             }
+            for (const auto& nc : m_not_contains) {
+                result.add_not_contains(nc.replace(var, {as_var}));
+            }
+
             result.set_length(m_length.assign_as(var,as_var));
 
             return result;
@@ -1181,6 +1257,12 @@ namespace smt {
             for (const auto& wine : m_diseq_wes) {
                 wines.emplace_back(wine.replace(var, {ch, var}));
             }
+            std::list<contains> ncontains;
+
+            for (const auto& nc : m_not_contains) {
+                ncontains.emplace_back(nc.replace(var, {ch, var}));
+            }
+
             std::list<state> result;
             for (auto& m : m_memberships->assign_prefix(var, ch)) {
                 state s{std::move(m)};
@@ -1203,6 +1285,9 @@ namespace smt {
                 for (const auto& wine : wines) {
                     s.add_word_diseq(wine);
                 }
+                for (const auto& nc : ncontains) {
+                    s.add_not_contains(nc);
+                }
                 s.set_length(m_length.assign_prefix(var,ch));
                 result.emplace_back(std::move(s));
             }
@@ -1221,6 +1306,11 @@ namespace smt {
             for (const auto& wine : m_diseq_wes) {
                 wines.emplace_back(wine.replace(var, {prefix, var}));
             }
+            std::list<contains> ncontains;
+            for (const auto& nc : m_not_contains) {
+                ncontains.emplace_back(nc.replace(var, {prefix, var}));
+            }
+
             std::list<state> result;
             for (auto& m : m_memberships->assign_prefix_var(var, prefix)) {
                 state s{std::move(m)};
@@ -1240,16 +1330,36 @@ namespace smt {
                 for (const auto& wine : wines) {
                     s.add_word_diseq(wine);
                 }
+                for (const auto& nc : ncontains) {
+                    s.add_not_contains(nc);
+                }
                 s.set_length(m_length.assign_prefix_var(var,prefix));
                 result.emplace_back(std::move(s));
             }
             return result;
         }
         bool state::is_reachable(ast_manager& m, int_expr_solver& m_int_solver) const {
+            seq_util m_util_s(m);
+            arith_util m_util_a(m);
+
+
             STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
             bool on_screen=false;
             expr_ref to_check= m_length.get_path_cond(m);
 //            if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
+            for(auto& nc:m_not_contains){
+                expr_ref super_len{m}, sub_len{m};
+                for(auto& ele:nc.super().content()){
+                    if(!super_len) super_len = ele.length_expr(m);
+                    else super_len = {m_util_a.mk_add(super_len, ele.length_expr(m)), m};
+                }
+                for(auto& ele:nc.sub().content()){
+                    if(!sub_len) sub_len = ele.length_expr(m);
+                    else sub_len = {m_util_a.mk_add(sub_len, ele.length_expr(m)), m};
+                }
+                to_check = {m.mk_and(to_check, m_util_a.mk_gt(sub_len,super_len)),m};
+            }
+
 
             lbool chk_res = m_int_solver.check_sat(to_check);
 
@@ -1315,6 +1425,10 @@ namespace smt {
             for (const auto& we : s.m_diseq_wes) {
                 os << "not (" << we << ")\n";
             }
+            for (const auto& nc : s.m_not_contains) {
+                os << nc << ")\n";
+            }
+
             os << s.m_memberships<<std::endl;
 
             s.m_length.print_path_cond(os);
@@ -1916,6 +2030,8 @@ namespace smt {
             for(auto& add_word_eq:to_add) w.insert(add_word_eq);
         }
 
+
+
         void state::remove_single_variable_word_term() {
             std::set<word_equation> updated_result;
 
@@ -1954,11 +2070,12 @@ namespace smt {
 
 
                         for (auto &eq2:m_eq_wes) {
-
-                            word_equation eq3 = eq2.replace(source, target);
-                            eq3=eq3.trim_prefix();
-                            if (eq3!=cur && !eq3.empty()){
-                                updated_result.insert(eq3);
+                            if(eq2!=cur){
+                                word_equation eq3 = eq2.replace(source, target);
+                                eq3=eq3.trim_prefix();
+                                if (!eq3.empty()){
+                                    updated_result.insert(eq3);
+                                }
                             }
                         }
                         m_eq_wes = updated_result;
@@ -1968,12 +2085,17 @@ namespace smt {
                         for (auto &eq2:m_diseq_wes) {
                             word_equation eq3 = eq2.replace(source, target);
                             eq3=eq3.trim_prefix();
-                            if (eq3!=cur) {
-                                updated_result.insert(eq3);
-                            }
+                            updated_result.insert(eq3);
                         }
                         m_diseq_wes = updated_result;
                         updated_result.clear();
+
+                        std::set<contains> updated_not_contains;
+                        for (auto &nc:m_not_contains) {
+                            updated_not_contains.insert(nc.replace(source, target));
+                        }
+                        m_not_contains = updated_not_contains;
+
                         break;
                     }
                 }
