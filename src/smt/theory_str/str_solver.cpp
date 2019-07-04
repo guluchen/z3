@@ -433,24 +433,24 @@ namespace smt {
             }
         }
 
-        contains::contains(const word_term& superstring, const word_term& substring) {
+        not_contains::not_contains(const word_term& superstring, const word_term& substring) {
             m_superstring=superstring;
             m_substring=substring;
         }
 
-        contains contains::replace(const element& tgt, const word_term& subst) const {
-            contains result{*this};
+        not_contains not_contains::replace(const element& tgt, const word_term& subst) const {
+            not_contains result{*this};
             result.m_superstring.replace(tgt, subst);
             result.m_substring.replace(tgt, subst);
             return result;
         }
 
-        contains contains::remove(const element& tgt) const {
+        not_contains not_contains::remove(const element& tgt) const {
             return replace(tgt, {});
         }
 
-        contains contains::remove_all(const std::set<element>& tgt) const {
-            contains result{*this};
+        not_contains not_contains::remove_all(const std::set<element>& tgt) const {
+            not_contains result{*this};
             for (const auto& e : tgt) {
                 result.m_superstring.replace(e, {});
                 result.m_substring.replace(e, {});
@@ -458,17 +458,31 @@ namespace smt {
             return result;
         }
 
-        bool contains::operator==(const contains& other) const {
+        const bool not_contains::is_invalid_by_syntatic_check() const{
+
+            std::_List_const_iterator<element> pos = std::search(
+                    m_superstring.content().begin(), m_superstring.content().end(),
+                    m_substring.content().begin(), m_substring.content().end());
+
+            if(pos == m_superstring.content().end()){
+                return false;
+            }else{
+                return true;
+            }
+
+        }
+
+        bool not_contains::operator==(const not_contains& other) const {
             return m_superstring == other.m_superstring && m_substring == other.m_substring;
         }
 
-        bool contains::operator<(const contains& other) const {
+        bool not_contains::operator<(const not_contains& other) const {
             if (m_superstring < other.m_superstring) return true;
             if (other.m_superstring < m_superstring) return false;
             return m_substring < other.m_substring;
         }
 
-        std::ostream& operator<<(std::ostream& os, const contains& we) {
+        std::ostream& operator<<(std::ostream& os, const not_contains& we) {
             os << "not_contains(" <<we.m_superstring << "," << we.m_substring<<")";
             return os;
         }
@@ -1087,7 +1101,7 @@ namespace smt {
 
         }
 
-        void state::add_not_contains(const smt::str::contains &nc) {
+        void state::add_not_contains(const smt::str::not_contains &nc) {
             m_not_contains.insert(std::move(nc));
         }
 
@@ -1257,7 +1271,7 @@ namespace smt {
             for (const auto& wine : m_diseq_wes) {
                 wines.emplace_back(wine.replace(var, {ch, var}));
             }
-            std::list<contains> ncontains;
+            std::list<not_contains> ncontains;
 
             for (const auto& nc : m_not_contains) {
                 ncontains.emplace_back(nc.replace(var, {ch, var}));
@@ -1306,7 +1320,7 @@ namespace smt {
             for (const auto& wine : m_diseq_wes) {
                 wines.emplace_back(wine.replace(var, {prefix, var}));
             }
-            std::list<contains> ncontains;
+            std::list<not_contains> ncontains;
             for (const auto& nc : m_not_contains) {
                 ncontains.emplace_back(nc.replace(var, {prefix, var}));
             }
@@ -1338,28 +1352,34 @@ namespace smt {
             }
             return result;
         }
-        bool state::is_reachable(ast_manager& m, int_expr_solver& m_int_solver) const {
+        bool state::is_reachable(ast_manager& m, int_expr_solver& m_int_solver, bool is_leaf) const {
             seq_util m_util_s(m);
             arith_util m_util_a(m);
 
 
-            STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
+            for(auto& nc:m_not_contains) {
+                if(nc.is_invalid_by_syntatic_check())
+                    return false;
+            }
+
+                STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
             bool on_screen=false;
             expr_ref to_check= m_length.get_path_cond(m);
 //            if(on_screen) std::cout<< mk_pp(to_check,m)<<std::endl;
-            for(auto& nc:m_not_contains){
-                expr_ref super_len{m}, sub_len{m};
-                for(auto& ele:nc.super().content()){
-                    if(!super_len) super_len = ele.length_expr(m);
-                    else super_len = {m_util_a.mk_add(super_len, ele.length_expr(m)), m};
+            if(is_leaf){
+                for(auto& nc:m_not_contains){
+                    expr_ref super_len{m}, sub_len{m};
+                    for(auto& ele:nc.super().content()){
+                        if(!super_len) super_len = ele.length_expr(m);
+                        else super_len = {m_util_a.mk_add(super_len, ele.length_expr(m)), m};
+                    }
+                    for(auto& ele:nc.sub().content()){
+                        if(!sub_len) sub_len = ele.length_expr(m);
+                        else sub_len = {m_util_a.mk_add(sub_len, ele.length_expr(m)), m};
+                    }
+                    to_check = {m.mk_and(to_check, m_util_a.mk_gt(sub_len,super_len)),m};
                 }
-                for(auto& ele:nc.sub().content()){
-                    if(!sub_len) sub_len = ele.length_expr(m);
-                    else sub_len = {m_util_a.mk_add(sub_len, ele.length_expr(m)), m};
-                }
-                to_check = {m.mk_and(to_check, m_util_a.mk_gt(sub_len,super_len)),m};
             }
-
 
             lbool chk_res = m_int_solver.check_sat(to_check);
 
@@ -2090,7 +2110,7 @@ namespace smt {
                         m_diseq_wes = updated_result;
                         updated_result.clear();
 
-                        std::set<contains> updated_not_contains;
+                        std::set<not_contains> updated_not_contains;
                         for (auto &nc:m_not_contains) {
                             updated_not_contains.insert(nc.replace(source, target));
                         }

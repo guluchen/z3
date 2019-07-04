@@ -30,12 +30,7 @@ namespace smt {
 
     void theory_str2::init(context *ctx) {
         theory::init(ctx);
-
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init\n";);
-    }
-
-    void theory_str2::add_theory_assumptions(expr_ref_vector& assumptions) {
-        STRACE("str", if (!IN_CHECK_FINAL) tout << "add_theory_assumptions\n";);
     }
 
     enode* theory_str2::ensure_enode(expr* e) {
@@ -170,37 +165,35 @@ namespace smt {
     void theory_str2::string_theory_propagation(expr * expr) {
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
 
-        if(!propgated_string_theory.contains(expr)||true) {
-            propgated_string_theory.insert(expr);
-            ast_manager &m = get_manager();
-            context &ctx = get_context();
+        ast_manager &m = get_manager();
+        context &ctx = get_context();
 
-            if (!ctx.e_internalized(expr)) {
-                ctx.internalize(expr, false);
-            }
-            enode* n = ctx.get_enode(expr);
-            ctx.mark_as_relevant(n);
+        if (!ctx.e_internalized(expr)) {
+            ctx.internalize(expr, false);
+        }
+        enode* n = ctx.get_enode(expr);
+        ctx.mark_as_relevant(n);
 
-            sort *expr_sort = m.get_sort(expr);
-            sort *str_sort = m_util_s.str.mk_string_sort();
+        sort *expr_sort = m.get_sort(expr);
+        sort *str_sort = m_util_s.str.mk_string_sort();
 
-            if (expr_sort == str_sort) {
+        if (expr_sort == str_sort) {
 
-                enode *n = ctx.get_enode(expr);
-                propagate_basic_string_axioms(n);
-                if (is_app(expr) && m_util_s.str.is_concat(to_app(expr))) {
-                    propagate_concat_axiom(n);
-                }
-            }
-            // if expr is an application, recursively inspect all arguments
-            if (is_app(expr)&&!m_util_s.str.is_length(expr)) {
-                app *term = to_app(expr);
-                unsigned num_args = term->get_num_args();
-                for (unsigned i = 0; i < num_args; i++) {
-                    string_theory_propagation(term->get_arg(i));
-                }
+            enode *n = ctx.get_enode(expr);
+            propagate_basic_string_axioms(n);
+            if (is_app(expr) && m_util_s.str.is_concat(to_app(expr))) {
+                propagate_concat_axiom(n);
             }
         }
+        // if expr is an application, recursively inspect all arguments
+        if (is_app(expr)&&!m_util_s.str.is_length(expr)) {
+            app *term = to_app(expr);
+            unsigned num_args = term->get_num_args();
+            for (unsigned i = 0; i < num_args; i++) {
+                string_theory_propagation(term->get_arg(i));
+            }
+        }
+
         STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
 
     }
@@ -345,19 +338,21 @@ namespace smt {
         if (m_util_s.str.is_length(n)) {
             add_length_axiom(n);
         }
-
-
         if (m_util_s.str.is_extract(n)) {
             handle_substr(n);
-        } else if (m_util_s.str.is_itos(n)) {
+        }
+        else if (m_util_s.str.is_itos(n)) {
             //handle_itos(n);
         } else if (m_util_s.str.is_stoi(n)) {
             //handle_stoi(n);
-        } else if (m_util_s.str.is_at(n)) {
+        }
+        else if (m_util_s.str.is_at(n)) {
             handle_char_at(n);
-        } else if (m_util_s.str.is_replace(n)) {
+        }
+        else if (m_util_s.str.is_replace(n)) {
             //handle_replace(n);
-        } else if (m_util_s.str.is_index(n)) {
+        }
+        else if (m_util_s.str.is_index(n)) {
             handle_index_of(n);
         }
 
@@ -564,7 +559,7 @@ namespace smt {
     }
 
     final_check_status theory_str2::final_check_eh() {
-        bool on_screen=true;
+        bool on_screen=false;
 
         using namespace str;
         if (m_word_eq_todo.empty()) {
@@ -617,7 +612,7 @@ namespace smt {
             solver.resume(get_manager(),get_context(),*this, m_int_solver);
             std::list<smt::str::state> to_check=solver.get_last_leaf_states();
             for(auto& s:to_check){
-               bool reachable =  s.is_reachable(get_manager(), m_int_solver);
+               bool reachable =  s.is_reachable(get_manager(), m_int_solver, false);
                if(reachable){
                    STRACE("str", tout << "Leaf node reachable: \n"<<s<<std::endl;);
                    if (!is_over_approximation)
@@ -1263,14 +1258,14 @@ namespace smt {
         VERIFY(m_util_s.str.is_in_re(e, s, re));
         ast_manager& m = get_manager();
 
-        expr_ref tmp{e, m};
-        m_rewrite(tmp);
-        if ((m.is_false(tmp) && is_true) || (m.is_true(tmp) && !is_true)) {
-            literal_vector lv;
-            lv.push_back(is_true ? mk_literal(e) : ~mk_literal(e));
-            set_conflict(lv);
-            return;
-        }
+//        expr_ref tmp{e, m};
+//        m_rewrite(tmp);
+//        if ((m.is_false(tmp) && is_true) || (m.is_true(tmp) && !is_true)) {
+//            literal_vector lv;
+//            lv.push_back(is_true ? mk_literal(e) : ~mk_literal(e));
+//            set_conflict(lv);
+//            return;
+//        }
         expr_ref r{re, m};
         context& ctx = get_context();
         literal l = ctx.get_literal(e);

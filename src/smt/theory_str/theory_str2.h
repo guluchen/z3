@@ -65,7 +65,6 @@ namespace smt {
         void display(std::ostream& os) const override;
         theory *mk_fresh(context *) override { return alloc(theory_str2, get_manager(), m_params); }
         void init(context *ctx) override;
-        void add_theory_assumptions(expr_ref_vector& assumptions) override;
         theory_var mk_var(enode *n) override;
         void apply_sort_cnstr(enode* n, sort* s) override;
         bool internalize_atom(app *atom, bool gate_ctx) override;

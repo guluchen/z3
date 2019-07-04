@@ -250,23 +250,24 @@ namespace smt {
             automaton::sptr remove_prefix(automaton::sptr a, const zstring& prefix) const;
         };
 
-        class contains {
+        class not_contains {
         private:
             word_term m_superstring;
             word_term m_substring;
         public:
-            contains(const word_term& superstring, const word_term& substring);
+            not_contains(const word_term& superstring, const word_term& substring);
             const word_term& super() const { return m_superstring; }
             const word_term& sub() const { return m_substring; }
 
-            contains replace(const element& tgt, const word_term& subst) const;
-            contains remove(const element& tgt) const;
-            contains remove_all(const std::set<element>& tgt) const;
+            not_contains replace(const element& tgt, const word_term& subst) const;
+            not_contains remove(const element& tgt) const;
+            not_contains remove_all(const std::set<element>& tgt) const;
 
-            bool operator==(const contains& other) const;
-            bool operator!=(const contains& other) const { return !(*this == other); }
-            bool operator<(const contains& other) const;
-            friend std::ostream& operator<<(std::ostream& os, const contains& we);
+            bool operator==(const not_contains& other) const;
+            bool operator!=(const not_contains& other) const { return !(*this == other); }
+            bool operator<(const not_contains& other) const;
+            friend std::ostream& operator<<(std::ostream& os, const not_contains& we);
+            const bool is_invalid_by_syntatic_check() const;
         };
 
 
@@ -401,7 +402,7 @@ namespace smt {
 
             std::set<word_equation> m_eq_wes;
             std::set<word_equation> m_diseq_wes;
-            std::set<contains> m_not_contains;
+            std::set<not_contains> m_not_contains;
 
             memberships::sptr m_memberships;
             length_constraints m_length;
@@ -452,7 +453,7 @@ namespace smt {
             void add_word_eq(const word_equation& we);
             void add_word_diseq(const word_equation& we);
             void add_membership(const element& var, expr * re);
-            void add_not_contains(const contains& nc);
+            void add_not_contains(const not_contains& nc);
 
 
             state assign_empty(const element& var, const element& non_zero_var=element::null()) const;
@@ -465,7 +466,7 @@ namespace smt {
             bool operator==(const state& other) const;
             bool operator!=(const state& other) const { return !(*this == other); }
             friend std::ostream& operator<<(std::ostream& os, const state& s);
-            bool is_reachable(ast_manager& m, int_expr_solver& m_int_solver) const;
+            bool is_reachable(ast_manager& m, int_expr_solver& m_int_solver, bool is_leaf=false) const;
         };
 
 
