@@ -475,7 +475,7 @@ namespace smt {
             int diseqLevel = -1;
 
             expr_ref_vector assertingConstraints;
-            UnderApproxState(ast_manager &m) : assertingConstraints(m), equalities(m), disequalities(m){
+            UnderApproxState(ast_manager &m) : equalities(m), assertingConstraints(m), disequalities(m){
 
             }
 
@@ -487,12 +487,12 @@ namespace smt {
                             str::state _currState):
 
                             eqLevel(_eqLevel),
-                            diseqLevel(_diseqLevel),
                             eq_combination(_eq_combination),
+                            diseqLevel(_diseqLevel),
                             importantVars(_importantVars),
-                            assertingConstraints(m),
                             equalities(m),
                             disequalities(m),
+                            assertingConstraints(m),
                             currState(_currState){
                 assertingConstraints.reset();
                 equalities.reset();
@@ -611,8 +611,8 @@ namespace smt {
                     th(th),
                     m_sort(s),
                     node(node),
-                    importantVar(importantVar),
                     arr_node(arr_node),
+                    importantVar(importantVar),
                     regex(regex),
                     len(len){
             }
@@ -781,6 +781,8 @@ namespace smt {
                         }
                     }
                 }
+
+                return false;
             }
 
             std::vector<zstring> collectAlternativeComponents(expr* v){
@@ -865,6 +867,8 @@ namespace smt {
                                 << std::endl;);
                     SASSERT(false);
                 }
+
+                return false;
             }
 
             bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
@@ -1346,6 +1350,7 @@ namespace smt {
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
+                void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
                 bool is_equal(UnderApproxState preState, UnderApproxState currState);
                     bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);

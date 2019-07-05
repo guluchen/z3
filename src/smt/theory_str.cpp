@@ -744,25 +744,26 @@ namespace smt {
             /* Options */
 
               opt_DisableIntegerTheoryIntegration(false),
-              opt_ConcatOverlapAvoid(true),
+
             /* Internal setup */
               search_started(false),
+              opt_ConcatOverlapAvoid(true),
               m_autil(m),
               m_arrayUtil(m),
-              u(m),
               m_scope_level(0),
+              u(m),
               m_rewrite(m),
               m_seq_rewrite(m),
               m_trail(m),
               m_delayed_axiom_setup_terms(m),
               m_delayed_assertions_todo(m),
               m_persisted_axiom_todo(m),
-              contains_map(m),
               string_int_conversion_terms(m),
-              totalCacheAccessCount(0),
+              contains_map(m),
               m_fresh_id(0),
-              m_trail_stack(*this),
+              totalCacheAccessCount(0),
               m_find(*this),
+              m_trail_stack(*this),
               m_mk_aut(m),
               m_res(m),
               uState(m),
@@ -856,8 +857,6 @@ namespace smt {
      * or else returns NULL if no concrete value was derived.
      */
     app * theory_str::mk_value_helper(app * n, model_generator& mg) {
-        ast_manager& m = get_manager();
-        context & ctx = get_context();
         if (u.str.is_string(n)) {
             return n;
         } else if (u.str.is_concat(n)) {
@@ -1201,8 +1200,6 @@ namespace smt {
      */
     bool theory_str::is_trivial_eq_concat(expr* x, expr* y){
         if (u.str.is_concat(x) && u.str.is_concat(y)) {
-            ast_manager & m = get_manager();
-
             expr* x0 = to_app(x)->get_arg(0);
             expr* x1 = to_app(x)->get_arg(1);
             expr* y0 = to_app(y)->get_arg(0);
@@ -1446,12 +1443,11 @@ namespace smt {
     }
 
     bool theory_str::new_eq_check_wrt_disequalities(expr* n, expr_ref_vector premises, zstring containKey, expr_ref conclusion){
-        context & ctx = get_context();
         ast_manager & m = get_manager();
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(n, m) << std::endl;);
 
         expr_ref_vector eqs(m);
-        expr *value = collect_eq_nodes(n, eqs);
+        collect_eq_nodes(n, eqs);
         for (expr_ref_vector::iterator itor = eqs.begin(); itor != eqs.end(); itor++) {
             for (const auto& nn : m_wi_expr_memo) {
                 expr* key;
@@ -1512,7 +1508,6 @@ namespace smt {
         expr* contain = nullptr;
         if (is_contain_equality(lhs, contain)) {
             if (u.str.is_extract(rhs)) {
-                expr* arg0 = to_app(rhs)->get_arg(0);
                 expr* arg1 = to_app(rhs)->get_arg(1);
                 expr* arg2 = to_app(rhs)->get_arg(2);
                 rational value;
@@ -1520,7 +1515,6 @@ namespace smt {
                     // check 3rd arg
                     if (u.str.is_index(arg2)) {
                         app* indexApp = to_app(arg2);
-                        expr* arg0_index = indexApp->get_arg(0);
                         expr* arg1_index = indexApp->get_arg(1);
                         expr* arg2_index = indexApp->get_arg(2);
                         if (arg1_index == contain && arg2_index == arg1){
@@ -1528,11 +1522,9 @@ namespace smt {
                         }
                     }
                     else {
-                        bool found_index = false;
                         for (int i = 0; i < to_app(arg2)->get_num_args(); ++i)
                             if (u.str.is_index(to_app(arg2)->get_arg(i))){
                                 app* indexApp = to_app(to_app(arg2)->get_arg(i));
-                                expr* arg0_index = indexApp->get_arg(0);
                                 expr* arg1_index = indexApp->get_arg(1);
                                 expr* arg2_index = indexApp->get_arg(2);
                                 if (arg1_index == contain && arg2_index == arg1) {
@@ -2048,12 +2040,14 @@ namespace smt {
             return node;
         } else {
             expr * resultAst = mk_string("");
-            for (unsigned i = 0; i < argVec.size(); ++i) {
+            STRACE("str", tout << __LINE__ <<  mk_ismt2_pp(node, m) << std::endl;);
+            for (int i = argVec.size() - 1; i >= 0; --i) {
                 bool vArgHasEqcValue = false;
                 expr * vArg = get_eqc_value(argVec[i], vArgHasEqcValue);
-                resultAst = mk_concat(resultAst, vArg);
+                resultAst = mk_concat(vArg, resultAst);
             }
-            TRACE("str", tout << mk_ismt2_pp(node, m) << " is simplified to " << mk_ismt2_pp(resultAst, m) << std::endl;);
+
+            STRACE("str", tout << mk_ismt2_pp(node, m) << " is simplified to " << mk_ismt2_pp(resultAst, m) << std::endl;);
 
             if (in_same_eqc(node, resultAst)) {
                 TRACE("str", tout << "SKIP: both concats are already in the same equivalence class" << std::endl;);
@@ -2801,7 +2795,6 @@ namespace smt {
 
                 } else {
                     // if it has languages, take the 1st one
-                    bool tmpFound = false;
                     if (regex_in_var_reg_str_map.contains(el)) {
                         expr* tmp = nullptr;
                         expr_ref_vector tmpList(m);
@@ -3516,7 +3509,6 @@ namespace smt {
 
     void theory_str::new_diseq_eh(theory_var x, theory_var y) {
         ast_manager& m = get_manager();
-        context & ctx = get_context();
 
         expr *const n1 = get_enode(x)->get_owner();
         expr *const n2 = get_enode(y)->get_owner();
@@ -4008,7 +4000,6 @@ namespace smt {
     }
 
     void theory_str::pop_scope_eh(const unsigned num_scopes) {
-        ast_manager &m = get_manager();
         STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         m_scope_level -= num_scopes;
 
@@ -4085,10 +4076,10 @@ namespace smt {
         vector<expr_ref_vector> cores;
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
-            return FC_DONE;
-
-        newConstraintTriggered = false;
+//        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
+//            return FC_DONE;
+//
+//        newConstraintTriggered = false;
         dump_assignments();
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
@@ -4195,21 +4186,7 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        for (const auto& com : eq_combination){
-            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
-            for (const auto& e : com.second)
-            STRACE("str",
-                   if (!u.str.is_concat(e))
-                       tout << "\t\t" << mk_pp(e, m) << std::endl;
-                   else {
-                       ptr_vector<expr> childrenVector;
-                       get_nodes_in_concat(e, childrenVector);
-                       tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
-                           tout << mk_pp(childrenVector[i], m)  << " ";
-                       tout << std::endl;
-                   });
-        }
+        print_eq_combination(eq_combination);
 
         bool axiomAdded = false;
         // enhancement: propagation of value/length information
@@ -4234,38 +4211,15 @@ namespace smt {
 
         std::set<expr*> notImportant;
         refine_important_vars(importantVars, notImportant, eq_combination);
-        for (const auto& com : eq_combination){
-            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
-            for (const auto& e : com.second)
-            STRACE("str",
-                   if (!u.str.is_concat(e))
-                       tout << "\t\t" << mk_pp(e, m) << std::endl;
-                   else {
-                       ptr_vector<expr> childrenVector;
-                       get_nodes_in_concat(e, childrenVector);
-                       tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
-                           tout << mk_pp(childrenVector[i], m)  << " ";
-                       tout << std::endl;
-                   });
-        }
+        print_eq_combination(eq_combination);
 
-        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
-        for (const auto& com : eq_combination){
-            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
-            for (const auto& e : com.second)
-            STRACE("str",
-                   if (!u.str.is_concat(e))
-                       tout << "\t\t" << mk_pp(e, m) << std::endl;
-                   else {
-                       ptr_vector<expr> childrenVector;
-                       get_nodes_in_concat(e, childrenVector);
-                       tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
-                           tout << mk_pp(childrenVector[i], m)  << " ";
-                       tout << std::endl;
-                   });
-        }
+        subNodes.clear();
+        _causes.clear();
+        eq_combination = construct_eq_combination(_causes, subNodes, importantVars);
+
+//        eq_combination = refine_eq_combination(importantVars, eq_combination, subNodes, notImportant);
+//        print_eq_combination(eq_combination);
+
         std::map<expr*, expr*> causes;
         fetch_guessed_core_exprs(eq_combination, guessedEqs);
         for (const auto& com : eq_combination){
@@ -4692,7 +4646,6 @@ namespace smt {
             }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         if (ands.size() > 0) {
-            context & ctx = get_context();
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " adding constraint." << std::endl;);
             expr_ref_vector cores(m);
             fetch_guessed_exprs_with_scopes(cores);
@@ -4706,7 +4659,6 @@ namespace smt {
     }
 
     expr* theory_str::optimize_combination(expr* x, expr* y){
-        ast_manager & m = get_manager();
         ptr_vector<expr> nodes_x;
         get_nodes_in_concat(x, nodes_x);
 
@@ -6385,6 +6337,25 @@ namespace smt {
         return convert_equalities(v_combination, connectedVars, causes);
     }
 
+    void theory_str::print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){
+        ast_manager & m = get_manager();
+        for (const auto& com : eq_combination){
+            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            for (const auto& e : com.second)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
+        }
+    }
+
     bool theory_str::is_equal(UnderApproxState preState, UnderApproxState currState){
         ast_manager & m = get_manager();
         std::map<expr*, std::set<expr*>> _eq_combination = preState.eq_combination;
@@ -6520,7 +6491,6 @@ namespace smt {
     }
 
     bool theory_str::is_weaker_expr_sets(expr_ref_vector curr, expr_ref_vector prev){
-        context & ctx = get_context();
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << curr.size() << " vs " << curr.size() << std::endl;);
         // check if prev is WEAKER than curr, means all exprs in prev are in curr
@@ -6636,7 +6606,6 @@ namespace smt {
         return;
 
         ast_manager & m = get_manager();
-        context & ctx = get_context();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
 
         expr_ref_vector cases(m);
@@ -6684,7 +6653,6 @@ namespace smt {
 
     void theory_str::handle_NOTEqual_const(expr* lhs, zstring rhs){
         ast_manager & m = get_manager();
-        context & ctx = get_context();
         expr_ref_vector cases(m);
         expr_ref lenLhs(mk_strlen(lhs), m);
         expr_ref lenRhs(mk_int(rhs.length()), m);
@@ -7493,7 +7461,6 @@ namespace smt {
 
     void theory_str::assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded){
         ast_manager &m = get_manager();
-        context &ctx = get_context();
         if (e != nullptr) {
             if (causes.find(var) != causes.end()) {
                 STRACE("str", tout << __LINE__ <<  " has causes" << std::endl;);
@@ -7533,7 +7500,6 @@ namespace smt {
     }
 
     void theory_str::negate_context(){
-        context & ctx = get_context();
         ast_manager &m = get_manager();
         expr_ref_vector guessedEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs);
@@ -7550,7 +7516,6 @@ namespace smt {
     }
 
     void theory_str::negate_context(expr_ref_vector v){
-        context & ctx = get_context();
         ast_manager &m = get_manager();
         expr_ref_vector guessedEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs);
@@ -8022,7 +7987,6 @@ namespace smt {
             collect_strs_in_membership(to_app(v)->get_arg(1), ret);
         }
         else if (u.re.is_star(v) || u.re.is_plus(v)) {
-            expr* arg0 = to_app(v)->get_arg(0);
             collect_strs_in_membership(to_app(v)->get_arg(0), ret);
         }
         else if (u.re.is_concat(v)){
@@ -8098,9 +8062,6 @@ namespace smt {
      *
      */
     zstring theory_str::getStdRegexStr(expr* regex) {
-
-        ast_manager &m = get_manager();
-        context & ctx = get_context();
         if (u.re.is_to_re(regex)) {
             expr* arg0 = to_app(regex)->get_arg(0);
             zstring value;
@@ -9579,7 +9540,6 @@ namespace smt {
         else
             u.str.is_string(a.first, content);
 
-        int currentLength = 0;
         for (unsigned i = 0; i < elementNames.size(); ++i){
             if (elementNames[i].second >= 0) /* not const */ {
                 addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[i]),
@@ -11190,8 +11150,6 @@ namespace smt {
 
     expr* theory_str::getExprVarFlatArray(expr* e){
         ensure_enode(e);
-        context & ctx   = get_context();
-
         if (arrMap.find(e) != arrMap.end())
             return arrMap[e];
         expr_ref_vector eqNodeSet(get_manager());
@@ -12218,7 +12176,6 @@ namespace smt {
             expr* lhs,
             expr* rhs,
             expr* var){
-        ast_manager &m = get_manager();
         /* cut prefix */
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
@@ -12807,7 +12764,6 @@ namespace smt {
 
     std::vector<zstring> theory_str::collect_all_inequalities(expr* nn){
         ast_manager &m = get_manager();
-        context& ctx = get_context();
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
         std::vector<zstring> maxDiffStrs;
@@ -12901,7 +12857,7 @@ namespace smt {
                 if (u.str.is_concat(we.second.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.second.get(), tmp)){
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << tmp << std::endl;);
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
                         return true;
                     }
                 }
@@ -12911,7 +12867,7 @@ namespace smt {
                 if (u.str.is_concat(we.first.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.first.get(), tmp)){
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << tmp << std::endl;);
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
                         return true;
                     }
                 }
@@ -13922,11 +13878,9 @@ namespace smt {
             m_basicstr_axiom_todo.reset();
             STRACE("str", tout << "reset m_basicstr_axiom_todo" << std::endl;);
 
-            for (auto const& pair : m_str_eq_todo) {
-                enode * lhs = pair.first;
-                enode * rhs = pair.second;
-//                handle_equality(lhs->get_owner(), rhs->get_owner());
-            }
+//            for (auto const& pair : m_str_eq_todo) {
+//                handle_equality(pair.first->get_owner(), pair.second->get_owner());
+//            }
             m_str_eq_todo.reset();
 
             for (auto const& el : m_concat_axiom_todo) {
@@ -13934,9 +13888,9 @@ namespace smt {
             }
             m_concat_axiom_todo.reset();
 
-            for (auto const& el : m_concat_eval_todo) {
+//            for (auto const& el : m_concat_eval_todo) {
 //                try_eval_concat(el);
-            }
+//            }
             m_concat_eval_todo.reset();
 
             while(true) {
@@ -14284,7 +14238,7 @@ namespace smt {
                     app* indexOfApp = to_app(arg1);
                     expr* arg2_arg0 = indexOfApp->get_arg(0);
                     expr* arg2_arg1 = indexOfApp->get_arg(1);
-                    expr* arg2_arg2 = indexOfApp->get_arg(2);
+//                    expr* arg2_arg2 = indexOfApp->get_arg(2);
 
                     // same var, same keyword
                     if (arg2_arg0 == arg0 && arg2_arg1 == ex->get_arg(1)){
@@ -15227,7 +15181,6 @@ namespace smt {
             expr_ref lenAssert(ctx.mk_eq_atom(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-            expr* tmp = nullptr;
 //            if (!is_contain_equality(concatAst, tmp))
             {
                 // | n1 | = 0 --> concat = n2
@@ -15454,7 +15407,6 @@ namespace smt {
     // We only check m_find for a string constant.
 
     expr * theory_str::z3str2_get_eqc_value(expr * n , bool & hasEqcValue) {
-        ast_manager &m = get_manager();
         theory_var curr = get_var(n);
         if (curr != null_theory_var) {
             curr = m_find.find(curr);
@@ -16328,7 +16280,6 @@ namespace smt {
     }
 
     std::set<expr*> theory_str::collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){
-        ast_manager& m = get_manager();
         std::set<expr*> allvars;
         for (const auto& eq : eq_combination){
             // collect vars or not
@@ -16376,8 +16327,6 @@ namespace smt {
     }
 
     void theory_str::fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs) {
-        ast_manager& m = get_manager();
-        context& ctx = get_context();
         guessedExprs.append(uState.equalities);
         fetch_guessed_core_exprs(uState.eq_combination, guessedExprs);
     }
@@ -16417,7 +16366,6 @@ namespace smt {
             if (!m.is_not(mful_scope_levels[i].get()))
             {
                 literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-                int assignLvl = ctx.get_assign_level(tmp);
 
                 STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(mful_scope_levels[i].get(), m) << std::endl;);
 
