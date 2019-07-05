@@ -460,7 +460,7 @@ namespace smt {
 
         const bool not_contains::is_invalid_by_syntatic_check() const{
 
-            std::_List_const_iterator<element> pos = std::search(
+            std::list<element>::const_iterator pos = std::search(
                     m_superstring.content().begin(), m_superstring.content().end(),
                     m_substring.content().begin(), m_substring.content().end());
 
