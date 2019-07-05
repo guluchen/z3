@@ -808,9 +808,13 @@ namespace smt {
         STRACE("str", tout << "[Build State]\nmembership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
         for (const auto &m : m_membership_todo) {
-            SASSERT(is_const_fun(m.first));
-            zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
-            result.add_membership({element::t::VAR, name, m.first}, m.second);
+            if(is_const_fun(m.first)){
+                zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
+                result.add_membership({element::t::VAR, name, m.first}, m.second);
+            }else{
+                //TODO:check if m.first is an instance in m.second
+
+            }
             STRACE("str", tout << m.first << " is in " << m.second << '\n';);
         }
         STRACE("str", tout << "word equation todo:\n";);
