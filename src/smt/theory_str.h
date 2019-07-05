@@ -1990,7 +1990,11 @@ namespace smt {
                     std::set<expr*> s,
                         std::set<std::pair<expr*, int>> importantVars,
                     std::set<expr*> notImportantVars);
-                    std::set<expr*> refine_all_duplication(std::set<expr*> s);
+                std::set<expr*> refine_eq_set(
+                        expr* var,
+                        std::set<expr*> s,
+                        std::set<std::pair<expr*, int>> importantVars);
+                    std::set<expr*> refine_all_duplications(std::set<expr*> s);
                     bool are_equal_concat(expr* lhs, expr* rhs);
                 std::set<expr*> refine_eq_set(
                     std::set<expr*> s,

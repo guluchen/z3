@@ -13133,12 +13133,13 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
+            std::set<expr*> c_second = refine_eq_set(c.first, c.second, importantVars);
             bool important = is_important(c.first, importantVars);
             if (!important) {
                 // the var is too complicated
-                if (c.second.size() > 20) {
+                if (c_second.size() > 20) {
                     importantVars.insert(std::make_pair(c.first, -1));
-                    ret[c.first] = c.second;
+                    ret[c.first] = c_second;
                 }
                 else if (subNodes.find(c.first) == subNodes.end()) {
                     if (u.str.is_concat(c.first)) {
@@ -13155,12 +13156,12 @@ namespace smt {
                             }
 
                         if (importantConcat)
-                            ret[c.first] = c.second;
+                            ret[c.first] = c_second;
                         else {
                             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
                             // remove c.first from the list
                             std::set<expr*> tmp;
-                            for (const auto& cc : c.second)
+                            for (const auto& cc : c_second)
                                 if (cc != c.first){
                                     tmp.insert(cc);
                                 }
@@ -13171,7 +13172,7 @@ namespace smt {
                     }
                     else {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root var node  " << mk_pp(c.first, get_manager()) << std::endl;);
-                        ret[c.first] = c.second;
+                        ret[c.first] = c_second;
                     }
 
                 }
@@ -13182,7 +13183,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important node  " << mk_pp(c.first, get_manager()) << std::endl;);
                 if (subNodes.find(c.first) == subNodes.end())
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
-                ret[c.first] = c.second;
+                ret[c.first] = c_second;
             }
         }
         return ret;
@@ -13347,7 +13348,7 @@ namespace smt {
             std::set<expr*> notImportantVars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         ast_manager &m = get_manager();
-        s = refine_all_duplication(s);
+        s = refine_all_duplications(s);
         std::set<expr*> ret;
         for (std::set<expr*>::iterator it = s.begin(); it != s.end(); ++it) {
             if (u.str.is_concat(*it)) {
@@ -13425,7 +13426,66 @@ namespace smt {
         return ret;
     }
 
-    std::set<expr*> theory_str::refine_all_duplication(std::set<expr*> s) {
+    std::set<expr*> theory_str::refine_eq_set(
+            expr* var,
+            std::set<expr*> s,
+            std::set<std::pair<expr*, int>> importantVars){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
+        ast_manager &m = get_manager();
+        s = refine_all_duplications(s);
+        std::set<expr*> ret;
+        for (std::set<expr*>::iterator it = s.begin(); it != s.end(); ++it) {
+            if (u.str.is_concat(*it)) {
+                ptr_vector<expr> childrenVector;
+                get_all_nodes_in_concat(*it, childrenVector);
+
+                bool notAdd = false;
+
+                if (are_equal_exprs(var, *it)) {
+                    // do not have const or important var
+                    bool found = false;
+                    ptr_vector<expr> v;
+                    get_nodes_in_concat(*it, v);
+                    for (const auto& nn : v)
+                        if (u.str.is_string(nn) || is_important(nn, importantVars)){
+                            found = true;
+                            break;
+                        }
+                    if (found)
+                        notAdd = false;
+                    else
+                        notAdd = true;
+                }
+
+                if (!notAdd)
+                    ret.insert(*it);
+            }
+            else if (is_important(*it, importantVars)  || u.str.is_string(*it))
+                ret.insert(*it);
+        }
+
+        if (ret.size() == 1 && !is_important(var, importantVars)) {
+            // check if none of variable is really important
+            ptr_vector<expr> v;
+            get_all_nodes_in_concat(*ret.begin(), v);
+            bool shouldKeep = false;
+            for (const auto& nn : v) {
+                int tmp;
+                if (is_important(nn, importantVars, tmp) && tmp == -1){
+                    if (u.str.is_string(var)){
+                        shouldKeep = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!shouldKeep)
+                ret.clear();
+        }
+        return ret;
+    }
+
+    std::set<expr*> theory_str::refine_all_duplications(std::set<expr*> s) {
         if (s.size() == 1)
             return s;
         std::vector<expr *> v;
