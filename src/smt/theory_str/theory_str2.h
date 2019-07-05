@@ -118,7 +118,8 @@ namespace smt {
         void add_axiom(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
         void handle_substr(expr *e);
-        void handle_index_of(expr *i);
+        void handle_index_of(expr *e);
+        void handle_replace(expr *e);
         void handle_prefix(expr *e);
         void handle_suffix(expr *e);
         void handle_not_prefix(expr *e);

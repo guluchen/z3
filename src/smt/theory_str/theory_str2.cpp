@@ -14,17 +14,17 @@
 
 
 namespace smt {
-    bool theory_str2::is_over_approximation=false;
+    bool theory_str2::is_over_approximation = false;
 
     namespace {
         bool IN_CHECK_FINAL = false;
     }
 
-    theory_str2::theory_str2(ast_manager& m, const theory_str_params& params)
+    theory_str2::theory_str2(ast_manager &m, const theory_str_params &params)
             : theory{m.mk_family_id("seq")}, m_params{params}, m_rewrite{m}, m_util_a{m},
-              m_util_s{m},m{m}, m_length(m) {}
+              m_util_s{m}, m{m}, m_length(m) {}
 
-    void theory_str2::display(std::ostream& os) const {
+    void theory_str2::display(std::ostream &os) const {
         os << "theory_str display" << std::endl;
     }
 
@@ -33,12 +33,12 @@ namespace smt {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init\n";);
     }
 
-    enode* theory_str2::ensure_enode(expr* e) {
-        context& ctx = get_context();
+    enode *theory_str2::ensure_enode(expr *e) {
+        context &ctx = get_context();
         if (!ctx.e_internalized(e)) {
             ctx.internalize(e, false);
         }
-        enode* n = ctx.get_enode(e);
+        enode *n = ctx.get_enode(e);
         ctx.mark_as_relevant(n);
         return n;
     }
@@ -50,8 +50,7 @@ namespace smt {
         }
         if (is_attached_to_var(n)) {
             return n->get_th_var(get_id());
-        }
-        else {
+        } else {
             theory_var v = theory::mk_var(n);
             get_context().attach_th_var(n, this, v);
             get_context().mark_as_relevant(n);
@@ -64,7 +63,7 @@ namespace smt {
         (void) gate_ctx;
         STRACE("str", tout << "internalize_atom: gate_ctx is " << gate_ctx << ", "
                            << mk_pp(atom, get_manager()) << '\n';);
-        context& ctx = get_context();
+        context &ctx = get_context();
         if (ctx.b_internalized(atom)) {
             STRACE("str", tout << "done before\n";);
             return true;
@@ -73,7 +72,7 @@ namespace smt {
     }
 
     bool theory_str2::internalize_term(app *const term) {
-        context& ctx = get_context();
+        context &ctx = get_context();
         if (ctx.e_internalized(term)) {
             enode *e = ctx.get_enode(term);
             mk_var(e);
@@ -91,8 +90,7 @@ namespace smt {
         enode *e = nullptr;
         if (ctx.e_internalized(term)) {
             e = ctx.get_enode(term);
-        }
-        else {
+        } else {
             e = ctx.mk_enode(term, false, m.is_bool(term), true);
         }
         mk_var(e);
@@ -102,11 +100,11 @@ namespace smt {
         return true;
     }
 
-    void theory_str2::apply_sort_cnstr(enode* n, sort* s) {
+    void theory_str2::apply_sort_cnstr(enode *n, sort *s) {
         mk_var(n);
     }
 
-    void theory_str2::print_ctx(context& ctx) {  // test_hlin
+    void theory_str2::print_ctx(context &ctx) {  // test_hlin
         std::cout << "~~~~~ print ctx start ~~~~~~~\n";
 //        context& ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
@@ -115,17 +113,17 @@ namespace smt {
         ctx.get_assignments(Assigns);
         std::cout << "~~~~~~ from get_asserted_formulas ~~~~~~\n";
         for (unsigned i = 0; i < nFormulas; ++i) {
-            expr * ex = ctx.get_asserted_formula(i);
-            std::cout << mk_pp(ex,get_manager()) << " relevant? "<<ctx.is_relevant(ex)<<std::endl;
+            expr *ex = ctx.get_asserted_formula(i);
+            std::cout << mk_pp(ex, get_manager()) << " relevant? " << ctx.is_relevant(ex) << std::endl;
         }
         std::cout << "~~~~~~ from get_guessed_literals ~~~~~~\n";
-        for (auto & e : Literals){
-            std::cout << mk_pp(e,get_manager()) << " relevant? "<<ctx.is_relevant(e)<< std::endl;
+        for (auto &e : Literals) {
+            std::cout << mk_pp(e, get_manager()) << " relevant? " << ctx.is_relevant(e) << std::endl;
         }
         std::cout << "~~~~~~ from get_assignments ~~~~~~\n";
-        for (auto & e : Assigns){
+        for (auto &e : Assigns) {
 //            print_ast(e);
-            std::cout << mk_pp(e,get_manager()) << " relevant? "<<ctx.is_relevant(e) << std::endl;
+            std::cout << mk_pp(e, get_manager()) << " relevant? " << ctx.is_relevant(e) << std::endl;
         }
         std::cout << "~~~~~ print ctx end ~~~~~~~~~\n";
     }
@@ -152,17 +150,17 @@ namespace smt {
 
     void theory_str2::init_search_eh() {
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
-        context& ctx = get_context();
+        context &ctx = get_context();
         unsigned nFormulas = ctx.get_num_asserted_formulas();
         for (unsigned i = 0; i < nFormulas; ++i) {
-            expr * ex = ctx.get_asserted_formula(i);
-                string_theory_propagation(ex);
+            expr *ex = ctx.get_asserted_formula(i);
+            string_theory_propagation(ex);
         }
         STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
 
     }
 
-    void theory_str2::string_theory_propagation(expr * expr) {
+    void theory_str2::string_theory_propagation(expr *expr) {
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
 
         ast_manager &m = get_manager();
@@ -171,7 +169,7 @@ namespace smt {
         if (!ctx.e_internalized(expr)) {
             ctx.internalize(expr, false);
         }
-        enode* n = ctx.get_enode(expr);
+        enode *n = ctx.get_enode(expr);
         ctx.mark_as_relevant(n);
 
         sort *expr_sort = m.get_sort(expr);
@@ -186,7 +184,7 @@ namespace smt {
             }
         }
         // if expr is an application, recursively inspect all arguments
-        if (is_app(expr)&&!m_util_s.str.is_length(expr)) {
+        if (is_app(expr) && !m_util_s.str.is_length(expr)) {
             app *term = to_app(expr);
             unsigned num_args = term->get_num_args();
             for (unsigned i = 0; i < num_args; i++) {
@@ -198,15 +196,15 @@ namespace smt {
 
     }
 
-    void theory_str2::propagate_concat_axiom(enode * cat) {
+    void theory_str2::propagate_concat_axiom(enode *cat) {
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
 
-        bool on_screen=false;
+        bool on_screen = false;
 
 
-        app * a_cat = cat->get_owner();
+        app *a_cat = cat->get_owner();
         SASSERT(m_util_s.str.is_concat(a_cat));
-        ast_manager & m = get_manager();
+        ast_manager &m = get_manager();
 
         // build LHS
         expr_ref len_xy(m);
@@ -215,8 +213,8 @@ namespace smt {
 
         // build RHS: start by extracting x and y from Concat(x, y)
         SASSERT(a_cat->get_num_args() == 2);
-        app * a_x = to_app(a_cat->get_arg(0));
-        app * a_y = to_app(a_cat->get_arg(1));
+        app *a_x = to_app(a_cat->get_arg(0));
+        app *a_y = to_app(a_cat->get_arg(1));
         expr_ref len_x(m);
         len_x = m_util_s.str.mk_length(a_x);
         SASSERT(len_x);
@@ -230,27 +228,31 @@ namespace smt {
         len_x_plus_len_y = m_util_a.mk_add(len_x, len_y);
         SASSERT(len_x_plus_len_y);
 
-        if(on_screen) std::cout<<"[Concat Axiom] "<<mk_pp(len_xy,m)<<" = "<<mk_pp(len_x,m)<<" + "<<mk_pp(len_y,m)<<std::endl;
+        if (on_screen)
+            std::cout << "[Concat Axiom] " << mk_pp(len_xy, m) << " = " << mk_pp(len_x, m) << " + " << mk_pp(len_y, m)
+                      << std::endl;
 
         // finally assert equality between the two subexpressions
-        app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
+        app *eq = m.mk_eq(len_xy, len_x_plus_len_y);
         SASSERT(eq);
         add_axiom(eq);
         STRACE("str", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
 
     }
 
-    void theory_str2::propagate_basic_string_axioms(enode * str) {
-        bool on_screen=false;
+    void theory_str2::propagate_basic_string_axioms(enode *str) {
+        bool on_screen = false;
 
-        context & ctx = get_context();
-        ast_manager & m = get_manager();
+        context &ctx = get_context();
+        ast_manager &m = get_manager();
 
         {
-            sort * a_sort = m.get_sort(str->get_owner());
-            sort * str_sort = m_util_s.str.mk_string_sort();
+            sort *a_sort = m.get_sort(str->get_owner());
+            sort *str_sort = m_util_s.str.mk_string_sort();
             if (a_sort != str_sort) {
-                STRACE("str", tout << "WARNING: not setting up string axioms on non-string term " << mk_pp(str->get_owner(), m) << std::endl;);
+                STRACE("str",
+                       tout << "WARNING: not setting up string axioms on non-string term " << mk_pp(str->get_owner(), m)
+                            << std::endl;);
                 return;
             }
         }
@@ -262,10 +264,10 @@ namespace smt {
         }
 
         // generate a stronger axiom for constant strings
-        app * a_str = str->get_owner();
+        app *a_str = str->get_owner();
 
         if (m_util_s.str.is_string(a_str)) {
-            if(on_screen) std::cout<<"[ConstStr Axiom] "<<mk_pp(a_str,m)<<std::endl;
+            if (on_screen) std::cout << "[ConstStr Axiom] " << mk_pp(a_str, m) << std::endl;
 
             expr_ref len_str(m);
             len_str = m_util_s.str.mk_length(a_str);
@@ -282,7 +284,7 @@ namespace smt {
         } else {
             // build axiom 1: Length(a_str) >= 0
             {
-                if(on_screen) std::cout<<"[Non-Zero Axiom] "<<mk_pp(a_str,m)<<std::endl;
+                if (on_screen) std::cout << "[Non-Zero Axiom] " << mk_pp(a_str, m) << std::endl;
 
                 // build LHS
                 expr_ref len_str(m);
@@ -293,7 +295,7 @@ namespace smt {
                 zero = m_util_a.mk_numeral(rational(0), true);
                 SASSERT(zero);
                 // build LHS >= RHS and assert
-                app * lhs_ge_rhs = m_util_a.mk_ge(len_str, zero);
+                app *lhs_ge_rhs = m_util_a.mk_ge(len_str, zero);
                 SASSERT(lhs_ge_rhs);
                 STRACE("str", tout << "string axiom 1: " << mk_ismt2_pp(lhs_ge_rhs, m) << std::endl;);
                 add_axiom(lhs_ge_rhs);
@@ -301,7 +303,7 @@ namespace smt {
 
             // build axiom 2: Length(a_str) == 0 <=> a_str == ""
             {
-                if(on_screen) std::cout<<"[Zero iff Empty Axiom] "<<mk_pp(a_str,m)<<std::endl;
+                if (on_screen) std::cout << "[Zero iff Empty Axiom] " << mk_pp(a_str, m) << std::endl;
 
                 // build LHS of iff
                 expr_ref len_str(m);
@@ -328,10 +330,12 @@ namespace smt {
 
         }
     }
-    void theory_str2::add_length_axiom(expr* n) {
+
+    void theory_str2::add_length_axiom(expr *n) {
         add_axiom(m_util_a.mk_ge(n, m_util_a.mk_int(0)));
 
     }
+
     void theory_str2::relevant_eh(app *const n) {
         STRACE("str", tout << "relevant: " << mk_pp(n, get_manager()) << '\n';);
 
@@ -340,23 +344,19 @@ namespace smt {
         }
         if (m_util_s.str.is_extract(n)) {
             handle_substr(n);
-        }
-        else if (m_util_s.str.is_itos(n)) {
+        } else if (m_util_s.str.is_itos(n)) {
             //handle_itos(n);
         } else if (m_util_s.str.is_stoi(n)) {
             //handle_stoi(n);
-        }
-        else if (m_util_s.str.is_at(n)) {
+        } else if (m_util_s.str.is_at(n)) {
             handle_char_at(n);
-        }
-        else if (m_util_s.str.is_replace(n)) {
-            //handle_replace(n);
-        }
-        else if (m_util_s.str.is_index(n)) {
+        } else if (m_util_s.str.is_replace(n)) {
+            handle_replace(n);
+        } else if (m_util_s.str.is_index(n)) {
             handle_index_of(n);
         }
 
-        expr* arg;
+        expr *arg;
         if (m_util_s.str.is_length(n, arg) && !has_length(arg) && get_context().e_internalized(arg)) {
             enforce_length(arg);
         }
@@ -364,10 +364,10 @@ namespace smt {
     }
 
     void theory_str2::assign_eh(bool_var v, const bool is_true) {
-        ast_manager& m = get_manager();
-        STRACE("str", tout << "assign: bool_var #" << v << " is " << is_true << ", "
-                           << mk_pp(get_context().bool_var2expr(v), m) << '\n';);
-        context& ctx = get_context();
+        ast_manager &m = get_manager();
+        STRACE("strg", tout << "assign: bool_var #" << v << " is " << is_true << ", "
+                            << mk_pp(get_context().bool_var2expr(v), m) << "@ scope level:" << m_scope_level << '\n';);
+        context &ctx = get_context();
         expr *e = ctx.bool_var2expr(v);
         expr *e1 = nullptr, *e2 = nullptr;
         if (m_util_s.str.is_prefix(e, e1, e2)) {
@@ -386,7 +386,8 @@ namespace smt {
             if (is_true) {
                 handle_contains(e);
             } else {
-                m_not_contains_todo.push_back({{e1,m},{e2,m}});
+                m_not_contains_todo.push_back({{e1, m},
+                                               {e2, m}});
             }
         } else if (m_util_s.str.is_in_re(e)) {
             handle_in_re(e, is_true);
@@ -397,39 +398,37 @@ namespace smt {
     }
 
     void theory_str2::new_eq_eh(theory_var x, theory_var y) {
-        m_word_eq_var_todo.push_back({x,y});
+        m_word_eq_var_todo.push_back({x, y});
 
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
 
-        if(axiomatized_eq_vars.count(std::make_pair(x,y))==0){
-            axiomatized_eq_vars.insert(std::make_pair(x,y));
+        if (axiomatized_eq_vars.count(std::make_pair(x, y)) == 0) {
+            axiomatized_eq_vars.insert(std::make_pair(x, y));
 
 
-
-            literal l_eq_r = mk_eq(l,r,false);
-            literal len_l_eq_len_r = mk_eq(m_util_s.str.mk_length(l),m_util_s.str.mk_length(r),false);
+            literal l_eq_r = mk_eq(l, r, false);
+            literal len_l_eq_len_r = mk_eq(m_util_s.str.mk_length(l), m_util_s.str.mk_length(r), false);
             add_axiom({~l_eq_r, len_l_eq_len_r});
         }
         m_word_eq_todo.push_back({l, r});
         STRACE("str", tout << "new_eq: " << l << " = " << r << '\n';);
     }
 
-    template <class T>
-    static T* get_th_arith(context& ctx, theory_id afid, expr* e) {
-        theory* th = ctx.get_theory(afid);
+    template<class T>
+    static T *get_th_arith(context &ctx, theory_id afid, expr *e) {
+        theory *th = ctx.get_theory(afid);
         if (th && ctx.e_internalized(e)) {
-            return dynamic_cast<T*>(th);
-        }
-        else {
+            return dynamic_cast<T *>(th);
+        } else {
             return nullptr;
         }
     }
 
     void theory_str2::new_diseq_eh(theory_var x, theory_var y) {
-        m_word_diseq_var_todo.push_back({x,y});
+        m_word_diseq_var_todo.push_back({x, y});
 
-        ast_manager& m = get_manager();
+        ast_manager &m = get_manager();
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
 
@@ -468,6 +467,7 @@ namespace smt {
         m_word_eq_var_todo.push_scope();
         m_word_diseq_var_todo.push_scope();
         m_membership_todo.push_scope();
+        m_not_contains_todo.push_scope();
         STRACE("str", if (!IN_CHECK_FINAL) tout << "push_scope: " << m_scope_level << '\n';);
     }
 
@@ -478,6 +478,7 @@ namespace smt {
         m_word_eq_var_todo.pop_scope(num_scopes);
         m_word_diseq_var_todo.pop_scope(num_scopes);
         m_membership_todo.pop_scope(num_scopes);
+        m_not_contains_todo.pop_scope(num_scopes);
         m_rewrite.reset();
         STRACE("str", if (!IN_CHECK_FINAL)
             tout << "pop_scope: " << num_scopes << " (back to level " << m_scope_level << ")\n";);
@@ -496,7 +497,7 @@ namespace smt {
         smt_params params;
         params.m_model = true;
         smt::context ctx(m, params);
-        expr * exp = au.mk_ge(au.mk_int(0), au.mk_add(au.mk_int(1), au.mk_int(2)));
+        expr *exp = au.mk_ge(au.mk_int(0), au.mk_add(au.mk_int(1), au.mk_int(2)));
         std::cout << "expr made:\n" << mk_pp(exp, m) << std::endl;
 //        std::cout << "print ctx ... \n";
 //        print_ctx(ctx);
@@ -518,15 +519,15 @@ namespace smt {
         return chk_res;
     }
 
-    bool theory_str2::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver& m_int_solver) {
+    bool theory_str2::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver &m_int_solver) {
         using namespace str;
-        bool on_screen=false;
+        bool on_screen = false;
 
         counter_system cs = counter_system(solver);
         cs.print_counter_system();  // STRACE output
         cs.print_var_expr(get_manager());  // STRACE output
 
-        if(!cs.is_dag()){
+        if (!cs.is_dag()) {
             STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
             apron_counter_system ap_cs = apron_counter_system(cs);
             STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
@@ -540,26 +541,30 @@ namespace smt {
                                                              ap_cs.get_var_expr());
             lenc.pretty_print(get_manager());
             if (!lenc.empty()) {
-                expr_ref lenc_res{lenc.export_z3exp(get_manager()),get_manager()};
-                if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
-                STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;);
-                return m_int_solver.check_sat(lenc_res)==lbool::l_true;
+                expr_ref lenc_res{lenc.export_z3exp(get_manager()), get_manager()};
+                if (on_screen)
+                    std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
+                              << std::endl;  // keep stdout for test
+                STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
+                                   << std::endl;);
+                return m_int_solver.check_sat(lenc_res) == lbool::l_true;
             }
 
-        }else{
-            expr_ref lenc_res=cs.get_length_constraint_for_dag_counter_system(get_manager());
-            if(on_screen) std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager()) << std::endl;  // keep stdout for test
-            return m_int_solver.check_sat(lenc_res)==lbool::l_true;
+        } else {
+            expr_ref lenc_res = cs.get_length_constraint_for_dag_counter_system(get_manager());
+            if (on_screen)
+                std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
+                          << std::endl;  // keep stdout for test
+            return m_int_solver.check_sat(lenc_res) == lbool::l_true;
 
         }
-
 
 
         return true;
     }
 
     final_check_status theory_str2::final_check_eh() {
-        bool on_screen=false;
+        bool on_screen = false;
 
         using namespace str;
         if (m_word_eq_todo.empty()) {
@@ -574,50 +579,50 @@ namespace smt {
 
 
         if (!m_aut_imp) m_aut_imp = std::make_shared<oaut_adaptor>(get_manager(), get_context());
-        state&& root = mk_state_from_todo();
-        STRACE("strg", tout << "[Abbreviation <=> Fullname]\n"<<element::abbreviation_to_fullname(););
+        state &&root = mk_state_from_todo();
+        STRACE("strg", tout << "[Abbreviation <=> Fullname]\n" << element::abbreviation_to_fullname(););
 
-        if(on_screen) std::cout << "root original:\n" << root <<std::endl;
-        STRACE("strg", tout << "root original:\n" << root <<std::endl;);
+        if (on_screen) std::cout << "root original:\n" << root << std::endl;
+        STRACE("strg", tout << "root original:\n" << root << std::endl;);
         root.remove_single_variable_word_term();
-        STRACE("strg", tout << "root removed single var:\n" << root <<std::endl;);
+        STRACE("strg", tout << "root removed single var:\n" << root << std::endl;);
 //        root.merge_elements();
 //        STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
 
 
-        if(on_screen&& is_over_approximation){
-            std::cout<<"Is over-approximation\n";
+        if (on_screen && is_over_approximation) {
+            std::cout << "Is over-approximation\n";
         }
 
-        if (root.unsolvable_by_inference() ) {
+        if (root.unsolvable_by_inference()) {
             STRACE("str", tout << "proved unsolvable by inference\n";);
             block_curr_assignment();
             IN_CHECK_FINAL = false;
             return FC_CONTINUE;
         }
 
-        if(root.word_eqs().size()==0){
+        if (root.word_eqs().size() == 0) {
             if (is_over_approximation)
                 return FC_GIVEUP;
             else
                 return FC_DONE;
         }
 
-        int_expr_solver m_int_solver(get_manager(),get_context().get_fparams());
+        int_expr_solver m_int_solver(get_manager(), get_context().get_fparams());
         m_int_solver.initialize(get_context());
 
 
         solver solver{std::move(root), m_aut_imp};
-        while(solver.unfinished()){
-            solver.resume(get_manager(),get_context(),*this, m_int_solver);
-            std::list<smt::str::state> to_check=solver.get_last_leaf_states();
-            for(auto& s:to_check){
-               bool reachable =  s.is_reachable(get_manager(), m_int_solver, false);
-               if(reachable){
-                   STRACE("str", tout << "Leaf node reachable: \n"<<s<<std::endl;);
-                   if (!is_over_approximation)
-                       return FC_DONE;
-               }
+        while (solver.unfinished()) {
+            solver.resume(get_manager(), get_context(), *this, m_int_solver);
+            std::list<smt::str::state> to_check = solver.get_last_leaf_states();
+            for (auto &s:to_check) {
+                bool reachable = s.is_reachable(get_manager(), m_int_solver, false);
+                if (reachable) {
+                    STRACE("str", tout << "Leaf node reachable: \n" << s << std::endl;);
+                    if (!is_over_approximation)
+                        return FC_DONE;
+                }
             }
         }
 
@@ -640,7 +645,7 @@ namespace smt {
                 counter_system cs = counter_system(solver);
 
                 IN_CHECK_FINAL = false;
-                if(cs.is_dag()&& !is_over_approximation)
+                if (cs.is_dag() && !is_over_approximation)
                     return FC_DONE;
                 else
                     return FC_GIVEUP;
@@ -652,7 +657,7 @@ namespace smt {
         return FC_CONTINUE;
     }
 
-    model_value_proc *theory_str2::mk_value(enode *const n, model_generator& mg) {
+    model_value_proc *theory_str2::mk_value(enode *const n, model_generator &mg) {
         app *const tgt = n->get_owner();
         (void) m;
         STRACE("str", tout << "mk_value: sort is " << mk_pp(m.get_sort(tgt), m) << ", "
@@ -660,15 +665,15 @@ namespace smt {
         return alloc(expr_wrapper_proc, tgt);
     }
 
-    void theory_str2::init_model(model_generator& mg) {
+    void theory_str2::init_model(model_generator &mg) {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "init_model\n";);
     }
 
-    void theory_str2::finalize_model(model_generator& mg) {
+    void theory_str2::finalize_model(model_generator &mg) {
         STRACE("str", if (!IN_CHECK_FINAL) tout << "finalize_model\n";);
     }
 
-    lbool theory_str2::validate_unsat_core(expr_ref_vector& unsat_core) {
+    lbool theory_str2::validate_unsat_core(expr_ref_vector &unsat_core) {
         return l_undef;
     }
 
@@ -689,7 +694,7 @@ namespace smt {
     }
 
     expr_ref theory_str2::mk_sub(expr *a, expr *b) {
-        ast_manager& m = get_manager();
+        ast_manager &m = get_manager();
 
         expr_ref result(m_util_a.mk_sub(a, b), m);
         m_rewrite(result);
@@ -698,15 +703,15 @@ namespace smt {
 
 
     expr_ref
-    theory_str2::mk_skolem(symbol const& name, expr *e1, expr *e2, expr *e3, expr *e4, sort *sort) {
-        ast_manager& m = get_manager();
+    theory_str2::mk_skolem(symbol const &name, expr *e1, expr *e2, expr *e3, expr *e4, sort *sort) {
+        ast_manager &m = get_manager();
         expr *es[4] = {e1, e2, e3, e4};
         unsigned len = e4 ? 4 : (e3 ? 3 : (e2 ? 2 : 1));
 
         if (!sort) {
             sort = m.get_sort(e1);
         }
-        app * a = m_util_s.mk_skolem(name, len, es, sort);
+        app *a = m_util_s.mk_skolem(name, len, es, sort);
 
 //        ctx.internalize(a, false);
 //        mk_var(ctx.get_enode(a));
@@ -721,16 +726,16 @@ namespace smt {
 //            STRACE("str", tout << "new theory_var #" << v << '\n';);
 //        }
 
-        expr_ref ret(a,m);
+        expr_ref ret(a, m);
         string_theory_propagation(ret);
 
-        return expr_ref(a,m);
+        return expr_ref(a, m);
 
     }
 
     literal theory_str2::mk_literal(expr *const e) {
-        ast_manager& m = get_manager();
-        context& ctx = get_context();
+        ast_manager &m = get_manager();
+        context &ctx = get_context();
         expr_ref ex{e, m};
         m_rewrite(ex);
         if (!ctx.e_internalized(ex)) {
@@ -742,14 +747,14 @@ namespace smt {
     }
 
     bool_var theory_str2::mk_bool_var(expr *const e) {
-        ast_manager& m = get_manager();
+        ast_manager &m = get_manager();
         STRACE("str", tout << "mk_bool_var: " << mk_pp(e, m) << '\n';);
         if (!m.is_bool(e)) {
             return null_bool_var;
         }
-        context& ctx = get_context();
+        context &ctx = get_context();
         SASSERT(!ctx.b_internalized(e));
-        const bool_var& bv = ctx.mk_bool_var(e);
+        const bool_var &bv = ctx.mk_bool_var(e);
         ctx.set_var_theory(bv, get_id());
         ctx.set_enode_flag(bv, true);
         return bv;
@@ -773,28 +778,28 @@ namespace smt {
         return word_term::from_variable({ss.str().data()}, e);
     }
 
-    void theory_str2::add_length(expr* l) {
-        expr* e = nullptr;
+    void theory_str2::add_length(expr *l) {
+        expr *e = nullptr;
         VERIFY(m_util_s.str.is_length(l, e));
         SASSERT(!m_length.contains(l));
         m_length.push_back(l);
         m_has_length.insert(e);
     }
+
     /*
   ensure that all elements in equivalence class occur under an application of 'length'
 */
-    void theory_str2::enforce_length(expr* e) {
-        enode* n = ensure_enode(e);
-        enode* n1 = n;
+    void theory_str2::enforce_length(expr *e) {
+        enode *n = ensure_enode(e);
+        enode *n1 = n;
         do {
-            expr* o = n->get_owner();
+            expr *o = n->get_owner();
             if (!has_length(o)) {
                 expr_ref len = mk_len(o);
                 add_length_axiom(len);
             }
             n = n->get_next();
-        }
-        while (n1 != n);
+        } while (n1 != n);
     }
 
     str::state theory_str2::mk_state_from_todo() {
@@ -802,7 +807,7 @@ namespace smt {
         state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
         STRACE("str", tout << "[Build State]\nmembership todo:\n";);
         STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
-        for (const auto& m : m_membership_todo) {
+        for (const auto &m : m_membership_todo) {
             SASSERT(is_const_fun(m.first));
             zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
             result.add_membership({element::t::VAR, name, m.first}, m.second);
@@ -810,24 +815,23 @@ namespace smt {
         }
         STRACE("str", tout << "word equation todo:\n";);
         STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
-        for (const auto& eq : m_word_eq_todo) {
+        for (const auto &eq : m_word_eq_todo) {
             result.add_word_eq({mk_word_term(eq.first), mk_word_term(eq.second)});
             STRACE("str", tout << eq.first << " = " << eq.second << '\n';);
         }
         STRACE("str", tout << "word disequality todo:\n";);
         STRACE("str", if (m_word_diseq_todo.empty()) tout << "--\n";);
-        for (const auto& diseq : m_word_diseq_todo) {
+        for (const auto &diseq : m_word_diseq_todo) {
             result.add_word_diseq({mk_word_term(diseq.first), mk_word_term(diseq.second)});
             STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
         }
 
         STRACE("str", tout << "not contains todo:\n";);
         STRACE("str", if (m_not_contains_todo.empty()) tout << "--\n";);
-        for (const auto& nc : m_not_contains_todo) {
+        for (const auto &nc : m_not_contains_todo) {
             result.add_not_contains({mk_word_term(nc.first), mk_word_term(nc.second)});
-            STRACE("str", tout << "not_contains("<< nc.first << ", " << nc.second << ")\n";);
+            STRACE("str", tout << "not_contains(" << nc.first << ", " << nc.second << ")\n";);
         }
-
 
 
         result.initialize_length_constraint(result.variables());
@@ -837,13 +841,14 @@ namespace smt {
     }
 
     void theory_str2::add_axiom(expr *const e) {
-        bool on_screen =true;
-        STRACE("str_axiom", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        bool on_screen = true;
+        STRACE("str_axiom", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(e, get_manager()) << std::endl;);
 
-        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e,get_manager())<<std::endl;);
+        if (on_screen) STRACE("str_axiom",
+                              std::cout << __LINE__ << " " << __FUNCTION__ << mk_pp(e, get_manager()) << std::endl;);
 
 
-        if(!axiomatized_terms.contains(e)||false) {
+        if (!axiomatized_terms.contains(e) || false) {
             axiomatized_terms.insert(e);
             if (e == nullptr || get_manager().is_true(e)) return;
 //        string_theory_propagation(e);
@@ -861,20 +866,20 @@ namespace smt {
     }
 
     void theory_str2::add_axiom(std::initializer_list<literal> ls) {
-        bool on_screen =true;
+        bool on_screen = true;
 
         STRACE("str", tout << __LINE__ << " enter " << __FUNCTION__ << std::endl;);
-        context& ctx = get_context();
+        context &ctx = get_context();
         literal_vector lv;
-        for (const auto& l : ls) {
+        for (const auto &l : ls) {
             if (l != null_literal && l != false_literal) {
                 ctx.mark_as_relevant(l);
                 lv.push_back(l);
             }
         }
         ctx.mk_th_axiom(get_id(), lv.size(), lv.c_ptr());
-        if(on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__; );
-        if(on_screen) STRACE("str_axiom", ctx.display_literals_verbose(std::cout , lv) <<std::endl;);
+        if (on_screen) STRACE("str_axiom", std::cout << __LINE__ << " " << __FUNCTION__;);
+        if (on_screen) STRACE("str_axiom", ctx.display_literals_verbose(std::cout, lv) << std::endl;);
         STRACE("str_axiom", ctx.display_literals_verbose(tout << "[Assert_c]\n", lv) << '\n';);
         STRACE("str_axiom", tout << __LINE__ << " leave " << __FUNCTION__ << std::endl;);
     }
@@ -887,7 +892,7 @@ namespace smt {
     */
     void theory_str2::handle_char_at(expr *e) {
 
-        ast_manager& m = get_manager();
+        ast_manager &m = get_manager();
         expr *s = nullptr, *i = nullptr;
         VERIFY(m_util_s.str.is_at(e, s, i));
         expr_ref len_e(m_util_s.str.mk_length(e), m);
@@ -940,7 +945,7 @@ namespace smt {
       |e| = min(l, |s| - i) for 0 <= i < |s| and 0 < |l|
     */
     void theory_str2::handle_substr(expr *e) {
-        if(!axiomatized_terms.contains(e)||false) {
+        if (!axiomatized_terms.contains(e) || false) {
             axiomatized_terms.insert(e);
 
             ast_manager &m = get_manager();
@@ -977,7 +982,26 @@ namespace smt {
             add_axiom({~ls_le_0, mk_eq(le, zero, false)});
         }
     }
+    void theory_str2::handle_replace(expr *r) {
+        context& ctx = get_context();
+        expr* a = nullptr, *s = nullptr, *t = nullptr;
+        VERIFY(m_util_s.str.is_replace(r, a, s, t));
+        expr_ref x  = mk_skolem(symbol("m_indexof_left"), a, s);
+        expr_ref y  = mk_skolem(symbol("m_indexof_right"), a, s);
+        expr_ref xty = mk_concat(x, mk_concat(t, y));
+        expr_ref xsy = mk_concat(x, mk_concat(s, y));
+        literal a_emp = mk_eq_empty(a, true);
+        literal s_emp = mk_eq_empty(s, true);
+        literal cnt = mk_literal(m_util_s.str.mk_contains(a, s));
+        add_axiom({~a_emp, s_emp, mk_eq(r, a,false)});
+        add_axiom({cnt,  mk_eq(r, a,false)});
+        add_axiom({~s_emp, mk_eq(r, mk_concat(t, a),false)});
+        add_axiom({~cnt, a_emp, s_emp, mk_eq(a, xsy,false)});
+        add_axiom({~cnt, a_emp, s_emp, mk_eq(r, xty,false)});
+        ctx.force_phase(cnt);
+        tightest_prefix(s, x);
 
+    }
     void theory_str2::handle_index_of(expr *i) {
         if(!axiomatized_terms.contains(i)||false) {
             axiomatized_terms.insert(i);
