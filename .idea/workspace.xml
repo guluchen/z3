@@ -98,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="362">
-              <caret line="4073" column="19" lean-forward="true" selection-start-line="4073" selection-start-column="19" selection-end-line="4073" selection-end-column="19" />
+            <state relative-caret-position="511">
+              <caret line="13168" column="32" selection-start-line="13168" selection-start-column="32" selection-end-line="13168" selection-end-column="32" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -722,12 +722,12 @@
       <workItem from="1555596195940" duration="785004000" />
       <workItem from="1561472013501" duration="84934000" />
       <workItem from="1562210607925" duration="763000" />
-      <workItem from="1562211448830" duration="12353000" />
+      <workItem from="1562211448830" duration="13684000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1027976000" />
+    <option name="totallyTimeSpent" value="1029307000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1110,8 +1110,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="362">
-          <caret line="4073" column="19" lean-forward="true" selection-start-line="4073" selection-start-column="19" selection-end-line="4073" selection-end-column="19" />
+        <state relative-caret-position="511">
+          <caret line="13168" column="32" selection-start-line="13168" selection-start-column="32" selection-end-line="13168" selection-end-column="32" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

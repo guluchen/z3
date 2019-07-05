@@ -13164,7 +13164,9 @@ namespace smt {
                                 if (cc != c.first){
                                     tmp.insert(cc);
                                 }
-                            ret[c.first] = tmp;
+
+                            if (tmp.size() >= 1)
+                                ret[c.first] = tmp;
                         }
                     }
                     else {
