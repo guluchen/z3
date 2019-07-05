@@ -1,0 +1,57 @@
+(declare-fun a () String)
+(declare-fun b () String)
+
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert (not ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert (not ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  )))
+
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - ( - 0 1  ) 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - ( - ( - 0 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - 0 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - ( - 0 1  ) 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - ( - 0 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - 0 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - ( - 0 1  ) 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) ( - 0 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - 0 1  )  ) 0  ))
+(assert ( >= ( + ( str.len a  ) ( - 0 1  )  ) 0  ))
+(assert ( >= ( + ( str.len b  ) 0  ) 0  ))
+(assert ( >= ( + ( str.len a  ) 0  ) 0  ))
+(assert ( >= ( + ( str.len a  ) 0  ) 0  ))(assert ( = ( div ( + ( div ( + ( div ( + ( div ( + ( div ( + ( div ( + ( div ( + ( div ( + ( + ( div ( + ( + ( div ( + ( + ( div ( + ( + ( div ( + ( + ( div ( + ( + -1 ( str.to.int ( str.at a 0  )  )  ) ( str.to.int ( str.at b 0  )  )  ) 2  ) ( str.to.int ( str.at a -1  )  )  ) ( str.to.int ( str.at b -1  )  )  ) 2  ) ( str.to.int ( str.at a -2  )  )  ) ( str.to.int ( str.at b -2  )  )  ) 2  ) ( str.to.int ( str.at a -3  )  )  ) ( str.to.int ( str.at b -3  )  )  ) 2  ) ( str.to.int ( str.at a -4  )  )  ) ( str.to.int ( str.at b -4  )  )  ) 2  ) ( str.to.int ( str.at a -5  )  )  ) ( str.to.int ( str.at b -5  )  )  ) 2  ) ( str.to.int ( str.at a -6  )  )  ) 2  ) ( str.to.int ( str.at a -7  )  )  ) 2  ) ( str.to.int ( str.at a -8  )  )  ) 2  ) ( str.to.int ( str.at a -9  )  )  ) 2  ) ( str.to.int ( str.at a -10  )  )  ) 2  ) ( str.to.int ( str.at a -11  )  )  ) 2  ) ( str.to.int ( str.at a -12  )  )  ) 2  ) 1  ))(assert (str.in.re a (re.+ (re.range "0" "1"))))(assert (str.in.re b (re.+ (re.range "0" "1"))))
+
+(check-sat)
+
+(get-value (a))
+(get-value (b))
