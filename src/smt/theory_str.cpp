@@ -7018,7 +7018,7 @@ namespace smt {
                 cnt++;
         }
 
-        connectingSize = std::min(maxInt + cnt + sumConst, 300);
+        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, maxInt));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
@@ -10034,7 +10034,6 @@ namespace smt {
                 andConstraints.push_back(createLessEqOperator(lenRhs, mk_int(connectingSize)));
                 andConstraints.push_back(createLessEqOperator(lenLhs, mk_int(connectingSize)));
             }
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(createAndOperator(andConstraints), m) << std::endl;);
         }
         return createAndOperator(andConstraints);
     }
