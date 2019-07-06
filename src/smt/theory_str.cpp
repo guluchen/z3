@@ -8289,7 +8289,7 @@ namespace smt {
 //                        STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
 //                    STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
-                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
+//                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
                 }
                 else {
                 }
@@ -14171,7 +14171,6 @@ namespace smt {
 
             zstring strconst;
             u.str.is_string(str->get_owner(), strconst);
-            STRACE("str", tout <<  __FUNCTION__ << ":\"" << strconst.encode().c_str() << "\"" << std::endl;);
             unsigned int l = strconst.length();
             expr_ref len(m_autil.mk_numeral(rational(l), true), m);
 
@@ -14192,7 +14191,6 @@ namespace smt {
                 // build LHS >= RHS and assert
                 app * lhs_ge_rhs = m_autil.mk_ge(len_str, zero);
                 SASSERT(lhs_ge_rhs);
-                STRACE("str", tout << "string axiom 1: " << mk_ismt2_pp(lhs_ge_rhs, m) << std::endl;);
                 assert_axiom(lhs_ge_rhs);
             }
 
@@ -14234,8 +14232,6 @@ namespace smt {
         SASSERT(u.str.is_concat(a_cat));
 
         ast_manager & m = get_manager();
-
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(a_cat, m) << std::endl;);
 
         // build LHS
         expr_ref len_xy(m);
