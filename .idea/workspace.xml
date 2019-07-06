@@ -99,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="421">
-              <caret line="7013" column="33" lean-forward="true" selection-start-line="7013" selection-start-column="33" selection-end-line="7013" selection-end-column="33" />
+            <state relative-caret-position="340">
+              <caret line="3597" column="10" selection-start-line="3597" selection-start-column="10" selection-end-line="3597" selection-end-column="10" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -177,8 +177,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="18900">
-              <caret line="1260" column="38" selection-start-line="1260" selection-start-column="38" selection-end-line="1260" selection-end-column="38" />
+            <state relative-caret-position="190">
+              <caret line="2287" column="12" selection-start-line="2287" selection-start-column="12" selection-end-line="2287" selection-end-column="12" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -190,9 +190,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>under</find>
-      <find>notImportantVars</find>
-      <find>refine_eq_set</find>
       <find>refine_eq_c</find>
       <find>m_phase_available</find>
       <find>handle_trivial_diseq</find>
@@ -220,6 +217,9 @@
       <find>at_same_eq_state</find>
       <find>fetch_guessed_core_exprs</find>
       <find>underapproximation</find>
+      <find>static_a</find>
+      <find>static</find>
+      <find>new_diseq_eh</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -756,12 +756,12 @@
       <workItem from="1562210607925" duration="763000" />
       <workItem from="1562211448830" duration="30783000" />
       <workItem from="1562396972417" duration="3953000" />
-      <workItem from="1562419036143" duration="973000" />
+      <workItem from="1562419036143" duration="3026000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1051332000" />
+    <option name="totallyTimeSpent" value="1053385000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="0" />
@@ -1080,16 +1080,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="421">
-          <caret line="7013" column="33" lean-forward="true" selection-start-line="7013" selection-start-column="33" selection-end-line="7013" selection-end-column="33" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/ref_vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3180">
@@ -1144,10 +1134,20 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18900">
-          <caret line="1260" column="38" selection-start-line="1260" selection-start-column="38" selection-end-line="1260" selection-end-column="38" />
+        <state relative-caret-position="190">
+          <caret line="2287" column="12" selection-start-line="2287" selection-start-column="12" selection-end-line="2287" selection-end-column="12" />
           <folding>
             <element signature="e#9699#19701#1" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="3597" column="10" selection-start-line="3597" selection-start-column="10" selection-end-line="3597" selection-end-column="10" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
           </folding>
         </state>
       </provider>

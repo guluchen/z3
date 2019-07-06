@@ -2922,18 +2922,6 @@ namespace smt {
         expr * constStrAst_2 = collect_eq_nodes(n2, willEqClass);
         expr * constStrAst = (constStrAst_1 != nullptr) ? constStrAst_1 : constStrAst_2;
 
-        STRACE("str", tout << "eqc of n1 is {";
-                for (expr * el : willEqClass) {
-                    tout << " " << mk_pp(el, m);
-                }
-                tout << std::endl;
-                if (constStrAst == nullptr) {
-                    tout << "constStrAst = nullptr" << std::endl;
-                } else {
-                    tout << "constStrAst = " << mk_pp(constStrAst, m) << std::endl;
-                }
-        );
-
         // step 1: we may have constant values for Contains checks now
         if (constStrAst != nullptr) {
             for (auto a : willEqClass) {
@@ -3609,11 +3597,7 @@ namespace smt {
             }
         }
 
-        STRACE("str", tout << __FUNCTION__ << " skip =  " << skip << std::endl;);
-
         instantiate_str_diseq_length_axiom(n1, n2, skip);
-
-        STRACE("str", tout << __FUNCTION__ << " skip =  " << skip << std::endl;);
 
         if (!skip && is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m})) {
             STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
@@ -3883,16 +3867,12 @@ namespace smt {
 
         family_id m_arith_fid = m.mk_family_id("arith");
         sort *int_sort = m.mk_sort(m_arith_fid, INT_SORT);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(ex, m) << std::endl;);
 
         if (ex_sort == str_sort) {
-            STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort String" << std::endl;);
             // set up basic string axioms
             enode *n = ctx.get_enode(ex);
             SASSERT(n);
             m_basicstr_axiom_todo.push_back(n);
-            STRACE("str", tout << "add " << mk_pp(ex, m) << " to m_basicstr_axiom_todo" << std::endl;);
 
 
             if (is_app(ex)) {
@@ -3912,30 +3892,22 @@ namespace smt {
                         input_var_in_len.insert(var);
                     }
                 } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
-                    STRACE("str",
-                          tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (u.str.is_itos(ap)) {
                     STRACE("str",
                            tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
-                    TRACE("str",
-                          tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (ap->get_num_args() == 0 && !u.str.is_string(ap)) {
                     // if ex is a variable, add it to our list of variables
-                    STRACE("str", tout << "tracking variable " << mk_ismt2_pp(ap, get_manager()) << std::endl;);
                     variable_set.insert(ex);
                     ctx.mark_as_relevant(ex);
                     // this might help??
                     theory_var v = mk_var(n);
-                    STRACE("str", tout << "variable " << mk_ismt2_pp(ap, get_manager()) << " is #" << v << std::endl;);
                     (void) v;
                 }
             }
         } else if (ex_sort == bool_sort && !is_quantifier(ex)) {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort Bool" << std::endl;);
             // set up axioms for boolean terms
 
             ensure_enode(ex);
@@ -3946,21 +3918,15 @@ namespace smt {
                 if (is_app(ex)) {
                     app *ap = to_app(ex);
                     if (u.str.is_prefix(ap) || u.str.is_suffix(ap) || u.str.is_contains(ap) || u.str.is_in_re(ap)) {
-                        STRACE("str",
-                               tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                         m_library_aware_axiom_todo.push_back(n);
                     }
                 }
             } else {
-                STRACE("str", tout << "WARNING: Bool term " << mk_ismt2_pp(ex, get_manager())
-                                  << " not internalized. Delaying axiom setup to prevent a crash." << std::endl;);
                 ENSURE(!search_started); // infinite loop prevention
                 m_delayed_axiom_setup_terms.push_back(ex);
                 return;
             }
         } else if (ex_sort == int_sort) {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of sort Int" << std::endl;);
             // set up axioms for integer terms
             enode *n = ensure_enode(ex);
             SASSERT(n);
@@ -3968,14 +3934,8 @@ namespace smt {
             if (is_app(ex)) {
                 app *ap = to_app(ex);
                 if (u.str.is_index(ap)) {
-                    STRACE("str",
-                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (u.str.is_stoi(ap)) {
-                    STRACE("str",
-                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
-                    STRACE("str",
-                          tout << "found string-integer conversion term: " << mk_pp(ex, get_manager()) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
                     m_library_aware_axiom_todo.push_back(n);
                 }
@@ -3995,13 +3955,9 @@ namespace smt {
                 || u.re.is_to_re(ap)) {
             }
             else {
-                STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                                   ": expr is of wrong sort, ignoring" << std::endl;);
             }
         }
         else {
-            STRACE("str", tout << __FUNCTION__ <<  ": " << mk_ismt2_pp(ex, get_manager()) <<
-                              ": expr is of wrong sort, ignoring" << std::endl;);
         }
 
         // if expr is an application, recursively inspect all arguments
@@ -7004,10 +6960,11 @@ namespace smt {
             }
             else {
                 rational lo(-1), hi(-1);
-                lower_bound(v, lo);
-                upper_bound(v, hi);
-                maxInt = std::max(maxInt, lo.get_int32());
-                maxInt = std::max(maxInt, hi.get_int32());
+
+                if (lower_bound(v, lo))
+                    maxInt = std::max(maxInt, lo.get_int32());
+                if (upper_bound(v, hi))
+                    maxInt = std::max(maxInt, hi.get_int32());
             }
         }
 
@@ -7262,8 +7219,6 @@ namespace smt {
         for  (const auto& arr : arrMap_reverse) {
             ensure_enode(arr.second);
         }
-
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** Done" << connectingSize << std::endl;);
     }
 
     void theory_str::create_notcontain_map(){
@@ -9941,7 +9896,6 @@ namespace smt {
         }
 
         expr_ref ret(createOrOperator(possibleCases), m);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(ret.get(), m) << std::endl;);
         return ret;
     }
 
@@ -14070,7 +14024,7 @@ namespace smt {
 
         if (uState.reassertEQ)
             assert_cached_diseq_state();
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
         context & ctx = get_context();
         while (can_propagate()) {
 
@@ -14120,20 +14074,11 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " m_library_aware_axiom_todo: size " << start_count << std::endl;);
                 ptr_vector<enode> axioms_tmp(m_library_aware_axiom_todo);
                 for (auto const& e : axioms_tmp) {
-                    STRACE("str", tout << __LINE__ << " instantiate_axiom" << std::endl;);
-                    if (e == nullptr) {
-                        STRACE("str", tout << __LINE__ << " instantiate_axiom null" << std::endl;);
-                    }
-                    else
-                        STRACE("str", tout << __LINE__ << " instantiate_axiom not null"  << std::endl;);
-
-                    STRACE("str", tout << __LINE__ << " instantiate_axiom not null" << e->get_num_args() << std::endl;);
                     app * a = e->get_owner();
                     if (a == nullptr || a->get_num_args() == 0) {
                         STRACE("str", tout << __LINE__ << " instantiate_axiom null" << std::endl;);
                         continue;
                     }
-                    STRACE("str", tout << __LINE__ << " instantiate_axiom" << mk_pp(e->get_owner(), get_manager()) << std::endl;);
                     if (u.str.is_stoi(a)) {
 //                        instantiate_axiom_str_to_int(e);
                     } else if (u.str.is_itos(a)) {
@@ -14146,7 +14091,6 @@ namespace smt {
                         instantiate_axiom_suffixof(e);
                     } else if (u.str.is_contains(a)) {
                         instantiate_axiom_contains(e);
-                        STRACE("str", tout << __LINE__ << " done instantiate_axiom_contains" << mk_pp(e->get_owner(), get_manager()) << std::endl;);
                     } else if (u.str.is_index(a)) {
                         instantiate_axiom_indexof(e);
                     } else if (u.str.is_extract(a)) {
@@ -14160,7 +14104,6 @@ namespace smt {
                         NOT_IMPLEMENTED_YET();
                     }
                 }
-                STRACE("str", tout << __LINE__ << " done instantiate" << std::endl;);
                 unsigned end_count = m_library_aware_axiom_todo.size();
                 if (end_count > start_count) {
                     STRACE("str", tout << "new library-aware terms added during axiom setup -- checking again" << std::endl;);
