@@ -13928,12 +13928,12 @@ namespace smt {
                                 eqConcat.insert(tmp);
                             }
                             else if (hasLhSValue) {
-                                expr *tmp = u.str.mk_concat(valueLhs, r);
+                                expr *tmp = create_concat_with_str(val_lhs, r);
                                 m_trail.push_back(tmp);
                                 eqConcat.insert(tmp);
                             }
                             else if (hasRhSValue) {
-                                expr *tmp = u.str.mk_concat(l, valueRhs);
+                                expr *tmp = create_concat_with_str(l, val_rhs);
                                 m_trail.push_back(tmp);
                                 eqConcat.insert(tmp);
                             }
@@ -13989,6 +13989,64 @@ namespace smt {
 
         combinations[object] = result;
         return result;
+    }
+
+    expr* theory_str::create_concat_with_str(expr* n, zstring str){
+        expr* ends = ends_with_str(n);
+        if (ends != nullptr){
+            ptr_vector<expr> l;
+            get_nodes_in_concat(n, l);
+            zstring v;
+            u.str.is_string(ends, v);
+            v = v + str;
+            ends = u.str.mk_string(v);
+            for (int i = (int)l.size() - 2; i >= 0; --i){
+                ends = u.str.mk_concat(l[i], ends);
+            }
+            return ends;
+        }
+        else
+            return u.str.mk_concat(n, u.str.mk_string(str));
+    }
+
+    expr* theory_str::create_concat_with_str(zstring str, expr* n){
+        expr* starts = starts_with_str(n);
+        if (starts != nullptr){
+            ptr_vector<expr> l;
+            get_nodes_in_concat(n, l);
+            zstring v;
+            u.str.is_string(starts, v);
+            v = str + v;
+            starts = u.str.mk_string(v);
+
+            expr* tmp = l[l.size() - 1];
+            for (int i = (int)l.size() - 2; i >= 1; --i){
+                tmp = u.str.mk_concat(l[i], tmp);
+            }
+            return u.str.mk_concat(starts, tmp);
+        }
+        else
+            return u.str.mk_concat(u.str.mk_string(str), n);
+    }
+
+    expr* theory_str::ends_with_str(expr* n){
+        if (u.str.is_concat(n)){
+            ptr_vector<expr> l;
+            get_nodes_in_concat(n, l);
+            if (u.str.is_string(l[l.size() - 1]))
+                return l[l.size() - 1];
+        }
+        return nullptr;
+    }
+
+    expr* theory_str::starts_with_str(expr* n){
+        if (u.str.is_concat(n)){
+            ptr_vector<expr> l;
+            get_nodes_in_concat(n, l);
+            if (u.str.is_string(l[0]))
+                return l[0];
+        }
+        return nullptr;
     }
 
     void theory_str::add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes){

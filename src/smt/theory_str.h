@@ -2007,6 +2007,11 @@ namespace smt {
                     std::set<expr*> &subNodes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
+
+                    expr* create_concat_with_str(expr* n, zstring str);
+                    expr* create_concat_with_str(zstring str, expr* n);
+                    expr* ends_with_str(expr* n);
+                    expr* starts_with_str(expr* n);
                 void add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes);
         bool can_propagate() override;
         void propagate() override;

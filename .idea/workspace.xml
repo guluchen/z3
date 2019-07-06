@@ -84,6 +84,7 @@
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -98,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="220">
-              <caret line="8292" selection-start-line="8292" selection-end-line="8292" />
+            <state relative-caret-position="529">
+              <caret line="14028" column="58" selection-start-line="14028" selection-start-column="58" selection-end-line="14028" selection-end-column="58" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -176,8 +177,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="190">
-              <caret line="2287" column="12" selection-start-line="2287" selection-start-column="12" selection-end-line="2287" selection-end-column="12" />
+            <state relative-caret-position="214">
+              <caret line="2010" column="69" selection-start-line="2010" selection-start-column="69" selection-end-line="2010" selection-end-column="69" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -189,7 +190,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>m_phase_available</find>
       <find>handle_trivial_diseq</find>
       <find>instantiate_str_diseq_length_axiom</find>
       <find>refine_eq_</find>
@@ -219,6 +219,7 @@
       <find>static</find>
       <find>new_diseq_eh</find>
       <find>instantiate_basic_string_axioms</find>
+      <find>final_check</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -755,12 +756,12 @@
       <workItem from="1562210607925" duration="763000" />
       <workItem from="1562211448830" duration="30783000" />
       <workItem from="1562396972417" duration="3953000" />
-      <workItem from="1562419036143" duration="3580000" />
+      <workItem from="1562419036143" duration="5924000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1053939000" />
+    <option name="totallyTimeSpent" value="1056283000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="0" />
@@ -1133,8 +1134,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="190">
-          <caret line="2287" column="12" selection-start-line="2287" selection-start-column="12" selection-end-line="2287" selection-end-column="12" />
+        <state relative-caret-position="214">
+          <caret line="2010" column="69" selection-start-line="2010" selection-start-column="69" selection-end-line="2010" selection-end-column="69" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1143,8 +1144,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="8292" selection-start-line="8292" selection-end-line="8292" />
+        <state relative-caret-position="529">
+          <caret line="14028" column="58" selection-start-line="14028" selection-start-column="58" selection-end-line="14028" selection-end-column="58" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
