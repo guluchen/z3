@@ -12354,8 +12354,10 @@ namespace smt {
             else if (have_same_len(lhsVec[i], rhsVec[i])){
                 rational lenValue;
                 get_len_value(lhsVec[i], lenValue);
-                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenValue)));
-                andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenValue)));
+                if (!u.str.is_string(lhsVec[i]))
+                    andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenValue)));
+                if (!u.str.is_string(rhsVec[i]))
+                    andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenValue)));
                 prefix = i;
                 expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
                 if (!impliedEqualities.contains(tmp))
@@ -12383,8 +12385,10 @@ namespace smt {
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
                 rational lenValue;
                 get_len_value(lhsVec[lhsVec.size() - 1 - i], lenValue);
-                andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenValue)));
-                andRhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenValue)));
+                if (!u.str.is_string(lhsVec[lhsVec.size() - 1 - i]))
+                    andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenValue)));
+                if (!u.str.is_string(rhsVec[rhsVec.size() - 1 - i]))
+                    andRhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenValue)));
                 suffix = i;
                 expr* tmp = createImpliesOperator(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 if (!impliedEqualities.contains(tmp))
