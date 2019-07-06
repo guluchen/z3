@@ -12352,7 +12352,10 @@ namespace smt {
                     prefix = i;
             }
             else if (have_same_len(lhsVec[i], rhsVec[i])){
-                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_strlen(rhsVec[i])));
+                rational lenValue;
+                get_len_value(lhsVec[i], lenValue);
+                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenValue)));
+                andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenValue)));
                 prefix = i;
                 expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
                 if (!impliedEqualities.contains(tmp))
@@ -12378,7 +12381,10 @@ namespace smt {
                     suffix = i;
             }
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
-                andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_strlen(rhsVec[rhsVec.size() - 1 - i])));
+                rational lenValue;
+                get_len_value(lhsVec[lhsVec.size() - 1 - i], lenValue);
+                andRhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenValue)));
+                andRhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenValue)));
                 suffix = i;
                 expr* tmp = createImpliesOperator(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 if (!impliedEqualities.contains(tmp))
@@ -12398,7 +12404,6 @@ namespace smt {
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
-                    andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[prefix + 1]), mk_strlen(rhsVec[prefix + 1])));
                     expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
                     if (!impliedEqualities.contains(tmp))
                         impliedEqualities.push_back(tmp);
@@ -12409,7 +12414,6 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(rhsVec[prefix + 1], rhsVec[prefix + 2]);
             if (!are_equal_exprs(lhsVec[prefix + 1], concatTmp)) {
-                andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[prefix + 1]), mk_strlen(concatTmp)));
                 expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
@@ -12421,7 +12425,6 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(lhsVec[prefix + 1], lhsVec[prefix + 2]);
             if (!are_equal_exprs(rhsVec[prefix + 1], concatTmp)) {
-                andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[prefix + 1]), mk_strlen(concatTmp)));
                 expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(rhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
