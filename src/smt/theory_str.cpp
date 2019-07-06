@@ -1438,6 +1438,69 @@ namespace smt {
                 }
         }
 
+        // n1 . "const" . n2 = n3 . "const" . n4 --> guess n1 = n3
+//        for (const auto c1 : eqc_concat_lhs){
+//            expr* n1 = to_app(c1)->get_arg(0);
+//            expr_ref_vector eqn1(m);
+//            collect_eq_nodes(n1, eqn1);
+//
+//            for (const auto& nn1 : eqn1)
+//                if (u.str.is_concat(nn1)){
+//                    ptr_vector<expr> elements_nn1;
+//                    get_nodes_in_concat(nn1, elements_nn1);
+//                    if (elements_nn1.size() == 2){
+//
+//                        for (const auto c2 : eqc_concat_rhs){
+//                            expr* n2 = to_app(c2)->get_arg(0);
+//                            expr_ref_vector eqn2(m);
+//                            collect_eq_nodes(n2, eqn2);
+//                            for (const auto& nn2 : eqn2)
+//                                if (u.str.is_concat(nn2)){
+//                                    ptr_vector<expr> elements_nn2;
+//                                    get_nodes_in_concat(nn2, elements_nn2);
+//                                    if (elements_nn2.size() == 2 &&
+//                                            are_equal_exprs(elements_nn1[elements_nn1.size() - 1], elements_nn2[elements_nn2.size() - 1])){
+//                                        expr* tmp = createEqualOperator(n1, n2);
+//                                        ctx.force_phase(ctx.get_literal(tmp));
+//                                        TRACE("str", tout << __LINE__ << " tryout eq " << __FUNCTION__ << ": "<< mk_pp(tmp, m) << std::endl;);
+//                                    }
+//                                }
+//                        }
+//                    }
+//                }
+//
+//
+//
+//            n1 = to_app(c1)->get_arg(1);
+//            eqn1.reset();
+//            collect_eq_nodes(n1, eqn1);
+//
+//            for (const auto& nn1 : eqn1)
+//                if (u.str.is_concat(nn1)){
+//                    ptr_vector<expr> elements_nn1;
+//                    get_nodes_in_concat(nn1, elements_nn1);
+//                    if (elements_nn1.size() == 2){
+//
+//                        for (const auto c2 : eqc_concat_rhs){
+//                            expr* n2 = to_app(c2)->get_arg(1);
+//                            expr_ref_vector eqn2(m);
+//                            collect_eq_nodes(n2, eqn2);
+//                            for (const auto& nn2 : eqn2)
+//                                if (u.str.is_concat(nn2)){
+//                                    ptr_vector<expr> elements_nn2;
+//                                    get_nodes_in_concat(nn2, elements_nn2);
+//                                    if (elements_nn2.size() == 2 &&
+//                                        are_equal_exprs(elements_nn1[0], elements_nn2[0])){
+//                                        expr* tmp = createEqualOperator(n1, n2);
+//                                        ctx.force_phase(ctx.get_literal(tmp));
+//                                        TRACE("str", tout << __LINE__ << "  tryout eq " << __FUNCTION__ << ": "<< mk_pp(tmp, m) << std::endl;);
+//                                    }
+//                                }
+//                        }
+//                    }
+//                }
+//        }
+
         special_assertion_for_contain_vs_substr(lhs, rhs);
         special_assertion_for_contain_vs_substr(rhs, lhs);
     }
@@ -3679,6 +3742,29 @@ namespace smt {
                 return;
             }
 
+        rational lowerBound_lhs, upperBound_lhs, lowerBound_rhs, upperBound_rhs;
+        if (lower_bound(lhs, lowerBound_lhs))
+            if (upper_bound(rhs, upperBound_rhs))
+                if (lowerBound_lhs > upperBound_rhs) {
+                    skip = true;
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << lowerBound_lhs << " > "  << upperBound_rhs << std::endl;);
+                    return;
+                }
+
+        if (upper_bound(lhs, upperBound_lhs))
+            if (lower_bound(rhs, lowerBound_rhs))
+                if (upperBound_lhs < lowerBound_rhs) {
+                    skip = true;
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << upperBound_lhs << " < "  << lowerBound_rhs << std::endl;);
+                    return;
+                }
+
+        expr* emptystr = mk_string("");
+        if (lhs == emptystr || rhs == emptystr){
+            skip = true;
+            return;
+        }
+
         // build conclusion: not (lhs == rhs)
         expr_ref conclusion01(mk_not(m, ctx.mk_eq_atom(lhs, rhs)), m);
 
@@ -4087,7 +4173,7 @@ namespace smt {
 
         const str::state &root = build_state_from_memo();
 
-        bool atSameEQState = at_same_eq_state(root, uState.currState);
+        bool atSameEQState = at_same_eq_state(uState);
         if (atSameEQState && at_same_diseq_state(root, uState.currState)) {
             if (uState.reassertDisEQ && uState.reassertEQ) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
@@ -4128,6 +4214,17 @@ namespace smt {
             uState.disequalities.append(guessedDisEqs);
             uState.currState = root;
             return FC_CONTINUE;
+        }
+        else {
+            // check all completed state, skip the last one
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completedStates " << completedStates.size() << std::endl;);
+            for (int i = 0; i < (int)completedStates.size() - 1; ++i){
+                bool sameEq = at_same_eq_state(completedStates[i]);
+                if (sameEq){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
+                    return FC_DONE;
+                }
+            }
         }
 
         // enhancement: improved backpropagation of value/length information
@@ -4361,20 +4458,16 @@ namespace smt {
         return tmpz3State;
     }
 
-    bool theory_str::at_same_state(str::state curr, str::state prev){
-        return at_same_eq_state(curr, prev) && at_same_diseq_state(curr, prev);
-    }
-
-    bool theory_str::at_same_eq_state(str::state curr, str::state prev) {
+    bool theory_str::at_same_eq_state(UnderApproxState state) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
         expr_ref_vector guessedExprs(m);
         fetch_guessed_exprs_with_scopes(guessedExprs);
 
         expr_ref_vector prev_guessedExprs(m);
-        fetch_guessed_exprs_from_cache(prev_guessedExprs);
+        fetch_guessed_exprs_from_cache(state, prev_guessedExprs);
 
-        if (uState.equalities.size() == 0 && uState.disequalities.size() == 0)
+        if (state.equalities.size() == 0 && state.disequalities.size() == 0)
             return false;
 
         // compare all eq
@@ -4399,55 +4492,55 @@ namespace smt {
 
         return true;
 
-        // compare all eq
-        for(const auto& e : prev.m_wes_to_satisfy){
-            if (curr.m_wes_to_satisfy.find(e) == curr.m_wes_to_satisfy.end()) {
-                STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
-                return false;
-            }
-        }
-
-        for(const auto& e : curr.m_wes_to_satisfy){
-            // skip x = ""
-            if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
-                continue;
-
-            if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
-                STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
-
-                // skip x = "" . x
-                {
-                    str::word_term lhs = e.lhs();
-                    str::word_term rhs = e.rhs();
-                    std::set<str::element> lhs_elements = lhs.variables();
-                    std::set<str::element> rhs_elements = rhs.variables();
-                    if (lhs_elements.size() != 0 && rhs_elements.size() != 0) {
-                        bool included = true;
-                        if (lhs_elements.size() < rhs_elements.size()) {
-                            for (const auto &el : lhs_elements)
-                                if (rhs_elements.find(el) == rhs_elements.end()) {
-                                    included = false;
-                                    break;
-                                }
-                        } else
-                            for (const auto &el : rhs_elements)
-                                if (lhs_elements.find(el) == lhs_elements.end()) {
-                                    included = false;
-                                    break;
-                                }
-
-                        if (included) {
-                            STRACE("str", tout << __LINE__ << " skip constraint " << e << std::endl;);
-                            continue;
-                        }
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        return true;
+//        // compare all eq
+//        for(const auto& e : prev.m_wes_to_satisfy){
+//            if (curr.m_wes_to_satisfy.find(e) == curr.m_wes_to_satisfy.end()) {
+//                STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
+//                return false;
+//            }
+//        }
+//
+//        for(const auto& e : curr.m_wes_to_satisfy){
+//            // skip x = ""
+//            if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
+//                continue;
+//
+//            if (prev.m_wes_to_satisfy.find(e) == prev.m_wes_to_satisfy.end()) {
+//                STRACE("str", tout << __LINE__ <<  " not at_same_state " << e << std::endl;);
+//
+//                // skip x = "" . x
+//                {
+//                    str::word_term lhs = e.lhs();
+//                    str::word_term rhs = e.rhs();
+//                    std::set<str::element> lhs_elements = lhs.variables();
+//                    std::set<str::element> rhs_elements = rhs.variables();
+//                    if (lhs_elements.size() != 0 && rhs_elements.size() != 0) {
+//                        bool included = true;
+//                        if (lhs_elements.size() < rhs_elements.size()) {
+//                            for (const auto &el : lhs_elements)
+//                                if (rhs_elements.find(el) == rhs_elements.end()) {
+//                                    included = false;
+//                                    break;
+//                                }
+//                        } else
+//                            for (const auto &el : rhs_elements)
+//                                if (lhs_elements.find(el) == lhs_elements.end()) {
+//                                    included = false;
+//                                    break;
+//                                }
+//
+//                        if (included) {
+//                            STRACE("str", tout << __LINE__ << " skip constraint " << e << std::endl;);
+//                            continue;
+//                        }
+//                    }
+//                }
+//
+//                return false;
+//            }
+//        }
+//
+//        return true;
     }
 
     bool theory_str::at_same_diseq_state(str::state curr, str::state prev) {
@@ -6280,7 +6373,7 @@ namespace smt {
 
         if (is_equal(uState, state)) {
             expr_ref_vector corePrev(m);
-            fetch_guessed_exprs_from_cache(corePrev);
+            fetch_guessed_exprs_from_cache(uState, corePrev);
 
             fetch_guessed_core_exprs(eq_combination, guessedEqs);
 
@@ -6314,6 +6407,7 @@ namespace smt {
         else {
             uState = state;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << uState.eq_combination.size() << std::endl;);
+            completedStates.push_back(uState);
         }
 
         // set -> map
@@ -6516,7 +6610,7 @@ namespace smt {
         context & ctx = get_context();
 
         expr_ref_vector guessedExprs(m);
-        fetch_guessed_exprs_from_cache(guessedExprs);
+        fetch_guessed_exprs_from_cache(uState, guessedExprs);
         expr* causexpr = createAndOperator(guessedExprs);
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << " @lvl " << m_scope_level << std::endl;);
@@ -6897,6 +6991,8 @@ namespace smt {
             u.str.is_string(s, tmp);
             sumConst += tmp.length();
         }
+
+        sumConst = std::min(sumConst, 100);
 
         int maxInt = -1;
 
@@ -13482,8 +13578,66 @@ namespace smt {
             if (!shouldKeep)
                 ret.clear();
         }
+
+        // check all pairs to see if they have the same role
+//        std::vector<expr*> v = set2vector(ret);
+//        ret.clear();
+//        for (int i = 0; i < v.size(); ++i) {
+//            if (u.str.is_concat(v[i])) {
+//                ptr_vector<expr> nodes_i;
+//                get_nodes_in_concat(v[i], nodes_i);
+//                bool add = true;
+//                for (int j = i + 1; j < v.size(); ++j) {
+//                    ptr_vector<expr> nodes_j;
+//                    get_nodes_in_concat(v[j], nodes_j);
+//                    if (nodes_i.size() == nodes_j.size())
+//                        if (same_role(nodes_i, nodes_j)){
+//                            add = false;
+//                            break;
+//                        }
+//                }
+//
+//                if (add)
+//                    ret.insert(v[i]);
+//            }
+//            else
+//                ret.insert(v[i]);
+//        }
         return ret;
     }
+
+    /*
+     * 2 nodes have same role or not
+     * if they are both concat funcs
+     *      all elements have the same role
+     * if they are both variables
+     *      vars have the same bound, same eq, same diseq, same contains
+     */
+//    bool theory_str::same_role(expr* node_i, expr* node_j){
+//        if (u.str.is_concat(node_i) && u.str.is_concat(node_j)){
+//            ptr_vector<expr> nodes_i;
+//            get_nodes_in_concat(node_i, nodes_i);
+//            ptr_vector<expr> nodes_j;
+//            get_nodes_in_concat(node_j, nodes_j);
+//            if (nodes_i.size() == nodes_j.size()){
+//                for (int k = 0; k < nodes_i.size(); ++k)
+//                    if (!same_role(nodes_i[k], nodes_j[k]))
+//                        return false;
+//            }
+//            else
+//                return false;
+//        }
+//        else if (u.str.is_concat(node_i) || u.str.is_concat(node_j)){
+//            return false;
+//        }
+//        else if (!isInternalVar(node_i) && !isInternalVar(node_j)){
+//            //
+//            rational lb_i, lb_j;
+//            lower_bound(node_i, lb_i);
+//            lower_bound(node_i, lb_i);
+//
+//        }
+//    }
 
     std::set<expr*> theory_str::refine_all_duplications(std::set<expr*> s) {
         if (s.size() == 1)
@@ -16222,6 +16376,15 @@ namespace smt {
             if (get_len_value(v, len) && len.get_int32() == 0) {
                 ret.push_back(createEqualOperator(v, mk_string("")));
             }
+            else if (u.str.is_string(v)) {
+                // const = concat
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(v, eqs);
+                for (const auto& eq : eqs)
+                    if (u.str.is_concat(eq)) {
+                        ret.push_back(createEqualOperator(v, eq));
+                    }
+            }
         }
         guessedExprs.reset();
         guessedExprs.append(ret);
@@ -16388,9 +16551,9 @@ namespace smt {
         return false;
     }
 
-    void theory_str::fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs) {
-        guessedExprs.append(uState.equalities);
-        fetch_guessed_core_exprs(uState.eq_combination, guessedExprs);
+    void theory_str::fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessedExprs) {
+        guessedExprs.append(state.equalities);
+        fetch_guessed_core_exprs(state.eq_combination, guessedExprs);
     }
 
     void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs) {

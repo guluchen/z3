@@ -1259,8 +1259,7 @@ namespace smt {
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
                     std::set<zstring> collect_all_const_in_expr(expr* v);
             int get_actual_trau_lvl();
-            bool at_same_state(str::state curr, str::state prev);
-                bool at_same_eq_state(str::state curr, str::state prev);
+                bool at_same_eq_state(UnderApproxState state);
                 bool at_same_diseq_state(str::state curr, str::state prev);
 
         bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
@@ -2289,6 +2288,7 @@ namespace smt {
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;
+        std::vector<UnderApproxState> completedStates;
 
 
         expr_ref_vector impliedFacts;
@@ -2312,7 +2312,7 @@ namespace smt {
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
         bool check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars);
-        void fetch_guessed_exprs_from_cache(expr_ref_vector &guessedExprs);
+        void fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessedExprs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
@@ -2324,6 +2324,27 @@ namespace smt {
         const bool block_dpllt_assignment_from_memo();
         void set_up_axioms(expr * ex);
     };
+
+
+//    class int_expr_solver:expr_solver{
+//        bool unsat_core=false;
+//        kernel m_kernel;
+//        ast_manager& m;
+//        bool initialized;
+//        expr_ref_vector erv;
+//    public:
+//        int_expr_solver(ast_manager& m, smt_params fp):
+//                m_kernel(m, fp), m(m),erv(m){
+//            fp.m_string_solver = symbol("none");
+//            initialized=false;
+//        }
+//
+//        lbool check_sat(expr* e) override;
+//
+//        void initialize(context& ctx);
+//
+//        void assert_expr(expr * e);
+//    };
 
 }
 
