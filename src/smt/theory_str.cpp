@@ -12338,8 +12338,12 @@ namespace smt {
 
         zstring lValue, rValue;
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
-            if (are_equal_exprs(lhsVec[i], rhsVec[i]))
+            if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
+                if (lhsVec[i] != rhsVec[i]) {
+                    andLhs.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
+                }
                 prefix = i;
+            }
             else if (u.str.is_string(lhsVec[i], lValue) && u.str.is_string(rhsVec[i], rValue)) {
                 if (!lValue.prefixof(rValue) && !rValue.prefixof(lValue)) {
                     // thing goes wrong
@@ -12369,8 +12373,11 @@ namespace smt {
         /* cut suffix */
         int suffix = -1;
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
-            if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
+            if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])) {
+                if (lhsVec[lhsVec.size() - 1 - i] != rhsVec[rhsVec.size() - 1 - i])
+                    andRhs.push_back(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 suffix = i;
+            }
             else if (u.str.is_string(lhsVec[lhsVec.size() - 1 - i], lValue) && u.str.is_string(rhsVec[rhsVec.size() - 1 - i], rValue)) {
                 if (!lValue.suffixof(rValue) && !rValue.suffixof(lValue)) {
                     // thing goes wrong
