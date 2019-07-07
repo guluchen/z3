@@ -12335,7 +12335,7 @@ namespace smt {
         int prefix = -1;
 
         zstring lValue, rValue;
-        for ((int) i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
+        for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
                 if (lhsVec[i] != rhsVec[i]) {
                     andLhs.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
