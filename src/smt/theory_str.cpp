@@ -12280,14 +12280,14 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
-            else if (have_same_len(lhsVec[i], rhsVec[i])){
-                prefix = i;
-                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-            }
+//            else if (have_same_len(lhsVec[i], rhsVec[i])){
+//                prefix = i;
+//                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
+//
+//                assert_axiom(tmp.get());
+//                impliedFacts.push_back(tmp);
+////                uState.addAssertingConstraints(tmp)
+//            }
             else
                 break;
 
@@ -12296,14 +12296,14 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
-            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
-                suffix = i;
-                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-            }
+//            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
+//                suffix = i;
+//                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
+//
+//                assert_axiom(tmp.get());
+//                impliedFacts.push_back(tmp);
+////                uState.addAssertingConstraints(tmp)
+//            }
             else
                 break;
 
@@ -12481,14 +12481,14 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
-            else if (have_same_len(lhsVec[i], rhsVec[i])){
-                prefix = i;
-                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-            }
+//            else if (have_same_len(lhsVec[i], rhsVec[i])){
+//                prefix = i;
+//                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
+//
+//                assert_axiom(tmp.get());
+//                impliedFacts.push_back(tmp);
+////                uState.addAssertingConstraints(tmp)
+//            }
             else
                 break;
 
@@ -12497,14 +12497,14 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
-            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
-                suffix = i;
-                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
-
-                assert_axiom(tmp.get());
-                impliedFacts.push_back(tmp);
-//                uState.addAssertingConstraints(tmp)
-            }
+//            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
+//                suffix = i;
+//                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
+//
+//                assert_axiom(tmp.get());
+//                impliedFacts.push_back(tmp);
+////                uState.addAssertingConstraints(tmp)
+//            }
             else
                 break;
 
