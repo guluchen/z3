@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -98,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="164">
-              <caret line="12341" column="17" lean-forward="true" selection-start-line="12341" selection-start-column="17" selection-end-line="12341" selection-end-column="17" />
+            <state relative-caret-position="236">
+              <caret line="14905" column="27" lean-forward="true" selection-start-line="14905" selection-start-column="27" selection-end-line="14905" selection-end-column="27" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -189,8 +190,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ctx</find>
-      <find>premise01</find>
       <find>force_phase</find>
       <find>new_eq_</find>
       <find>new_eq_eh</find>
@@ -206,10 +205,8 @@
       <find>force_p</find>
       <find>at_same</find>
       <find>curr</find>
-      <find>fetch_guessed_exprs_from_cache</find>
       <find>at_same_state</find>
       <find>at_same_eq_state</find>
-      <find>fetch_guessed_core_exprs</find>
       <find>underapproximation</find>
       <find>static_a</find>
       <find>static</find>
@@ -219,6 +216,10 @@
       <find>repeat</find>
       <find>propagate_eq</find>
       <find>have_same_len</find>
+      <find>fetch_guessed_core_exprs</find>
+      <find>fetch_guessed_exprs_from_cache</find>
+      <find>substr</find>
+      <find>instantiate</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -755,12 +756,12 @@
       <workItem from="1562210607925" duration="763000" />
       <workItem from="1562211448830" duration="30783000" />
       <workItem from="1562396972417" duration="3953000" />
-      <workItem from="1562419036143" duration="13027000" />
+      <workItem from="1562419036143" duration="15848000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1063386000" />
+    <option name="totallyTimeSpent" value="1066207000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="0" />
@@ -783,7 +784,7 @@
       <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.10191083" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.24313408" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.17538688" />
       <window_info anchor="right" id="Database" order="3" />
     </layout>
   </component>
@@ -1143,8 +1144,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="164">
-          <caret line="12341" column="17" lean-forward="true" selection-start-line="12341" selection-start-column="17" selection-end-line="12341" selection-end-column="17" />
+        <state relative-caret-position="236">
+          <caret line="14905" column="27" lean-forward="true" selection-start-line="14905" selection-start-column="27" selection-end-line="14905" selection-end-column="27" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

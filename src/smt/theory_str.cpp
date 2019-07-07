@@ -4118,8 +4118,8 @@ namespace smt {
         vector<expr_ref_vector> cores;
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
-            return FC_DONE;
+//        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
+//            return FC_DONE;
 
         newConstraintTriggered = false;
         dump_assignments();
@@ -14902,24 +14902,31 @@ namespace smt {
         // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
         // ==> base = t0.t1 AND len(t0) = pos AND (Substr ...) = t1
         expr_ref t0(mk_str_var("substr0"), m);
-        expr_ref t1(mk_str_var("substr1"), m);
-        expr_ref case2_conclusion(m.mk_and(
-                ctx.mk_eq_atom(substrBase, mk_concat(t0,t1)),
-                ctx.mk_eq_atom(mk_strlen(t0), substrPos),
-                ctx.mk_eq_atom(expr, t1)), m);
+//        expr_ref t1(mk_str_var("substr1"), m);
+        expr_ref t2(t0, m);
+        expr_ref t3(mk_str_var("substr3"), m);
+        expr_ref t4(mk_str_var("substr4"), m);
+
+        expr_ref_vector case2_conclusion_terms(m);
+        case2_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t0, mk_concat(t3, t4))));
+//        case2_conclusion_terms.push_back(ctx.mk_eq_atom(t1, mk_concat(t3, t4)));
+        case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), substrPos));
+        case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
+        case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
+
+        expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref case2(m.mk_implies(m.mk_and(argumentsValid, lenOutOfBounds), case2_conclusion), m);
 
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t2.t3.t4 AND len(t2) = pos AND len(t3) = len AND (Substr ...) = t3
 
-        expr_ref t2(mk_str_var("substr2"), m);
-        expr_ref t3(mk_str_var("substr3"), m);
-        expr_ref t4(mk_str_var("substr4"), m);
         expr_ref_vector case3_conclusion_terms(m);
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t2, mk_concat(t3, t4))));
+//        case3_conclusion_terms.push_back(ctx.mk_eq_atom(t1, mk_concat(t3, t4)));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t2), substrPos));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), substrLen));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
+
         expr_ref case3_conclusion(mk_and(case3_conclusion_terms), m);
         expr_ref case3(m.mk_implies(m.mk_and(argumentsValid, m.mk_not(lenOutOfBounds)), case3_conclusion), m);
 
