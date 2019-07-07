@@ -4118,8 +4118,8 @@ namespace smt {
         vector<expr_ref_vector> cores;
         unsigned min_core_size;
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
-            return FC_DONE;
+//        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
+//            return FC_DONE;
 
         newConstraintTriggered = false;
         dump_assignments();
@@ -6578,7 +6578,7 @@ namespace smt {
             ensure_enode(a);
 
             if (m.is_and(a))
-                assert_axiom(createImpliesOperator(a, causexpr));
+                assert_axiom(createImpliesOperator(causexpr, a));
             else
                 assert_axiom(a);
         }
