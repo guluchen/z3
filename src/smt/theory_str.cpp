@@ -6578,7 +6578,7 @@ namespace smt {
             ensure_enode(a);
 
             if (m.is_and(a))
-                assert_axiom(createEqualOperator(a, causexpr));
+                assert_axiom(createImpliesOperator(a, causexpr));
             else
                 assert_axiom(a);
         }
@@ -16382,7 +16382,7 @@ namespace smt {
 
         rational len;
         for (const auto& v : allvars) {
-            STRACE("str", tout << __LINE__ << " core var " << mk_pp(v, m) << std::endl;);
+//            STRACE("str", tout << __LINE__ << " core var " << mk_pp(v, m) << std::endl;);
             if (get_len_value(v, len) && len.get_int32() == 0) {
                 ret.push_back(createEqualOperator(v, mk_string("")));
             }
