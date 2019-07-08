@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -99,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="181">
-              <caret line="12384" column="14" selection-start-line="12384" selection-start-column="14" selection-end-line="12395" selection-end-column="13" />
+            <state relative-caret-position="543">
+              <caret line="14783" column="30" lean-forward="true" selection-start-line="14783" selection-start-column="30" selection-end-line="14783" selection-end-column="30" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -178,7 +177,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="214">
-              <caret line="2010" column="69" selection-start-line="2010" selection-start-column="69" selection-end-line="2010" selection-end-column="69" />
+              <caret line="2119" column="26" lean-forward="true" selection-start-line="2119" selection-start-column="26" selection-end-line="2119" selection-end-column="26" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -190,9 +189,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>new_eq_eh</find>
-      <find>force</find>
-      <find>phase</find>
       <find>phase caching</find>
       <find>m_phase_counter</find>
       <find>m_phase_cache_on</find>
@@ -220,6 +216,9 @@
       <find>instantiate</find>
       <find>is_weaker_expr_sets</find>
       <find>is_equal</find>
+      <find>mk_index</find>
+      <find>indexof</find>
+      <find>instantiate_axiom_indexof_extended</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -245,7 +244,7 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="41" />
+    <option name="x" value="22" />
     <option name="y" value="23" />
     <option name="width" value="1399" />
     <option name="height" value="877" />
@@ -756,15 +755,15 @@
       <workItem from="1562210607925" duration="763000" />
       <workItem from="1562211448830" duration="30783000" />
       <workItem from="1562396972417" duration="3953000" />
-      <workItem from="1562419036143" duration="18814000" />
+      <workItem from="1562419036143" duration="22907000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1069173000" />
+    <option name="totallyTimeSpent" value="1073266000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="41" y="23" width="1399" height="877" extended-state="0" />
+    <frame x="22" y="23" width="1399" height="877" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49078014" visible="true" weight="0.15106854" />
@@ -1135,7 +1134,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="214">
-          <caret line="2010" column="69" selection-start-line="2010" selection-start-column="69" selection-end-line="2010" selection-end-column="69" />
+          <caret line="2119" column="26" lean-forward="true" selection-start-line="2119" selection-start-column="26" selection-end-line="2119" selection-end-column="26" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1144,8 +1143,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="181">
-          <caret line="12384" column="14" selection-start-line="12384" selection-start-column="14" selection-end-line="12395" selection-end-column="13" />
+        <state relative-caret-position="543">
+          <caret line="14783" column="30" lean-forward="true" selection-start-line="14783" selection-start-column="30" selection-end-line="14783" selection-end-column="30" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

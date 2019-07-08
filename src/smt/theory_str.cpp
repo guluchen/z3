@@ -14643,7 +14643,6 @@ namespace smt {
         std::pair<app*, app*> value;
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(a, m) << std::endl;);
         enode* key = ensure_enode(a);
 
         if (contain_split_map.contains(key)) {
@@ -14770,15 +14769,8 @@ namespace smt {
             }
         }
 
-        // case 2: i = 0
-        {
-            expr_ref premise(ctx.mk_eq_atom(i, zero), m);
-            // reduction to simpler case
-            if (premise != m.mk_false()) {
-                expr_ref conclusion(ctx.mk_eq_atom(e, mk_indexof(H, N)), m);
-                assert_implication(premise, conclusion);
-            }
-        }
+        expr_ref hd(mk_str_var("hd"), m);
+        expr_ref tl(mk_str_var("tl"), m);
 
         // case 3: i >= len(H)
         {
@@ -14802,9 +14794,6 @@ namespace smt {
             expr_ref premise(_premise);
             th_rewriter rw(m);
             rw(premise);
-
-            expr_ref hd(mk_str_var("hd"), m);
-            expr_ref tl(mk_str_var("tl"), m);
 
             expr_ref_vector conclusion_terms(m);
             conclusion_terms.push_back(ctx.mk_eq_atom(H, mk_concat(hd, tl)));
