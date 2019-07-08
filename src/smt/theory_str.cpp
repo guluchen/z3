@@ -6341,8 +6341,8 @@ namespace smt {
             uState.disequalities.append(guessedDisEqs);
 
             bool axiomAdded = false;
-            if (!is_weaker_expr_sets(guessedEqs, corePrev)) {
-//            if (!is_equal(corePrev, guessedEqs)) {
+//            if (!is_weaker_expr_sets(guessedEqs, corePrev)) {
+            if (is_equal(corePrev, guessedEqs)) {
                 axiomAdded = true;
                 underapproximation_repeat();
                 handle_diseq(true);
@@ -6523,12 +6523,7 @@ namespace smt {
 
     bool theory_str::is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        ast_manager & m = get_manager();
-        for (const auto& e : coreCurr)
-            STRACE("str", tout << __LINE__ << " coreCurr: " << mk_pp(e, m) << std::endl;);
-
-        for (const auto& e : corePrev)
-            STRACE("str", tout << __LINE__ << " corePrev: " << mk_pp(e, m) << std::endl;);
+        ast_manager & m = get_manager(); 
 
         if (coreCurr.size() != corePrev.size())
             return false;
@@ -8289,7 +8284,7 @@ namespace smt {
 //                        STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
 //                    STRACE("str", tout <<  std::endl;);
                     arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
-//                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
                 }
                 else {
                 }
