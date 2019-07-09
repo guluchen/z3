@@ -1218,12 +1218,14 @@ namespace smt {
 
         if (underapproximation_repeat()) {
             uState.reassertEQ = true;
+            newConstraintTriggered = true;
             int tmpz3State = get_actual_trau_lvl();
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " z3_level " << tmpz3State << std::endl;);
             uState.eqLevel = tmpz3State;
         }
 
         if (impliedFacts.size() > 0){
+            newConstraintTriggered = true;
             uState.reassertEQ = true;
             uState.eqLevel = get_actual_trau_lvl();
             for (const auto& e : impliedFacts) {
@@ -4175,8 +4177,7 @@ namespace smt {
             // check all completed state, skip the last one
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completedStates " << completedStates.size() << std::endl;);
             for (int i = 0; i < (int)completedStates.size() - 1; ++i){
-                bool sameEq = at_same_eq_state(completedStates[i]);
-                if (sameEq){
+                if (at_same_eq_state(completedStates[i]) && at_same_diseq_state(root, completedStates[i].currState)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
                     return FC_DONE;
                 }
@@ -4414,6 +4415,12 @@ namespace smt {
         return tmpz3State;
     }
 
+    /*
+     * if all equalities in previous branch are still true
+     * Note 1: some equalities can change where some len = 0, e.g. x . y . z becomes x . z if y.len = 0
+     * Note 2: some new equalties because of length information, e.g. x . y = "abc" && y.len = 2 implies y = "bc"
+     * In such cases, we are still the same "core" branch.
+     */
     bool theory_str::at_same_eq_state(UnderApproxState state) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
@@ -7519,7 +7526,7 @@ namespace smt {
                 axiomAdded = true;
                 assertedConstraints.push_back(e);
                 assert_breakdown_combination(e, var, causes);
-            } 
+            }
         }
         else {
             /* trivial unsat */
@@ -7533,7 +7540,6 @@ namespace smt {
     void theory_str::assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes){
         context &ctx = get_context();
         ensure_enode(e);
-        literal resultLiteral = ctx.get_literal(e);
         if (causes.find(var) != causes.end()) {
             assert_axiom(e, causes[var]);
 //            literal causeLiteral = ctx.get_literal(causes[var]);
@@ -8184,6 +8190,8 @@ namespace smt {
             std::vector<std::pair<expr*, int>> rhs_elements,
             std::map<expr*, int> connectedVariables,
             int p){
+        ast_manager &m = get_manager();
+        th_rewriter rw(m);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << lhs << " == " << rhs << std::endl;);
         std::string tmp01;
         std::string tmp02;
@@ -8201,14 +8209,15 @@ namespace smt {
                     p);
             generatedEqualities.emplace(tmp01);
             if (cases.size() > 0) {
-                return createOrOperator(cases);
+                expr_ref tmp(createOrOperator(cases), m);
+                return tmp.get();
             }
             else {
                 return nullptr;
             }
         }
         else
-            return get_manager().mk_true();
+            return m.mk_true();
     }
 
 
@@ -13484,7 +13493,6 @@ namespace smt {
             std::set<expr*> s,
             std::set<std::pair<expr*, int>> importantVars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
-        ast_manager &m = get_manager();
         s = refine_all_duplications(s);
         std::set<expr*> ret;
         for (std::set<expr*>::iterator it = s.begin(); it != s.end(); ++it) {
@@ -14298,7 +14306,6 @@ namespace smt {
         // build LHS
         expr_ref len_xy(m);
         len_xy = mk_strlen(a_cat);
-        SASSERT(len_xy);
 
         // build RHS: start by extracting x and y from Concat(x, y)
         SASSERT(a_cat->get_num_args() == 2);
@@ -14307,20 +14314,16 @@ namespace smt {
         concat_astNode_map.insert(a_x, a_y, a_cat);
         expr_ref len_x(m);
         len_x = mk_strlen(a_x);
-        SASSERT(len_x);
 
         expr_ref len_y(m);
         len_y = mk_strlen(a_y);
-        SASSERT(len_y);
 
         // now build len_x + len_y
         expr_ref len_x_plus_len_y(m);
         len_x_plus_len_y = m_autil.mk_add(len_x, len_y);
-        SASSERT(len_x_plus_len_y);
 
         // finally assert equality between the two subexpressions
         app * eq = m.mk_eq(len_xy, len_x_plus_len_y);
-        SASSERT(eq);
         assert_axiom(eq);
 
         // len_x = 0 --> Concat(x, y) = y
@@ -14336,7 +14339,6 @@ namespace smt {
 
         app * expr = e->get_owner();
         if (axiomatized_terms.contains(expr)) {
-            TRACE("str", tout << "already set up prefixof axiom for " << mk_pp(expr, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(expr);
@@ -14360,10 +14362,8 @@ namespace smt {
                                 mk_strlen(expr->get_arg(1)), m_autil.mk_mul(mk_int(-1), mk_strlen(expr->get_arg(0)))),
                         mk_int(0))
                 , m);
-        SASSERT(topLevelCond);
 
         expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
-        SASSERT(finalAxiom);
         assert_axiom(finalAxiom);
     }
 
@@ -14373,7 +14373,6 @@ namespace smt {
 
         app * expr = e->get_owner();
         if (axiomatized_terms.contains(expr)) {
-            TRACE("str", tout << "already set up suffixof axiom for " << mk_pp(expr, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(expr);
@@ -14388,7 +14387,6 @@ namespace smt {
         innerItems.push_back(ctx.mk_eq_atom(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
         innerItems.push_back(m.mk_ite(ctx.mk_eq_atom(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
         expr_ref then1(m.mk_and(innerItems.size(), innerItems.c_ptr()), m);
-        SASSERT(then1);
 
         // the top-level condition is Length(arg0) >= Length(arg1)
         expr_ref topLevelCond(
@@ -14397,20 +14395,28 @@ namespace smt {
                                 mk_strlen(expr->get_arg(1)), m_autil.mk_mul(mk_int(-1), mk_strlen(expr->get_arg(0)))),
                         mk_int(0))
                 , m);
-        SASSERT(topLevelCond);
 
         expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
-        SASSERT(finalAxiom);
         assert_axiom(finalAxiom);
     }
 
+    /*
+     * Quick paths:
+     *      path 1: "abc" contains "a"
+     *      path 2: (x . "abc" . y) contains "a"
+     *
+     *
+     *      path 3: (str.contains (str.substr value1 number1 (+ number2 (str.indexof value1 "J" number1))) "J")
+     *          --> (str.indexof value1 "J" number1) > -1 && (+ number2 (str.indexof value1 "J" number1)) > indexof
+     * arg0 = pre_contains . arg1 . post_contains
+     *
+     */
     void theory_str::instantiate_axiom_contains(enode * e) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
         app * ex = e->get_owner();
         if (axiomatized_terms.contains(ex)) {
-            TRACE("str", tout << "already set up Contains axiom for " << mk_pp(ex, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(ex);
@@ -14420,7 +14426,6 @@ namespace smt {
         zstring haystackStr, needleStr;
         if (u.str.is_string(ex->get_arg(1), needleStr)) {
             if (u.str.is_string(ex->get_arg(0), haystackStr)) {
-                TRACE("str", tout << "eval constant Contains term " << mk_pp(ex, m) << std::endl;);
                 if (haystackStr.contains(needleStr)) {
                     assert_axiom(ex);
                 } else {
@@ -14454,7 +14459,6 @@ namespace smt {
                     app* indexOfApp = to_app(arg1);
                     expr* arg2_arg0 = indexOfApp->get_arg(0);
                     expr* arg2_arg1 = indexOfApp->get_arg(1);
-//                    expr* arg2_arg2 = indexOfApp->get_arg(2);
 
                     // same var, same keyword
                     if (arg2_arg0 == arg0 && arg2_arg1 == ex->get_arg(1)){
@@ -14532,12 +14536,14 @@ namespace smt {
                         if (sum >= 1) {
                             // e1  --> contain = true
                             assert_implication(e1, ex);
+                            return;
                         }
                         else {
                             // index <= arg2app
                             // e1 --> contain = false
 
                             assert_implication(e1, mk_not(m, ex));
+                            return;
                         }
                     }
                 }
@@ -14560,8 +14566,6 @@ namespace smt {
             contain_pair_idx_map[substr].insert(key);
         }
 
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(ex, m) << std::endl;);
-
         std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("pre_contain"), mk_str_var("post_contain"));
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
@@ -14581,13 +14585,19 @@ namespace smt {
         assert_axiom(breakdownAssert);
     }
 
+    /*
+     * arg1 >= 0 && arg1 < arg0.len,
+     *  then    arg0 = charAt0 . charAt1 . charAt2
+     *          charAt0.len = arg1
+     *          charAt1.len = 1
+     *  else return ""
+     */
     void theory_str::instantiate_axiom_charAt(enode * e) {
         context &ctx = get_context();
         ast_manager &m = get_manager();
         expr *arg0, *arg1;
         app *expr = e->get_owner();
         if (axiomatized_terms.contains(expr)) {
-            TRACE("str", tout << "already set up CharAt axiom for " << mk_pp(expr, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(expr);
@@ -14617,13 +14627,28 @@ namespace smt {
         assert_axiom(finalAxiom);
     }
 
+    /*
+     * arg2 = 0,
+     *      arg0 contains arg1
+     *      then    arg0 = indexOf1 . arg1 . indexOf2
+     *              indexOf1.len = indexAst
+     *              charAt1.len = 1
+     *              if needle.len = 1, then
+     *                  indexOf1 does not contain arg1
+     *              else
+     *                  arg0 = x3 . x4
+     *                  x3.len = indexAst + arg1.len - 1
+     *                  x3 does not contain arg1
+     *      else
+     *              indexOf1 = -1
+     *  return indexOf1
+     */
     void theory_str::instantiate_axiom_indexof(enode * e) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
         app * ex = e->get_owner();
         if (axiomatized_terms.contains(ex)) {
-            TRACE("str", tout << "already set up str.indexof axiom for " << mk_pp(ex, m) << std::endl;);
             return;
         }
         SASSERT(ex->get_num_args() == 3);
@@ -14668,15 +14693,15 @@ namespace smt {
         //  indexAst = |x1|
         thenItems.push_back(ctx.mk_eq_atom(indexAst, mk_strlen(x1)));
 
-        bool simpleCase = false;
+        bool oneCharCase = false;
         zstring needleStr;
         if (u.str.is_string(ex->get_arg(1), needleStr)) {
             if (needleStr.length() == 1) {
-                simpleCase = true;
+                oneCharCase = true;
             }
         }
 
-        if (simpleCase){
+        if (oneCharCase){
             thenItems.push_back(mk_not(m, mk_contains(x1, ex->get_arg(1))));
         }
         else {
@@ -14726,13 +14751,28 @@ namespace smt {
         }
     }
 
+    /*
+     * arg2 != 0,
+     *      arg0 = hd . tl
+     *      then    arg0 = indexOf1 . arg1 . indexOf2
+     *              indexOf1.len = indexAst
+     *              charAt1.len = 1
+     *              if needle.len = 1, then
+     *                  indexOf1 does not contain arg1
+     *              else
+     *                  arg0 = x3 . x4
+     *                  x3.len = indexAst + arg1.len - 1
+     *                  x3 does not contain arg1
+     *      else
+     *              indexOf1 = -1
+     *  return indexOf1
+     */
     void theory_str::instantiate_axiom_indexof_extended(enode * _e) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
         app * e = _e->get_owner();
         if (axiomatized_terms.contains(e)) {
-            TRACE("str", tout << "already set up extended str.indexof axiom for " << mk_pp(e, m) << std::endl;);
             return;
         }
         SASSERT(e->get_num_args() == 3);
@@ -14749,57 +14789,69 @@ namespace smt {
         //     len(hd) = i
         //     str.indexof(tl, N, 0)
 
-        expr * H = nullptr; // "haystack"
-        expr * N = nullptr; // "needle"
-        expr * i = nullptr; // start index
-        u.str.is_index(e, H, N, i);
+        expr * arg0 = nullptr; // "haystack"
+        expr * arg1 = nullptr; // "needle"
+        expr * startIndex = nullptr; // start index
+        u.str.is_index(e, arg0, arg1, startIndex);
 
         expr_ref minus_one(m_autil.mk_numeral(rational::minus_one(), true), m);
         expr_ref zero(m_autil.mk_numeral(rational::zero(), true), m);
 
         // case split
 
-        // case 1: i < 0
+        // case 1: startIndex < 0
         {
-            expr_ref premise(m_autil.mk_le(i, minus_one), m);
+            expr_ref premise(m_autil.mk_le(startIndex, minus_one), m);
             if (premise != m.mk_false()) {
                 expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
                 assert_implication(premise, conclusion);
             }
         }
 
-        expr_ref hd(mk_str_var("hd"), m);
+        expr_ref hd(m);
         expr_ref tl(mk_str_var("tl"), m);
-
-        // case 3: i >= len(H)
+        if (index_head.contains(e)) {
+            STRACE("str",
+                   tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[e], m)
+                        << std::endl;);
+            hd = index_head[e];
+        }
+        else {
+            hd = mk_str_var("hd");
+            index_head.insert(e, hd.get());
+        }
+        // case 3: startIndex >= len(H), return -1
         {
-            //expr_ref _premise(m_autil.mk_ge(i, mk_strlen(H)), m);
-            //expr_ref premise(_premise);
             //th_rewriter rw(m);
             //rw(premise);
-            expr_ref premise(m_autil.mk_ge(m_autil.mk_add(i, m_autil.mk_mul(minus_one, mk_strlen(H))), zero), m);
+            expr_ref premise(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero), m);
             if (premise != m.mk_false()) {
                 expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
                 assert_implication(premise, conclusion);
             }
         }
 
-        // case 4: 0 < i < len(H)
+        // case 4: 0 < i < len(H),
+        //      arg0 = hd . tl
+        //      hd.len = startIndex
+        //      tlindex = indexOf(tl, arg1, 0)
+        //      if tlindex >= 0, then
+        //          indexOf = tlindex + |hd|,
+        //      else indexOf = -1
         {
-            expr_ref premise1(m_autil.mk_gt(i, zero), m);
-            //expr_ref premise2(m_autil.mk_lt(i, mk_strlen(H)), m);
-            expr_ref premise2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(i, m_autil.mk_mul(minus_one, mk_strlen(H))), zero)), m);
+            expr_ref premise1(m_autil.mk_gt(startIndex, zero), m);
+            expr_ref premise2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
             expr_ref _premise(m.mk_and(premise1, premise2), m);
             expr_ref premise(_premise);
             th_rewriter rw(m);
             rw(premise);
 
             expr_ref_vector conclusion_terms(m);
-            conclusion_terms.push_back(ctx.mk_eq_atom(H, mk_concat(hd, tl)));
-            conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(hd), i));
+            conclusion_terms.push_back(ctx.mk_eq_atom(arg0, mk_concat(hd, tl)));
+            conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(hd), startIndex));
 
-            // if tlindex >= 0 --> indexOf = tlindex + |hd|, else indexOf = -1
-            expr* tlIndexOf = mk_indexof(tl, N);
+            // if tlindex >= 0 --> indexOf = tlindex + hd.len, else indexOf = -1
+            expr* tlIndexOf = mk_indexof(tl, arg1);
             conclusion_terms.push_back(createITEOperator(
                     createGreaterEqOperator(tlIndexOf, mk_int(0)),
                     ctx.mk_eq_atom(e, createAddOperator(tlIndexOf, mk_strlen(hd))),
@@ -14812,67 +14864,75 @@ namespace smt {
         {
             // heuristic: integrate with str.contains information
             // (but don't introduce it if it isn't already in the instance)
-            // (0 <= i < len(H)) ==> (H contains N) <==> (H indexof N, i) >= 0
-            expr_ref precondition1(m_autil.mk_gt(i, minus_one), m);
-            //expr_ref precondition2(m_autil.mk_lt(i, mk_strlen(H)), m);
-            expr_ref precondition2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(i, m_autil.mk_mul(minus_one, mk_strlen(H))), zero)), m);
+            // (0 <= startIndex < len(arg0)) ==> (arg0 contains arg1) <==> (arg0 indexof arg1, startIndex) >= 0
+            expr_ref precondition1(m_autil.mk_gt(startIndex, minus_one), m);
+            expr_ref precondition2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
             expr_ref _precondition(m.mk_and(precondition1, precondition2), m);
             expr_ref precondition(_precondition);
             th_rewriter rw(m);
             rw(precondition);
 
-            expr_ref premise(u.str.mk_contains(H, N), m);
+            expr_ref premise(u.str.mk_contains(arg0, arg1), m);
             ctx.internalize(premise, false);
             expr_ref conclusion(m_autil.mk_ge(e, zero), m);
             expr_ref containsAxiom(ctx.mk_eq_atom(premise, conclusion), m);
             expr_ref finalAxiom(rewrite_implication(precondition, containsAxiom), m);
-            SASSERT(finalAxiom);
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
             m_delayed_assertions_todo.push_back(finalAxiom);
         }
     }
 
-    // TODO: if the first argument is 0, simplify the constraint
+    /*
+     * condition: pos >= 0 && pos < strlen(base) && len >= 0
+     * if !condition
+     *      return ""
+     * if !condition && (pos+len) >= strlen(base)
+     *      arg0 = substr0 . substr3 . substr 4
+     *      substr0.len = pos
+     *      substr4.len = 0
+     *      return substr3
+     * if !condition && (pos+len) < strlen(base)
+     *      arg0 = substr0 . substr3 . substr 4
+     *      substr0.len = pos
+     *      substr3.len = len
+     *      return substr3
+     */
     void theory_str::instantiate_axiom_substr(enode * e) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
-        expr* substrBase = nullptr;
-        expr* substrPos = nullptr;
-        expr* substrLen = nullptr;
+        expr* base = nullptr;
+        expr* pos = nullptr;
+        expr* len = nullptr;
 
         app * expr = e->get_owner();
         if (axiomatized_terms.contains(expr)) {
-            TRACE("str", tout << "already set up Substr axiom for " << mk_pp(expr, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(expr);
 
         TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
 
-        VERIFY(u.str.is_extract(expr, substrBase, substrPos, substrLen));
+        VERIFY(u.str.is_extract(expr, base, pos, len));
 
         expr_ref zero(m_autil.mk_numeral(rational::zero(), true), m);
         expr_ref minusOne(m_autil.mk_numeral(rational::minus_one(), true), m);
-        SASSERT(zero);
-        SASSERT(minusOne);
 
         expr_ref_vector argumentsValid_terms(m);
         // pos >= 0
-        argumentsValid_terms.push_back(m_autil.mk_ge(substrPos, zero));
+        argumentsValid_terms.push_back(m_autil.mk_ge(pos, zero));
         // pos < strlen(base)
-        // --> pos + -1*strlen(base) < 0
         argumentsValid_terms.push_back(mk_not(m, m_autil.mk_ge(
-                m_autil.mk_add(substrPos, m_autil.mk_mul(minusOne, mk_strlen(substrBase))),
+                m_autil.mk_add(pos, m_autil.mk_mul(minusOne, mk_strlen(base))),
                 zero)));
 
         // len >= 0
-        argumentsValid_terms.push_back(m_autil.mk_ge(substrLen, zero));
+        argumentsValid_terms.push_back(m_autil.mk_ge(len, zero));
 
 
         // (pos+len) >= strlen(base)
         // --> pos + len + -1*strlen(base) >= 0
         expr_ref lenOutOfBounds(m_autil.mk_ge(
-                m_autil.mk_add(substrPos, substrLen, m_autil.mk_mul(minusOne, mk_strlen(substrBase))),
+                m_autil.mk_add(pos, len, m_autil.mk_mul(minusOne, mk_strlen(base))),
                 zero), m);
         expr_ref argumentsValid = mk_and(argumentsValid_terms);
 
@@ -14882,16 +14942,42 @@ namespace smt {
         expr_ref case1_conclusion(ctx.mk_eq_atom(expr, mk_string("")), m);
         expr_ref case1(m.mk_implies(case1_premise, case1_conclusion), m);
 
+        bool startFromHead = false;
+        rational startingInteger;
+        if (m_autil.is_numeral(pos, startingInteger) && startingInteger.is_zero()) {
+            startFromHead = true;
+        }
+
         // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
-        // ==> base = t0.t1 AND len(t0) = pos AND (Substr ...) = t1
+        // ==> base = substr0 . substr3 . substr4 AND len(t0) = pos AND (Substr ...) = t1
         expr_ref t0(mk_str_var("substr0"), m);
-        expr_ref t2(t0, m);
         expr_ref t3(mk_str_var("substr3"), m);
         expr_ref t4(mk_str_var("substr4"), m);
 
         expr_ref_vector case2_conclusion_terms(m);
-        case2_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t0, mk_concat(t3, t4))));
-        case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), substrPos));
+        if (!startFromHead) {
+            case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
+            case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
+            STRACE("str", tout << __FUNCTION__ << " update index head vs substring " << mk_pp(pos, m) << std::endl;);
+            if (u.str.is_index(to_app(pos))){
+                if (to_app(pos)->get_arg(0) == base){
+                    // index >= 0 --> substr0 == head of index
+                    if (index_head.contains(pos)) {
+                        STRACE("str",
+                               tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[pos], m)
+                                    << std::endl;);
+                    }
+                    else
+                        index_head.insert(pos, t0);
+                    STRACE("str", tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(base, m) << std::endl;);
+//                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
+//                    STRACE("str", tout << __FUNCTION__ << " update index head vs substring " << mk_pp(ctx.mk_eq_atom(t0, index_head[pos]), m) << std::endl;);
+                }
+            }
+        }
+        else
+            case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
+
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
 
@@ -14902,15 +14988,19 @@ namespace smt {
         expr_ref premise_expr(m);
         premise_expr = createAndOperator(premises);
         expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
-        literal premise_l = ctx.get_literal(premise_expr);
 
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
-        // ==> base = t2.t3.t4 AND len(t2) = pos AND len(t3) = len AND (Substr ...) = t3
+        // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
 
         expr_ref_vector case3_conclusion_terms(m);
-        case3_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t2, mk_concat(t3, t4))));
-        case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t2), substrPos));
-        case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), substrLen));
+        if (!startFromHead) {
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
+        }
+        else
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
+
+        case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), len));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
 
         expr_ref case3_conclusion(mk_and(case3_conclusion_terms), m);
@@ -14934,13 +15024,27 @@ namespace smt {
 //        ctx.force_phase(premise_l);
     }
 
+    /*
+     * Similar to IndexOf
+     * If arg0 contains arg1
+     * then    arg0 = replace1 . arg1 . replace2
+     *         result = replace1 . arg2 . replace2
+     *              if needle.len = 1, then
+     *                  replace1 does not contain arg1
+     *              else
+     *                  arg0 = x3 . x4
+     *                  x3.len = replace1.len + arg1.len - 1
+     *                  x3 does not contain arg1
+     * else
+     *         result = arg0
+     *
+     */
     void theory_str::instantiate_axiom_replace(enode * e) {
         context & ctx = get_context();
         ast_manager & m = get_manager();
 
         app * expr = e->get_owner();
         if (axiomatized_terms.contains(expr)) {
-            TRACE("str", tout << "already set up Replace axiom for " << mk_pp(expr, m) << std::endl;);
             return;
         }
         axiomatized_terms.insert(expr);
@@ -14950,7 +15054,6 @@ namespace smt {
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
         app* a = u.str.mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(a, m) << std::endl;);
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];
             value = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
@@ -14962,36 +15065,33 @@ namespace smt {
 
         expr_ref x1(value.first, m);
         expr_ref x2(value.second, m);
-        expr_ref i1(mk_int_var("i1"), m);
         expr_ref result(mk_str_var("result"), m);
 
         // condAst = Contains(args[0], args[1])
         expr_ref condAst(mk_contains(expr->get_arg(0), expr->get_arg(1)), m);
-        literal cond_l = ctx.get_literal(condAst.get());
         // -----------------------
         // true branch
         expr_ref_vector thenItems(m);
         //  args[0] = x1 . args[1] . x2
         thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x1, mk_concat(expr->get_arg(1), x2))));
-        //  i1 = |x1|
-        thenItems.push_back(ctx.mk_eq_atom(i1, mk_strlen(x1)));
 
-        bool simpleCase = false;
+        bool singleCharCase = false;
         zstring needleStr;
         if (u.str.is_string(expr->get_arg(1), needleStr)) {
             if (needleStr.length() == 1) {
-                simpleCase = true;
+                singleCharCase = true;
             }
         }
 
-        if (simpleCase) {
+        if (singleCharCase) {
             thenItems.push_back(mk_not(m, mk_contains(x1, expr->get_arg(1))));
         }
         else {
             //  args[0]  = x3 . x4 /\ |x3| = |x1| + |args[1]| - 1 /\ ! contains(x3, args[1])
+
             expr_ref x3(mk_str_var("replace3"), m);
             expr_ref x4(mk_str_var("replace4"), m);
-            expr_ref tmpLen(m_autil.mk_add(i1, mk_strlen(expr->get_arg(1)), mk_int(-1)), m);
+            expr_ref tmpLen(m_autil.mk_add(mk_strlen(x1), mk_strlen(expr->get_arg(1)), mk_int(-1)), m);
             thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x3, x4)));
             thenItems.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
             thenItems.push_back(mk_not(m, mk_contains(x3, expr->get_arg(1))));

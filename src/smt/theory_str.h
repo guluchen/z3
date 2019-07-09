@@ -2234,6 +2234,7 @@ namespace smt {
         theory_str_contain_pair_bool_map_t contain_pair_bool_map;
         obj_map<expr, std::set<std::pair<expr*, expr*> > > contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>> contain_split_map;
+        obj_map<expr, expr*> index_head;
         unsigned m_fresh_id;
         string_map stringConstantCache;
         unsigned long totalCacheAccessCount;
