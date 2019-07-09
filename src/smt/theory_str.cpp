@@ -4331,7 +4331,7 @@ namespace smt {
 
         bool axiomAdded = false;
         // enhancement: propagation of value/length information
-        if (propagate_eq_combination(eq_combination, guessedEqs)) {
+        if (propagate_eq_combination(eq_combination, guessedEqs, guessedDisEqs)) {
             STRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
             update_state();
             return FC_CONTINUE;
@@ -4351,7 +4351,7 @@ namespace smt {
 //        print_eq_combination(eq_combination);
 
         std::map<expr*, expr*> causes;
-        fetch_guessed_core_exprs(eq_combination, guessedEqs);
+        fetch_guessed_core_exprs(eq_combination, guessedEqs, guessedDisEqs);
         for (const auto& com : eq_combination){
             causes[com.first] = createAndOperator(guessedEqs);
         }
@@ -4390,8 +4390,10 @@ namespace smt {
     /*
      * a . b = c .d && |a| = |b| --> a = b
      */
-    bool theory_str::propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs){
-        fetch_guessed_core_exprs(eq_combination, guessedEqs);
+    bool theory_str::propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination,
+            expr_ref_vector guessedEqs,
+            expr_ref_vector guessedDisEqs){
+        fetch_guessed_core_exprs(eq_combination, guessedEqs, guessedDisEqs);
         expr* coreExpr = createAndOperator(guessedEqs);
 
         ast_manager & m = get_manager();
@@ -4435,9 +4437,9 @@ namespace smt {
      *
      */
     bool theory_str::is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination){
-        expr_ref_vector eqList(get_manager());
+        expr_ref_vector eqList(get_manager()), diseqList(get_manager());
         fetch_guessed_exprs_with_scopes(eqList);
-        fetch_guessed_core_exprs(eq_combination, eqList);
+        fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
         expr* core = createAndOperator(eqList);
 
         for (const auto &wi : m_wi_expr_memo) {
@@ -4538,6 +4540,8 @@ namespace smt {
         for(const auto& e : prev_guessedExprs){
             if (e != m.mk_true() && !guessedExprs.contains(e) ) {
                 // check the case where some var disappear because of len = 0
+                if (to_app(e)->get_num_args() != 2)
+                    continue;
                 expr* lhs = simplify_concat(to_app(e)->get_arg(0));
                 expr* rhs = simplify_concat(to_app(e)->get_arg(1));
                 expr* eq = createEqualOperator(lhs, rhs);
@@ -4816,9 +4820,9 @@ namespace smt {
             }
 
         if (ands.size() > 0) {
-            expr_ref_vector cores(m);
-            fetch_guessed_exprs_with_scopes(cores);
-            fetch_guessed_core_exprs(eq_combination, cores);
+            expr_ref_vector eqcores(m), diseqcores(m);
+            fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
+            fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
             expr_ref toAssert(createAndOperator(ands), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
@@ -4967,10 +4971,10 @@ namespace smt {
             }
 
         if (ands.size() > 0) {
-            expr_ref_vector cores(m);
-            fetch_guessed_exprs_with_scopes(cores);
-            fetch_guessed_core_exprs(eq_combination, cores);
-            expr_ref toAssert(createImpliesOperator(createAndOperator(cores), createAndOperator(ands)), m);
+            expr_ref_vector eqcores(m), diseqcores(m);
+            fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
+            fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
+            expr_ref toAssert(createImpliesOperator(createAndOperator(eqcores), createAndOperator(ands)), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
             return true;
@@ -6458,7 +6462,7 @@ namespace smt {
             expr_ref_vector corePrev(m);
             fetch_guessed_exprs_from_cache(uState, corePrev);
 
-            fetch_guessed_core_exprs(eq_combination, guessedEqs);
+            fetch_guessed_core_exprs(eq_combination, guessedEqs, guessedDisEqs);
 
             // update guessed exprs
             uState.equalities.reset();
@@ -16542,7 +16546,8 @@ namespace smt {
 
     void theory_str::fetch_guessed_core_exprs(
             std::map<expr*, std::set<expr*>> eq_combination,
-            expr_ref_vector &guessedExprs){
+            expr_ref_vector &guessedExprs,
+            expr_ref_vector diseqExprs){
         ast_manager& m = get_manager();
         // collect vars
         std::set<expr*> allvars = collect_all_vars_in_eq_combination(eq_combination);
@@ -16635,6 +16640,20 @@ namespace smt {
                     }
             }
         }
+
+        for (const auto& e : diseqExprs){
+            STRACE("str", tout << __LINE__ << " diseqExprs exprs " << mk_pp(e, m) << std::endl;);
+            if (to_app(e)->get_num_args() == 1) {
+                expr *eq = to_app(e)->get_arg(0);
+                if (to_app(eq)->get_num_args() == 2) {
+                    expr *lhs = to_app(eq)->get_arg(0);
+                    expr *rhs = to_app(eq)->get_arg(1);
+                    if (is_contain_equality(lhs) || is_contain_equality(rhs))
+                        ret.push_back(e);
+                }
+            }
+        }
+
         guessedExprs.reset();
         guessedExprs.append(ret);
         for (int i = 0; i < guessedExprs.size(); ++i)
@@ -16802,7 +16821,7 @@ namespace smt {
 
     void theory_str::fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessedExprs) {
         guessedExprs.append(state.equalities);
-        fetch_guessed_core_exprs(state.eq_combination, guessedExprs);
+        fetch_guessed_core_exprs(state.eq_combination, guessedExprs, state.disequalities);
     }
 
     void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs) {

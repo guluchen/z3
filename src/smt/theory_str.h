@@ -1253,7 +1253,7 @@ namespace smt {
         void reset_eh() override;
         final_check_status final_check_eh() override;
             void update_state();
-            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs);
+            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
@@ -2307,7 +2307,8 @@ namespace smt {
         void dump_literals();
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
-                expr_ref_vector &guessedExprs);
+                expr_ref_vector &guessedExprs,
+                expr_ref_vector diseqExprs);
         void fetch_related_exprs(
                 expr_ref_vector allvars,
                 expr_ref_vector &guessedExprs);
