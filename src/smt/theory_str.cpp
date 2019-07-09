@@ -6407,6 +6407,7 @@ namespace smt {
     }
 
     bool theory_str::is_equal(UnderApproxState preState, UnderApproxState currState){
+        return false;
         ast_manager & m = get_manager();
         std::map<expr*, std::set<expr*>> _eq_combination = preState.eq_combination;
 
@@ -6568,12 +6569,14 @@ namespace smt {
         init_underapprox_repeat();
         literal causeLiteral = ctx.get_literal(causexpr);
         bool axiomAdded = false;
+
         for (const auto& a : uState.assertingConstraints){
             axiomAdded = true;
             ensure_enode(a);
 
-            if (m.is_and(a))
+            if (m.is_and(a)) {
                 assert_axiom(createImpliesOperator(causexpr, a));
+            }
             else
                 assert_axiom(a);
         }
@@ -7512,8 +7515,6 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " has causes" << std::endl;);
                 STRACE("str", tout << __LINE__ << mk_pp(causes[var], m) << std::endl;);
             }
-            else
-            STRACE("str", tout << __LINE__ <<  " no causes" << std::endl;);
             if (!m.is_true(e)){
                 axiomAdded = true;
                 assertedConstraints.push_back(e);
@@ -7522,7 +7523,6 @@ namespace smt {
             assertedConstraints.push_back(e);
         }
         else {
-            STRACE("str", tout << __LINE__ <<  " trivialUnsat = true " << std::endl;);
             /* trivial unsat */
             assertedConstraints.reset();
             if (causes.find(var) != causes.end()) {
@@ -14886,27 +14886,30 @@ namespace smt {
         // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
         // ==> base = t0.t1 AND len(t0) = pos AND (Substr ...) = t1
         expr_ref t0(mk_str_var("substr0"), m);
-//        expr_ref t1(mk_str_var("substr1"), m);
         expr_ref t2(t0, m);
         expr_ref t3(mk_str_var("substr3"), m);
         expr_ref t4(mk_str_var("substr4"), m);
 
         expr_ref_vector case2_conclusion_terms(m);
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t0, mk_concat(t3, t4))));
-//        case2_conclusion_terms.push_back(ctx.mk_eq_atom(t1, mk_concat(t3, t4)));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), substrPos));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
 
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
-        expr_ref case2(m.mk_implies(m.mk_and(argumentsValid, lenOutOfBounds), case2_conclusion), m);
+        expr_ref_vector premises(m);
+        premises.push_back(argumentsValid);
+        premises.push_back(lenOutOfBounds);
+        expr_ref premise_expr(m);
+        premise_expr = createAndOperator(premises);
+        expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
+        literal premise_l = ctx.get_literal(premise_expr);
 
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t2.t3.t4 AND len(t2) = pos AND len(t3) = len AND (Substr ...) = t3
 
         expr_ref_vector case3_conclusion_terms(m);
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(substrBase, mk_concat(t2, mk_concat(t3, t4))));
-//        case3_conclusion_terms.push_back(ctx.mk_eq_atom(t1, mk_concat(t3, t4)));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t2), substrPos));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), substrLen));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
@@ -14929,6 +14932,7 @@ namespace smt {
             rw(case3_rw);
             assert_axiom(case3_rw);
         }
+//        ctx.force_phase(premise_l);
     }
 
     void theory_str::instantiate_axiom_replace(enode * e) {
@@ -14964,6 +14968,7 @@ namespace smt {
 
         // condAst = Contains(args[0], args[1])
         expr_ref condAst(mk_contains(expr->get_arg(0), expr->get_arg(1)), m);
+        literal cond_l = ctx.get_literal(condAst.get());
         // -----------------------
         // true branch
         expr_ref_vector thenItems(m);
@@ -15009,6 +15014,7 @@ namespace smt {
         expr_ref reduceToResult_rw(reduceToResult, m);
         rw(reduceToResult_rw);
         assert_axiom(reduceToResult_rw);
+//        ctx.force_phase(cond_l);
     }
 
     void theory_str::instantiate_axiom_regexIn(enode * e) {
