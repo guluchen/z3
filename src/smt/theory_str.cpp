@@ -3633,8 +3633,18 @@ namespace smt {
                 collect_eq_nodes(rhs, eqs);
                 for (const auto& eq : eqs) {
                     ptr_vector<expr> v;
-                    get_nodes_in_concat(eq, v);
+                    get_all_nodes_in_concat(eq, v);
                     for (const auto &n : v) {
+
+//                        expr * boolVar;
+//                        if (contain_pair_bool_map.find(n, str, boolVar) && n != rhs){
+//                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it "  << mk_pp(n, get_manager())<< std::endl;);
+//                            expr_ref_vector premises(get_manager());
+//                            premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                            premises.push_back(createEqualOperator(rhs, eq));
+//                            assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                        }
+
                         zstring tmp;
                         if (u.str.is_string(n, tmp)) {
                             if (tmp.contains(key)) {
@@ -3647,39 +3657,55 @@ namespace smt {
                                 return true;
                             }
                         }
-                        else if (u.str.is_concat(n)){
-                            expr* arg0 = to_app(n)->get_arg(0);
-                            expr* arg1 = to_app(n)->get_arg(1);
-                            ptr_vector<expr> v_arg;
-                            get_nodes_in_concat(arg0, v_arg);
-                            for (const auto& nn : v_arg){
-                                if (u.str.is_string(nn, tmp)) {
-                                    if (tmp.contains(key)) {
-                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-                                        expr_ref_vector premises(get_manager());
-                                        premises.push_back(createEqualOperator(rhs, eq));
-                                        premises.push_back(createEqualOperator(nn, arg0));
-                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
-                                        return true;
-                                    }
-                                }
-                            }
-
-                            v_arg.clear();
-                            get_nodes_in_concat(arg1, v_arg);
-                            for (const auto& nn : v_arg){
-                                if (u.str.is_string(nn, tmp)) {
-                                    if (tmp.contains(key)) {
-                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-                                        expr_ref_vector premises(get_manager());
-                                        premises.push_back(createEqualOperator(rhs, eq));
-                                        premises.push_back(createEqualOperator(nn, arg1));
-                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
+//                        else if (u.str.is_concat(n)){
+//                            expr* arg0 = to_app(n)->get_arg(0);
+//                            expr* arg1 = to_app(n)->get_arg(1);
+//                            if (contain_pair_bool_map.find(arg0, str, boolVar)){
+//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                expr_ref_vector premises(get_manager());
+//                                premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                                premises.push_back(createEqualOperator(rhs, eq));
+//                                assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                            }
+//
+//                            if (contain_pair_bool_map.find(arg1, str, boolVar)){
+//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                expr_ref_vector premises(get_manager());
+//                                premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                                premises.push_back(createEqualOperator(rhs, eq));
+//                                assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                            }
+//
+//                            ptr_vector<expr> v_arg;
+//                            get_nodes_in_concat(arg0, v_arg);
+//                            for (const auto& nn : v_arg){
+//                                if (u.str.is_string(nn, tmp)) {
+//                                    if (tmp.contains(key)) {
+//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                        expr_ref_vector premises(get_manager());
+//                                        premises.push_back(createEqualOperator(rhs, eq));
+//                                        premises.push_back(createEqualOperator(nn, arg0));
+//                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
+//                                        return true;
+//                                    }
+//                                }
+//                            }
+//
+//                            v_arg.clear();
+//                            get_nodes_in_concat(arg1, v_arg);
+//                            for (const auto& nn : v_arg){
+//                                if (u.str.is_string(nn, tmp)) {
+//                                    if (tmp.contains(key)) {
+//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                        expr_ref_vector premises(get_manager());
+//                                        premises.push_back(createEqualOperator(rhs, eq));
+//                                        premises.push_back(createEqualOperator(nn, arg1));
+//                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
+//                                        return true;
+//                                    }
+//                                }
+//                            }
+//                        }
                     }
                 }
             }
@@ -3692,8 +3718,18 @@ namespace smt {
                 collect_eq_nodes(lhs, eqs);
                 for (const auto& eq : eqs) {
                     ptr_vector<expr> v;
-                    get_nodes_in_concat(eq, v);
+                    get_all_nodes_in_concat(eq, v);
                     for (const auto &n : v) {
+                        expr * boolVar;
+//                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it "  << mk_pp(n, get_manager())<< std::endl;);
+//                        if (contain_pair_bool_map.find(n, str, boolVar) && n != lhs){
+//                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it "  << mk_pp(n, get_manager())<< std::endl;);
+//                            expr_ref_vector premises(get_manager());
+//                            premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                            premises.push_back(createEqualOperator(lhs, eq));
+//                            assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                        }
+
                         zstring tmp;
                         if (u.str.is_string(n, tmp)) {
                             if (tmp.contains(key)) {
@@ -3706,39 +3742,55 @@ namespace smt {
                                 return true;
                             }
                         }
-                        else if (u.str.is_concat(n)){
-                            expr* arg0 = to_app(n)->get_arg(0);
-                            expr* arg1 = to_app(n)->get_arg(1);
-                            ptr_vector<expr> v_arg;
-                            get_nodes_in_concat(arg0, v_arg);
-                            for (const auto& nn : v_arg){
-                                if (u.str.is_string(nn, tmp)) {
-                                    if (tmp.contains(key)) {
-                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-                                        expr_ref_vector premises(get_manager());
-                                        premises.push_back(createEqualOperator(lhs, eq));
-                                        premises.push_back(createEqualOperator(nn, arg0));
-                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
-                                        return true;
-                                    }
-                                }
-                            }
-
-                            v_arg.clear();
-                            get_nodes_in_concat(arg1, v_arg);
-                            for (const auto& nn : v_arg){
-                                if (u.str.is_string(nn, tmp)) {
-                                    if (tmp.contains(key)) {
-                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-                                        expr_ref_vector premises(get_manager());
-                                        premises.push_back(createEqualOperator(lhs, eq));
-                                        premises.push_back(createEqualOperator(nn, arg1));
-                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
+//                        else if (u.str.is_concat(n)){
+//                            expr* arg0 = to_app(n)->get_arg(0);
+//                            expr* arg1 = to_app(n)->get_arg(1);
+//                            if (contain_pair_bool_map.find(arg0, str, boolVar)){
+//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                expr_ref_vector premises(get_manager());
+//                                premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                                premises.push_back(createEqualOperator(lhs, eq));
+//                                assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                            }
+//
+//                            if (contain_pair_bool_map.find(arg1, str, boolVar)){
+//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                expr_ref_vector premises(get_manager());
+//                                premises.push_back(mk_not(get_manager(), createEqualOperator(lhs, rhs)));
+//                                premises.push_back(createEqualOperator(lhs, eq));
+//                                assert_implication(createAndOperator(premises), mk_not(get_manager(), boolVar));
+//                            }
+//
+//                            ptr_vector<expr> v_arg;
+//                            get_nodes_in_concat(arg0, v_arg);
+//                            for (const auto& nn : v_arg){
+//                                if (u.str.is_string(nn, tmp)) {
+//                                    if (tmp.contains(key)) {
+//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                        expr_ref_vector premises(get_manager());
+//                                        premises.push_back(createEqualOperator(lhs, eq));
+//                                        premises.push_back(createEqualOperator(nn, arg0));
+//                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
+//                                        return true;
+//                                    }
+//                                }
+//                            }
+//
+//                            v_arg.clear();
+//                            get_nodes_in_concat(arg1, v_arg);
+//                            for (const auto& nn : v_arg){
+//                                if (u.str.is_string(nn, tmp)) {
+//                                    if (tmp.contains(key)) {
+//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
+//                                        expr_ref_vector premises(get_manager());
+//                                        premises.push_back(createEqualOperator(lhs, eq));
+//                                        premises.push_back(createEqualOperator(nn, arg1));
+//                                        assert_implication(createAndOperator(premises), createEqualOperator(lhs, rhs));
+//                                        return true;
+//                                    }
+//                                }
+//                            }
+//                        }
                     }
                 }
             }
