@@ -1262,13 +1262,13 @@ namespace smt {
                 bool at_same_eq_state(UnderApproxState state);
                 bool at_same_diseq_state(str::state curr, str::state prev);
 
-        bool review_combination(std::map<expr *, std::set<expr *>> eq_combination);
+        bool review_starting_ending_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool all_length_solved();
             std::set<char> collect_char_domain_from_strs();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
-            bool special_handling_for_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
-                expr* optimize_combination(expr* x, expr* y);
-            bool special_handling_for_charAt_family(
+            bool handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
+                expr* create_equations_over_contain_vars(expr* x, expr* y);
+            bool handle_charAt_family(
                 std::map<expr *, std::set<expr *>> eq_combination,
                 std::map<expr*, expr*> causes);
                 bool are_equal_exprs(expr* x, expr* y);
@@ -1931,7 +1931,7 @@ namespace smt {
                         expr* lhs,
                         expr* rhs,
                         expr_ref_vector &imppliedEqualities);
-            std::set<std::pair<expr*, int>> collect_important_vars(std::set<expr*> eqc_roots);
+            std::set<std::pair<expr*, int>> collect_important_vars();
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
                     std::set<expr*> &notImportant,
