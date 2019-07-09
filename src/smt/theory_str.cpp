@@ -7518,9 +7518,8 @@ namespace smt {
             if (!m.is_true(e)){
                 axiomAdded = true;
                 assertedConstraints.push_back(e);
-            }
-            assert_breakdown_combination(e, var, causes);
-            assertedConstraints.push_back(e);
+                assert_breakdown_combination(e, var, causes);
+            } 
         }
         else {
             /* trivial unsat */

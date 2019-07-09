@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -99,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="261">
-              <caret line="6409" column="21" selection-start-line="6409" selection-start-column="21" selection-end-line="6409" selection-end-column="21" />
+            <state relative-caret-position="411">
+              <caret line="7521" column="14" selection-start-line="7521" selection-start-column="14" selection-end-line="7521" selection-end-column="14" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -181,7 +180,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>static</find>
       <find>new_diseq_eh</find>
       <find>instantiate_basic_string_axioms</find>
       <find>final_check</find>
@@ -211,6 +209,7 @@
       <find>instantiate_axiom_substr</find>
       <find>createAndOperator</find>
       <find>force_phase</find>
+      <find>convert_equal</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -747,12 +746,12 @@
       <workItem from="1562210607925" duration="763000" />
       <workItem from="1562211448830" duration="30783000" />
       <workItem from="1562396972417" duration="3953000" />
-      <workItem from="1562419036143" duration="27798000" />
+      <workItem from="1562419036143" duration="28255000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1078157000" />
+    <option name="totallyTimeSpent" value="1078614000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1135,8 +1134,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="261">
-          <caret line="6409" column="21" selection-start-line="6409" selection-start-column="21" selection-end-line="6409" selection-end-column="21" />
+        <state relative-caret-position="411">
+          <caret line="7521" column="14" selection-start-line="7521" selection-start-column="14" selection-end-line="7521" selection-end-column="14" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
