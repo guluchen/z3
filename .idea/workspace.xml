@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="387">
-              <caret line="4543" column="29" selection-start-line="4543" selection-start-column="29" selection-end-line="4543" selection-end-column="29" />
+            <state relative-caret-position="568">
+              <caret line="4838" column="12" selection-start-line="4838" selection-start-column="12" selection-end-line="4838" selection-end-column="12" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -170,7 +170,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="221">
-              <caret line="1255" column="119" selection-start-line="1255" selection-start-column="119" selection-end-line="1255" selection-end-column="150" />
+              <caret line="2327" column="44" selection-start-line="2327" selection-start-column="13" selection-end-line="2327" selection-end-column="44" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -182,19 +182,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>dump_assignments</find>
-      <find>eqc_roots</find>
-      <find>collect_important_vars</find>
-      <find>cores</find>
-      <find>print_eq_combination</find>
-      <find>causes</find>
-      <find>handling_for_contain_family</find>
-      <find>contain_family</find>
-      <find>exprLenMap</find>
-      <find>index_head</find>
-      <find>check_contain_by_eq_nodes</find>
-      <find>new_dis</find>
-      <find>m_wes_to_fail</find>
       <find>at_same_diseq_state</find>
       <find>contain_s</find>
       <find>contain_pair_bool_map.conta</find>
@@ -207,11 +194,24 @@
       <find>contain_pair_idx_map</find>
       <find>contain_pair_bool_map</find>
       <find>instantiate_axi</find>
-      <find>propagate_eq_combination</find>
       <find>is_notconta</find>
       <find>is_contain_equality</find>
-      <find>guessedEqs</find>
       <find>fetch_guessed_core_exprs</find>
+      <find>-&gt;get</find>
+      <find>at_same_eq_state</find>
+      <find>causes</find>
+      <find>guessedEqs</find>
+      <find>underapproximation(</find>
+      <find>assert_breakdown_combination</find>
+      <find>handle_</find>
+      <find>handle_charAt_family</find>
+      <find>convert_equalities</find>
+      <find>is_notContain_consistent</find>
+      <find>eqs</find>
+      <find>fetch_guessed_exprs_with_scopes</find>
+      <find>final_check</find>
+      <find>is_completed_branch</find>
+      <find>propagate_eq_combination</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -751,19 +751,19 @@
       <workItem from="1562419036143" duration="29413000" />
       <workItem from="1562640337386" duration="8650000" />
       <workItem from="1562654774742" duration="7483000" />
-      <workItem from="1562680332038" duration="9386000" />
+      <workItem from="1562680332038" duration="15902000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1105291000" />
+    <option name="totallyTimeSpent" value="1111807000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4862259" visible="true" weight="0.1311717" />
-      <window_info id="Structure" order="1" sideWeight="0.5137741" side_tool="true" visible="true" weight="0.1311717" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4848485" visible="true" weight="0.1311717" />
+      <window_info id="Structure" order="1" sideWeight="0.5151515" side_tool="true" visible="true" weight="0.1311717" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.07773585" />
@@ -776,7 +776,7 @@
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50080776" side_tool="true" weight="0.10231023" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32981133" />
-      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.07515924" />
+      <window_info anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.07515924" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.11793215" />
@@ -1130,7 +1130,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="221">
-          <caret line="1255" column="119" selection-start-line="1255" selection-start-column="119" selection-end-line="1255" selection-end-column="150" />
+          <caret line="2327" column="44" selection-start-line="2327" selection-start-column="13" selection-end-line="2327" selection-end-column="44" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1139,8 +1139,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="387">
-          <caret line="4543" column="29" selection-start-line="4543" selection-start-column="29" selection-end-line="4543" selection-end-column="29" />
+        <state relative-caret-position="568">
+          <caret line="4838" column="12" selection-start-line="4838" selection-start-column="12" selection-end-line="4838" selection-end-column="12" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

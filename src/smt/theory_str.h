@@ -1252,8 +1252,15 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            void refined_init_final_check(
+                std::set<std::pair<expr *, int>> &importantVars,
+                std::map<expr *, std::set<expr *>> &eq_combination);
+            void init_final_check(
+                std::set<std::pair<expr *, int>> &importantVars,
+                std::map<expr *, std::set<expr *>> &eq_combination);
+            bool is_completed_branch(bool &addAxiom);
             void update_state();
-            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination, expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs);
+            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
@@ -1269,8 +1276,7 @@ namespace smt {
             bool handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
                 expr* create_equations_over_contain_vars(expr* x, expr* y);
             bool handle_charAt_family(
-                std::map<expr *, std::set<expr *>> eq_combination,
-                std::map<expr*, expr*> causes);
+                std::map<expr *, std::set<expr *>> eq_combination);
                 bool are_equal_exprs(expr* x, expr* y);
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
@@ -1339,7 +1345,7 @@ namespace smt {
                 std::map<expr*, std::vector<int>> &strValue);
             bool fixedValue(std::vector<std::pair<expr*, rational>> &freeVars, std::map<expr*, rational> varLens);
             bool fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens);
-            bool propagate_final(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
+            bool propagate_concat();
             bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
                 void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
@@ -1347,7 +1353,6 @@ namespace smt {
                 bool propagate_length_within_eqc(expr * var);
             bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
-                std::map<expr*, expr*> causes,
                 std::set<std::pair<expr*, int>> importantVars);
                 void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
                 bool is_equal(UnderApproxState preState, UnderApproxState currState);
@@ -1383,9 +1388,9 @@ namespace smt {
                     void static_analysis(std::map<expr*, std::set<expr*>> eq_combination);
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> importantVars,
-                                            std::map<expr*, expr*> causes);
-                void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes, expr_ref_vector &assertedConstraints, bool &axiomAdded);
-                void assert_breakdown_combination(expr* e, expr* var, std::map<expr*, expr*> causes);
+                                           expr* premise);
+                void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
+                void assert_breakdown_combination(expr* e, expr* var);
                 void negate_context();
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
