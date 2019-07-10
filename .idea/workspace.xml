@@ -3,7 +3,8 @@
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
       <config projectName="Z3" targetName="subpaving" />
-      <config projectName="Z3" targetName="pattern" />
+      <config projectName="Z3" targetName="euclid" />
+      <config projectName="Z3" targetName="rewriter" />
       <config projectName="Z3" targetName="lp_tst" />
       <config projectName="Z3" targetName="ast" />
       <config projectName="Z3" targetName="util" />
@@ -21,7 +22,6 @@
       <config projectName="Z3" targetName="cmd_context" />
       <config projectName="Z3" targetName="smt" />
       <config projectName="Z3" targetName="opt" />
-      <config projectName="Z3" targetName="ddnf" />
       <config projectName="Z3" targetName="bv_tactics" />
       <config projectName="Z3" targetName="api_dll" />
       <config projectName="Z3" targetName="sat_tactic" />
@@ -40,11 +40,11 @@
       <config projectName="Z3" targetName="bit_blaster" />
       <config projectName="Z3" targetName="sat" />
       <config projectName="Z3" targetName="smt2parser" />
+      <config projectName="Z3" targetName="pattern" />
       <config projectName="Z3" targetName="portfolio" />
       <config projectName="Z3" targetName="smtlogic_tactics" />
       <config projectName="Z3" targetName="bmc" />
       <config projectName="Z3" targetName="qe" />
-      <config projectName="Z3" targetName="solver" />
       <config projectName="Z3" targetName="fp" />
       <config projectName="Z3" targetName="substitution" />
       <config projectName="Z3" targetName="aig_tactic" />
@@ -56,24 +56,24 @@
       <config projectName="Z3" targetName="rel" />
       <config projectName="Z3" targetName="tab" />
       <config projectName="Z3" targetName="sls_tactic" />
+      <config projectName="Z3" targetName="smt_params" />
       <config projectName="Z3" targetName="subpaving_tactic" />
       <config projectName="Z3" targetName="clp" />
-      <config projectName="Z3" targetName="rewriter" />
+      <config projectName="Z3" targetName="tactic" />
+      <config projectName="Z3" targetName="cpp_example" />
       <config projectName="Z3" targetName="dataflow" />
       <config projectName="Z3" targetName="uninstall" />
-      <config projectName="Z3" targetName="euclid" />
       <config projectName="Z3" targetName="nlsat_tactic" />
       <config projectName="Z3" targetName="api" />
       <config projectName="Z3" targetName="parser_util" />
-      <config projectName="Z3" targetName="cpp_example" />
-      <config projectName="Z3" targetName="tactic" />
+      <config projectName="Z3" targetName="ddnf" />
       <config projectName="Z3" targetName="grobner" />
       <config projectName="Z3" targetName="c_example" />
       <config projectName="Z3" targetName="model" />
       <config projectName="Z3" targetName="muz" />
       <config projectName="Z3" targetName="normal_forms" />
       <config projectName="Z3" targetName="ufbv_tactic" />
-      <config projectName="Z3" targetName="smt_params" />
+      <config projectName="Z3" targetName="solver" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -98,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="437">
-              <caret line="1186" column="12" selection-start-line="1186" selection-start-column="12" selection-end-line="1186" selection-end-column="42" />
+            <state relative-caret-position="212">
+              <caret line="4249" column="40" selection-start-line="4249" selection-start-column="40" selection-end-line="4249" selection-end-column="40" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -167,8 +168,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="197">
-              <caret line="1253" column="33" lean-forward="true" selection-start-line="1253" selection-start-column="33" selection-end-line="1253" selection-end-column="33" />
+            <state relative-caret-position="18795">
+              <caret line="1253" column="33" selection-start-line="1253" selection-start-column="33" selection-end-line="1253" selection-end-column="33" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -203,13 +204,13 @@
       <find>collect_char_domain_from_strs</find>
       <find>at_same_diseq_state</find>
       <find>at_same_eq_state</find>
-      <find>is_completed_branch</find>
       <find>handle_diseq</find>
       <find>oneCharCase</find>
       <find>pop_scope_eh</find>
       <find>final_check</find>
       <find>newConstraintTriggered</find>
       <find>new_eq_e</find>
+      <find>is_completed_branch</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -245,6 +246,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -273,7 +275,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -749,19 +750,20 @@
       <workItem from="1562419036143" duration="29413000" />
       <workItem from="1562640337386" duration="8650000" />
       <workItem from="1562654774742" duration="7483000" />
-      <workItem from="1562680332038" duration="19653000" />
+      <workItem from="1562680332038" duration="20014000" />
+      <workItem from="1562767092937" duration="1268000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1115558000" />
+    <option name="totallyTimeSpent" value="1117187000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="41" y="23" width="1399" height="877" extended-state="6" />
+    <frame x="41" y="23" width="1399" height="877" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4848485" visible="true" weight="0.1311717" />
-      <window_info id="Structure" order="1" sideWeight="0.5151515" side_tool="true" visible="true" weight="0.1311717" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.48347107" visible="true" weight="0.13264555" />
+      <window_info id="Structure" order="1" sideWeight="0.5165289" side_tool="true" visible="true" weight="0.13264555" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.07773585" />
@@ -774,7 +776,7 @@
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50080776" side_tool="true" weight="0.10231023" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32981133" />
-      <window_info anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.07515924" />
+      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.07515924" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.11793215" />
@@ -1080,6 +1082,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="212">
+          <caret line="4249" column="40" selection-start-line="4249" selection-start-column="40" selection-end-line="4249" selection-end-column="40" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_bool_var_data.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="495">
@@ -1127,20 +1139,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="197">
-          <caret line="1253" column="33" lean-forward="true" selection-start-line="1253" selection-start-column="33" selection-end-line="1253" selection-end-column="33" />
+        <state relative-caret-position="18795">
+          <caret line="1253" column="33" selection-start-line="1253" selection-start-column="33" selection-end-line="1253" selection-end-column="33" />
           <folding>
             <element signature="e#9699#19701#1" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="437">
-          <caret line="1186" column="12" selection-start-line="1186" selection-start-column="12" selection-end-line="1186" selection-end-column="42" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
           </folding>
         </state>
       </provider>

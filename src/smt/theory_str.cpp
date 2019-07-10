@@ -4246,8 +4246,8 @@ namespace smt {
 
         dump_assignments();
 
-        bool newAssert;
-        if (is_completed_branch(newAssert)){
+        bool addAxiom;
+        if (is_completed_branch(addAxiom)){
             if (newAssert)
                 return FC_CONTINUE;
             else
@@ -4356,6 +4356,7 @@ namespace smt {
         if (at_same_eq_state(uState) && at_same_diseq_state(root, uState.currState)) {
             if (uState.reassertDisEQ && uState.reassertEQ) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+                return true;
             }
             else {
                 if (!uState.reassertEQ){
@@ -4373,7 +4374,8 @@ namespace smt {
                 uState.reassertDisEQ = true;
                 uState.reassertEQ = true;
 
-                addAxiom = false;
+                addAxiom = true;
+                return true;
             }
         }
         else {
@@ -4383,9 +4385,11 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
                 if (at_same_eq_state(completedStates[i]) && at_same_diseq_state(root, completedStates[i].currState)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     /*
