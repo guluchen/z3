@@ -3614,6 +3614,7 @@ namespace smt {
             m_wi_expr_memo.push_back(wi);
         }
         else {
+            newConstraintTriggered = true;
             STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
                                << mk_ismt2_pp(n2, m) << std::endl;);
         }
@@ -4233,11 +4234,13 @@ namespace smt {
         ast_manager &m = get_manager();
         context& ctx = get_context();
 
-        if (m_we_expr_memo.empty() && m_wi_expr_memo.empty())
+        if (m_we_expr_memo.empty() && m_wi_expr_memo.empty()) {
             return FC_DONE;
+        }
 
-        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ)
+        if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
             return FC_DONE;
+        }
         else
             newConstraintTriggered = false;
 
