@@ -4312,7 +4312,7 @@ namespace smt {
             std::set<std::pair<expr *, int>> &importantVars,
             std::map<expr *, std::set<expr *>> &eq_combination){
 
-        sigmaDomain = collect_char_domain_from_strs();
+        sigmaDomain = collect_char_domain_from_concat();
         importantVars = collect_important_vars();
         std::map<expr*, std::set<expr*>> _premises;
         std::set<expr*> subNodes;
@@ -4374,8 +4374,10 @@ namespace smt {
             }
         }
         else {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completed state " << completedStates.size() << std::endl;);
             // check all completed state, skip the last one
             for (int i = 0; i < (int)completedStates.size() - 1; ++i){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
                 if (at_same_eq_state(completedStates[i]) && at_same_diseq_state(root, completedStates[i].currState)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
                 }
@@ -4534,8 +4536,9 @@ namespace smt {
     bool theory_str::at_same_eq_state(UnderApproxState state) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
-        expr_ref_vector guessedExprs(m);
-        fetch_guessed_exprs_with_scopes(guessedExprs);
+        expr_ref_vector guessedExprs(m),  guessedDisEqExprs(m);
+        fetch_guessed_exprs_with_scopes(guessedExprs, guessedDisEqExprs);
+        guessedExprs.append(guessedDisEqExprs);
 
         expr_ref_vector prev_guessedExprs(m);
         fetch_guessed_exprs_from_cache(state, prev_guessedExprs);
@@ -4701,7 +4704,10 @@ namespace smt {
         return !notSolved;
     }
 
-    std::set<char> theory_str::collect_char_domain_from_strs(){
+    /*
+     *
+     */
+    std::set<char> theory_str::collect_char_domain_from_concat(){
         std::set<char> charDomain;
         for (const auto& we : m_we_expr_memo) {
             zstring value;
@@ -14789,7 +14795,8 @@ namespace smt {
         }
 
         if (oneCharCase){
-            thenItems.push_back(mk_not(m, mk_contains(x1, ex->get_arg(1))));
+            assert_axiom(mk_not(m, mk_contains(x1, ex->get_arg(1))));
+//            thenItems.push_back(mk_not(m, mk_contains(x1, ex->get_arg(1))));
         }
         else {
             //     args[0]  = x3 . x4
@@ -15174,7 +15181,8 @@ namespace smt {
         }
 
         if (singleCharCase) {
-            thenItems.push_back(mk_not(m, mk_contains(x1, expr->get_arg(1))));
+            assert_axiom(mk_not(m, mk_contains(x1, expr->get_arg(1))));
+//            thenItems.push_back(mk_not(m, mk_contains(x1, expr->get_arg(1))));
         }
         else {
             //  args[0]  = x3 . x4 /\ |x3| = |x1| + |args[1]| - 1 /\ ! contains(x3, args[1])
@@ -16604,7 +16612,6 @@ namespace smt {
         }
 
         for (const auto& e : diseqExprs){
-            STRACE("str", tout << __LINE__ << " diseqExprs exprs " << mk_pp(e, m) << std::endl;);
             if (to_app(e)->get_num_args() == 1) {
                 expr *eq = to_app(e)->get_arg(0);
                 if (to_app(eq)->get_num_args() == 2) {

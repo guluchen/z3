@@ -1271,7 +1271,7 @@ namespace smt {
 
         bool review_starting_ending_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool all_length_solved();
-            std::set<char> collect_char_domain_from_strs();
+            std::set<char> collect_char_domain_from_concat();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
             bool handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
                 expr* create_equations_over_contain_vars(expr* x, expr* y);
