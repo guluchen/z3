@@ -4248,7 +4248,7 @@ namespace smt {
 
         bool addAxiom;
         if (is_completed_branch(addAxiom)){
-            if (newAssert)
+            if (addAxiom)
                 return FC_CONTINUE;
             else
                 return FC_DONE;
