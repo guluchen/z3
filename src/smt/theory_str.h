@@ -1264,7 +1264,18 @@ namespace smt {
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
-                    std::set<zstring> collect_all_const_in_expr(expr* v);
+                    bool one_const_in_expr(expr* v, expr_ref_vector constList);
+
+            bool implies_empty_str_from_notContain(std::map<expr *, std::set<expr *>> eq_combination);
+                expr_ref_vector implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key);
+                expr_ref_vector implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key);
+                    bool not_contain(expr* haystack, expr* needle);
+                    bool does_contain(expr* haystack, expr* needle);
+
+            bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);
+                int get_lower_bound_image_in_expr(expr* n, expr* str);
+                bool get_image_in_expr(expr* n, expr_ref_vector &constList);
+
             int get_actual_trau_lvl();
                 bool at_same_eq_state(UnderApproxState state);
                 bool at_same_diseq_state(str::state curr, str::state prev);

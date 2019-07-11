@@ -4274,6 +4274,17 @@ namespace smt {
             return FC_CONTINUE;
         }
 
+        if (implies_empty_str_from_notContain(eq_combination)) {
+            TRACE("str", tout << "Resuming search due to axioms added by implies_empty_str_from_notContain." << std::endl;);
+            update_state();
+            return FC_CONTINUE;
+        }
+
+        if (!parikh_image_check(eq_combination)){
+            negate_context();
+            return FC_CONTINUE;
+        }
+
         bool axiomAdded = false;
         // enhancement: propagation of value/length information
         if (propagate_eq_combination(eq_combination)) {
@@ -4520,6 +4531,212 @@ namespace smt {
             return false;
         }
         return true;
+    }
+
+    /*
+     * check all eq
+     *
+     * x = y . z
+     * x = t . "A"
+     * z does not contain "A"
+     *
+     * z is empty
+     *
+     */
+    bool theory_str::implies_empty_str_from_notContain(std::map<expr *, std::set<expr *>> eq_combination){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
+        for (const auto& v : eq_combination) {
+            for (const auto& e : v.second){
+                // if last expr is const
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(e, nodes);
+                if (u.str.is_string(nodes[nodes.size() - 1])){
+                    // check all other eq
+                    ret.append(implies_empty_tail_str_from_notContain(v.second, nodes[nodes.size() - 1]));
+                }
+
+                if (u.str.is_string(nodes[0])){
+                    // check all other eq
+                    ret.append(implies_empty_start_str_from_notContain(v.second, nodes[0]));
+                }
+            }
+        }
+        if (ret.size() > 0){
+            expr_ref_vector eqList(m), diseqList(m);
+            fetch_guessed_exprs_with_scopes(eqList, diseqList);
+
+            fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
+
+            assert_implication(createAndOperator(eqList), createAndOperator(ret));
+            return true;
+        }
+        return false;
+    }
+
+    expr_ref_vector theory_str::implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key){
+        expr_ref_vector ret(get_manager());
+        for (const auto& s : v){
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(s, nodes);
+            for (int i = (int)nodes.size() - 1; i >= 0; --i){
+                if (not_contain(nodes[i], key)){
+                    zstring tmp = "";
+                    ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                }
+                else
+                    break;
+            }
+        }
+        return ret;
+    }
+
+    expr_ref_vector theory_str::implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key){
+        expr_ref_vector ret(get_manager());
+        for (const auto& s : v){
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(s, nodes);
+
+            for (int i = 0; i < (int)nodes.size(); ++i){
+                if (not_contain(nodes[i], key)){
+                    zstring tmp = "";
+                    ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                }
+                else
+                    break;
+            }
+        }
+        return ret;
+    }
+
+    /*
+     * check all eq
+     *
+     * maximum of some letters
+     * x = t . "A"
+     * z does not contain "A"
+     *
+     * z is empty
+     *
+     */
+    bool theory_str::parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
+        std::map<zstring, int> maxImages;
+        for (const auto& v : eq_combination) {
+            for (const auto& e : v.second){
+                expr_ref_vector constList(m);
+                if (get_image_in_expr(e, constList)){
+                    for (const auto& nn : v.second)
+                        if (nn != e){
+                            int cnt = get_lower_bound_image_in_expr(nn, constList[0].get());
+                            if (cnt > constList.size())
+                                return false;
+                        }
+                }
+            }
+        }
+        return true;
+    }
+
+    int theory_str::get_lower_bound_image_in_expr(expr* n, expr* str){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+        int cnt = 0;
+
+        zstring value;
+        u.str.is_string(str, value);
+        zstring tmpValue;
+        for (const auto& nn : nodes){
+            if (does_contain(nn, str)){
+                cnt ++;
+            }
+            else if (u.str.is_string(nn, tmpValue) && value.length() > 0) {
+                if (tmpValue.contains(value))
+                    cnt++;
+            }
+        }
+
+        if (cnt > 0)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " there are at least" << cnt << " in " << mk_pp(n, get_manager()) << std::endl;);
+        return cnt;
+    }
+
+    bool theory_str::get_image_in_expr(expr* n, expr_ref_vector &constList){
+
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+
+        int constCount = 0;
+        for (const auto& e : nodes) {
+            if (u.str.is_string(e)) {
+                if (!constList.contains(e))
+                    constCount++;
+                constList.push_back(e);
+            }
+        }
+        if (constCount == 1){
+            // check other variabes do not contain const
+            for (const auto& s : nodes){
+                if (s != constList[0].get()){
+                    if (not_contain(s, constList[0].get())){
+                        // good
+                    }
+                    else {
+                        constList.reset();
+                        return false;
+                    }
+                }
+            }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " there are " << constList.size() << " in " << mk_pp(constList[0].get(), get_manager()) << std::endl;);
+            // can get the image here
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool theory_str::not_contain(expr* haystack, expr* needle){
+        std::pair<expr*, expr*> key = std::make_pair(haystack, needle);
+        if (contain_pair_bool_map.contains(key)){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+            context& ctx = get_context();
+            switch (ctx.get_assignment(contain_pair_bool_map[key])){
+                case l_true:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return false;
+                case l_false:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return true;
+                case l_undef:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return false;
+            }
+        }
+        return false;
+    }
+
+    bool theory_str::does_contain(expr* haystack, expr* needle){
+        std::pair<expr*, expr*> key = std::make_pair(haystack, needle);
+        if (contain_pair_bool_map.contains(key)){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+            context& ctx = get_context();
+            switch (ctx.get_assignment(contain_pair_bool_map[key])){
+                case l_true:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return true;
+                case l_false:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return false;
+                case l_undef:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
+                    return false;
+            }
+        }
+        return false;
     }
 
     int theory_str::get_actual_trau_lvl(){
