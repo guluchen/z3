@@ -9454,7 +9454,7 @@ namespace smt {
                     if (not_contain(a.first, e.first))
                         return nullptr;
             }
-            
+
             /* do not need AND */
             /* result = sum (length) */
             expr_ref_vector adds(m);
@@ -14943,6 +14943,7 @@ namespace smt {
 
         expr_ref breakdownAssert(ctx.mk_eq_atom(ex, ctx.mk_eq_atom(ex->get_arg(0), mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))), m);
         SASSERT(breakdownAssert);
+        assert_axiom(mk_not(m, u.str.mk_contains(value.first, needle.get())));
         assert_axiom(breakdownAssert);
     }
 
@@ -15009,6 +15010,7 @@ namespace smt {
         ast_manager & m = get_manager();
 
         app * ex = e->get_owner();
+        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         if (axiomatized_terms.contains(ex)) {
             return;
         }
@@ -15054,6 +15056,16 @@ namespace smt {
         }
         else {
             index_tail.insert(ex, std::make_pair(x1.get(), x2.get()));
+        }
+
+        if (index_head.contains(ex)) {
+            STRACE("str",
+                   tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[ex], m)
+                        << std::endl;);
+            assert_axiom(createEqualOperator(x1.get(), index_head[ex]));
+        }
+        else {
+            index_head.insert(ex, x1.get());
         }
 
         // -----------------------
@@ -15180,18 +15192,8 @@ namespace smt {
             }
         }
 
-        expr_ref hd(m);
+        expr_ref hd(mk_str_var("hd"), m);
         expr_ref tl(mk_str_var("tl"), m);
-        if (index_head.contains(e)) {
-            STRACE("str",
-                   tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[e], m)
-                        << std::endl;);
-            hd = index_head[e];
-        }
-        else {
-            hd = mk_str_var("hd");
-            index_head.insert(e, hd.get());
-        }
 
 
         // case 3: startIndex >= len(H), return -1
@@ -15238,7 +15240,7 @@ namespace smt {
         {
             // heuristic: integrate with str.contains information
             // (but don't introduce it if it isn't already in the instance)
-            // (0 <= startIndex < len(arg0)) ==> (arg0 contains arg1) <==> (arg0 indexof arg1, startIndex) >= 0
+            // (0 <= startIndex < len(arg0)) ==> (arg0 contains arg1) <==> (arg0 indexof arg1, startIndex) >= startIndex
             expr_ref precondition1(m_autil.mk_gt(startIndex, minus_one), m);
             expr_ref precondition2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
             expr_ref _precondition(m.mk_and(precondition1, precondition2), m);
@@ -15248,7 +15250,7 @@ namespace smt {
 
             expr_ref premise(u.str.mk_contains(arg0, arg1), m);
             ctx.internalize(premise, false);
-            expr_ref conclusion(m_autil.mk_ge(e, zero), m);
+            expr_ref conclusion(m_autil.mk_ge(e, startIndex), m);
             expr_ref containsAxiom(ctx.mk_eq_atom(premise, conclusion), m);
             expr_ref finalAxiom(rewrite_implication(precondition, containsAxiom), m);
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
@@ -15347,13 +15349,11 @@ namespace smt {
                         STRACE("str",
                                tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[pos], m)
                                     << std::endl;);
+                        case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
+                        case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
                     }
                     else
                         index_head.insert(pos, t0);
-                    STRACE("str", tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(base, m) << std::endl;);
-                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
-                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
-                    STRACE("str", tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(ctx.mk_eq_atom(t0, index_head[pos]), m) << std::endl;);
                 }
             }
             else {
