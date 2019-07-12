@@ -5215,9 +5215,19 @@ namespace smt {
             std::string name_y = expr2str(nodes_y[pos]);
             if (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 )
                 if (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 ||
-                        name_y.find("pre_contain") == 0)
-                    if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1]))
+                        name_y.find("pre_contain") == 0) {
+                    if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1])) {
                         return createEqualOperator(nodes_x[pos], nodes_y[pos]);
+                    }
+                    else {
+                        zstring tmp00;
+                        zstring tmp01;
+                        if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
+                            if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00))
+                                return createEqualOperator(nodes_x[pos], nodes_y[pos]);
+                        }
+                    }
+                }
         }
         return nullptr;
     }
@@ -7302,7 +7312,7 @@ namespace smt {
     bool theory_str::is_trivial_contain(zstring s){
         for (int i = 0; i < s.length(); ++i)
             if (sigmaDomain.find(s[i]) == sigmaDomain.end())
-                return  true;
+                return true;
 
         return false;
     }
@@ -7312,7 +7322,6 @@ namespace smt {
         ast_manager & m = get_manager();
         expr_ref_vector eqs(m);
         collect_eq_nodes(n, eqs);
-//        eqs.push_back(n);
         for  (const auto& nn : eqs) {
             if (u.str.is_concat(nn)) {
                 ptr_vector<expr> exprVector;
@@ -13371,8 +13380,12 @@ namespace smt {
                 if (u.str.is_concat(we.second.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.second.get(), tmp)){
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                        return true;
+                        zstring key;
+                        if (u.str.is_string(tmp, key) && !is_trivial_contain(key)) {
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
+                            return true;
+                        }
                     }
                 }
             }
@@ -13381,8 +13394,12 @@ namespace smt {
                 if (u.str.is_concat(we.first.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.first.get(), tmp)){
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
-                        return true;
+                        zstring key;
+                        if (u.str.is_string(tmp, key) && !is_trivial_contain(key)) {
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
+                            return true;
+                        }
                     }
                 }
             }
@@ -14779,10 +14796,10 @@ namespace smt {
         assert_axiom(eq);
 
         // len_x = 0 --> Concat(x, y) = y
-        assert_implication(m.mk_eq(len_x, mk_int(0)), createEqualOperator(a_cat, a_y));
-
-        // len_y = 0 --> Concat(x, y) = x
-        assert_implication(m.mk_eq(len_y, mk_int(0)), createEqualOperator(a_cat, a_x));
+//        assert_implication(m.mk_eq(len_x, mk_int(0)), createEqualOperator(a_cat, a_y));
+//
+//        // len_y = 0 --> Concat(x, y) = x
+//        assert_implication(m.mk_eq(len_y, mk_int(0)), createEqualOperator(a_cat, a_x));
     }
 
     void theory_str::instantiate_axiom_prefixof(enode * e) {
@@ -17030,8 +17047,21 @@ namespace smt {
                 if (to_app(eq)->get_num_args() == 2) {
                     expr *lhs = to_app(eq)->get_arg(0);
                     expr *rhs = to_app(eq)->get_arg(1);
-                    if (is_contain_equality(lhs) || is_contain_equality(rhs))
-                        ret.push_back(e);
+                    expr* key;
+                    if (is_contain_equality(lhs, key)) {
+                        zstring keyStr;
+                        if (u.str.is_string(key, keyStr)){
+                            if (!is_trivial_contain(keyStr))
+                                ret.push_back(e);
+                        }
+                    }
+                    else if (is_contain_equality(rhs, key)){
+                        zstring keyStr;
+                        if (u.str.is_string(key, keyStr)){
+                            if (!is_trivial_contain(keyStr))
+                                ret.push_back(e);
+                        }
+                    }
                 }
             }
         }
