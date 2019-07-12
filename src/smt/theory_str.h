@@ -1273,6 +1273,8 @@ namespace smt {
                     bool does_contain(expr* haystack, expr* needle);
 
             bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);
+                void not_contain_string_in_expr(expr* n, expr_ref_vector &constList);
+                bool agree_on_not_contain(expr* n, expr* key);
                 int get_lower_bound_image_in_expr(expr* n, expr* str);
                 bool get_image_in_expr(expr* n, expr_ref_vector &constList);
 

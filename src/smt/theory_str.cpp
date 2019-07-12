@@ -4665,6 +4665,67 @@ namespace smt {
                                 return false;
                         }
                 }
+                constList.reset();
+                not_contain_string_in_expr(e, constList);
+                for (const auto& s : constList){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, get_manager()) << " does not contain " << mk_pp(s, get_manager()) << std::endl;);
+                    for (const auto& nn : v.second)
+                        if (nn != e){
+                            int cnt = get_lower_bound_image_in_expr(nn, s);
+                            if (cnt > 0)
+                                return false;
+                        }
+                }
+            }
+        }
+        return true;
+    }
+
+    void theory_str::not_contain_string_in_expr(expr* n, expr_ref_vector &constList){
+        context &ctx = get_context();
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+        for (const auto& nn : nodes){
+            if (!u.str.is_string(nn)) {
+                expr_ref_vector eqs(get_manager());
+                collect_eq_nodes(nn, eqs);
+
+                for (const auto &c : contain_pair_bool_map) {
+                    if (eqs.contains(c.get_key1())) {
+                        switch (ctx.get_assignment(c.get_value())){
+                            case l_true:
+                                break;
+                            case l_false:
+                                if (agree_on_not_contain(n, c.get_key2()))
+                                    constList.push_back(c.get_key2());
+                                break;
+                            case l_undef:
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    bool theory_str::agree_on_not_contain(expr* n, expr* key){
+//        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " checking if " << mk_pp(n, get_manager()) << " does not contain " << mk_pp(key, get_manager()) << std::endl;);
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+        zstring valueKey, nodeValue;
+        bool isStr = u.str.is_string(key, valueKey);
+        for (const auto& nn : nodes) {
+            if (u.str.is_string(nn, nodeValue)) {
+                if (isStr) {
+                    if (nodeValue.contains(valueKey))
+                        return false;
+                    else
+                        continue;
+                }
+            }
+
+            if (!not_contain(nn, key)){
+                return false;
             }
         }
         return true;
@@ -4729,40 +4790,58 @@ namespace smt {
     }
 
     bool theory_str::not_contain(expr* haystack, expr* needle){
-        std::pair<expr*, expr*> key = std::make_pair(haystack, needle);
-        if (contain_pair_bool_map.contains(key)){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-            context& ctx = get_context();
-            switch (ctx.get_assignment(contain_pair_bool_map[key])){
-                case l_true:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return false;
-                case l_false:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return true;
-                case l_undef:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return false;
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(haystack, eqs);
+        for (const auto& s: eqs) {
+            std::pair<expr *, expr *> key = std::make_pair(s, needle);
+            if (contain_pair_bool_map.contains(key)) {
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager())
+                            << " " << mk_pp(needle, get_manager()) << std::endl;);
+                context &ctx = get_context();
+                switch (ctx.get_assignment(contain_pair_bool_map[key])) {
+                    case l_true: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true"
+                                                    << mk_pp(haystack, get_manager()) << " "
+                                                    << mk_pp(needle, get_manager()) << std::endl;);
+                        break;
+                    case l_false: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false"
+                                                     << mk_pp(haystack, get_manager()) << " "
+                                                     << mk_pp(needle, get_manager()) << std::endl;);
+                        return true;
+                    case l_undef: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef"
+                                                     << mk_pp(haystack, get_manager()) << " "
+                                                     << mk_pp(needle, get_manager()) << std::endl;);
+                        break;
+                }
             }
         }
         return false;
     }
 
     bool theory_str::does_contain(expr* haystack, expr* needle){
-        std::pair<expr*, expr*> key = std::make_pair(haystack, needle);
-        if (contain_pair_bool_map.contains(key)){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-            context& ctx = get_context();
-            switch (ctx.get_assignment(contain_pair_bool_map[key])){
-                case l_true:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return true;
-                case l_false:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return false;
-                case l_undef:
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef" << mk_pp(haystack, get_manager()) << " " << mk_pp(needle, get_manager()) << std::endl;);
-                    return false;
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(haystack, eqs);
+        for (const auto& s: eqs) {
+            std::pair<expr *, expr *> key = std::make_pair(s, needle);
+            if (contain_pair_bool_map.contains(key)) {
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager())
+                            << " " << mk_pp(needle, get_manager()) << std::endl;);
+                context &ctx = get_context();
+                switch (ctx.get_assignment(contain_pair_bool_map[key])) {
+                    case l_true: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true"
+                                                    << mk_pp(haystack, get_manager()) << " "
+                                                    << mk_pp(needle, get_manager()) << std::endl;);
+                        return true;
+                    case l_false: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false"
+                                                     << mk_pp(haystack, get_manager()) << " "
+                                                     << mk_pp(needle, get_manager()) << std::endl;);
+                        break;
+                    case l_undef: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef"
+                                                     << mk_pp(haystack, get_manager()) << " "
+                                                     << mk_pp(needle, get_manager()) << std::endl;);
+                        break;
+                }
             }
         }
         return false;
