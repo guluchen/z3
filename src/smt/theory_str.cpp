@@ -1182,9 +1182,9 @@ namespace smt {
 
         // merge eqc **AFTER** handle_equality
         m_find.merge(x, y);
-        newConstraintTriggered = true;
 
         if (!is_trivial_eq_concat(n1->get_owner(), n2->get_owner())) {
+            newConstraintTriggered = true;
             expr_ref tmp(createEqualOperator(n1->get_owner(), n2->get_owner()), m);
             ensure_enode(tmp);
             mful_scope_levels.push_back(tmp);
@@ -4276,6 +4276,7 @@ namespace smt {
 
         if (implies_empty_str_from_notContain(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by implies_empty_str_from_notContain." << std::endl;);
+            newConstraintTriggered = true;
             update_state();
             return FC_CONTINUE;
         }
@@ -4567,8 +4568,9 @@ namespace smt {
             fetch_guessed_exprs_with_scopes(eqList, diseqList);
 
             fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
-
-            assert_implication(createAndOperator(eqList), createAndOperator(ret));
+            expr* asserting = createImpliesOperator(createAndOperator(eqList), createAndOperator(ret));
+            assert_axiom(asserting);
+            impliedFacts.push_back(asserting);
             return true;
         }
         return false;
@@ -4584,13 +4586,19 @@ namespace smt {
                     zstring tmp = "";
                     app* a = u.str.mk_contains(nodes[i], key);
                     enode* key = ensure_enode(a);
-                    ret.push_back(createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].second->get_owner()));
+                    if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
+                        ret.push_back(
+                                createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].second->get_owner()));
+                    }
                 }
 
                 if (not_contain(nodes[i], key)){
                     zstring tmp = "";
-                    ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                    if (!are_equal_exprs(nodes[i], u.str.mk_string(tmp))) {
+                        ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                    }
+
                 }
                 else
                     break;
@@ -4610,13 +4618,20 @@ namespace smt {
                     zstring tmp = "";
                     app* a = u.str.mk_contains(nodes[i], key);
                     enode* key = ensure_enode(a);
-                    ret.push_back(createEqualOperator(nodes[i], contain_split_map[key].first->get_owner()));
+                    if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
+                         ret.push_back(
+                                 createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].first->get_owner()));
+                    }
                 }
 
                 if (not_contain(nodes[i], key)){
                     zstring tmp = "";
-                    ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+
+                    if (!are_equal_exprs(nodes[i], u.str.mk_string(tmp))) {
+                        ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                    }
+
                 }
                 else
                     break;
