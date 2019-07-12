@@ -1182,9 +1182,9 @@ namespace smt {
 
         // merge eqc **AFTER** handle_equality
         m_find.merge(x, y);
+        newConstraintTriggered = true;
 
         if (!is_trivial_eq_concat(n1->get_owner(), n2->get_owner())) {
-            newConstraintTriggered = true;
             expr_ref tmp(createEqualOperator(n1->get_owner(), n2->get_owner()), m);
             ensure_enode(tmp);
             mful_scope_levels.push_back(tmp);
@@ -16917,8 +16917,8 @@ namespace smt {
 
         guessedExprs.reset();
         guessedExprs.append(ret);
-        for (int i = 0; i < guessedExprs.size(); ++i)
-            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
+//        for (int i = 0; i < guessedExprs.size(); ++i)
+//            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
     }
 
     void theory_str::fetch_related_exprs(
