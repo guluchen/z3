@@ -5,7 +5,10 @@
 
 (assert (not ( >= ( + ( - ( - (- 1) 1  ) 1  ) ( ite ( < ( str.len num1  ) ( str.len num2  )  ) ( str.len num1  ) ( str.len num2  )  )  ) 0  )))
 
+(assert ( >= ( + ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 2)  )  )  ) ( str.to.int ( str.at num2 ( + ( str.len num2  ) (- 2)  )  )  )  ) 0  ) 10  ))
 (assert ( >= ( + ( - (- 1) 1  ) ( ite ( < ( str.len num1  ) ( str.len num2  )  ) ( str.len num1  ) ( str.len num2  )  )  ) 0  ))
+(assert (not ( >= ( + ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 1)  )  )  ) ( str.to.int ( str.at num2 ( + ( str.len num2  ) (- 1)  )  )  )  ) 0  ) 10  )))
+
 (assert ( >= ( + (- 1) ( ite ( < ( str.len num1  ) ( str.len num2  )  ) ( str.len num1  ) ( str.len num2  )  )  ) 0  ))
 (assert (not ( = ( str.len num2  ) 0  )))
 

@@ -1,21 +1,17 @@
 (declare-fun num1 () String)
 (declare-fun num2 () String)
 
-(assert (not ( >= ( + ( - ( - ( - ( - ( - (- 1) 1  ) 1  ) 1  ) 1  ) 1  ) ( str.len num2  )  ) 0  )))
-
-(assert (not ( >= ( + ( - ( - ( - ( - ( - (- 1) 1  ) 1  ) 1  ) 1  ) 1  ) ( str.len num1  )  ) 0  )))
-
-(assert ( >= ( + ( - ( - ( - ( - (- 1) 1  ) 1  ) 1  ) 1  ) ( str.len num1  )  ) 0  ))
-(assert ( >= ( + ( - ( - ( - (- 1) 1  ) 1  ) 1  ) ( str.len num1  )  ) 0  ))
 (assert ( >= ( + ( - ( - (- 1) 1  ) 1  ) ( str.len num1  )  ) 0  ))
+(assert ( >= ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 2)  )  )  ) 1  ) 10  ))
 (assert ( >= ( + ( - (- 1) 1  ) ( str.len num1  )  ) 0  ))
 (assert (not ( >= ( + ( - (- 1) 1  ) ( ite ( < ( str.len num1  ) ( str.len num2  )  ) ( str.len num1  ) ( str.len num2  )  )  ) 0  )))
 
+(assert ( >= ( + ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 1)  )  )  ) ( str.to.int ( str.at num2 ( + ( str.len num2  ) (- 1)  )  )  )  ) 0  ) 10  ))
 (assert ( >= ( + (- 1) ( ite ( < ( str.len num1  ) ( str.len num2  )  ) ( str.len num1  ) ( str.len num2  )  )  ) 0  ))
 (assert (not ( = ( str.len num2  ) 0  )))
 
 (assert (not ( = ( str.len num1  ) 0  )))
-(assert ( not ( = ( div ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 5)  )  )  ) ( div ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 4)  )  )  ) ( div ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 3)  )  )  ) ( div ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 2)  )  )  ) ( div ( + ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 1)  )  )  ) ( str.to.int ( str.at num2 ( + ( str.len num2  ) (- 1)  )  )  )  ) 0  ) 10  )  ) 10  )  ) 10  )  ) 10  )  ) 10  ) 0  )  ))(assert (str.in.re num1 (re.+ (re.range "0" "9"))))(assert (str.in.re num2 (re.+ (re.range "0" "9"))))
+(assert ( >= ( + ( str.to.int ( str.at num1 ( + ( str.len num1  ) (- 3)  )  )  ) 1  ) 10  ))(assert (str.in.re num1 (re.+ (re.range "0" "9"))))(assert (str.in.re num2 (re.+ (re.range "0" "9"))))
 
 (check-sat)
 
