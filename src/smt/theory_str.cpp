@@ -4582,9 +4582,11 @@ namespace smt {
             ptr_vector<expr> nodes;
             get_nodes_in_concat(s, nodes);
             for (int i = (int)nodes.size() - 1; i >= 0; --i){
-                if (does_contain(nodes[i], key)){
+                expr* real_haystack = nullptr;
+                if (does_contain(nodes[i], key, real_haystack)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                     zstring tmp = "";
-                    app* a = u.str.mk_contains(nodes[i], key);
+                    app* a = u.str.mk_contains(real_haystack, key);
                     enode* key = ensure_enode(a);
                     if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
                         ret.push_back(
@@ -4614,9 +4616,11 @@ namespace smt {
             get_nodes_in_concat(s, nodes);
 
             for (int i = 0; i < (int)nodes.size(); ++i){
-                 if (does_contain(nodes[i], key)){
+                expr* real_haystack = nullptr;
+                 if (does_contain(nodes[i], key, real_haystack)){
+                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                     zstring tmp = "";
-                    app* a = u.str.mk_contains(nodes[i], key);
+                    app* a = u.str.mk_contains(real_haystack, key);
                     enode* key = ensure_enode(a);
                     if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
                          ret.push_back(
@@ -4660,6 +4664,7 @@ namespace smt {
                 if (get_image_in_expr(e, constList)){
                     for (const auto& nn : v.second)
                         if (nn != e){
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                             int cnt = get_lower_bound_image_in_expr(nn, constList[0].get());
                             if (cnt > constList.size())
                                 return false;
@@ -4668,10 +4673,12 @@ namespace smt {
                 constList.reset();
                 not_contain_string_in_expr(e, constList);
                 for (const auto& s : constList){
+
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, get_manager()) << " does not contain " << mk_pp(s, get_manager()) << std::endl;);
                     for (const auto& nn : v.second)
                         if (nn != e){
                             int cnt = get_lower_bound_image_in_expr(nn, s);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                             if (cnt > 0)
                                 return false;
                         }
@@ -4740,7 +4747,9 @@ namespace smt {
         u.str.is_string(str, value);
         zstring tmpValue;
         for (const auto& nn : nodes){
-            if (does_contain(nn, str)){
+            expr* real_haystack = nullptr;
+            if (does_contain(nn, str, real_haystack)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                 cnt ++;
             }
             else if (u.str.is_string(nn, tmpValue) && value.length() > 0) {
@@ -4790,6 +4799,7 @@ namespace smt {
     }
 
     bool theory_str::not_contain(expr* haystack, expr* needle){
+        context &ctx = get_context();
         expr_ref_vector eqs(get_manager());
         collect_eq_nodes(haystack, eqs);
         for (const auto& s: eqs) {
@@ -4798,7 +4808,7 @@ namespace smt {
                 STRACE("str",
                        tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager())
                             << " " << mk_pp(needle, get_manager()) << std::endl;);
-                context &ctx = get_context();
+
                 switch (ctx.get_assignment(contain_pair_bool_map[key])) {
                     case l_true: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true"
                                                     << mk_pp(haystack, get_manager()) << " "
@@ -4818,20 +4828,22 @@ namespace smt {
         return false;
     }
 
-    bool theory_str::does_contain(expr* haystack, expr* needle){
+    bool theory_str::does_contain(expr* haystack, expr* needle, expr* &realHaystack){
+        context &ctx = get_context();
         expr_ref_vector eqs(get_manager());
         collect_eq_nodes(haystack, eqs);
         for (const auto& s: eqs) {
             std::pair<expr *, expr *> key = std::make_pair(s, needle);
             if (contain_pair_bool_map.contains(key)) {
                 STRACE("str",
-                       tout << __LINE__ << " " << __FUNCTION__ << " not_contain check" << mk_pp(haystack, get_manager())
+                       tout << __LINE__ << " " << __FUNCTION__ << " does_contain check" << mk_pp(haystack, get_manager())
                             << " " << mk_pp(needle, get_manager()) << std::endl;);
-                context &ctx = get_context();
+
                 switch (ctx.get_assignment(contain_pair_bool_map[key])) {
                     case l_true: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true"
                                                     << mk_pp(haystack, get_manager()) << " "
                                                     << mk_pp(needle, get_manager()) << std::endl;);
+                        realHaystack = s;
                         return true;
                     case l_false: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false"
                                                      << mk_pp(haystack, get_manager()) << " "

@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="365">
-              <caret line="4670" column="136" selection-start-line="4670" selection-start-column="119" selection-end-line="4670" selection-end-column="136" />
+            <state relative-caret-position="253">
+              <caret line="4619" column="63" selection-start-line="4619" selection-start-column="63" selection-end-line="4619" selection-end-column="63" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#390084#402117#1" />
@@ -134,8 +134,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="267">
-              <caret line="1276" column="33" selection-start-line="1276" selection-start-column="33" selection-end-line="1276" selection-end-column="33" />
+            <state relative-caret-position="253">
+              <caret line="1272" column="75" selection-start-line="1272" selection-start-column="75" selection-end-line="1272" selection-end-column="75" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -173,10 +173,10 @@
       <find>nstantiate_axiom</find>
       <find>index_tail</find>
       <find>is_completed_branch</find>
-      <find>does_contain</find>
-      <find>get_lower_bound_image_in_expr</find>
       <find>not_contain</find>
+      <find>get_lower_bound_image_in_expr</find>
       <find>generateconstra</find>
+      <find>does_contain</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -720,12 +720,12 @@
       <workItem from="1562767092937" duration="11339000" />
       <workItem from="1562830351457" duration="1853000" />
       <workItem from="1562833160283" duration="9771000" />
-      <workItem from="1562854028838" duration="19420000" />
+      <workItem from="1562854028838" duration="20567000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1158302000" />
+    <option name="totallyTimeSpent" value="1159449000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1119,8 +1119,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="267">
-          <caret line="1276" column="33" selection-start-line="1276" selection-start-column="33" selection-end-line="1276" selection-end-column="33" />
+        <state relative-caret-position="253">
+          <caret line="1272" column="75" selection-start-line="1272" selection-start-column="75" selection-end-line="1272" selection-end-column="75" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1129,8 +1129,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="365">
-          <caret line="4670" column="136" selection-start-line="4670" selection-start-column="119" selection-end-line="4670" selection-end-column="136" />
+        <state relative-caret-position="253">
+          <caret line="4619" column="63" selection-start-line="4619" selection-start-column="63" selection-end-line="4619" selection-end-column="63" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#390084#402117#1" />
