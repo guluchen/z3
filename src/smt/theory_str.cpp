@@ -9196,6 +9196,10 @@ namespace smt {
             else if (!optimizing) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                 if ((a.second % QMAX == -1 || valA.length() == 1) && (b.second % QMAX  == -1 || valB.length() == 1)) /* head vs head */ {
+                    if (not_contain(a.first, b.first) || not_contain(b.first, a.first))
+                        return nullptr;
+
+
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(0, i) == valB.extract(0, i)) {
@@ -9440,6 +9444,17 @@ namespace smt {
 
         else {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+
+            /*
+             * quick path, check not contains
+             */
+            for (const auto& e : elementNames){
+                zstring value;
+                if (u.str.is_string(e.first, value) && value.length() == 1)
+                    if (not_contain(a.first, e.first))
+                        return nullptr;
+            }
+            
             /* do not need AND */
             /* result = sum (length) */
             expr_ref_vector adds(m);
