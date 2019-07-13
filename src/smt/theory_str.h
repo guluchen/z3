@@ -1273,6 +1273,7 @@ namespace smt {
                     bool does_contain(expr* haystack, expr* needle, expr* &realHaystack);
 
             bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);
+                bool can_match(zstring value, expr* n);
                 void not_contain_string_in_expr(expr* n, expr_ref_vector &constList);
                 bool agree_on_not_contain(expr* n, expr* key);
                 int get_lower_bound_image_in_expr(expr* n, expr* str);
@@ -1405,6 +1406,7 @@ namespace smt {
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var);
                 void negate_context();
+                void negate_context(expr* e);
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
                 bool isInternalVar(expr* e);

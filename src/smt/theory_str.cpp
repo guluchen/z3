@@ -1224,6 +1224,7 @@ namespace smt {
             uState.eqLevel = tmpz3State;
         }
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " impliedFacts size: " << impliedFacts.size() << std::endl;);
         if (impliedFacts.size() > 0){
             newConstraintTriggered = true;
             uState.reassertEQ = true;
@@ -4683,6 +4684,32 @@ namespace smt {
                                 return false;
                         }
                 }
+
+                zstring value;
+                if (u.str.is_string(e, value)){
+                    for (const auto& nn : v.second){
+                        if (!can_match(value, nn)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    bool theory_str::can_match(zstring value, expr* n){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+        for (const auto& nn : nodes){
+            zstring v;
+            if (u.str.is_string(nn, v)) {
+                if (!value.contains(v))
+                    return false;
+                else {
+                    value = value.extract(0, value.indexof(v, 0)) +
+                            value.extract(value.indexof(v, 0) + v.length(), value.length() - value.indexof(v, 0) - v.length());
+                } 
             }
         }
         return true;
@@ -7029,8 +7056,8 @@ namespace smt {
         expr* causexpr = createAndOperator(guessedExprs);
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << " @lvl " << m_scope_level << std::endl;);
-        init_underapprox_repeat();
-        literal causeLiteral = ctx.get_literal(causexpr);
+        if (uState.assertingConstraints.size() > 0)
+            init_underapprox_repeat();
         bool axiomAdded = false;
 
         for (const auto& a : uState.assertingConstraints){
@@ -7988,7 +8015,7 @@ namespace smt {
         else {
             /* trivial unsat */
             assertedConstraints.reset();
-            negate_context();
+            negate_context(premise);
         }
     }
 
@@ -8005,6 +8032,13 @@ namespace smt {
         guessedEqs.append(guessedDisEqs);
 
         expr_ref tmp(mk_not(m, createAndOperator(guessedEqs)), m);
+        assert_axiom(tmp.get());
+        impliedFacts.push_back(tmp.get());
+    }
+
+    void theory_str::negate_context(expr* premise){
+        ast_manager &m = get_manager();
+        expr_ref tmp(mk_not(m,premise), m);
         assert_axiom(tmp.get());
         impliedFacts.push_back(tmp.get());
     }
