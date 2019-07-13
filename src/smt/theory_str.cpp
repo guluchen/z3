@@ -15248,6 +15248,7 @@ namespace smt {
                    tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].second, m)
                         << std::endl;);
             assert_axiom(createEqualOperator(x2.get(), index_tail[ex].second));
+            assert_axiom(createEqualOperator(index_tail[ex].first, mk_concat(x1.get(), ex->get_arg(1))));
             length_relation.insert(std::make_pair(index_tail[ex].first, x1.get()));
             length_relation.insert(std::make_pair(index_tail[ex].first, ex->get_arg(1)));
         }
@@ -15562,6 +15563,9 @@ namespace smt {
                                 if (index_tail.contains(arg0)) {
                                     case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
                                     case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
+
+                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
+                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
                                     length_relation.insert(std::make_pair(t0, index_tail[arg0].first));
 
                                     // get index key
@@ -15582,6 +15586,9 @@ namespace smt {
                                 if (index_tail.contains(arg1)) {
                                     case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
                                     case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
+
+                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
+                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
                                     length_relation.insert(std::make_pair(t0, index_tail[arg1].first));
 
                                     // get index key
