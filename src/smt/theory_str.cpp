@@ -4709,7 +4709,7 @@ namespace smt {
                 else {
                     value = value.extract(0, value.indexof(v, 0)) +
                             value.extract(value.indexof(v, 0) + v.length(), value.length() - value.indexof(v, 0) - v.length());
-                } 
+                }
             }
         }
         return true;
@@ -8026,6 +8026,7 @@ namespace smt {
     }
 
     void theory_str::negate_context(){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager &m = get_manager();
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
@@ -8037,6 +8038,7 @@ namespace smt {
     }
 
     void theory_str::negate_context(expr* premise){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager &m = get_manager();
         expr_ref tmp(mk_not(m,premise), m);
         assert_axiom(tmp.get());
@@ -8044,6 +8046,7 @@ namespace smt {
     }
 
     void theory_str::negate_context(expr_ref_vector v){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager &m = get_manager();
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
@@ -14336,11 +14339,8 @@ namespace smt {
                     expr_ref tmp(ctx.mk_eq_atom(object, *it), m);
                     ctx.internalize(tmp, false);
                     causes[object].insert(tmp);
-
-                    STRACE("str", tout << __LINE__ << " aaaaaa " << mk_pp(tmp, m) << std::endl;);
                 }
                 // get lhs
-                STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " == " << mk_pp(*it, m) << std::endl;);
                 expr* arg0 = ctx.get_enode(to_app(*it)->get_arg(0))->get_root()->get_owner();
                 expr* arg1 = ctx.get_enode(to_app(*it)->get_arg(1))->get_root()->get_owner();
 
@@ -14349,7 +14349,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
                 std::set<expr *> eqLhs;
                 if (parents.find(arg0) == parents.end()) {
-                    STRACE("str", tout << __LINE__ << " tracing " << mk_pp(arg0, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " tracing lhs " << mk_pp(arg0, m) << std::endl;);
                     std::set<expr*> lhsParents;
                     lhsParents.insert(parents.begin(), parents.end());
                     lhsParents.insert(arg0);
@@ -14362,7 +14362,7 @@ namespace smt {
                 // get rhs
                 std::set<expr *> eqRhs;
                 if (parents.find(arg1) == parents.end()) {
-                    STRACE("str", tout << __LINE__ << " tracing " << mk_pp(arg1, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " tracing rhs " << mk_pp(arg1, m) << std::endl;);
                     std::set<expr*> rhsParents;
                     rhsParents.insert(parents.begin(), parents.end());
                     rhsParents.insert(arg1);
@@ -14389,7 +14389,6 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
                 }
                 else {
-
                     if (causes.find(arg0) != causes.end())
                         causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
@@ -14400,11 +14399,12 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
                 }
                 else {
-
                     if (causes.find(arg0) != causes.end())
                         causes[object].insert(causes[arg0].begin(), causes[arg0].end());
                 }
 
+                STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " size = " << eqLhs.size()  << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << mk_pp(arg1, m) << " size = " << eqRhs.size()  << std::endl;);
                 for (const auto &l : eqLhs)
                     for (const auto &r : eqRhs) {
                         zstring val_lhs, val_rhs;
@@ -14461,6 +14461,20 @@ namespace smt {
             }
         }
 
+        STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << result.size() <<  " cases " << std::endl;);
+        for (const auto& e: eqConcat)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
+
         // continuing refining
         for (const auto& nn : eqConcat)
             if (((!u.str.is_extract(nn)) &&
@@ -14483,10 +14497,10 @@ namespace smt {
                         result.insert(nn);
                 }
             }
-
+        STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << result.size() <<  " cases " << std::endl;);
         if (result.size() == 0) {
             STRACE("str", tout << __LINE__ << " add itself " << mk_pp(object, m) << std::endl;);
-            result.emplace(object);
+            result.emplace(simplify_concat(object));
         }
         else {
             // important var, it = itself, size = 1, it is root --> add another option if it is possible
@@ -14502,6 +14516,18 @@ namespace smt {
         }
 
         combinations[object] = result;
+        for (const auto& e: result)
+            STRACE("str",
+                   if (!u.str.is_concat(e))
+                       tout << "\t\t" << mk_pp(e, m) << std::endl;
+                   else {
+                       ptr_vector<expr> childrenVector;
+                       get_nodes_in_concat(e, childrenVector);
+                       tout << "\t\t";
+                       for (int i = 0; i < childrenVector.size(); ++i)
+                           tout << mk_pp(childrenVector[i], m)  << " ";
+                       tout << std::endl;
+                   });
         return result;
     }
 
