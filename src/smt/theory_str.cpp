@@ -4287,7 +4287,7 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        bool axiomAdded = false;
+        print_eq_combination(eq_combination);
         // enhancement: propagation of value/length information
         if (propagate_eq_combination(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
@@ -12879,6 +12879,8 @@ namespace smt {
 
                 if (lValue == rValue)
                     prefix = i;
+                else
+                    break;
             }
             else if (have_same_len(lhsVec[i], rhsVec[i])){
                 rational lenValue;
@@ -12913,6 +12915,8 @@ namespace smt {
 
                 if (lValue == rValue)
                     suffix = i;
+                else
+                    break;
             }
             else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
                 rational lenValue;
@@ -14480,7 +14484,7 @@ namespace smt {
                                 eqConcat.insert(tmp);
                             }
                             else {
-                                expr *tmp = u.str.mk_concat(l, r);
+                                expr *tmp = create_concat_with_concat(l, r);
                                 m_trail.push_back(tmp);
                                 eqConcat.insert(tmp);
                             }
@@ -14557,6 +14561,22 @@ namespace smt {
                        tout << std::endl;
                    });
         return result;
+    }
+
+    expr* theory_str::create_concat_with_concat(expr* n1, expr* n2){
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        expr* arg2 = nullptr;
+        expr* arg3 = nullptr;
+
+        if (u.str.is_concat(n1, arg0, arg1) && u.str.is_concat(n2, arg2, arg3)){
+            zstring v1, v2;
+            if (u.str.is_string(arg1, v1) && u.str.is_string(arg2, v2)){
+                return u.str.mk_concat(arg0, mk_concat(u.str.mk_string(v1 + v2), arg3));
+            }
+        }
+
+        return u.str.mk_concat(n1, n2);
     }
 
     expr* theory_str::create_concat_with_str(expr* n, zstring str){

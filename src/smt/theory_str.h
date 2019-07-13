@@ -2027,7 +2027,7 @@ namespace smt {
                     std::set<expr*> &subNodes,
                     std::set<expr*> parents,
                     std::set<std::pair<expr*, int>> importantVars);
-
+                    expr* create_concat_with_concat(expr* n1, expr* n2);
                     expr* create_concat_with_str(expr* n, zstring str);
                     expr* create_concat_with_str(zstring str, expr* n);
                     expr* ends_with_str(expr* n);

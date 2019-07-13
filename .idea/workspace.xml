@@ -85,6 +85,7 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="356">
-              <caret line="15589" column="18" lean-forward="true" selection-start-line="15589" selection-start-column="18" selection-end-line="15589" selection-end-column="18" />
+            <state relative-caret-position="244">
+              <caret line="14485" column="35" selection-start-line="14485" selection-start-column="35" selection-end-line="14485" selection-end-column="35" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -141,8 +142,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="297">
-              <caret line="2258" column="16" selection-start-line="2258" selection-start-column="16" selection-end-line="2258" selection-end-column="16" />
+            <state relative-caret-position="326">
+              <caret line="2029" column="26" selection-start-line="2029" selection-start-column="26" selection-end-line="2029" selection-end-column="26" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -154,8 +155,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>is_completed_branch</find>
-      <find>not_contain</find>
       <find>get_lower_bound_image_in_expr</find>
       <find>generateconstra</find>
       <find>does_contain</find>
@@ -184,6 +183,8 @@
       <find>final_check_e</find>
       <find>length_rela</find>
       <find>index_ta</find>
+      <find>have_same_len</find>
+      <find>extend</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -728,12 +729,12 @@
       <workItem from="1562830351457" duration="1853000" />
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
-      <workItem from="1562944360793" duration="19182000" />
+      <workItem from="1562944360793" duration="21099000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1179067000" />
+    <option name="totallyTimeSpent" value="1180984000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1127,8 +1128,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="2258" column="16" selection-start-line="2258" selection-start-column="16" selection-end-line="2258" selection-end-column="16" />
+        <state relative-caret-position="326">
+          <caret line="2029" column="26" selection-start-line="2029" selection-start-column="26" selection-end-line="2029" selection-end-column="26" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1137,8 +1138,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="356">
-          <caret line="15589" column="18" lean-forward="true" selection-start-line="15589" selection-start-column="18" selection-end-line="15589" selection-end-column="18" />
+        <state relative-caret-position="244">
+          <caret line="14485" column="35" selection-start-line="14485" selection-start-column="35" selection-end-line="14485" selection-end-column="35" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
