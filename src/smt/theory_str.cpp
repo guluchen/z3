@@ -15585,7 +15585,7 @@ namespace smt {
                                     length_relation.insert(std::make_pair(t0, index_tail[arg1].first));
 
                                     // get index key
-                                    length_relation.insert(std::make_pair(t0, to_app(arg0)->get_arg(1)));
+                                    length_relation.insert(std::make_pair(t0, to_app(arg1)->get_arg(1)));
 
                                     STRACE("str",
                                            tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[arg1].second, m)
