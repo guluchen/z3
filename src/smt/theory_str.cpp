@@ -9484,6 +9484,16 @@ namespace smt {
         for (int i = 0; i < elementNames.size(); ++i)
             STRACE("str", tout << "  " << mk_pp(elementNames[i].first, m););
         STRACE("str", tout <<  std::endl;);
+
+        /*
+         * quick path, length base split
+         */
+        for (const auto& e : elementNames){
+            if (length_relation.find(std::make_pair(e.first, a.first)) != length_relation.end()){
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of length based split" << mk_pp(e.first, m)<< std::endl;);
+                return nullptr;
+            }
+        }
         expr_ref_vector result(m);
 
         if (a.second < 0) { /* const string or regex */
@@ -15238,6 +15248,8 @@ namespace smt {
                    tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].second, m)
                         << std::endl;);
             assert_axiom(createEqualOperator(x2.get(), index_tail[ex].second));
+            length_relation.insert(std::make_pair(index_tail[ex].first, x1.get()));
+            length_relation.insert(std::make_pair(index_tail[ex].first, ex->get_arg(1)));
         }
         else {
             index_tail.insert(ex, std::make_pair(x1.get(), x2.get()));
@@ -15550,6 +15562,10 @@ namespace smt {
                                 if (index_tail.contains(arg0)) {
                                     case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
                                     case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
+                                    length_relation.insert(std::make_pair(t0, index_tail[arg0].first));
+
+                                    // get index key
+                                    length_relation.insert(std::make_pair(t0, to_app(arg0)->get_arg(1)));
                                     STRACE("str",
                                            tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[arg0].second, m)
                                                 << std::endl;);
@@ -15566,7 +15582,10 @@ namespace smt {
                                 if (index_tail.contains(arg1)) {
                                     case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
                                     case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
+                                    length_relation.insert(std::make_pair(t0, index_tail[arg1].first));
 
+                                    // get index key
+                                    length_relation.insert(std::make_pair(t0, to_app(arg0)->get_arg(1)));
 
                                     STRACE("str",
                                            tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[arg1].second, m)

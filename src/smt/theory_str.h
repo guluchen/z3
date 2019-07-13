@@ -2256,6 +2256,7 @@ namespace smt {
         obj_map<enode, std::pair<enode*,enode*>> contain_split_map;
         obj_map<expr, expr*> index_head;
         obj_map<expr, std::pair<expr*, expr*>> index_tail;
+        std::set<std::pair<expr*, expr*>> length_relation;
         unsigned m_fresh_id;
         string_map stringConstantCache;
         unsigned long totalCacheAccessCount;
@@ -2308,6 +2309,7 @@ namespace smt {
         std::map<expr*, std::vector<expr*>> iterMap;
         std::map<expr*, std::set<expr*>> appearanceMap;
         std::map<expr*, std::set<expr*>> notContainMap;
+
         std::map<expr*, std::set<expr*>> backwardDep;
         std::map<expr*, expr*> arrMap;
         std::map<std::string, expr*> arrMap_reverse;
