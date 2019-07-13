@@ -7869,6 +7869,8 @@ namespace smt {
                     );
                     t = clock() - t;
                     assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                    if (result == nullptr)
+                        return true;
                 }
 
                 expr* regexExpr;
@@ -7925,6 +7927,8 @@ namespace smt {
                     );
                     t = clock() - t;
                     assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                    if (result == nullptr)
+                        return true;
                 }
             }
             else {
@@ -7957,6 +7961,8 @@ namespace smt {
                         );
                         t = clock() - t;
                         assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                        if (result == nullptr)
+                            return true;
                     }
             }
 
@@ -8000,14 +8006,7 @@ namespace smt {
 
         expr_ref tmp(mk_not(m, createAndOperator(guessedEqs)), m);
         assert_axiom(tmp.get());
-//        uState.addAssertingConstraints(tmp);
-//        enode_pair_vector eqs;
-//        literal_vector lits;
-//        fetch_guessed_literals_with_scopes(lits);
-//        ctx.set_conflict(
-//                ctx.mk_justification(
-//                        ext_theory_conflict_justification(
-//                                get_id(), ctx.get_region(), lits.size(), lits.c_ptr(), eqs.size(), eqs.c_ptr(), 0, nullptr)));
+        impliedFacts.push_back(tmp.get());
     }
 
     void theory_str::negate_context(expr_ref_vector v){
@@ -13085,7 +13084,7 @@ namespace smt {
                 importantVars.insert(std::make_pair(v.first, v.second));
 
         for (const auto& v : eq_combination)
-            if (v.second.size() >= 4) {
+            if (v.second.size() >= 6) {
                 expr_ref_vector eqList(m);
                 collect_eq_nodes(v.first, eqList);
                 for (int i = 0; i < eqList.size(); ++i)
