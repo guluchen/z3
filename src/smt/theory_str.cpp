@@ -9071,6 +9071,15 @@ namespace smt {
                                 return nullptr;
                         }
                     }
+                    else {
+                        if (lhs_elements[i].second % QMAX == 0 && i + 1 < left_arr.size() && left_arr[i + 1] == EMPTYFLAT){
+                            rational bound;
+                            if (lower_bound(lhs_elements[i].first, bound) && bound.get_int64() > 0){
+                                STRACE("str", tout << __LINE__ <<  " " << mk_pp(lhs_elements[i].first, m) << " cannot be empty because of lowerbound " << bound.get_int64() << std::endl;);
+                                return nullptr;
+                            }
+                        }
+                    }
                     checkLeft[i] = true;
                 }
             }
@@ -9085,6 +9094,15 @@ namespace smt {
                         } else {
                             if (rhs_elements[i].second % QCONSTMAX == -1 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT)
                                 return nullptr;
+                        }
+                    }
+                    else {
+                        if (rhs_elements[i].second % QMAX == 0 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT){
+                            rational bound;
+                            if (lower_bound(rhs_elements[i].first, bound) && bound.get_int64() > 0){
+                                STRACE("str", tout << __LINE__ <<  " " << mk_pp(rhs_elements[i].first, m) << " cannot be empty because of lowerbound " << bound.get_int64() << std::endl;);
+                                return nullptr;
+                            }
                         }
                     }
                     checkRight[i] = true;

@@ -96,14 +96,23 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="324">
-              <caret line="14502" column="49" selection-start-line="14502" selection-start-column="49" selection-end-line="14502" selection-end-column="49" />
+            <state relative-caret-position="332">
+              <caret line="16571" column="33" lean-forward="true" selection-start-line="16571" selection-start-column="33" selection-end-line="16571" selection-end-column="33" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="216">
+              <caret line="1236" column="28" selection-start-line="1236" selection-start-column="23" selection-end-line="1236" selection-end-column="28" />
             </state>
           </provider>
         </entry>
@@ -145,9 +154,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>generateconstraint02</find>
-      <find>generatecon</find>
-      <find>generate_constraint01</find>
       <find>final_check</find>
       <find>indexof</find>
       <find>__axiomindexof</find>
@@ -175,6 +181,9 @@
       <find>assert_breakdown_combination</find>
       <find>parikh</find>
       <find>parikh_image_check</find>
+      <find>lower_bound</find>
+      <find>is_l</find>
+      <find>is_le</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -719,12 +728,12 @@
       <workItem from="1562830351457" duration="1853000" />
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
-      <workItem from="1562944360793" duration="13316000" />
+      <workItem from="1562944360793" duration="14628000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1173201000" />
+    <option name="totallyTimeSpent" value="1174513000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -874,13 +883,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="398">
-          <caret line="1281" column="8" selection-start-line="1281" selection-start-column="8" selection-end-line="1281" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_jobscheduler.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -998,13 +1000,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="465">
           <caret line="31" column="10" selection-start-line="31" selection-start-column="10" selection-end-line="31" selection-end-column="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="11445">
-          <caret line="763" selection-start-line="763" selection-end-line="763" />
         </state>
       </provider>
     </entry>
@@ -1126,13 +1121,27 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="574">
+          <caret line="3641" column="17" selection-start-line="3641" selection-start-column="17" selection-end-line="3641" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="324">
-          <caret line="14502" column="49" selection-start-line="14502" selection-start-column="49" selection-end-line="14502" selection-end-column="49" />
+        <state relative-caret-position="332">
+          <caret line="16571" column="33" lean-forward="true" selection-start-line="16571" selection-start-column="33" selection-end-line="16571" selection-end-column="33" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="216">
+          <caret line="1236" column="28" selection-start-line="1236" selection-start-column="23" selection-end-line="1236" selection-end-column="28" />
         </state>
       </provider>
     </entry>
