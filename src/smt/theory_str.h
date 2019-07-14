@@ -1252,6 +1252,13 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool eval_str_int();
+            /*
+             * Check agreement between integer and string theories for the term a = (str.to-int S).
+             * Returns true if axioms were added, and false otherwise.
+             */
+            bool eval_str2int(app * a);
+            bool eval_int2str(app * a);
             void refined_init_final_check(
                 std::set<std::pair<expr *, int>> &importantVars,
                 std::map<expr *, std::set<expr *>> &eq_combination);

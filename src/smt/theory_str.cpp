@@ -960,7 +960,7 @@ namespace smt {
             }
         }
 
-        if (vLen.get_int32() == 0)
+        if (vLen.get_int64() == 0)
             return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
 
         app * val = mk_value_helper(owner, mg);
@@ -983,7 +983,7 @@ namespace smt {
 
                 enode* arrNode = ctx.get_enode(getExprVarFlatArray(owner.get()));
 
-                result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int32());
+                result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
                 importantNode = owner.get();
             }
             else {
@@ -997,7 +997,7 @@ namespace smt {
 
                         enode* arrNode = ctx.get_enode(getExprVarFlatArray(eqSet[i].get()));
                         result = alloc(string_value_proc, *this, s, n->get_owner(), true,
-                                       arrNode, regex, vLen.get_int32());
+                                       arrNode, regex, vLen.get_int64());
                         found = true;
                         importantNode = eqSet[i].get();
                         break;
@@ -1005,7 +1005,7 @@ namespace smt {
                 }
 
                 if (!found) {
-                    result = alloc(string_value_proc, *this, s, n->get_owner(), false, regex, vLen.get_int32());
+                    result = alloc(string_value_proc, *this, s, n->get_owner(), false, regex, vLen.get_int64());
                 }
             }
 
@@ -1577,7 +1577,7 @@ namespace smt {
                 expr* arg1 = to_app(rhs)->get_arg(1);
                 expr* arg2 = to_app(rhs)->get_arg(2);
                 rational value;
-                if (m_autil.is_numeral(arg1, value) && value.get_int32() == 0) {
+                if (m_autil.is_numeral(arg1, value) && value.get_int64() == 0) {
                     // check 3rd arg
                     if (u.str.is_index(arg2)) {
                         app* indexApp = to_app(arg2);
@@ -1633,7 +1633,7 @@ namespace smt {
             for (int i = 0; i < v.size(); ++i){
                 rational len;
                 if (get_len_value(v[i], len)){
-                    if (len.get_int32() == 0){
+                    if (len.get_int64() == 0){
                         ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
                     }
                     else
@@ -1673,7 +1673,7 @@ namespace smt {
             for (int i = v.size() - 1; i >= 0; --i){
                 rational len;
                 if (get_len_value(v[i], len)){
-                    if (len.get_int32() == 0){
+                    if (len.get_int64() == 0){
                         ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
                     }
                     else
@@ -2446,7 +2446,7 @@ namespace smt {
         rational ra;
         expr_ref_vector ands(get_manager());
         for (const auto& nn : nodes) {
-            if (get_len_value(nn, ra) && ra.get_int32() == 0){
+            if (get_len_value(nn, ra) && ra.get_int64() == 0){
                 ands.push_back(createEqualOperator(mk_strlen(nn), mk_int(0)));
             }
         }
@@ -4019,8 +4019,7 @@ namespace smt {
                 } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (u.str.is_itos(ap)) {
-                    STRACE("str",
-                           tout << " add to m_library_aware_axiom_todo: " << mk_pp(ex, get_manager()) << std::endl;);
+                    TRACE("str", tout << __LINE__ << " found string-integer conversion term: " << mk_pp(ex, m) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
                     m_library_aware_axiom_todo.push_back(n);
                 } else if (ap->get_num_args() == 0 && !u.str.is_string(ap)) {
@@ -4255,6 +4254,11 @@ namespace smt {
                 return FC_DONE;
         }
 
+        if (eval_str_int()) {
+            TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
+            return FC_CONTINUE;
+        }
+
         if (propagate_concat()) {
             TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
             return FC_CONTINUE;
@@ -4317,6 +4321,173 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
         return FC_DONE;
+    }
+
+    bool theory_str::eval_str_int(){
+        bool addedAxioms = false;
+        for (unsigned i = 0; i < string_int_conversion_terms.size(); ++i) {
+            app * ex = to_app(string_int_conversion_terms[i].get());
+            if (u.str.is_stoi(ex)) {
+                if (eval_str2int(ex)) {
+                    addedAxioms = true;
+                }
+            } else if (u.str.is_itos(ex)) {
+                if (eval_int2str(ex)) {
+                    addedAxioms = true;
+                }
+            } else {
+                UNREACHABLE();
+            }
+        }
+        return addedAxioms;
+    }
+
+    /*
+     * Check agreement between integer and string theories for the term a = (str.to-int S).
+     * Returns true if axioms were added, and false otherwise.
+     */
+    bool theory_str::eval_str2int(app * a) {
+        SASSERT(u.str.is_stoi(a));
+        bool axiomAdd = false;
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        expr * S = a->get_arg(0);
+
+        // check integer theory
+        rational Ival;
+        bool Ival_exists = get_arith_value(a, Ival);
+        if (Ival_exists) {
+            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << Ival.to_string() << std::endl;);
+            // if that value is not -1, we can assert (str.to.int S) = Ival --> S = "Ival"
+            if (!Ival.is_minus_one()) {
+                zstring Ival_str(Ival.to_string().c_str());
+                expr_ref premise(ctx.mk_eq_atom(a, m_autil.mk_numeral(Ival, true)), m);
+                expr_ref conclusion(ctx.mk_eq_atom(S, mk_string(Ival_str)), m);
+                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                if (!string_int_axioms.contains(axiom)) {
+                    string_int_axioms.insert(axiom);
+                    assert_axiom(axiom);
+                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                    axiomAdd = true;
+                }
+            }
+        } else {
+            STRACE("str", tout << "integer theory has no assignment for " << mk_pp(a, m) << std::endl;);
+        }
+
+        bool S_hasEqcValue;
+        expr * S_str = get_eqc_value(S, S_hasEqcValue);
+        if (S_hasEqcValue) {
+            zstring str;
+            u.str.is_string(S_str, str);
+            bool valid = true;
+            rational convertedRepresentation(0);
+            rational ten(10);
+            if (str.length() == 0) {
+                valid = false;
+            } else {
+                for (unsigned i = 0; i < str.length(); ++i) {
+                    if (!('0' <= str[i] && str[i] <= '9')) {
+                        valid = false;
+                        break;
+                    } else {
+                        // accumulate
+                        char digit = (int)str[i];
+                        std::string sDigit(1, digit);
+                        int val = atoi(sDigit.c_str());
+                        convertedRepresentation = (ten * convertedRepresentation) + rational(val);
+                    }
+                }
+            }
+
+            // TODO this duplicates code a bit, we can simplify the branch on "conclusion" only
+            if (valid) {
+                // return actuan value
+                expr_ref premise(ctx.mk_eq_atom(S, mk_string(str)), m);
+                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(convertedRepresentation, true)), m);
+                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                if (!string_int_axioms.contains(axiom)) {
+                    string_int_axioms.insert(axiom);
+                    assert_axiom(axiom);
+                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                    axiomAdd = true;
+                }
+            }
+            else {
+                // return -1
+                expr_ref premise(ctx.mk_eq_atom(S, mk_string(str)), m);
+                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                if (!string_int_axioms.contains(axiom)) {
+                    string_int_axioms.insert(axiom);
+                    assert_axiom(axiom);
+                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                    axiomAdd = true;
+                }
+            }
+        }
+
+        return axiomAdd;
+    }
+
+    bool theory_str::eval_int2str(app * a) {
+        bool axiomAdd = false;
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        expr * N = a->get_arg(0);
+
+        // check string theory
+        bool Sval_expr_exists;
+        expr * Sval_expr = get_eqc_value(a, Sval_expr_exists);
+        if (Sval_expr_exists) {
+            zstring Sval;
+            u.str.is_string(Sval_expr, Sval);
+            STRACE("str", tout << "string theory assigns \"" << mk_pp(a, m) << " = " << Sval << "\n";);
+            // empty string --> integer value < 0
+            if (Sval.empty()) {
+                // ignore this. we should already assert the axiom for what happens when the string is ""
+            } else {
+                // nonempty string --> convert to correct integer value, or disallow it
+                rational convertedRepresentation(0);
+                rational ten(10);
+                bool conversionOK = true;
+                for (unsigned i = 0; i < Sval.length(); ++i) {
+                    char digit = (int)Sval[i];
+                    if (isdigit((int)digit)) {
+                        std::string sDigit(1, digit);
+                        int val = atoi(sDigit.c_str());
+                        convertedRepresentation = (ten * convertedRepresentation) + rational(val);
+                    } else {
+                        // not a digit, invalid
+                        TRACE("str", tout << "str.to-int argument contains non-digit character '" << digit << "'" << std::endl;);
+                        conversionOK = false;
+                        break;
+                    }
+                }
+
+                if (conversionOK) {
+                    expr_ref premise(ctx.mk_eq_atom(a, mk_string(Sval)), m);
+                    expr_ref conclusion(ctx.mk_eq_atom(N, m_autil.mk_numeral(convertedRepresentation, true)), m);
+                    expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                    if (!string_int_axioms.contains(axiom)) {
+                        string_int_axioms.insert(axiom);
+                        assert_axiom(axiom);
+                        m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                        axiomAdd = true;
+                    }
+                } else {
+                    expr_ref axiom(m.mk_not(ctx.mk_eq_atom(a, mk_string(Sval))), m);
+                    // always assert this axiom because this is a conflict clause
+                    assert_axiom(axiom);
+                    axiomAdd = true;
+                }
+            }
+        } else {
+            STRACE("str", tout << "string theory has no assignment for " << mk_pp(a, m) << std::endl;);
+        }
+        return axiomAdd;
     }
 
     /*
@@ -5404,7 +5575,7 @@ namespace smt {
                     rational val;
                     expr* tmp = getExprVarFlatIter(std::make_pair(v, i));
                     if (get_arith_value(tmp, val)){
-                        iterInt[tmp] = val.get_int32();
+                        iterInt[tmp] = val.get_int64();
                     }
                 }
             }
@@ -5415,7 +5586,7 @@ namespace smt {
                 rational vLen;
                 if (get_len_value(n.first, vLen)){
                     zstring zstringVal("");
-                    for (int i = 0; i < vLen.get_int32(); ++i){
+                    for (int i = 0; i < vLen.get_int64(); ++i){
                         expr* val_i = createSelectOperator(n.second, m_autil.mk_int(i));
                         rational v_i;
                         if (get_arith_value(val_i, v_i)) {
@@ -5429,7 +5600,7 @@ namespace smt {
                             }
                         }
 
-                        int intVal = v_i.get_int32();
+                        int intVal = v_i.get_int64();
                         if (intVal <= 0 || intVal >= 128){
                             zstringVal = zstringVal + zstring((char)defaultChar);
                         }
@@ -5517,7 +5688,7 @@ namespace smt {
                             rational len, iter;
                             if (get_arith_value(getExprVarFlatSize(std::make_pair(varName, i)), len) &&
                                 get_arith_value(getExprVarFlatIter(std::make_pair(varName, i)), iter))
-                            iters.emplace_back(std::make_pair(len.get_int32(), iter.get_int32()));
+                            iters.emplace_back(std::make_pair(len.get_int64(), iter.get_int64()));
                         }
 
                         std::vector<int> tmp = createString(varName, solverValue, len, strValue, iters, assigned, true);
@@ -5685,7 +5856,7 @@ namespace smt {
             bool &assigned,
             bool assignAnyway){
         ast_manager & m = get_manager();
-        int lenVar = getVarLength(name, len).get_int32();
+        int lenVar = getVarLength(name, len).get_int64();
 
         STRACE("str", tout << __LINE__  << " " <<  __FUNCTION__ << ": " << mk_pp(name, m) << ": " << value << ", len = " << lenVar << std::endl;);
         std::vector<int> val = getVarValue(name, len, strValue);
@@ -5813,7 +5984,7 @@ namespace smt {
 
                 for (int i = 0; i < nodes.size(); ++i){
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
-                    int lengthS = getVarLength(nodes[i], len).get_int32();
+                    int lengthS = getVarLength(nodes[i], len).get_int64();
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
                     zstring value;
                     if (u.str.is_string(nodes[i], value)) {
@@ -5900,7 +6071,7 @@ namespace smt {
                     int pos = 0;
 
                     for (int i = 0; i < nodes.size(); ++i) {
-                        int varLength = getVarLength(nodes[i], len).get_int32();
+                        int varLength = getVarLength(nodes[i], len).get_int64();
                         if (nodes[i] == newlyUpdate) {
 
                             for (int i = 0; i < varLength; ++i)
@@ -5939,10 +6110,10 @@ namespace smt {
                         get_nodes_in_concat(eq, nodes);
                         for (int i = 0; i < nodes.size(); ++i){
                             if (u.str.is_string(nodes[i])) {
-                                pos += getVarLength(nodes[i], len).get_int32();
+                                pos += getVarLength(nodes[i], len).get_int64();
                             }
                             else {
-                                int varLength = getVarLength(nodes[i], len).get_int32();
+                                int varLength = getVarLength(nodes[i], len).get_int64();
                                 std::vector<int> sValue = getVarValue(nodes[i], len, strValue);
 
                                 bool updated = false;
@@ -5987,7 +6158,7 @@ namespace smt {
             return;
 
         std::vector<int> value = getVarValue(newlyUpdate, len, strValue);
-        int length = getVarLength(newlyUpdate, len).get_int32();
+        int length = getVarLength(newlyUpdate, len).get_int64();
 
         if (length == 0) {
             return;
@@ -5997,7 +6168,7 @@ namespace smt {
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
             for (int i = 0; i < nodes.size(); ++i) {
-                int lengthVar = getVarLength(nodes[i], len).get_int32();
+                int lengthVar = getVarLength(nodes[i], len).get_int64();
                 if (u.str.is_string(nodes[i])) {
                 }
                 else if(strValue.find(nodes[i]) != strValue.end()){
@@ -6070,7 +6241,7 @@ namespace smt {
         std::vector<int> value = getVarValue(newlyUpdate, len, strValue);
         rational length = getVarLength(newlyUpdate, len);
 
-        if (length.get_int32() == 0) {
+        if (length.get_int64() == 0) {
             return;
         }
 
@@ -6083,14 +6254,14 @@ namespace smt {
             for (int i = 0; i < nodes.size(); ++i)
                 if (nodes[i] != newlyUpdate) {
                     if (u.str.is_string(nodes[i])) {
-                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        int lengthVar = getVarLength(nodes[i], len).get_int64();
                         pos += lengthVar;
                     } else if (strValue.find(nodes[i]) != strValue.end()) {
                         STRACE("str",
                                tout << __LINE__ << " " << __FUNCTION__ << "  update " << mk_pp(nodes[i], m) << " from "
                                     << mk_pp(newlyUpdate, m) << std::endl;);
                         std::vector<int> sValue = getVarValue(nodes[i], len, strValue);
-                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        int lengthVar = getVarLength(nodes[i], len).get_int64();
                         /* verify a determined value */
 
                         bool update = false;
@@ -6122,7 +6293,7 @@ namespace smt {
                     } else {
                         STRACE("str", tout << __LINE__ << " assign a new value: " << mk_pp(nodes[i], m) << std::endl;);
                         SASSERT(len.find(nodes[i]) != len.end());
-                        int lengthVar = getVarLength(nodes[i], len).get_int32();
+                        int lengthVar = getVarLength(nodes[i], len).get_int64();
                         /* update a new value */
                         std::vector<int> sValue;
                         for (int i = 0; i < lengthVar; ++i)
@@ -6133,9 +6304,9 @@ namespace smt {
                     }
                 }
             else {
-                    pos =  pos + length.get_int32();
+                    pos =  pos + length.get_int64();
             }
-            SASSERT(pos == length.get_int32());
+            SASSERT(pos == length.get_int64());
         }
     }
 
@@ -6168,7 +6339,7 @@ namespace smt {
         if (strValue.find(newlyUpdate) != strValue.end()) {
             std::vector<int> value = strValue[newlyUpdate];
             rational length = getVarLength(newlyUpdate, len);
-            if ((int)value.size() < length.get_int32()) {
+            if ((int)value.size() < length.get_int64()) {
                 for (int i = (int)value.size(); i < length; ++i)
                     value.emplace_back(0);
                 strValue[newlyUpdate] = value;
@@ -6177,7 +6348,7 @@ namespace smt {
         }
         else {
             rational length = getVarLength(newlyUpdate, len);
-            strValue[newlyUpdate] = std::vector<int>(length.get_int32(), 0);
+            strValue[newlyUpdate] = std::vector<int>(length.get_int64(), 0);
             return strValue[newlyUpdate];
         }
     }
@@ -6544,8 +6715,8 @@ namespace smt {
                     zstring concatString;
                     u.str.is_string(concat_str, concatString);
 
-                    zstring lhsString = concatString.extract(0, lhs_len.get_int32());
-                    zstring rhsString = concatString.extract(lhs_len.get_int32(), concatString.length() - lhsString.length());
+                    zstring lhsString = concatString.extract(0, lhs_len.get_int64());
+                    zstring rhsString = concatString.extract(lhs_len.get_int64(), concatString.length() - lhsString.length());
 
                     expr_ref_vector lhs_terms(m), rhs_terms(m);
                     if (!u.str.is_string(*it)) {
@@ -6572,8 +6743,8 @@ namespace smt {
                     zstring concatString;
                     u.str.is_string(concat_str, concatString);
 
-                    zstring lhsString = concatString.extract(0, concatString.length() - rhs_len.get_int32());
-                    zstring rhsString = concatString.extract(concatString.length() - rhs_len.get_int32(), rhs_len.get_int32());
+                    zstring lhsString = concatString.extract(0, concatString.length() - rhs_len.get_int64());
+                    zstring rhsString = concatString.extract(concatString.length() - rhs_len.get_int64(), rhs_len.get_int64());
 
                     expr_ref_vector lhs_terms(m), rhs_terms(m);
                     if (!u.str.is_string(*it)) {
@@ -6989,7 +7160,7 @@ namespace smt {
                 int pos = 0;
 
                 for (int i = 0; i < tmp.size(); ++i){
-                    if (get_len_value(tmp[i], len) && len.get_int32() == 0) // skip empty vars
+                    if (get_len_value(tmp[i], len) && len.get_int64() == 0) // skip empty vars
                         continue;
 
                     if (elements.size() <= i)
@@ -7444,15 +7615,15 @@ namespace smt {
             rational vLen;
             bool vLen_exists = get_len_value(v, vLen);
             if (vLen_exists){
-                maxInt = std::max(maxInt, vLen.get_int32());
+                maxInt = std::max(maxInt, vLen.get_int64());
             }
             else {
                 rational lo(-1), hi(-1);
 
                 if (lower_bound(v, lo))
-                    maxInt = std::max(maxInt, lo.get_int32());
+                    maxInt = std::max(maxInt, lo.get_int64());
                 if (upper_bound(v, hi))
-                    maxInt = std::max(maxInt, hi.get_int32());
+                    maxInt = std::max(maxInt, hi.get_int64());
             }
         }
 
@@ -10892,7 +11063,7 @@ namespace smt {
                                         if (!m_autil.is_numeral(at, atValue))
                                             lhsExpr = createSelectOperator(arrayLhs, at);
                                         else
-                                            lhsExpr = mk_int(content[atValue.get_int32()]);
+                                            lhsExpr = mk_int(content[atValue.get_int64()]);
                                         subpossibleCases.push_back(createEqualOperator(
                                                 lhsExpr,
                                                 createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
@@ -13489,7 +13660,7 @@ namespace smt {
                     rational pos;
                     found = true;
                     if (get_arith_value(arg1, pos)) {
-                        maxCharAt = std::max(maxCharAt, pos.get_int32());
+                        maxCharAt = std::max(maxCharAt, pos.get_int64());
                     }
                     else {
                         maxCharAt = -1;
@@ -13504,7 +13675,7 @@ namespace smt {
                     rational pos;
                     found = true;
                     if (get_arith_value(arg1, pos)) {
-                        maxCharAt = std::max(maxCharAt, pos.get_int32());
+                        maxCharAt = std::max(maxCharAt, pos.get_int64());
                     }
                     else {
                         maxCharAt = -1;
@@ -14641,12 +14812,12 @@ namespace smt {
     void theory_str::add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes){
         rational vLen;
         if (get_len_value(concatL, vLen)) {
-            if (vLen.get_int32() == 0)
+            if (vLen.get_int64() == 0)
                 return;
         }
 
         if (get_len_value(concatR, vLen)) {
-            if (vLen.get_int32() == 0)
+            if (vLen.get_int64() == 0)
                 return;
         }
 
@@ -14727,7 +14898,7 @@ namespace smt {
                         continue;
                     }
                     if (u.str.is_stoi(a)) {
-//                        instantiate_axiom_str_to_int(e);
+                        instantiate_axiom_str_to_int(e);
                     } else if (u.str.is_itos(a)) {
 //                        instantiate_axiom_int_to_str(e);
                     } else if (u.str.is_at(a)) {
@@ -14779,6 +14950,39 @@ namespace smt {
                 }
                 m_delayed_assertions_todo.reset();
             }
+        }
+    }
+
+    void theory_str::instantiate_axiom_str_to_int(enode * e) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        app * ex = e->get_owner();
+        if (axiomatized_terms.contains(ex)) {
+            TRACE("str", tout << "already set up str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
+            return;
+        }
+        axiomatized_terms.insert(ex);
+
+        TRACE("str", tout << "instantiate str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
+
+        // let expr = (str.to-int S)
+        // axiom 1: expr >= -1
+        // axiom 2: expr = 0 <==> S = "0"
+
+        expr * S = ex->get_arg(0);
+        {
+            expr_ref axiom1(m_autil.mk_ge(ex, m_autil.mk_numeral(rational::minus_one(), true)), m);
+            SASSERT(axiom1);
+            assert_axiom(axiom1);
+        }
+
+        {
+            expr_ref lhs(ctx.mk_eq_atom(ex, m_autil.mk_numeral(rational::zero(), true)), m);
+            expr_ref rhs(ctx.mk_eq_atom(S, mk_string("0")), m);
+            expr_ref axiom2(ctx.mk_eq_atom(lhs, rhs), m);
+            SASSERT(axiom2);
+            assert_axiom(axiom2);
         }
     }
 
@@ -15079,14 +15283,14 @@ namespace smt {
                         else {
                             rational val;
                             if (m_autil.is_numeral(arg2app->get_arg(i), val)) {
-                                sum = sum + val.get_int32();
+                                sum = sum + val.get_int64();
                             }
                             else if (m_autil.is_mul(arg2app->get_arg(i))) {
                                 app* tmp = to_app(arg2app->get_arg(i));
                                 int mul = 1;
                                 for (int j = 0; j < tmp->get_num_parameters(); ++j)
                                     if (m_autil.is_numeral(tmp->get_arg(j), val))
-                                        mul = mul * val.get_int32();
+                                        mul = mul * val.get_int64();
                                     else {
                                         completed = false;
                                         break;
@@ -16836,7 +17040,7 @@ namespace smt {
         rational vLen;
         for (int i = 0; i < vars.size(); ++i){
             if (get_len_value(vars[i], vLen))
-                if (vLen.get_int32() == 0)
+                if (vLen.get_int64() == 0)
                     return true;
         }
         return false;
@@ -17246,7 +17450,7 @@ namespace smt {
         rational len;
         for (const auto& v : allvars) {
 //            STRACE("str", tout << __LINE__ << " core var " << mk_pp(v, m) << std::endl;);
-            if (get_len_value(v, len) && len.get_int32() == 0) {
+            if (get_len_value(v, len) && len.get_int64() == 0) {
                 ret.push_back(createEqualOperator(v, mk_string("")));
             }
             else if (u.str.is_string(v)) {
@@ -17303,10 +17507,10 @@ namespace smt {
             expr *rhs = to_app(e)->get_arg(1);
 
             // skip empty values
-            if (get_len_value(lhs, lenValue) && lenValue.get_int32() == 0)
+            if (get_len_value(lhs, lenValue) && lenValue.get_int64() == 0)
                 continue;
 
-            if (get_len_value(rhs, lenValue) && lenValue.get_int32() == 0)
+            if (get_len_value(rhs, lenValue) && lenValue.get_int64() == 0)
                 continue;
 
             // check rhs
@@ -17324,7 +17528,7 @@ namespace smt {
 
         // capture empty values
         for (const auto& v : allvars)
-            if (get_len_value(v, lenValue) && lenValue.get_int32() == 0)
+            if (get_len_value(v, lenValue) && lenValue.get_int64() == 0)
                 ret.push_back(createEqualOperator(v, mk_string("")));
 
         guessedExprs.reset();
@@ -17360,7 +17564,7 @@ namespace smt {
             expr* tmp = ret[pos].get();
             pos++;
 
-            if (get_len_value(tmp, lenValue) && lenValue.get_int32() == 0)
+            if (get_len_value(tmp, lenValue) && lenValue.get_int64() == 0)
                 continue;
 
             if (u.str.is_replace(tmp)){
