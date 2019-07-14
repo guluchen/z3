@@ -1274,9 +1274,9 @@ namespace smt {
                     bool one_const_in_expr(expr* v, expr_ref_vector constList);
 
             bool implies_empty_str_from_notContain(std::map<expr *, std::set<expr *>> eq_combination);
-                expr_ref_vector implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key);
-                expr_ref_vector implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key);
-                    bool not_contain(expr* haystack, expr* needle);
+                expr_ref_vector implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs);
+                expr_ref_vector implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs);
+                    bool not_contain(expr* haystack, expr* needle, expr* &realHaystack);
                     bool does_contain(expr* haystack, expr* needle, expr* &realHaystack);
 
             bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);

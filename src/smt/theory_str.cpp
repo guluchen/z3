@@ -2106,17 +2106,13 @@ namespace smt {
             return node;
         } else {
             expr * resultAst = mk_string("");
-            STRACE("str", tout << __LINE__ <<  mk_ismt2_pp(node, m) << std::endl;);
             for (int i = argVec.size() - 1; i >= 0; --i) {
                 bool vArgHasEqcValue = false;
                 expr * vArg = get_eqc_value(argVec[i], vArgHasEqcValue);
                 resultAst = mk_concat(vArg, resultAst);
             }
 
-            STRACE("str", tout << mk_ismt2_pp(node, m) << " is simplified to " << mk_ismt2_pp(resultAst, m) << std::endl;);
-
             if (in_same_eqc(node, resultAst)) {
-                TRACE("str", tout << "SKIP: both concats are already in the same equivalence class" << std::endl;);
             } else if (u.str.is_string(resultAst)){
                 expr_ref_vector items(m);
                 int pos = 0;
@@ -4279,6 +4275,8 @@ namespace smt {
             return FC_CONTINUE;
         }
 
+        print_eq_combination(eq_combination);
+
         if (implies_empty_str_from_notContain(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by implies_empty_str_from_notContain." << std::endl;);
             newConstraintTriggered = true;
@@ -4304,7 +4302,6 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        print_eq_combination(eq_combination);
         // enhancement: propagation of value/length information
         if (propagate_eq_combination(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
@@ -4618,8 +4615,8 @@ namespace smt {
         }
         if (impliedEqualites.size() > 0){
             expr* tmp = createAndOperator(impliedEqualites);
-            expr* assertingExpr = createImpliesOperator(coreExpr, tmp);
-            assert_axiom(assertingExpr);
+            expr* assertingExpr = rewrite_implication(coreExpr, tmp);
+            assert_axiom(tmp);
 //            impliedFacts.push_back(assertingExpr);
             return true;
         }
@@ -4699,7 +4696,7 @@ namespace smt {
             fetch_related_exprs(relatedVars, eqs);
 
             // implies that x contains A if needed, means negating the context
-            expr_ref toAssert(createImpliesOperator(createAndOperator(eqs), conclusion), m);
+            expr_ref toAssert(rewrite_implication(createAndOperator(eqs), conclusion), m);
             assert_axiom(toAssert);
             impliedFacts.push_back(toAssert);
             return false;
@@ -4727,12 +4724,12 @@ namespace smt {
                 get_nodes_in_concat(e, nodes);
                 if (u.str.is_string(nodes[nodes.size() - 1])){
                     // check all other eq
-                    ret.append(implies_empty_tail_str_from_notContain(v.second, nodes[nodes.size() - 1]));
+                    ret.append(implies_empty_tail_str_from_notContain(v.second, nodes[nodes.size() - 1], e));
                 }
 
                 if (u.str.is_string(nodes[0])){
                     // check all other eq
-                    ret.append(implies_empty_start_str_from_notContain(v.second, nodes[0]));
+                    ret.append(implies_empty_start_str_from_notContain(v.second, nodes[0], e));
                 }
             }
         }
@@ -4741,37 +4738,55 @@ namespace smt {
             fetch_guessed_exprs_with_scopes(eqList, diseqList);
 
             fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
-            expr* asserting = createImpliesOperator(createAndOperator(eqList), createAndOperator(ret));
-            assert_axiom(asserting);
+            expr* asserting = rewrite_implication(createAndOperator(eqList), createAndOperator(ret));
+            assert_axiom(createAndOperator(ret));
             impliedFacts.push_back(asserting);
             return true;
         }
         return false;
     }
 
-    expr_ref_vector theory_str::implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key){
-        expr_ref_vector ret(get_manager());
+    expr_ref_vector theory_str::implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
         for (const auto& s : v){
             ptr_vector<expr> nodes;
             get_nodes_in_concat(s, nodes);
             for (int i = (int)nodes.size() - 1; i >= 0; --i){
                 expr* real_haystack = nullptr;
                 if (does_contain(nodes[i], key, real_haystack)){
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], m) << " " << mk_pp(key, m) << " " <<  mk_pp(real_haystack, m) << std::endl;);
                     zstring tmp = "";
                     app* a = u.str.mk_contains(real_haystack, key);
                     enode* key = ensure_enode(a);
                     if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
-                        ret.push_back(
-                                createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].second->get_owner()));
+                        expr_ref_vector ands(m);
+                        ands.push_back(createEqualOperator(lhs, s));
+                        if (real_haystack != nodes[i])
+                            ands.push_back(createEqualOperator(nodes[i], real_haystack));
+                        ands.push_back(a);
+
+                        ret.push_back(rewrite_implication(createAndOperator(ands),
+                                createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())));
+                        return ret;
                     }
                 }
 
-                if (not_contain(nodes[i], key)){
+                if (not_contain(nodes[i], key, real_haystack)){
                     zstring tmp = "";
                     if (!are_equal_exprs(nodes[i], u.str.mk_string(tmp))) {
-                        ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                        expr_ref_vector ands(m);
+                        ands.push_back(createEqualOperator(lhs, s));
+                        if (real_haystack != nodes[i])
+                            ands.push_back(createEqualOperator(nodes[i], real_haystack));
+
+                        app* a = u.str.mk_contains(real_haystack, key);
+                        enode* key = ensure_enode(a);
+                        ands.push_back(mk_not(m, a));
+
+                        ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], m) << " must be empty" << std::endl;);
+                        return ret;
                     }
 
                 }
@@ -4782,8 +4797,9 @@ namespace smt {
         return ret;
     }
 
-    expr_ref_vector theory_str::implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key){
-        expr_ref_vector ret(get_manager());
+    expr_ref_vector theory_str::implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs){
+        ast_manager & m = get_manager();
+        expr_ref_vector ret(m);
         for (const auto& s : v){
             ptr_vector<expr> nodes;
             get_nodes_in_concat(s, nodes);
@@ -4795,18 +4811,38 @@ namespace smt {
                     zstring tmp = "";
                     app* a = u.str.mk_contains(real_haystack, key);
                     enode* key = ensure_enode(a);
-                    if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[key].second->get_owner())) {
-                         ret.push_back(
-                                 createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].first->get_owner()));
+                    rational len;
+                    if (!get_len_value(contain_split_map[key].second->get_owner(), len) || len.get_int64() != 0) {
+
+                        expr_ref_vector ands(m);
+                        ands.push_back(createEqualOperator(lhs, s));
+                        if (real_haystack != nodes[i])
+                            ands.push_back(createEqualOperator(nodes[i], real_haystack));
+                        ands.push_back(a);
+
+                         ret.push_back(rewrite_implication(createAndOperator(ands),
+                                                           createEqualOperator(u.str.mk_string(tmp), contain_split_map[key].first->get_owner())));
+                         return ret;
                     }
                 }
 
-                if (not_contain(nodes[i], key)){
+                if (not_contain(nodes[i], key, real_haystack)){
                     zstring tmp = "";
+                    rational len;
+                    if (!get_len_value(nodes[i], len) || len.get_int64() != 0) {
 
-                    if (!are_equal_exprs(nodes[i], u.str.mk_string(tmp))) {
-                        ret.push_back(createEqualOperator(nodes[i], u.str.mk_string(tmp)));
+                        expr_ref_vector ands(m);
+                        ands.push_back(createEqualOperator(lhs, s));
+                        if (real_haystack != nodes[i])
+                            ands.push_back(createEqualOperator(nodes[i], real_haystack));
+
+                        app* a = u.str.mk_contains(real_haystack, key);
+                        enode* key = ensure_enode(a);
+                        ands.push_back(mk_not(m, a));
+
+                        ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
+                        return ret;
                     }
 
                 }
@@ -4861,6 +4897,7 @@ namespace smt {
                 if (u.str.is_string(e, value)){
                     for (const auto& nn : v.second){
                         if (!can_match(value, nn)) {
+                            assert_axiom(mk_not(m, createEqualOperator(e, nn)));
                             return false;
                         }
                     }
@@ -4876,8 +4913,9 @@ namespace smt {
         for (const auto& nn : nodes){
             zstring v;
             if (u.str.is_string(nn, v)) {
-                if (!value.contains(v))
+                if (!value.contains(v)) {
                     return false;
+                }
                 else {
                     value = value.extract(0, value.indexof(v, 0)) +
                             value.extract(value.indexof(v, 0) + v.length(), value.length() - value.indexof(v, 0) - v.length());
@@ -4929,8 +4967,8 @@ namespace smt {
                         continue;
                 }
             }
-
-            if (!not_contain(nn, key)){
+            expr* real_haystack = nullptr;
+            if (!not_contain(nn, key, real_haystack)){
                 return false;
             }
         }
@@ -4979,7 +5017,8 @@ namespace smt {
             // check other variabes do not contain const
             for (const auto& s : nodes){
                 if (s != constList[0].get()){
-                    if (not_contain(s, constList[0].get())){
+                    expr* realHaystack = nullptr;
+                    if (not_contain(s, constList[0].get(), realHaystack)){
                         // good
                     }
                     else {
@@ -4997,7 +5036,7 @@ namespace smt {
             return false;
     }
 
-    bool theory_str::not_contain(expr* haystack, expr* needle){
+    bool theory_str::not_contain(expr* haystack, expr* needle, expr* &realHaystack){
         context &ctx = get_context();
         expr_ref_vector eqs(get_manager());
         collect_eq_nodes(haystack, eqs);
@@ -5016,6 +5055,7 @@ namespace smt {
                     case l_false: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false"
                                                      << mk_pp(haystack, get_manager()) << " "
                                                      << mk_pp(needle, get_manager()) << std::endl;);
+                        realHaystack = s;
                         return true;
                     case l_undef: STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef"
                                                      << mk_pp(haystack, get_manager()) << " "
@@ -5503,7 +5543,7 @@ namespace smt {
             expr_ref_vector eqcores(m), diseqcores(m);
             fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
             fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
-            expr_ref toAssert(createImpliesOperator(createAndOperator(eqcores), createAndOperator(ands)), m);
+            expr_ref toAssert(rewrite_implication(createAndOperator(eqcores), createAndOperator(ands)), m);
             assert_axiom(toAssert.get());
             impliedFacts.push_back(toAssert.get());
             return true;
@@ -7237,7 +7277,7 @@ namespace smt {
             ensure_enode(a);
 
             if (m.is_and(a)) {
-                assert_axiom(createImpliesOperator(causexpr, a));
+                assert_axiom(rewrite_implication(causexpr, a));
             }
             else
                 assert_axiom(a);
@@ -9522,7 +9562,8 @@ namespace smt {
             else if (!optimizing) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                 if ((a.second % QMAX == -1 || valA.length() == 1) && (b.second % QMAX  == -1 || valB.length() == 1)) /* head vs head */ {
-                    if (not_contain(a.first, b.first) || not_contain(b.first, a.first))
+                    expr* realHaystack = nullptr;
+                    if (not_contain(a.first, b.first, realHaystack) || not_contain(b.first, a.first, realHaystack))
                         return nullptr;
 
 
@@ -9786,9 +9827,11 @@ namespace smt {
              */
             for (const auto& e : elementNames){
                 zstring value;
-                if (u.str.is_string(e.first, value) && value.length() == 1)
-                    if (not_contain(a.first, e.first))
+                if (u.str.is_string(e.first, value) && value.length() == 1) {
+                    expr* real_haystack = nullptr;
+                    if (not_contain(a.first, e.first, real_haystack))
                         return nullptr;
+                }
             }
 
             /* do not need AND */
@@ -10169,7 +10212,7 @@ namespace smt {
 //                            i + 1);
                     resultParts.push_back(createOrOperator(ors));
                 }
-                resultParts.push_back(createImpliesOperator(
+                resultParts.push_back(rewrite_implication(
                         createLessEqOperator(len_connectedVar, m_autil.mk_int(content.length() - 1)),
                         createEqualOperator(getExprVarFlatIter(elementNames[connectedVarPos]), m_autil.mk_int(1))));
             }
@@ -10665,7 +10708,7 @@ namespace smt {
             }
 
             andConstraints.push_back(
-                    createImpliesOperator(
+                    rewrite_implication(
                             createLessOperator(lenB, lenA),
                             createEqualOperator(iterB, m_autil.mk_int(1))));
         }
@@ -13062,7 +13105,7 @@ namespace smt {
                 if (!u.str.is_string(rhsVec[i]))
                     andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenValue)));
                 prefix = i;
-                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
+                expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
             }
@@ -13098,7 +13141,7 @@ namespace smt {
                 if (!u.str.is_string(rhsVec[rhsVec.size() - 1 - i]))
                     andRhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenValue)));
                 suffix = i;
-                expr* tmp = createImpliesOperator(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
+                expr* tmp = rewrite_implication(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
             }
@@ -13116,7 +13159,7 @@ namespace smt {
             // only 1 var left
             if (prefix + 1 == (int)lhsVec.size() - suffix - 2)
                 if (!are_equal_exprs(lhsVec[prefix + 1], rhsVec[prefix + 1])) {
-                    expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
+                    expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], rhsVec[prefix + 1]));
                     if (!impliedEqualities.contains(tmp))
                         impliedEqualities.push_back(tmp);
                 }
@@ -13126,7 +13169,7 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(rhsVec[prefix + 1], rhsVec[prefix + 2]);
             if (!are_equal_exprs(lhsVec[prefix + 1], concatTmp)) {
-                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], concatTmp));
+                expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
@@ -13137,7 +13180,7 @@ namespace smt {
             // only 1 var left
             expr* concatTmp = u.str.mk_concat(lhsVec[prefix + 1], lhsVec[prefix + 2]);
             if (!are_equal_exprs(rhsVec[prefix + 1], concatTmp)) {
-                expr* tmp = createImpliesOperator(createAndOperator(andLhs), createEqualOperator(rhsVec[prefix + 1], concatTmp));
+                expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(rhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
@@ -16395,7 +16438,6 @@ namespace smt {
     expr * theory_str::mk_concat(expr * n1, expr * n2) {
         context &ctx = get_context();
         ast_manager &m = get_manager();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(n1, m) << " " << mk_pp(n2, m)  << std::endl;);
         ENSURE(n1 != nullptr);
         ENSURE(n2 != nullptr);
         bool n1HasEqcValue = false;

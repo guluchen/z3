@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="212">
-              <caret line="7625" column="58" selection-start-line="7625" selection-start-column="58" selection-end-line="7625" selection-end-column="58" />
+            <state relative-caret-position="101">
+              <caret line="4871" column="16" lean-forward="true" selection-start-line="4871" selection-start-column="16" selection-end-line="4871" selection-end-column="16" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#433503#433808#0" expanded="true" />
@@ -146,8 +146,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="197">
-              <caret line="2150" column="34" selection-start-line="2150" selection-start-column="34" selection-end-line="2150" selection-end-column="34" />
+            <state relative-caret-position="212">
+              <caret line="1282" column="53" selection-start-line="1282" selection-start-column="53" selection-end-line="1282" selection-end-column="53" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -159,15 +159,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collect_all_possible_arrangements</find>
-      <find>equalityToSMT</find>
-      <find>negate_context</find>
-      <find>assert_breakdown_combination</find>
-      <find>parikh</find>
-      <find>parikh_image_check</find>
-      <find>lower_bound</find>
-      <find>is_l</find>
-      <find>is_le</find>
       <find>leng</find>
       <find>index_hea</find>
       <find>index_tail</find>
@@ -188,9 +179,19 @@
       <find>get_int32</find>
       <find>32</find>
       <find>instantiate_axiom_str_to_int</find>
+      <find>rewrite</find>
+      <find>createimpli</find>
+      <find>createImpliesOperator</find>
+      <find>implies_empty_tail_str_from_notContain</find>
+      <find>get_manager</find>
       <find>finalcheck_str2int</find>
+      <find>not_contain</find>
+      <find>implies_empty_start_str_from_notContain</find>
+      <find>implies_empty_str_from_notContain</find>
+      <find>can_match</find>
     </findStrings>
     <replaceStrings>
+      <replace>rewrite_implication</replace>
       <replace>get_int64</replace>
     </replaceStrings>
   </component>
@@ -737,12 +738,12 @@
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
       <workItem from="1562944360793" duration="21675000" />
-      <workItem from="1563072514491" duration="9560000" />
+      <workItem from="1563072514491" duration="19702000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1191120000" />
+    <option name="totallyTimeSpent" value="1201262000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1136,8 +1137,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="197">
-          <caret line="2150" column="34" selection-start-line="2150" selection-start-column="34" selection-end-line="2150" selection-end-column="34" />
+        <state relative-caret-position="212">
+          <caret line="1282" column="53" selection-start-line="1282" selection-start-column="53" selection-end-line="1282" selection-end-column="53" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1146,8 +1147,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="212">
-          <caret line="7625" column="58" selection-start-line="7625" selection-start-column="58" selection-end-line="7625" selection-end-column="58" />
+        <state relative-caret-position="101">
+          <caret line="4871" column="16" lean-forward="true" selection-start-line="4871" selection-start-column="16" selection-end-line="4871" selection-end-column="16" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#433503#433808#0" expanded="true" />
