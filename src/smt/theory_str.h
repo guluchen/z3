@@ -2149,6 +2149,9 @@ namespace smt {
         void instantiate_axiom_substr(enode * e);
         void instantiate_axiom_replace(enode * e);
         void instantiate_axiom_regexIn(enode * e);
+        void instantiate_axiom_int_to_str(enode * e);
+        void instantiate_axiom_str_to_int(enode * e);
+
 
         app * mk_fresh_const(char const* name, sort* s);
         app * mk_strlen(expr * e);

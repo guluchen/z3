@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
@@ -99,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="338">
-              <caret line="4258" column="31" lean-forward="true" selection-start-line="4258" selection-start-column="31" selection-end-line="4258" selection-end-column="31" />
+            <state relative-caret-position="212">
+              <caret line="7625" column="58" selection-start-line="7625" selection-start-column="58" selection-end-line="7625" selection-end-column="58" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#433503#433808#0" expanded="true" />
@@ -145,8 +146,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="212">
-              <caret line="1258" column="15" lean-forward="true" selection-start-line="1258" selection-start-column="15" selection-end-line="1258" selection-end-column="15" />
+            <state relative-caret-position="197">
+              <caret line="2150" column="34" selection-start-line="2150" selection-start-column="34" selection-end-line="2150" selection-end-column="34" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -736,12 +737,12 @@
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
       <workItem from="1562944360793" duration="21675000" />
-      <workItem from="1563072514491" duration="8132000" />
+      <workItem from="1563072514491" duration="9560000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1189692000" />
+    <option name="totallyTimeSpent" value="1191120000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1135,8 +1136,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="212">
-          <caret line="1258" column="15" lean-forward="true" selection-start-line="1258" selection-start-column="15" selection-end-line="1258" selection-end-column="15" />
+        <state relative-caret-position="197">
+          <caret line="2150" column="34" selection-start-line="2150" selection-start-column="34" selection-end-line="2150" selection-end-column="34" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1145,8 +1146,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="338">
-          <caret line="4258" column="31" lean-forward="true" selection-start-line="4258" selection-start-column="31" selection-end-line="4258" selection-end-column="31" />
+        <state relative-caret-position="212">
+          <caret line="7625" column="58" selection-start-line="7625" selection-start-column="58" selection-end-line="7625" selection-end-column="58" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#433503#433808#0" expanded="true" />

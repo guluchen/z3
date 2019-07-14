@@ -7615,15 +7615,15 @@ namespace smt {
             rational vLen;
             bool vLen_exists = get_len_value(v, vLen);
             if (vLen_exists){
-                maxInt = std::max(maxInt, vLen.get_int64());
+                maxInt = std::max(maxInt, vLen.get_int32());
             }
             else {
                 rational lo(-1), hi(-1);
 
                 if (lower_bound(v, lo))
-                    maxInt = std::max(maxInt, lo.get_int64());
+                    maxInt = std::max(maxInt, lo.get_int32());
                 if (upper_bound(v, hi))
-                    maxInt = std::max(maxInt, hi.get_int64());
+                    maxInt = std::max(maxInt, hi.get_int32());
             }
         }
 
@@ -13660,7 +13660,7 @@ namespace smt {
                     rational pos;
                     found = true;
                     if (get_arith_value(arg1, pos)) {
-                        maxCharAt = std::max(maxCharAt, pos.get_int64());
+                        maxCharAt = std::max(maxCharAt, pos.get_int32());
                     }
                     else {
                         maxCharAt = -1;
@@ -13675,7 +13675,7 @@ namespace smt {
                     rational pos;
                     found = true;
                     if (get_arith_value(arg1, pos)) {
-                        maxCharAt = std::max(maxCharAt, pos.get_int64());
+                        maxCharAt = std::max(maxCharAt, pos.get_int32());
                     }
                     else {
                         maxCharAt = -1;
@@ -14900,7 +14900,7 @@ namespace smt {
                     if (u.str.is_stoi(a)) {
                         instantiate_axiom_str_to_int(e);
                     } else if (u.str.is_itos(a)) {
-//                        instantiate_axiom_int_to_str(e);
+                        instantiate_axiom_int_to_str(e);
                     } else if (u.str.is_at(a)) {
                         instantiate_axiom_charAt(e);
                     } else if (u.str.is_prefix(a)) {
@@ -14950,39 +14950,6 @@ namespace smt {
                 }
                 m_delayed_assertions_todo.reset();
             }
-        }
-    }
-
-    void theory_str::instantiate_axiom_str_to_int(enode * e) {
-        context & ctx = get_context();
-        ast_manager & m = get_manager();
-
-        app * ex = e->get_owner();
-        if (axiomatized_terms.contains(ex)) {
-            TRACE("str", tout << "already set up str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
-            return;
-        }
-        axiomatized_terms.insert(ex);
-
-        TRACE("str", tout << "instantiate str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
-
-        // let expr = (str.to-int S)
-        // axiom 1: expr >= -1
-        // axiom 2: expr = 0 <==> S = "0"
-
-        expr * S = ex->get_arg(0);
-        {
-            expr_ref axiom1(m_autil.mk_ge(ex, m_autil.mk_numeral(rational::minus_one(), true)), m);
-            SASSERT(axiom1);
-            assert_axiom(axiom1);
-        }
-
-        {
-            expr_ref lhs(ctx.mk_eq_atom(ex, m_autil.mk_numeral(rational::zero(), true)), m);
-            expr_ref rhs(ctx.mk_eq_atom(S, mk_string("0")), m);
-            expr_ref axiom2(ctx.mk_eq_atom(lhs, rhs), m);
-            SASSERT(axiom2);
-            assert_axiom(axiom2);
         }
     }
 
@@ -16300,6 +16267,63 @@ namespace smt {
         } else {
             STRACE("str", tout << __LINE__ << " "  << "ERROR: unknown regex expression " << mk_pp(regex, m) << "!" << std::endl;);
             NOT_IMPLEMENTED_YET();
+        }
+    }
+
+    void theory_str::instantiate_axiom_str_to_int(enode * e) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        app * ex = e->get_owner();
+        if (axiomatized_terms.contains(ex)) {
+            TRACE("str", tout << "already set up str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
+            return;
+        }
+        axiomatized_terms.insert(ex);
+
+        TRACE("str", tout << "instantiate str.to-int axiom for " << mk_pp(ex, m) << std::endl;);
+
+        // let expr = (str.to-int S)
+        // axiom 1: expr >= -1
+        // axiom 2: expr = 0 <==> S = "0"
+
+        expr * S = ex->get_arg(0);
+        {
+            expr_ref axiom1(m_autil.mk_ge(ex, m_autil.mk_numeral(rational::minus_one(), true)), m);
+            SASSERT(axiom1);
+            assert_axiom(axiom1);
+        }
+
+        {
+            expr_ref lhs(ctx.mk_eq_atom(ex, m_autil.mk_numeral(rational::zero(), true)), m);
+            expr_ref rhs(ctx.mk_eq_atom(S, mk_string("0")), m);
+            expr_ref axiom2(ctx.mk_eq_atom(lhs, rhs), m);
+            SASSERT(axiom2);
+            assert_axiom(axiom2);
+        }
+    }
+
+    void theory_str::instantiate_axiom_int_to_str(enode * e) {
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+
+        app * ex = e->get_owner();
+        if (axiomatized_terms.contains(ex)) {
+            TRACE("str", tout << "already set up str.from-int axiom for " << mk_pp(ex, m) << std::endl;);
+            return;
+        }
+        axiomatized_terms.insert(ex);
+
+        TRACE("str", tout << "instantiate str.from-int axiom for " << mk_pp(ex, m) << std::endl;);
+
+        // axiom 1: N < 0 <==> (str.from-int N) = ""
+        expr * N = ex->get_arg(0);
+        {
+            expr_ref axiom1_lhs(mk_not(m, m_autil.mk_ge(N, m_autil.mk_numeral(rational::zero(), true))), m);
+            expr_ref axiom1_rhs(ctx.mk_eq_atom(ex, mk_string("")), m);
+            expr_ref axiom1(ctx.mk_eq_atom(axiom1_lhs, axiom1_rhs), m);
+            SASSERT(axiom1);
+            assert_axiom(axiom1);
         }
     }
 
