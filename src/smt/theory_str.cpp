@@ -4739,8 +4739,9 @@ namespace smt {
 
             fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
             expr* asserting = rewrite_implication(createAndOperator(eqList), createAndOperator(ret));
-            assert_axiom(createAndOperator(ret));
+//            assert_axiom(createAndOperator(ret));
             impliedFacts.push_back(asserting);
+            negate_context();
             return true;
         }
         return false;
@@ -4765,8 +4766,10 @@ namespace smt {
                         if (real_haystack != nodes[i])
                             ands.push_back(createEqualOperator(nodes[i], real_haystack));
                         ands.push_back(contain_pair_bool_map[std::make_pair(real_haystack, key)]);
-                        ret.push_back(rewrite_implication(createAndOperator(ands),
-                                createEqualOperator(u.str.mk_string(tmp), contain_split_map[tmpenode].second->get_owner())));
+                        rational len;
+                        if (lower_bound(contain_split_map[tmpenode].second->get_owner(), len) && len.get_int64() > 0)
+                            ret.push_back(rewrite_implication(createAndOperator(ands),
+                                    createEqualOperator(u.str.mk_string(tmp), contain_split_map[tmpenode].second->get_owner())));
                         return ret;
                     }
                 }
@@ -4783,8 +4786,9 @@ namespace smt {
                         ensure_enode(a);
                         SASSERT(contain_pair_bool_map.contains(std::make_pair(real_haystack, key)));
                         ands.push_back(mk_not(m, contain_pair_bool_map[std::make_pair(real_haystack, key)]));
-
-                        ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
+                        rational len;
+                        if (lower_bound(nodes[i], len) && len.get_int64() > 0)
+                            ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], m) << " must be empty" << std::endl;);
                         return ret;
                     }
@@ -4819,8 +4823,9 @@ namespace smt {
                         if (real_haystack != nodes[i])
                             ands.push_back(createEqualOperator(nodes[i], real_haystack));
                         ands.push_back(contain_pair_bool_map[std::make_pair(real_haystack, key)]);
-
-                         ret.push_back(rewrite_implication(createAndOperator(ands),
+                        rational len;
+                        if (lower_bound(contain_split_map[tmpenode].first->get_owner(), len) && len.get_int64() > 0)
+                            ret.push_back(rewrite_implication(createAndOperator(ands),
                                                            createEqualOperator(u.str.mk_string(tmp), contain_split_map[tmpenode].first->get_owner())));
                          return ret;
                     }
@@ -4838,8 +4843,9 @@ namespace smt {
 
                         SASSERT(contain_pair_bool_map.contains(std::make_pair(real_haystack, key)));
                         ands.push_back(mk_not(m, contain_pair_bool_map[std::make_pair(real_haystack, key)]));
-
-                        ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
+                        rational len;
+                        if (lower_bound(nodes[i], len) && len.get_int64() > 0)
+                            ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], get_manager()) << " must be empty" << std::endl;);
                         return ret;
                     }

@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -99,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="250">
-              <caret line="13081" column="80" lean-forward="true" selection-start-line="13081" selection-start-column="80" selection-end-line="13081" selection-end-column="80" />
+            <state relative-caret-position="347">
+              <caret line="8253" column="42" lean-forward="true" selection-start-line="8253" selection-start-column="42" selection-end-line="8253" selection-end-column="42" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#433503#433808#0" expanded="true" />
@@ -160,7 +159,6 @@
     <findStrings>
       <find>index_hea</find>
       <find>index_tail</find>
-      <find>final_check</find>
       <find>final_check_e</find>
       <find>length_rela</find>
       <find>index_ta</find>
@@ -186,8 +184,9 @@
       <find>can_match</find>
       <find>parikh_image_check</find>
       <find>contain_pair_bool_map</find>
-      <find>implies_empty_tail_str_from_notContain</find>
       <find>implies_empty_start_str_from_notContain</find>
+      <find>final_check</find>
+      <find>implies_empty_tail_str_from_notContain</find>
     </findStrings>
     <replaceStrings>
       <replace>rewrite_implication</replace>
@@ -737,12 +736,12 @@
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
       <workItem from="1562944360793" duration="21675000" />
-      <workItem from="1563072514491" duration="22607000" />
+      <workItem from="1563072514491" duration="23521000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1204167000" />
+    <option name="totallyTimeSpent" value="1205081000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1146,8 +1145,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="250">
-          <caret line="13081" column="80" lean-forward="true" selection-start-line="13081" selection-start-column="80" selection-end-line="13081" selection-end-column="80" />
+        <state relative-caret-position="347">
+          <caret line="8253" column="42" lean-forward="true" selection-start-line="8253" selection-start-column="42" selection-end-line="8253" selection-end-column="42" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#433503#433808#0" expanded="true" />
