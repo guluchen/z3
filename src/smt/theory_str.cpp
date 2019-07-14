@@ -4287,15 +4287,6 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        print_eq_combination(eq_combination);
-        // enhancement: propagation of value/length information
-        if (propagate_eq_combination(eq_combination)) {
-            TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
-            update_state();
-            return FC_CONTINUE;
-        }
-
-        refined_init_final_check(importantVars, eq_combination);
 
         if (handle_contain_family(eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
@@ -4308,6 +4299,16 @@ namespace smt {
             update_state();
             return FC_CONTINUE;
         }
+
+        print_eq_combination(eq_combination);
+        // enhancement: propagation of value/length information
+        if (propagate_eq_combination(eq_combination)) {
+            TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
+            update_state();
+            return FC_CONTINUE;
+        }
+
+        refined_init_final_check(importantVars, eq_combination);
 
         if (underapproximation(eq_combination, importantVars)) {
             update_state();
@@ -4448,7 +4449,7 @@ namespace smt {
             expr* tmp = createAndOperator(impliedEqualites);
             expr* assertingExpr = createImpliesOperator(coreExpr, tmp);
             assert_axiom(assertingExpr);
-            impliedFacts.push_back(assertingExpr);
+//            impliedFacts.push_back(assertingExpr);
             return true;
         }
         else
@@ -15156,6 +15157,37 @@ namespace smt {
         expr_ref ts0(value.first, m);
         expr_ref ts1(value.second, m);
 
+        if (u.str.is_extract(haystack.get())){
+            app* substr = to_app(haystack.get());
+            rational ra;
+            if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
+                    app *rootContain = mk_contains(substr->get_arg(0), needle);
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
+        }
+
+        for (const auto& p : contain_pair_bool_map){
+            if (u.str.is_extract(p.get_key1()) && p.get_key2() == needle.get()){
+                app* substr = to_app(p.get_key1());
+                rational ra;
+                if (substr->get_arg(0) == haystack.get() &&
+                    m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                    app *rootContain = mk_contains(p.get_key1(), needle.get());
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
+        }
+
         expr_ref breakdownAssert(ctx.mk_eq_atom(ex, ctx.mk_eq_atom(ex->get_arg(0), mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))), m);
         SASSERT(breakdownAssert);
         assert_axiom(mk_not(m, u.str.mk_contains(value.first, needle.get())));
@@ -15254,6 +15286,38 @@ namespace smt {
         else {
             value = std::make_pair<app*, app*>(mk_str_var("indexOf1"), mk_str_var("indexOf2"));
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
+        }
+
+        if (u.str.is_extract(haystack.get())){
+            app* substr = to_app(haystack.get());
+            rational ra;
+            if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
+                    app *rootContain = mk_contains(substr->get_arg(0), needle);
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
+        }
+
+        for (const auto& p : contain_pair_bool_map){
+            if (u.str.is_extract(p.get_key1()) && p.get_key2() == needle.get()){
+                app* substr = to_app(p.get_key1());
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                rational ra;
+                if (substr->get_arg(0) == haystack.get() &&
+                    m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                    app *rootContain = mk_contains(p.get_key1(), needle.get());
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
         }
 
         expr_ref x1(value.first, m);
@@ -15694,6 +15758,7 @@ namespace smt {
         ast_manager & m = get_manager();
 
         app * expr = e->get_owner();
+
         if (axiomatized_terms.contains(expr)) {
             return;
         }
@@ -15711,6 +15776,37 @@ namespace smt {
         else {
             value = std::make_pair<app*, app*>(mk_str_var("replace1"), mk_str_var("replace2"));
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
+        }
+
+        if (u.str.is_extract(haystack.get())){
+            app* substr = to_app(haystack.get());
+            rational ra;
+            if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
+                    app *rootContain = mk_contains(substr->get_arg(0), needle);
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
+        }
+
+        for (const auto& p : contain_pair_bool_map){
+            if (u.str.is_extract(p.get_key1()) && p.get_key2() == needle.get()){
+                app* substr = to_app(p.get_key1());
+                rational ra;
+                if (substr->get_arg(0) == haystack.get() &&
+                    m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+                    app *rootContain = mk_contains(p.get_key1(), needle.get());
+                    enode* keynode = ensure_enode(rootContain);
+                    SASSERT(contain_split_map.contains(keynode));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
+                    assert_axiom(createEqualOperator(value.first, contain_split_map[keynode].first->get_owner()));
+                }
+            }
         }
 
         expr_ref x1(value.first, m);

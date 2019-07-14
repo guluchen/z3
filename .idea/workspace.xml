@@ -3,8 +3,7 @@
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
       <config projectName="Z3" targetName="subpaving" />
-      <config projectName="Z3" targetName="euclid" />
-      <config projectName="Z3" targetName="rewriter" />
+      <config projectName="Z3" targetName="pattern" />
       <config projectName="Z3" targetName="lp_tst" />
       <config projectName="Z3" targetName="ast" />
       <config projectName="Z3" targetName="util" />
@@ -22,6 +21,7 @@
       <config projectName="Z3" targetName="cmd_context" />
       <config projectName="Z3" targetName="smt" />
       <config projectName="Z3" targetName="opt" />
+      <config projectName="Z3" targetName="ddnf" />
       <config projectName="Z3" targetName="bv_tactics" />
       <config projectName="Z3" targetName="api_dll" />
       <config projectName="Z3" targetName="sat_tactic" />
@@ -40,11 +40,11 @@
       <config projectName="Z3" targetName="bit_blaster" />
       <config projectName="Z3" targetName="sat" />
       <config projectName="Z3" targetName="smt2parser" />
-      <config projectName="Z3" targetName="pattern" />
       <config projectName="Z3" targetName="portfolio" />
       <config projectName="Z3" targetName="smtlogic_tactics" />
       <config projectName="Z3" targetName="bmc" />
       <config projectName="Z3" targetName="qe" />
+      <config projectName="Z3" targetName="solver" />
       <config projectName="Z3" targetName="fp" />
       <config projectName="Z3" targetName="substitution" />
       <config projectName="Z3" targetName="aig_tactic" />
@@ -56,24 +56,24 @@
       <config projectName="Z3" targetName="rel" />
       <config projectName="Z3" targetName="tab" />
       <config projectName="Z3" targetName="sls_tactic" />
-      <config projectName="Z3" targetName="smt_params" />
       <config projectName="Z3" targetName="subpaving_tactic" />
       <config projectName="Z3" targetName="clp" />
-      <config projectName="Z3" targetName="tactic" />
-      <config projectName="Z3" targetName="cpp_example" />
+      <config projectName="Z3" targetName="rewriter" />
       <config projectName="Z3" targetName="dataflow" />
       <config projectName="Z3" targetName="uninstall" />
+      <config projectName="Z3" targetName="euclid" />
       <config projectName="Z3" targetName="nlsat_tactic" />
       <config projectName="Z3" targetName="api" />
       <config projectName="Z3" targetName="parser_util" />
-      <config projectName="Z3" targetName="ddnf" />
+      <config projectName="Z3" targetName="cpp_example" />
+      <config projectName="Z3" targetName="tactic" />
       <config projectName="Z3" targetName="grobner" />
       <config projectName="Z3" targetName="c_example" />
       <config projectName="Z3" targetName="model" />
       <config projectName="Z3" targetName="muz" />
       <config projectName="Z3" targetName="normal_forms" />
       <config projectName="Z3" targetName="ufbv_tactic" />
-      <config projectName="Z3" targetName="solver" />
+      <config projectName="Z3" targetName="smt_params" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -85,7 +85,6 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="244">
-              <caret line="14485" column="35" selection-start-line="14485" selection-start-column="35" selection-end-line="14485" selection-end-column="35" />
+            <state relative-caret-position="214">
+              <caret line="15785" column="20" lean-forward="true" selection-start-line="15785" selection-start-column="20" selection-end-line="15785" selection-end-column="100" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -112,7 +111,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="321">
+            <state relative-caret-position="18645">
               <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
             </state>
           </provider>
@@ -143,7 +142,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="326">
-              <caret line="2029" column="26" selection-start-line="2029" selection-start-column="26" selection-end-line="2029" selection-end-column="26" />
+              <caret line="2255" column="49" selection-start-line="2255" selection-start-column="49" selection-end-line="2255" selection-end-column="49" />
               <folding>
                 <element signature="e#9699#19701#1" />
               </folding>
@@ -155,13 +154,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_lower_bound_image_in_expr</find>
-      <find>generateconstra</find>
-      <find>does_contain</find>
-      <find>create_equations_over_contain_vars</find>
-      <find>handle_contain_family</find>
-      <find>() &gt;= 6</find>
-      <find>collectAllPossibleSplits</find>
       <find>generate_smt</find>
       <find>convert_equalities</find>
       <find>underapproximation</find>
@@ -185,6 +177,13 @@
       <find>index_ta</find>
       <find>have_same_len</find>
       <find>extend</find>
+      <find>contain_pair_idx_map</find>
+      <find>contain_pair_bool_map</find>
+      <find>std::make_pair</find>
+      <find>d::pair&lt;expr *, expr *&gt;</find>
+      <find>instantiate_axiom_ind</find>
+      <find>ert_axiom(createEqualOperator(value.first, contain_split_map[ke</find>
+      <find>std::pair&lt;expr*</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -729,12 +728,13 @@
       <workItem from="1562830351457" duration="1853000" />
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
-      <workItem from="1562944360793" duration="21099000" />
+      <workItem from="1562944360793" duration="21675000" />
+      <workItem from="1563072514491" duration="4455000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1180984000" />
+    <option name="totallyTimeSpent" value="1186015000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1095,6 +1095,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="574">
+          <caret line="3641" column="17" selection-start-line="3641" selection-start-column="17" selection-end-line="3641" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18645">
+          <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="62730">
@@ -1112,24 +1126,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="574">
-          <caret line="3641" column="17" selection-start-line="3641" selection-start-column="17" selection-end-line="3641" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="321">
-          <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="326">
-          <caret line="2029" column="26" selection-start-line="2029" selection-start-column="26" selection-end-line="2029" selection-end-column="26" />
+          <caret line="2255" column="49" selection-start-line="2255" selection-start-column="49" selection-end-line="2255" selection-end-column="49" />
           <folding>
             <element signature="e#9699#19701#1" />
           </folding>
@@ -1138,8 +1138,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="244">
-          <caret line="14485" column="35" selection-start-line="14485" selection-start-column="35" selection-end-line="14485" selection-end-column="35" />
+        <state relative-caret-position="214">
+          <caret line="15785" column="20" lean-forward="true" selection-start-line="15785" selection-start-column="20" selection-end-line="15785" selection-end-column="100" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
