@@ -85,7 +85,6 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="101">
-              <caret line="4871" column="16" lean-forward="true" selection-start-line="4871" selection-start-column="16" selection-end-line="4871" selection-end-column="16" />
+            <state relative-caret-position="250">
+              <caret line="13081" column="80" lean-forward="true" selection-start-line="13081" selection-start-column="80" selection-end-line="13081" selection-end-column="80" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#433503#433808#0" expanded="true" />
@@ -159,7 +158,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>leng</find>
       <find>index_hea</find>
       <find>index_tail</find>
       <find>final_check</find>
@@ -169,7 +167,6 @@
       <find>have_same_len</find>
       <find>extend</find>
       <find>contain_pair_idx_map</find>
-      <find>contain_pair_bool_map</find>
       <find>std::make_pair</find>
       <find>d::pair&lt;expr *, expr *&gt;</find>
       <find>instantiate_axiom_ind</find>
@@ -182,13 +179,15 @@
       <find>rewrite</find>
       <find>createimpli</find>
       <find>createImpliesOperator</find>
-      <find>implies_empty_tail_str_from_notContain</find>
       <find>get_manager</find>
       <find>finalcheck_str2int</find>
       <find>not_contain</find>
-      <find>implies_empty_start_str_from_notContain</find>
       <find>implies_empty_str_from_notContain</find>
       <find>can_match</find>
+      <find>parikh_image_check</find>
+      <find>contain_pair_bool_map</find>
+      <find>implies_empty_tail_str_from_notContain</find>
+      <find>implies_empty_start_str_from_notContain</find>
     </findStrings>
     <replaceStrings>
       <replace>rewrite_implication</replace>
@@ -738,12 +737,12 @@
       <workItem from="1562833160283" duration="9771000" />
       <workItem from="1562854028838" duration="21003000" />
       <workItem from="1562944360793" duration="21675000" />
-      <workItem from="1563072514491" duration="19702000" />
+      <workItem from="1563072514491" duration="22607000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1201262000" />
+    <option name="totallyTimeSpent" value="1204167000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1147,8 +1146,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="101">
-          <caret line="4871" column="16" lean-forward="true" selection-start-line="4871" selection-start-column="16" selection-end-line="4871" selection-end-column="16" />
+        <state relative-caret-position="250">
+          <caret line="13081" column="80" lean-forward="true" selection-start-line="13081" selection-start-column="80" selection-end-line="13081" selection-end-column="80" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#433503#433808#0" expanded="true" />
