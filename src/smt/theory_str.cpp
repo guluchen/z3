@@ -4247,11 +4247,11 @@ namespace smt {
 
         dump_assignments();
 
-        if (propagate_concat()) {
-            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
-            newConstraintTriggered = true;
-            return FC_CONTINUE;
-        }
+//        if (propagate_concat()) {
+//            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
+//            newConstraintTriggered = true;
+//            return FC_CONTINUE;
+//        }
 
         if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
@@ -7202,19 +7202,23 @@ namespace smt {
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    handle_str2int(a->get_arg(1), s);
+                    if (!m_autil.is_numeral(a->get_arg(1)))
+                        handle_str2int(a->get_arg(1), s);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
-                    handle_int2str(num, a->get_arg(1));
+                    if (!m_autil.is_numeral(num))
+                        handle_int2str(num, a->get_arg(1));
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    handle_str2int(a->get_arg(0), s);
+                    if (!m_autil.is_numeral(a->get_arg(0)))
+                        handle_str2int(a->get_arg(0), s);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
-                    handle_int2str(num, a->get_arg(0));
+                    if (!m_autil.is_numeral(num))
+                        handle_int2str(num, a->get_arg(0));
                 }
             }
 
@@ -10080,6 +10084,22 @@ namespace smt {
             if (length_relation.find(std::make_pair(e.first, a.first)) != length_relation.end()){
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of length based split" << mk_pp(e.first, m)<< std::endl;);
                 return nullptr;
+            }
+        }
+
+        /*
+         * str-int var
+         */
+        if (string_int_vars.contains(a.first)){
+            for (int i = 0; i < elementNames.size(); ++i){
+                zstring val;
+                if (u.str.is_string(elementNames[i].first, val)) {
+                    for (int j = 0; j < val.length(); ++j)
+                        if ((val[j] <= '0' || val[j] >= '9') && (val.length() == 1 || (i < elementNames.size() - 1 && elementNames[i].first == elementNames[i + 1].first))) {
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of str-int" << mk_pp(elementNames[i].first, m) << " " << mk_pp(elementNames[i + 1].first, m)<< std::endl;);
+                            return nullptr;
+                        }
+                }
             }
         }
         expr_ref_vector result(m);
