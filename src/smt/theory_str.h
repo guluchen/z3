@@ -473,8 +473,9 @@ namespace smt {
             bool reassertDisEQ = false;
             int eqLevel = -1;
             int diseqLevel = -1;
-
             expr_ref_vector assertingConstraints;
+            rational str_int_bound;
+
             UnderApproxState(ast_manager &m) : equalities(m), assertingConstraints(m), disequalities(m){
 
             }
@@ -484,7 +485,8 @@ namespace smt {
                             std::set<std::pair<expr*, int>> _importantVars,
                             expr_ref_vector _equalities,
                             expr_ref_vector _disequalities,
-                            str::state _currState):
+                            str::state _currState,
+                            rational _str_int_bound):
 
                             eqLevel(_eqLevel),
                             eq_combination(_eq_combination),
@@ -493,7 +495,8 @@ namespace smt {
                             equalities(m),
                             disequalities(m),
                             assertingConstraints(m),
-                            currState(_currState){
+                            currState(_currState),
+                            str_int_bound(_str_int_bound){
                 assertingConstraints.reset();
                 equalities.reset();
                 equalities.append(_equalities);
@@ -504,7 +507,7 @@ namespace smt {
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, importantVars, equalities, disequalities, currState);
+                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, importantVars, equalities, disequalities, currState, str_int_bound);
                 tmp.addAssertingConstraints(assertingConstraints);
                 reassertEQ = true;
                 reassertDisEQ = true;
@@ -1265,6 +1268,10 @@ namespace smt {
             void init_final_check(
                 std::set<std::pair<expr *, int>> &importantVars,
                 std::map<expr *, std::set<expr *>> &eq_combination);
+                void analyze_bound_str_int();
+                bool analyze_upper_bound_str_int();
+                rational log_10(rational n);
+                rational ten_power(rational n);
             bool is_completed_branch(bool &addAxiom);
             void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1375,7 +1382,16 @@ namespace smt {
             bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::set<std::pair<expr*, int>> importantVars);
-                void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
+                bool handle_str_int();
+                    void handle_str2int(expr* num, expr* str);
+                    void handle_int2str(expr* num, expr* str);
+                        expr* unroll_str2int(expr* n);
+                        expr* lower_bound_str_int(expr* num, expr* str);
+                        expr* lower_bound_int_str(expr* num, expr* str);
+                        expr* fill_0_at_begining(expr* n);
+                std::map<expr*, std::vector<expr*>> mapset2mapvector(std::map<expr*, std::set<expr*>> m);
+                std::map<expr*, int> set2map(std::set<std::pair<expr*, int>> s);
+                void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination, int line = -1);
                 bool is_equal(UnderApproxState preState, UnderApproxState currState);
                     bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
@@ -1886,6 +1902,8 @@ namespace smt {
             std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
             expr* getExprVarFlatArray(std::pair<expr*, int> a);
             expr* getExprVarFlatArray(expr* e);
+            expr* get_bound_str_int_control_var();
+
             app* createITEOperator(expr* c, expr* t, expr* e);
             /*
             * First base case
@@ -1959,6 +1977,8 @@ namespace smt {
                         expr* rhs,
                         expr_ref_vector &imppliedEqualities);
             std::set<std::pair<expr*, int>> collect_important_vars();
+            void collect_important_vars_str_int(std::map<expr*, int> &vars);
+            bool is_str_int_var(expr* e);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
                     std::set<expr*> &notImportant,
@@ -2256,6 +2276,8 @@ namespace smt {
         obj_hashtable<expr> input_var_in_len;
         expr_ref_vector string_int_conversion_terms;
         obj_hashtable<expr> string_int_axioms;
+        obj_hashtable<expr> string_int_vars;
+        obj_hashtable<expr> int_string_vars;
 
         expr_ref_vector m_persisted_axiom_todo;
 
@@ -2274,7 +2296,10 @@ namespace smt {
         obj_map<expr, eautomaton*>     m_re2aut;
         re2automaton                   m_mk_aut;
         expr_ref_vector                m_res;
-
+        rational str_int_bound;
+        rational max_str_int_bound = rational(10);
+        expr* str_int_bound_expr = nullptr;
+        bool need_change = false;
         /*
          * If DisableIntegerTheoryIntegration is set to true,
          * ALL calls to the integer theory integration methods
@@ -2341,7 +2366,8 @@ namespace smt {
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 expr_ref_vector &guessedExprs,
-                expr_ref_vector diseqExprs);
+                expr_ref_vector diseqExprs,
+                rational bound = rational(0));
         void fetch_related_exprs(
                 expr_ref_vector allvars,
                 expr_ref_vector &guessedExprs);
@@ -2356,6 +2382,7 @@ namespace smt {
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
+        void fetch_guessed_str_int_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;

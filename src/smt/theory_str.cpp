@@ -768,6 +768,7 @@ namespace smt {
               m_res(m),
               uState(m),
               impliedFacts(m){
+                  str_int_bound = rational(0);
     }
 
     void theory_str::display(std::ostream& os) const {
@@ -1217,6 +1218,7 @@ namespace smt {
         }
 
         if (underapproximation_repeat()) {
+            need_change = true;
             uState.reassertEQ = true;
             newConstraintTriggered = true;
             int tmpz3State = get_actual_trau_lvl();
@@ -4018,6 +4020,8 @@ namespace smt {
                     TRACE("str", tout << __LINE__ << " found string-integer conversion term: " << mk_pp(ex, m) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
                     m_library_aware_axiom_todo.push_back(n);
+                    if (str_int_bound_expr == nullptr)
+                        str_int_bound_expr = mk_int_var("StrIntBound");
                 } else if (ap->get_num_args() == 0 && !u.str.is_string(ap)) {
                     // if ex is a variable, add it to our list of variables
                     variable_set.insert(ex);
@@ -4058,6 +4062,8 @@ namespace smt {
                 } else if (u.str.is_stoi(ap)) {
                     string_int_conversion_terms.push_back(ap);
                     m_library_aware_axiom_todo.push_back(n);
+                    if (str_int_bound_expr == nullptr)
+                        str_int_bound_expr = mk_int_var("StrIntBound");
                 }
             }
         }
@@ -4172,6 +4178,10 @@ namespace smt {
         if (m_scope_level < uState.diseqLevel) {
             uState.reset_diseq();
         }
+        context& ctx = get_context();
+        for (int i = 0; i < ctx.get_unsat_core_size(); ++i) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " unsat core " << i << mk_pp(ctx.get_unsat_core_expr(i), get_manager()) << std::endl;);
+        }
 
 //        if (mful_scope_levels.size() > 0) {
 //            context& ctx = get_context();
@@ -4226,21 +4236,30 @@ namespace smt {
     }
 
     final_check_status theory_str::final_check_eh() {
-        TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+        TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         ast_manager &m = get_manager();
         context& ctx = get_context();
 
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty()) {
+            STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
 
+        dump_assignments();
+
+        if (propagate_concat()) {
+            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
+            newConstraintTriggered = true;
+            return FC_CONTINUE;
+        }
+
         if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
+            STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
         else
             newConstraintTriggered = false;
 
-        dump_assignments();
 
         bool addAxiom;
         if (is_completed_branch(addAxiom)){
@@ -4252,11 +4271,6 @@ namespace smt {
 
         if (eval_str_int()) {
             TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
-            return FC_CONTINUE;
-        }
-
-        if (propagate_concat()) {
-            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
             return FC_CONTINUE;
         }
 
@@ -4321,6 +4335,7 @@ namespace smt {
     }
 
     bool theory_str::eval_str_int(){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
         bool addedAxioms = false;
         for (unsigned i = 0; i < string_int_conversion_terms.size(); ++i) {
             app * ex = to_app(string_int_conversion_terms[i].get());
@@ -4336,6 +4351,25 @@ namespace smt {
                 UNREACHABLE();
             }
         }
+
+        if (string_int_conversion_terms.size() > 0 && str_int_bound == rational(0)) {
+            str_int_bound = rational(5);
+            assert_axiom(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
+            addedAxioms = true;
+            need_change = false;
+            newConstraintTriggered = true;
+        }
+        else if (string_int_conversion_terms.size() > 0 && need_change && str_int_bound < max_str_int_bound){
+            str_int_bound = str_int_bound * rational(2);
+            assert_axiom(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
+            if (str_int_bound >= max_str_int_bound)
+                impliedFacts.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
+            addedAxioms = true;
+            need_change = false;
+            newConstraintTriggered = true;
+
+
+        }
         return addedAxioms;
     }
 
@@ -4348,7 +4382,7 @@ namespace smt {
         bool axiomAdd = false;
         context & ctx = get_context();
         ast_manager & m = get_manager();
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
         expr * S = a->get_arg(0);
 
         // check integer theory
@@ -4360,8 +4394,9 @@ namespace smt {
             if (!Ival.is_minus_one()) {
                 zstring Ival_str(Ival.to_string().c_str());
                 expr_ref premise(ctx.mk_eq_atom(a, m_autil.mk_numeral(Ival, true)), m);
+
                 expr_ref conclusion(ctx.mk_eq_atom(S, mk_string(Ival_str)), m);
-                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                expr_ref axiom(rewrite_implication(conclusion, premise), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
@@ -4432,7 +4467,7 @@ namespace smt {
         bool axiomAdd = false;
         context & ctx = get_context();
         ast_manager & m = get_manager();
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
         expr * N = a->get_arg(0);
 
         // check string theory
@@ -4499,9 +4534,86 @@ namespace smt {
 
         sigmaDomain = collect_char_domain_from_concat();
         importantVars = collect_important_vars();
+        analyze_upper_bound_str_int();
         std::map<expr*, std::set<expr*>> _premises;
         std::set<expr*> subNodes;
         eq_combination = construct_eq_combination(_premises, subNodes, importantVars);
+    }
+
+    void theory_str::analyze_bound_str_int(){
+        rational bound = str_int_bound;
+        for (const auto& num : int_string_vars){
+            rational ub, lb;
+            if (upper_num_bound(num, ub)){
+                rational log10 = log_10(ub);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << ub << " log10 " << log10 << std::endl;);
+                if (log10 > bound)
+                    bound = log10;
+            }
+            else {
+                if (lower_num_bound(num, lb)){
+                    rational log10 = log_10(lb);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lower_num_bound " << ub << " log10 " << log10 << std::endl;);
+                    if (log10 > bound)
+                        bound = log10;
+                }
+            }
+        }
+        str_int_bound = bound;
+    }
+
+    bool theory_str::analyze_upper_bound_str_int(){
+        rational bound = str_int_bound;
+        bool all_upper_bounds = true;
+        for (const auto& num : int_string_vars){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << mk_pp(num, get_manager()) << std::endl;);
+            rational ub, lb;
+            if (upper_num_bound(num, ub)){
+                rational log10 = log_10(ub);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << ub << " log10 " << log10 << std::endl;);
+                if (log10 > bound)
+                    bound = log10;
+            }
+            else {
+                all_upper_bounds = false;
+                if (lower_num_bound(num, lb)){
+                    rational log10 = log_10(lb);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lower_num_bound " << ub << " log10 " << log10 << std::endl;);
+                    if (log10 > bound)
+                        bound = log10;
+                }
+            }
+        }
+        str_int_bound = bound;
+        return all_upper_bounds;
+    }
+
+    rational theory_str::log_10(rational n){
+        rational num(1);
+        rational one(1);
+        rational ten(10);
+        rational zero(0);
+        if (n < zero){
+            return num;
+        }
+        else {
+            while (n > one){
+                n = n / ten;
+                num = num + 1;
+            }
+            return num;
+        }
+    }
+
+    rational theory_str::ten_power(rational n){
+        SASSERT(n >= rational(0));
+        rational num(1);
+        rational i(1);
+        rational ten(10);
+        for (; i <= n; i = i + 1){
+            num = num * ten;
+        }
+        return num;
     }
 
     /*
@@ -5341,6 +5453,12 @@ namespace smt {
                     charDomain.insert(s[i]);
         }
 
+        if (string_int_conversion_terms.size() > 0) {
+            charDomain.insert('-');
+            for (int i = 0; i < 10; ++i)
+                charDomain.insert('0' + i);
+        }
+
         for (const auto& ch : charDomain)
             STRACE("str", tout << __LINE__ <<  " sigmaDomain: " << ch << std::endl;);
 
@@ -5393,6 +5511,12 @@ namespace smt {
             for (const auto& s : tmp)
                 for (int i = 0; i < s.length(); ++i)
                     charDomain.insert(s[i]);
+        }
+
+        if (string_int_conversion_terms.size() > 0) {
+            charDomain.insert('-');
+            for (int i = 0; i < 10; ++i)
+                charDomain.insert('0' + i);
         }
 
         for (const auto& ch : charDomain)
@@ -6478,7 +6602,7 @@ namespace smt {
         }
 
         axiomAdded = axiomAdded || propagate_value(concatSet);
-//        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
+        axiomAdded = axiomAdded || propagate_length(varSet, concatSet, exprLenMap);
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
     }
@@ -6712,7 +6836,7 @@ namespace smt {
                     // no assumptions on LHS
                     expr_ref rhs(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
                     assert_axiom(rhs);
-                } else {
+                } else if (!are_equal_exprs(concat_lhs, mk_string(lhsString))){
                     expr_ref lhs(mk_and(terms), m);
                     expr_ref rhs(ctx.mk_eq_atom(concat_lhs, mk_string(lhsString)), m);
                     assert_implication(lhs, rhs);
@@ -6744,7 +6868,7 @@ namespace smt {
                     // no assumptions on LHS
                     expr_ref rhs(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
                     assert_axiom(rhs);
-                } else {
+                } else if (!are_equal_exprs(concat_rhs, mk_string(rhsString))){
                     expr_ref lhs(mk_and(terms), m);
                     expr_ref rhs(ctx.mk_eq_atom(concat_rhs, mk_string(rhsString)), m);
                     assert_implication(lhs, rhs);
@@ -7010,31 +7134,13 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         context & ctx = get_context();
-        for (const auto& com : eq_combination){
-            STRACE("str", tout << __LINE__ << " EQ set of " << mk_pp(com.first, m) << std::endl;);
-            for (const auto& e : com.second)
-                STRACE("str",
-                        if (!u.str.is_concat(e))
-                            tout << "\t\t" << mk_pp(e, m) << std::endl;
-                        else {
-                            ptr_vector<expr> childrenVector;
-                            get_nodes_in_concat(e, childrenVector);
-                            tout << "\t\t";
-                            for (int i = 0; i < childrenVector.size(); ++i)
-                                tout << mk_pp(childrenVector[i], m)  << " ";
-                            tout << std::endl;
-                        });
-        }
-
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** get_base_level (" << ctx.get_base_level() << "/scope_levels" << ctx.get_scope_level() << ")" << ctx.get_scope_level() - ctx.get_base_level() << std::endl;);
-
-        int tmpz3State = get_actual_trau_lvl();
+        print_eq_combination(eq_combination, __LINE__);
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
         fetch_guessed_core_exprs(eq_combination, guessedEqs, guessedDisEqs);
         const str::state &root = build_state_from_memo();
-        UnderApproxState state(m, tmpz3State, tmpz3State, eq_combination, importantVars, guessedEqs, guessedDisEqs, root);
+        UnderApproxState state(m, get_actual_trau_lvl(), get_actual_trau_lvl(), eq_combination, importantVars, guessedEqs, guessedDisEqs, root, str_int_bound);
 
         if (is_equal(uState, state)) {
             expr_ref_vector corePrev(m);
@@ -7053,8 +7159,8 @@ namespace smt {
                 axiomAdded = true;
                 underapproximation_repeat();
                 handle_diseq(true);
-                uState.eqLevel = tmpz3State;
-                uState.diseqLevel = tmpz3State;
+                uState.eqLevel = get_actual_trau_lvl();
+                uState.diseqLevel = get_actual_trau_lvl();
             }
             else if (!uState.reassertDisEQ){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
@@ -7069,35 +7175,259 @@ namespace smt {
         }
         else {
             uState = state;
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << uState.eq_combination.size() << std::endl;);
+            uState.str_int_bound = str_int_bound;
             completedStates.push_back(uState);
         }
 
-        // set -> map
-        std::map<expr*, int> connectedVars;
-        for (const auto& p : importantVars)
-            connectedVars[p.first] = p.second;
+        std::map<expr*, int> connectedVars = set2map(importantVars);
 
-        static_analysis(eq_combination);
         init_underapprox(eq_combination, connectedVars);
 
-        for  (const auto& v : connectedVars)
-            STRACE("str", tout << __LINE__ <<  " *** connected var " << mk_pp(v.first, m) << ": " << v.second << std::endl;);
         handle_diseq();
 
-        std::map<expr*, std::vector<expr*>> v_combination;
-        for (const auto& v : eq_combination){
-            std::vector<expr*> tmp(v.second.begin(), v.second.end());
-            v_combination[v.first] = tmp;
-        }
+        bool axiomAdded = handle_str_int();
+        axiomAdded = convert_equalities(mapset2mapvector(eq_combination), connectedVars, createAndOperator(guessedEqs)) || axiomAdded;
 
-        return convert_equalities(v_combination, connectedVars, createAndOperator(guessedEqs));
+        return axiomAdded;
     }
 
-    void theory_str::print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination){
+    bool theory_str::handle_str_int(){
+        if (string_int_conversion_terms.size() > 0) {
+
+            ast_manager & m = get_manager();
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+            expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+            fetch_guessed_str_int_with_scopes(guessedEqs, guessedDisEqs);
+            for (const auto &e : guessedEqs) {
+                app* a = to_app(e);
+                if (u.str.is_stoi(a->get_arg(0))){
+                    expr* s = to_app(a->get_arg(0))->get_arg(0);
+                    handle_str2int(a->get_arg(1), s);
+                }
+                else if (u.str.is_itos(a->get_arg(0))){
+                    expr* num = to_app(a->get_arg(0))->get_arg(0);
+                    handle_int2str(num, a->get_arg(1));
+                }
+                else if (u.str.is_stoi(a->get_arg(1))){
+                    expr* s = to_app(a->get_arg(1))->get_arg(0);
+                    handle_str2int(a->get_arg(0), s);
+                }
+                else if (u.str.is_itos(a->get_arg(1))){
+                    expr* num = to_app(a->get_arg(1))->get_arg(0);
+                    handle_int2str(num, a->get_arg(0));
+                }
+            }
+
+            for (const auto &e : guessedDisEqs) {
+                NOT_IMPLEMENTED_YET();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void theory_str::handle_str2int(expr* num, expr* str){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+        expr* unroll = unroll_str2int(str);
+        expr* unrollConstraint = createEqualOperator(num, unroll);
+        expr* lenConstraint = lower_bound_str_int(num, str);
+        expr* boundConstraint = createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound));
+        expr* start_by_0 = fill_0_at_begining(str);
+        rational max_value = ten_power(str_int_bound) - rational(1);
+        expr_ref_vector conclusions(m);
+
+        conclusions.push_back(lenConstraint);
+        conclusions.push_back(unrollConstraint);
+        conclusions.push_back(start_by_0);
+        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
+        expr_ref_vector premises(m);
+        premises.push_back(boundConstraint);
+
+        expr* conclusion = createEqualOperator(createEqualOperator(num, u.str.mk_stoi(str)), createAndOperator(conclusions));
+        expr* to_assert = rewrite_implication(createAndOperator(premises), conclusion);
+        assert_axiom(to_assert);
+        impliedFacts.push_back(to_assert);
+    }
+
+    void theory_str::handle_int2str(expr* num, expr* str){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+        expr* unroll = unroll_str2int(str);
+        expr* unrollConstraint = createEqualOperator(num, unroll);
+        expr* lenConstraint = lower_bound_int_str(num, str);
+        expr* boundConstraint = createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound));
+        expr* start_by_0 = fill_0_at_begining(str);
+        rational max_value = ten_power(str_int_bound) - rational(1);
+
+        expr_ref_vector conclusions(m);
+
+        conclusions.push_back(lenConstraint);
+        conclusions.push_back(unrollConstraint);
+        conclusions.push_back(start_by_0);
+        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
+
+        expr_ref_vector premises(m);
+        premises.push_back(boundConstraint);
+        premises.push_back(createEqualOperator(num, u.str.mk_stoi(str)));
+
+        expr* to_assert = rewrite_implication(createAndOperator(premises), createAndOperator(conclusions));
+        assert_axiom(to_assert);
+        impliedFacts.push_back(to_assert);
+    }
+
+    expr* theory_str::unroll_str2int(expr* n){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
+        rational ten(10);
+        rational zero(0);
+        rational zeroChar(48);
+        rational coeff(1);
+        expr_ref_vector adds(m);
+        rational pos = str_int_bound - rational(1);
+        expr* arr = getExprVarFlatArray(n);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(arr, m) << std::endl;);
+        while (pos >= zero){
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(createSelectOperator(arr, mk_int(pos)), m) << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(createMultiplyOperator(createSelectOperator(arr, mk_int(pos)), mk_int(coeff)), m) << std::endl;);
+            adds.push_back(createMultiplyOperator(createSelectOperator(arr, mk_int(pos)), mk_int(coeff)));
+            rational base = zeroChar * coeff * rational(-1);
+            adds.push_back(mk_int(base));
+            pos = pos - 1;
+            coeff = coeff * ten;
+        }
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(createAddOperator(adds), m) << std::endl;);
+        return createAddOperator(adds);
+    }
+
+    /*
+     * 0 <= val < 10 --> len < 2
+     * 10 <= val < 100 --> len < 3
+     * ..
+     * -1 >= val > -10 --> len < 3
+     * -10 >= val > -100 --> len < 4
+     */
+    expr* theory_str::lower_bound_str_int(expr* num, expr* str){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(num, m) << " " << mk_pp(str, m) << std::endl;);
+        expr_ref_vector ands(m);
+
+        rational ten(10);
+        rational powerOf(1);
+        rational one(1);
+        rational len(1);
+        rational zero(0);
+        rational prePower(0);
+        rational minusOne = zero - one;
+        expr* len_e = mk_strlen(str);
+        while (len < str_int_bound){
+            len = len + 1;
+            powerOf = powerOf * ten; // 10^len
+            expr* premise = createGreaterEqOperator(num, mk_int(powerOf));
+            expr* conclusion = createGreaterEqOperator(len_e, mk_int(len));
+            ands.push_back(rewrite_implication(premise, conclusion));
+        }
+//        ands.push_back(createLessEqOperator(len_e, mk_int(str_int_bound)));
+        return createAndOperator(ands);
+    }
+
+    /*
+     * 0 <= val < 10 --> len = 2
+     * 10 <= val < 100 --> len = 3
+     * ..
+     * -1 >= val > -10 --> len = 3
+     * -10 >= val > -100 --> len = 4
+     */
+    expr* theory_str::lower_bound_int_str(expr* num, expr* str){
+        ast_manager & m = get_manager();
+        expr_ref_vector ands(m);
+
+        rational ten(10);
+        rational powerOf(1);
+        rational one(1);
+        rational len(1);
+        rational zero(0);
+        rational prePower(0);
+        rational minusOne = zero - one;
+        expr* len_e = mk_strlen(str);
+        while (len <= str_int_bound){
+            len = len + 1;
+            powerOf = powerOf * ten; // 10^len
+
+            rational powerOf_minus_one = powerOf - one;
+            rational len_minus_one = len - one;
+            rational negative_prePower = prePower * minusOne;
+            rational negative_power_and_one = (powerOf + one) * minusOne;
+
+            // positive number
+            expr_ref_vector tmpAnds(m);
+            tmpAnds.push_back(createGreaterEqOperator(num, mk_int(prePower)));
+            tmpAnds.push_back(createLessEqOperator(num, mk_int(powerOf_minus_one)));
+            ands.push_back(rewrite_implication(
+                    createAndOperator(tmpAnds),
+                    createEqualOperator(mk_strlen(str), mk_int(len_minus_one))));
+
+            // negative number
+//            tmpAnds.reset();
+//            tmpAnds.push_back(createLessEqOperator(num, mk_int(negative_prePower)));
+//            tmpAnds.push_back(createGreaterEqOperator(num, mk_int(negative_power_and_one)));
+//            ands.push_back(rewrite_implication(
+//                    createAndOperator(tmpAnds),
+//                    createEqualOperator(mk_strlen(str), mk_int(len))));
+//
+//            prePower = powerOf;
+        }
+        ands.push_back(createLessEqOperator(len_e, mk_int(str_int_bound)));
+        return createAndOperator(ands);
+    }
+
+    expr* theory_str::fill_0_at_begining(expr* n){
+        ast_manager & m = get_manager();
+        expr_ref_vector ands(m);
+
+        rational one(1);
+        rational len = one;
+        rational zero_char(48);
+        expr* zero_e = mk_int(zero_char);
+        expr* arr = getExprVarFlatArray(n);
+        expr* len_n = mk_strlen(n);
+        while (len < str_int_bound){
+            expr* premise = createLessEqOperator(len_n, mk_int(len));
+
+            rational tmp = str_int_bound - len - one;
+            expr* conclusion = createEqualOperator(createSelectOperator(arr, mk_int(tmp)), zero_e);
+            ands.push_back(rewrite_implication(premise, conclusion));
+            len = len + 1;
+        }
+
+        return createAndOperator(ands);
+    }
+
+
+    std::map<expr*, std::vector<expr*>> theory_str::mapset2mapvector(std::map<expr*, std::set<expr*>> m){
+        std::map<expr*, std::vector<expr*>> ret;
+        for (const auto& v : m){
+            std::vector<expr*> tmp(v.second.begin(), v.second.end());
+            ret[v.first] = tmp;
+        }
+        return ret;
+    }
+
+    std::map<expr*, int> theory_str::set2map(std::set<std::pair<expr*, int>> s){
+        std::map<expr*, int> ret;
+        for (const auto& p : s)
+            ret[p.first] = p.second;
+        return ret;
+    }
+
+    void theory_str::print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination, int line){
         ast_manager & m = get_manager();
         for (const auto& com : eq_combination){
-            STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            if (line > 0) {
+                STRACE("str", tout << line << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+            }
+            else
+                STRACE("str", tout << " EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
             STRACE("str",
                    if (!u.str.is_concat(e))
@@ -7272,7 +7602,7 @@ namespace smt {
         fetch_guessed_exprs_from_cache(uState, guessedExprs);
         expr* causexpr = createAndOperator(guessedExprs);
 
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; connectingSize = " << connectingSize << " @lvl " << m_scope_level << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << " @lvl " << m_scope_level << std::endl;);
         if (uState.assertingConstraints.size() > 0)
             init_underapprox_repeat();
         bool axiomAdded = false;
@@ -7686,6 +8016,7 @@ namespace smt {
     void theory_str::init_underapprox(
             std::map<expr*, std::set<expr*>> eq_combination,
             std::map<expr*, int> &importantVars){
+        static_analysis(eq_combination);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         context & ctx = get_context();
@@ -7732,6 +8063,12 @@ namespace smt {
         }
 
         for (const auto& we: membership_memo) {
+            allStrExprs.insert(we.first);
+        }
+
+        std::map<expr*, int> str_int_vars;
+        collect_important_vars_str_int(str_int_vars);
+        for (const auto& we: str_int_vars) {
             allStrExprs.insert(we.first);
         }
 
@@ -7787,7 +8124,22 @@ namespace smt {
                         assert_axiom(tmp.get());
                         uState.addAssertingConstraints(tmp);
                     }
+                }
+                else if (is_str_int_var(v)){
+                    expr_ref_vector ands(m);
+                    rational i(0);
+                    rational zero((int)('0'));
+                    rational nine((int)('9'));
+                    expr* zero_e(mk_int(zero));
+                    expr* nine_e(mk_int(nine));
+                    for (; i < str_int_bound; i = i + 1){
+                        ands.push_back(createGreaterEqOperator(createSelectOperator(v1, mk_int(i)), zero_e));
+                        ands.push_back(createLessEqOperator(createSelectOperator(v1, mk_int(i)), nine_e));
+                    }
 
+                    expr_ref tmp(createOrOperator(ands), m);
+                    assert_axiom(tmp.get());
+                    uState.addAssertingConstraints(tmp);
                 }
             }
             else if (arrVar != nullptr) {
@@ -7860,6 +8212,12 @@ namespace smt {
         }
 
         for (const auto& we: membership_memo) {
+            allStrExprs.insert(we.first);
+        }
+
+        std::map<expr*, int> str_int_vars;
+        collect_important_vars_str_int(str_int_vars);
+        for (const auto& we: str_int_vars) {
             allStrExprs.insert(we.first);
         }
 
@@ -8891,6 +9249,18 @@ namespace smt {
         ast_manager &m = get_manager();
         th_rewriter rw(m);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << lhs << " == " << rhs << std::endl;);
+
+        //swap if lhs > rhs
+        if (lhs_elements.size() > rhs_elements.size()){
+            std::string tmp = lhs;
+            lhs = rhs;
+            rhs = tmp;
+
+            std::vector<std::pair<expr*, int>> tmpVector = lhs_elements;
+            lhs_elements = rhs_elements;
+            rhs_elements = tmpVector;
+        }
+
         std::string tmp01;
         std::string tmp02;
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
@@ -11101,7 +11471,8 @@ namespace smt {
                                     possibleCases.push_back(createAndOperator(subpossibleCases));
                                 }
                             }
-                            else for (int j = 0; j <= std::min(localSplit, (int)content.length()); j++){
+                            else {
+                                for (int j = 0; j <= std::min(localSplit, (int)content.length()); j++){
                                     expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
                                     subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
                                     for (int k = 0; k < j; ++k){
@@ -11110,15 +11481,42 @@ namespace smt {
                                         expr* lhsExpr = nullptr;
                                         if (!m_autil.is_numeral(at, atValue))
                                             lhsExpr = createSelectOperator(arrayLhs, at);
-                                        else
+                                        else {
+                                            if (is_str_int_var(elementNames[i].first) && (content[atValue.get_int64()] < '0' || content[atValue.get_int64()] > '9')){
+                                                STRACE("str", tout << __LINE__ << " break because of str-int" << std::endl;);
+                                                subpossibleCases.reset();
+                                                break;
+                                            }
                                             lhsExpr = mk_int(content[atValue.get_int64()]);
-                                        subpossibleCases.push_back(createEqualOperator(
-                                                lhsExpr,
-                                                createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
+                                        }
+                                        if (!is_str_int_var(elementNames[i].first))
+                                            subpossibleCases.push_back(createEqualOperator(
+                                                    lhsExpr,
+                                                    createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
+                                        else {
+                                            rational pos(str_int_bound - rational(j) + rational(k));
+                                            subpossibleCases.push_back(createEqualOperator(
+                                                    lhsExpr,
+                                                    createSelectOperator(arrayRhs,  createAddOperator(mk_int(pos), prefix_rhs))));
+                                        }
                                     }
-                                    possibleCases.push_back(createAndOperator(subpossibleCases));
+                                    if (subpossibleCases.size() > 0)
+                                        possibleCases.push_back(createAndOperator(subpossibleCases));
                                 }
-                            possibleCases.push_back(createLessEqOperator(m_autil.mk_int(std::min(localSplit, (int)content.length()) + 1 ), subLen));
+
+                                if (is_str_int_var(elementNames[i].first)) {
+                                    // must be 0
+                                    for (int k = std::min(localSplit, (int)content.length()) + 1; k < (int)content.length(); ++k){
+
+                                    }
+                                }
+                            }
+
+                            if (!is_str_int_var(elementNames[i].first))
+                                possibleCases.push_back(createLessEqOperator(m_autil.mk_int(std::min(localSplit, (int)content.length()) + 1 ), subLen));
+                            else {
+
+                            }
                             resultParts.push_back(createOrOperator(possibleCases));
                         }
                     }
@@ -11960,6 +12358,10 @@ namespace smt {
         return nullptr;
     }
 
+    expr* theory_str::get_bound_str_int_control_var(){
+        return str_int_bound_expr;
+    }
+
     app* theory_str::createITEOperator(expr* c, expr* t, expr* e){
         context & ctx   = get_context();
         if (t == e)
@@ -12003,9 +12405,11 @@ namespace smt {
                 return to_app(x);
             }
         }
-
-        app* tmp = m_autil.mk_mul(x, y);
-        return tmp;
+        if (m_autil.is_numeral(y)){
+            return m_autil.mk_mul(y, x);
+        }
+        else
+            return m_autil.mk_mul(x, y);
     }
 
     /*
@@ -13293,6 +13697,8 @@ namespace smt {
             }
         }
 
+        collect_important_vars_str_int(tmpResult);
+
         for (const auto& nn : tmpResult)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
 
@@ -13301,6 +13707,55 @@ namespace smt {
             ret.insert(std::pair<expr *, int>(p.first, p.second));
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return ret;
+    }
+
+    void theory_str::collect_important_vars_str_int(std::map<expr*, int> &vars){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        if (string_int_conversion_terms.size() > 0) {
+            string_int_vars.reset();
+            int_string_vars.reset();
+            ast_manager &m = get_manager();
+            expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+            fetch_guessed_str_int_with_scopes(guessedEqs, guessedDisEqs);
+            for (const auto &e : guessedEqs) {
+                app* a = to_app(e);
+                if (u.str.is_stoi(a->get_arg(0))){
+                    expr* s = to_app(a->get_arg(0))->get_arg(0);
+                    vars[s] = str_int_bound.get_int64();
+                    string_int_vars.insert(s);
+                    int_string_vars.insert(a->get_arg(1));
+                }
+                else if (u.str.is_itos(a->get_arg(0))){
+                    expr* num = to_app(a->get_arg(0))->get_arg(0);
+                    vars[a->get_arg(1)] = str_int_bound.get_int64();
+                    string_int_vars.insert(a->get_arg(1));
+                    int_string_vars.insert(num);
+                }
+                else if (u.str.is_stoi(a->get_arg(1))){
+                    expr* s = to_app(a->get_arg(1))->get_arg(0);
+                    vars[s] = str_int_bound.get_int64();
+                    string_int_vars.insert(s);
+                    int_string_vars.insert(a->get_arg(0));
+                }
+                else if (u.str.is_itos(a->get_arg(1))){
+                    expr* num = to_app(a->get_arg(1))->get_arg(0);
+                    vars[a->get_arg(0)] = str_int_bound.get_int64();
+                    string_int_vars.insert(a->get_arg(0));
+                    int_string_vars.insert(num);
+                }
+            }
+
+            for (const auto &e : guessedDisEqs) {
+                NOT_IMPLEMENTED_YET();
+            }
+
+            for (const auto& nn : vars)
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+        }
+    }
+
+    bool theory_str::is_str_int_var(expr* e){
+        return string_int_vars.contains(e);
     }
 
     void theory_str::refine_important_vars(
@@ -13315,9 +13770,12 @@ namespace smt {
             STRACE("str", tout << __LINE__ << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
 
 
+        std::map<expr*, int> str_int_vars;
+        collect_important_vars_str_int(str_int_vars);
+
         for (const auto& nn : importantVars) {
             if (retTmp.find(nn.first) == retTmp.end()) {
-                if (is_importantVar_recheck(nn.first, nn.second, eq_combination)) {
+                if (is_importantVar_recheck(nn.first, nn.second, eq_combination) || str_int_vars.find(nn.first) != str_int_vars.end()) {
                     expr_ref_vector eqs(m);
                     collect_eq_nodes(nn.first, eqs);
                     for (int i = 0; i < eqs.size(); ++i) {
@@ -13340,10 +13798,10 @@ namespace smt {
             }
 
         std::map<expr*, int> occurrences = countOccurrences_from_combination(eq_combination);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
         std::set<std::pair<expr *, int>> importantVarsTmp;
         for (const auto& v : retTmp)
-            if (notImportant.find(v.first) == notImportant.end()) {
+            if (notImportant.find(v.first) == notImportant.end() || str_int_vars.find(v.first) != str_int_vars.end()) {
                 if (v.second == -1) {
                     expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(v.first, m) << " eq_combination size: " << eq_combination[rootTmp].size()
@@ -13366,10 +13824,9 @@ namespace smt {
                 }
             }
 
-
         importantVars.clear();
         for (const auto& v : importantVarsTmp)
-            if (notImportant.find(v.first) == notImportant.end())
+            if (notImportant.find(v.first) == notImportant.end() || str_int_vars.find(v.first) != str_int_vars.end())
                 importantVars.insert(std::make_pair(v.first, v.second));
 
         for (const auto& v : eq_combination)
@@ -13380,7 +13837,7 @@ namespace smt {
                     importantVars.insert(std::make_pair(eqList[i].get(), -1));
             }
 
-        TRACE("str", tout << __FUNCTION__ << std::endl;);
+        TRACE("str", tout << __LINE__ << __FUNCTION__ << std::endl;);
         for (const auto& nn : importantVars)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
     }
@@ -13960,7 +14417,7 @@ namespace smt {
                     importantVars.insert(std::make_pair(c.first, -1));
                     ret[c.first] = c_second;
                 }
-                else if (subNodes.find(c.first) == subNodes.end()) {
+                else if (subNodes.find(c.first) == subNodes.end() || u.str.is_string(c.first)) {
                     if (u.str.is_concat(c.first)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root concat node  " << mk_pp(c.first, get_manager()) << std::endl;);
                         // check if it is an important concat
@@ -14884,13 +15341,13 @@ namespace smt {
     }
 
     void theory_str::propagate() {
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
 
         assert_cached_eq_state();
 
         if (uState.reassertEQ)
             assert_cached_diseq_state();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
+
         context & ctx = get_context();
         while (can_propagate()) {
 
@@ -16342,13 +16799,8 @@ namespace smt {
             assert_axiom(axiom1);
         }
 
-        {
-            expr_ref lhs(ctx.mk_eq_atom(ex, m_autil.mk_numeral(rational::zero(), true)), m);
-            expr_ref rhs(ctx.mk_eq_atom(S, mk_string("0")), m);
-            expr_ref axiom2(ctx.mk_eq_atom(lhs, rhs), m);
-            SASSERT(axiom2);
-            assert_axiom(axiom2);
-        }
+        expr_ref s2i(mk_int_var("s2i"), m);
+        assert_axiom(ctx.mk_eq_atom(s2i, ex));
     }
 
     void theory_str::instantiate_axiom_int_to_str(enode * e) {
@@ -16373,6 +16825,8 @@ namespace smt {
             SASSERT(axiom1);
             assert_axiom(axiom1);
         }
+        expr_ref i2s(mk_str_var("i2s"), m);
+        assert_axiom(ctx.mk_eq_atom(i2s, ex));
     }
 
     app * theory_str::mk_strlen(expr * e) {
@@ -17319,7 +17773,7 @@ namespace smt {
         for (const auto& n : variable_set){
             rational vLen;
             if (get_len_value(n, vLen)) {
-                STRACE("str", tout << __LINE__ << " len = " << vLen << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << mk_pp(n, m) << " len = " << vLen << std::endl;);
                 varLen[n] = vLen;
             }
             else {
@@ -17405,8 +17859,13 @@ namespace smt {
                     else if (get_len_value(n, vLen)) {
                         STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
                     }
-                    else if (lower_bound(n, vLen)){
-                        STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " lower_bound = " << vLen << std::endl;);
+                    else {
+                        if (lower_bound(n, vLen)){
+                            STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " lower_bound = " << vLen << std::endl;);
+                        }
+                        if (upper_bound(n, vLen)){
+                            STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " upper_bound = " << vLen << std::endl;);
+                        }
                     }
                 }
 
@@ -17416,6 +17875,13 @@ namespace smt {
 
                 for (const auto& we: membership_memo) {
                     STRACE("str", tout << "Membership: " << we.first << " = " << we.second << std::endl;);
+                }
+
+                if (string_int_conversion_terms.size() > 0) {
+                    rational bound;
+                    if (lower_num_bound(get_bound_str_int_control_var(), bound)){
+                        STRACE("str", tout << __LINE__ << " var " << mk_pp(get_bound_str_int_control_var(), m) << " lower_bound = " << bound << std::endl;);
+                    }
                 }
         );
     }
@@ -17441,7 +17907,8 @@ namespace smt {
     void theory_str::fetch_guessed_core_exprs(
             std::map<expr*, std::set<expr*>> eq_combination,
             expr_ref_vector &guessedExprs,
-            expr_ref_vector diseqExprs){
+            expr_ref_vector diseqExprs,
+            rational bound){
         ast_manager& m = get_manager();
         // collect vars
         std::set<expr*> allvars = collect_all_vars_in_eq_combination(eq_combination);
@@ -17520,7 +17987,6 @@ namespace smt {
 
         rational len;
         for (const auto& v : allvars) {
-//            STRACE("str", tout << __LINE__ << " core var " << mk_pp(v, m) << std::endl;);
             if (get_len_value(v, len) && len.get_int64() == 0) {
                 ret.push_back(createEqualOperator(v, mk_string("")));
             }
@@ -17558,6 +18024,13 @@ namespace smt {
                     }
                 }
             }
+        }
+
+        if (get_bound_str_int_control_var() != nullptr) {
+            if (bound == rational(0))
+                ret.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
+            else
+                ret.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(bound)));
         }
 
         guessedExprs.reset();
@@ -17727,7 +18200,7 @@ namespace smt {
 
     void theory_str::fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessedExprs) {
         guessedExprs.append(state.equalities);
-        fetch_guessed_core_exprs(state.eq_combination, guessedExprs, state.disequalities);
+        fetch_guessed_core_exprs(state.eq_combination, guessedExprs, state.disequalities, state.str_int_bound);
     }
 
     void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs) {
@@ -17770,6 +18243,32 @@ namespace smt {
 
                 guessedLiterals.push_back(tmp);
             }
+    }
+
+    void theory_str::fetch_guessed_str_int_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs) {
+        ast_manager& m = get_manager();
+        context& ctx = get_context();
+
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+        for (const auto& s : assignments) {
+            if (ctx.is_relevant(s)) {
+                if (!m.is_not(s)) {
+                    app* a = to_app(s);
+                    if (a->get_num_args() == 2 && m.is_eq(a) && u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        guessedEqs.push_back(s);
+                    }
+                }
+                else if (to_app(s)->get_num_args() == 1){
+                    app* a = to_app(to_app(s)->get_arg(0));
+                    if (a->get_num_args() == 2 && m.is_eq(a) && u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        guessedDisEqs.push_back(s);
+                    }
+                }
+            }
+        }
     }
 
 
