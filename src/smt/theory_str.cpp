@@ -9891,6 +9891,23 @@ namespace smt {
         bool isConstA = a.second < 0;
         bool isConstB = b.second < 0;
 
+        /*
+         * str-int var
+         */
+        if (string_int_vars.contains(a.first)){
+            zstring val;
+            if (u.str.is_string(b.first, val)) {
+                for (int j = 0; j < val.length(); ++j)
+                    if ((val[j] < '0' || val[j] > '9') &&
+                        (val.length() == 1 ||
+                                (j == 0 && b.second % QMAX == -1) ||
+                                (j == val.length() - 1 && b.second % QMAX == 0))) {
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of str-int" << mk_pp(b.first, m) << std::endl;);
+                        return nullptr;
+                    }
+            }
+        }
+
         expr* nameA = nullptr;
         expr* nameB = nullptr;
         if (optimizing){
@@ -10301,8 +10318,12 @@ namespace smt {
                 zstring val;
                 if (u.str.is_string(elementNames[i].first, val)) {
                     for (int j = 0; j < val.length(); ++j)
-                        if ((val[j] <= '0' || val[j] >= '9') && (val.length() == 1 || (i < elementNames.size() - 1 && elementNames[i].first == elementNames[i + 1].first))) {
-                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of str-int" << mk_pp(elementNames[i].first, m) << " " << mk_pp(elementNames[i + 1].first, m)<< std::endl;);
+                        if ((val[j] < '0' || val[j] > '9') &&
+                                (val.length() == 1 ||
+                                (i < elementNames.size() - 1 && elementNames[i].first == elementNames[i + 1].first) ||
+                                        (j == 0 && elementNames[i].second % QMAX == -1) ||
+                                        (j == val.length() - 1 && elementNames[i].second % QMAX == 0))) {
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of str-int" << mk_pp(elementNames[i].first, m) << std::endl;);
                             return nullptr;
                         }
                 }
