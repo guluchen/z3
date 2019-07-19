@@ -1248,6 +1248,7 @@ namespace smt {
             void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs, bool& skip);
                 expr* handle_trivial_diseq(expr * e, zstring value);
                     std::set<zstring> extract_const(expr* e, int lvl = 0);
+        void create_pq();
         void init_search_eh() override;
         void relevant_eh(app *n) override;
         void assign_eh(bool_var v, bool is_true) override;
@@ -1386,6 +1387,7 @@ namespace smt {
                     void handle_str2int(expr* num, expr* str);
                     void handle_int2str(expr* num, expr* str);
                         expr* unroll_str2int(expr* n);
+                        expr* unroll_str_int(expr* num, expr* str);
                         expr* lower_bound_str_int(expr* num, expr* str);
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_at_begining(expr* n);
@@ -1398,6 +1400,9 @@ namespace smt {
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat();
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
+                void setup_str_int_var(expr* v, expr* arr);
+                void setup_str_const(zstring val, expr* arr);
+                void setup_regex_var(expr* rexpr, expr* arr);
                 void create_notcontain_map();
                 void create_const_set();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
@@ -1405,6 +1410,8 @@ namespace smt {
                 std::set<char> initIncludeCharSet();
                 void createAppearanceMap(
                         std::map<expr*, std::set<expr*>> eq_combination);
+                void setup_flats();
+                bool should_use_flat();
             void init_underapprox_repeat();
 
             void handle_diseq(bool repeat = false);
@@ -1492,15 +1499,9 @@ namespace smt {
                 zstring underApproxRegex(zstring str);
                 zstring getStdRegexStr(expr* regex);
             /*
-             *
-             */
-            expr* constraintsIfEmpty(
-                    ptr_vector<expr> lhs,
-                    ptr_vector<expr> rhs);
-            /*
              * convert lhs == rhs to SMT formula
              */
-            expr* equalityToSMT(
+            expr* equality_to_arith(
                 std::string lhs, std::string rhs,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
@@ -1576,6 +1577,33 @@ namespace smt {
                     int pMax,
                     std::map<expr*, int> connectedVariables,
                     bool optimizing);
+
+            expr* generate_constraint_var_var(
+                std::pair<expr*, int> a,
+                std::pair<expr*, int> b,
+                int pMax,
+                rational bound);
+
+            expr* generate_constraint_var_var(
+                std::pair<expr*, int> a,
+                std::vector<std::pair<expr*, int>> elementNames,
+                int pos,
+                int pMax,
+                rational bound);
+
+            expr* generate_constraint_flat_var(
+                std::pair<expr*, int> a,
+                std::vector<std::pair<expr*, int>> elementNames,
+                int pos,
+                int pMax,
+                rational bound);
+
+            expr* generate_constraint_flat_flat(
+                std::pair<expr*, int> a,
+                std::vector<std::pair<expr*, int>> elementNames,
+                int pos,
+                int pMax,
+                rational bound);
             int lcd(int x, int y);
             bool matchRegex(expr* a, zstring b);
             bool matchRegex(expr* a, expr* b);
@@ -1702,7 +1730,6 @@ namespace smt {
                     expr* handle_connected_connected_array(
                             std::pair<expr*, int> a,
                             std::vector<std::pair<expr*, int>> elementNames,
-                            std::string lhs_str, std::string rhs_str,
                             int pos,
                             int bound,
                             bool optimizing,
@@ -1731,7 +1758,6 @@ namespace smt {
                 */
                 expr* leng_prefix_lhs(std::pair<expr*, int> a,
                                           std::vector<std::pair<expr*, int>> elementNames,
-                                          std::string lhs, std::string rhs,
                                           int pos,
                                           bool optimizing,
                                           bool unrollMode);
@@ -1741,7 +1767,6 @@ namespace smt {
                 */
                 expr* leng_prefix_rhs(
                         std::pair<expr*, int> a, /* var */
-                        std::string rhs,
                         bool unrollMode);
 
                 /*
@@ -1903,6 +1928,8 @@ namespace smt {
             expr* getExprVarFlatArray(std::pair<expr*, int> a);
             expr* getExprVarFlatArray(expr* e);
             expr* get_bound_str_int_control_var();
+            expr* get_bound_p_control_var();
+            expr* get_bound_q_control_var();
 
             app* createITEOperator(expr* c, expr* t, expr* e);
             /*
@@ -1940,8 +1967,9 @@ namespace smt {
             std::vector<std::pair<expr*, int>> create_equality(expr* node);
             std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> list);
             std::vector<std::pair<expr*, int>> create_equality(std::vector<expr*> list);
-                void createInternalVar(expr* v);
-                void reuseInternalVar(expr* v);
+                void create_internal_int_vars(expr* v);
+                void setup_str_int_len(expr* e, int start);
+                void reuse_internal_int_vars(expr* v);
             std::vector<expr*> set2vector(std::set<expr*> s);
             unsigned findMaxP(std::vector<expr*> v);
 
@@ -2296,9 +2324,16 @@ namespace smt {
         obj_map<expr, eautomaton*>     m_re2aut;
         re2automaton                   m_mk_aut;
         expr_ref_vector                m_res;
+        rational p_bound;
+        rational q_bound;
         rational str_int_bound;
-        rational max_str_int_bound = rational(10);
+        rational max_str_int_bound = rational(5);
+        rational max_p_bound = rational(3);
+        rational max_q_bound = rational(20);
         expr* str_int_bound_expr = nullptr;
+        expr* p_bound_expr = nullptr;
+        expr* q_bound_expr = nullptr;
+        bool flat_enabled = false;
         bool need_change = false;
         /*
          * If DisableIntegerTheoryIntegration is set to true,
