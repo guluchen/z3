@@ -8127,6 +8127,7 @@ namespace smt {
 
         std::map<expr*, int> str_int_vars;
         collect_important_vars_str_int(str_int_vars);
+        setup_flats();
         for (const auto& we: str_int_vars) {
             allStrExprs.insert(we.first);
         }
@@ -8185,7 +8186,6 @@ namespace smt {
         init_connecting_size(eq_combination, importantVars, false);
         init_connecting_size(eq_combination, importantVars);
         createAppearanceMap(eq_combination);
-        setup_flats();
     }
 
     void theory_str::setup_str_int_var(expr* v, expr* arr){

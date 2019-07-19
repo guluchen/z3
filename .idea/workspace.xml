@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -99,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="527">
-              <caret line="9903" column="78" selection-start-line="9903" selection-start-column="78" selection-end-line="9903" selection-end-column="78" />
+            <state relative-caret-position="201">
+              <caret line="8129" column="22" selection-start-line="8129" selection-start-column="22" selection-end-line="8129" selection-end-column="22" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -181,8 +180,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>const|regex = con</find>
-      <find>toConstraint_NoConnectedVar</find>
       <find>unroll_str2int</find>
       <find>same_state</find>
       <find>handle_str_int</find>
@@ -211,6 +208,8 @@
       <find>generate_constraint_var_var</find>
       <find>&lt;= '0'</find>
       <find>generate_constraint02</find>
+      <find>rational(2</find>
+      <find>setup_flats</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -767,12 +766,12 @@
       <workItem from="1563167619831" duration="15784000" />
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
-      <workItem from="1563546000963" duration="11405000" />
+      <workItem from="1563546000963" duration="12092000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1308224000" />
+    <option name="totallyTimeSpent" value="1308911000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1176,8 +1175,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="527">
-          <caret line="9903" column="78" selection-start-line="9903" selection-start-column="78" selection-end-line="9903" selection-end-column="78" />
+        <state relative-caret-position="201">
+          <caret line="8129" column="22" selection-start-line="8129" selection-start-column="22" selection-end-line="8129" selection-end-column="22" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
