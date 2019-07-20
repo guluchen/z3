@@ -1466,7 +1466,7 @@ namespace smt {
                 /*
                 *
                 */
-                std::vector<std::vector<zstring>> parseRegexComponents(zstring str);
+                std::vector<std::vector<zstring>> parse_regex_components(zstring str);
                     /**
                      * (abc|cde|ghi)*
                      */
@@ -1487,7 +1487,7 @@ namespace smt {
                     /*
                     *
                     */
-                    int findCorrespondRightParentheses(int leftParentheses, zstring str);
+                    int find_correspond_right_parentheses(int leftParentheses, zstring str);
 
                     /*
                     * (a) --> a
@@ -1700,7 +1700,6 @@ namespace smt {
                         expr_ref handle_Regex_WithPosition_array(
                                 std::pair<expr*, int> a, // connected var
                                 std::vector<std::pair<expr*, int>> elementNames,
-                                std::string lhs_str, std::string rhs_str,
                                 int regexPos,
                                 bool optimizing,
                                 int pMax = PMAX,
@@ -1741,7 +1740,6 @@ namespace smt {
                 expr* toConstraint_ConnectedVar(
                         std::pair<expr*, int> a, /* const or regex */
                         std::vector<std::pair<expr*, int>> elementNames, /* have connected var, do not have const */
-                        std::string lhs, std::string rhs,
                         std::map<expr*, int> connectedVariables,
                         bool optimizing,
                         int pMax);
@@ -1809,7 +1807,7 @@ namespace smt {
                 * (a|b|c)*_xxx --> range <a, c>
                 */
                 std::vector<std::pair<int, int>> collectCharRange(expr* a);
-                void collectCharRange(expr* a, bool chars[255]);
+                void collectCharRange(expr* a, std::vector<bool> &chars);
 
                 bool feasibleSplit_const(
                         zstring str,
