@@ -7325,7 +7325,7 @@ namespace smt {
         expr* arr = getExprVarFlatArray(str);
         expr* strLen = mk_strlen(str);
         expr_ref_vector ands(m);
-
+        ands.push_back(rewrite_implication(createEqualOperator(strLen, mk_int(0)), createEqualOperator(num, mk_int(- 1))));
         for (rational len = one; len <= str_int_bound; len = len + one) {
             expr_ref_vector adds(m);
             rational pos = len - one;
@@ -8167,7 +8167,7 @@ namespace smt {
                     setup_regex_var(rexpr, v1);
                 }
                 else if (is_str_int_var(v)){
-                    setup_str_int_var(v, v1);
+                    // setup_str_int_arr
                 }
             }
             else if (arrVar != nullptr) {
@@ -8188,18 +8188,19 @@ namespace smt {
         createAppearanceMap(eq_combination);
     }
 
-    void theory_str::setup_str_int_var(expr* v, expr* arr){
+    void theory_str::setup_str_int_arr(expr* v, int start){
         ast_manager & m = get_manager();
         expr_ref_vector ands(m);
-        rational i(0);
         rational one(1);
         rational zero((int)('0'));
         rational nine((int)('9'));
+        expr* arr = getExprVarFlatArray(v);
         expr* zero_e(mk_int(zero));
         expr* nine_e(mk_int(nine));
-        for (; i < str_int_bound; i = i + one){
-            ands.push_back(createGreaterEqOperator(createSelectOperator(arr, mk_int(i)), zero_e));
-            ands.push_back(createLessEqOperator(createSelectOperator(arr, mk_int(i)), nine_e));
+        for (rational i = one - one; i < str_int_bound; i = i + one){
+            expr* rhs = leng_prefix_rhs(std::make_pair(v, 1), true);
+            ands.push_back(createGreaterEqOperator(createSelectOperator(arr, createAddOperator(rhs, mk_int(i))), zero_e));
+            ands.push_back(createLessEqOperator(createSelectOperator(arr, createAddOperator(rhs, mk_int(i))), nine_e));
         }
 
         expr *len = mk_strlen(v);
@@ -9209,8 +9210,24 @@ namespace smt {
             collect_strs_in_membership(to_app(v)->get_arg(0), ret);
             collect_strs_in_membership(to_app(v)->get_arg(1), ret);
         }
+        else if (u.re.is_range(v)){
+            expr* arg0 = nullptr;
+            expr* arg1 = nullptr;
+            arg0 = to_app(v)->get_arg(0);
+            arg1 = to_app(v)->get_arg(1);
+            zstring start, finish;
+            u.str.is_string(arg0, start);
+            u.str.is_string(arg1, finish);
+            SASSERT(start.length() == 1);
+            SASSERT(finish.length() == 1);
+
+            for (int i = start[0]; i <= finish[0]; ++i) {
+                zstring tmp((char)i);
+                ret.insert(tmp);
+            }
+        }
         else
-            SASSERT(false);
+            NOT_IMPLEMENTED_YET();
     }
 
 
@@ -10228,27 +10245,37 @@ namespace smt {
             ands.push_back(createEqualOperator(iterA, iterB));
             ands.push_back(createEqualOperator(lenA, lenB));
 
-            for (rational i = one; i <= bound; i = i + one) {
+            for (rational i = zero; i <= bound; i = i + one) {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                expr *premise = createGreaterEqOperator(lenA, at_i);
-                expr *conclusion = createEqualOperator(
-                        createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
-                        createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
-                ands.push_back(rewrite_implication(premise, conclusion));
+                if (i == zero) {
+//                    ands.push_back(createGreaterEqOperator(lenA, at_i));
+                }
+                else {
+                    expr *premise = createGreaterEqOperator(lenA, at_i);
+                    expr *conclusion = createEqualOperator(
+                            createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
+                            createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
+                    ands.push_back(rewrite_implication(premise, conclusion));
+                }
             }
         }
         else {
-            for (rational i = one; i <= bound; i = i + one) {
+            for (rational i = zero; i <= bound; i = i + one) {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                expr *premise = createGreaterEqOperator(lenB, at_i);
-                expr *conclusion = createEqualOperator(
-                        createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
-                        createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
-                ands.push_back(rewrite_implication(premise, conclusion));
+                if (i == zero) {
+//                    ands.push_back(createGreaterEqOperator(lenA, at_i));
+                }
+                else {
+                    expr *premise = createGreaterEqOperator(lenB, at_i);
+                    expr *conclusion = createEqualOperator(
+                            createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
+                            createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
+                    ands.push_back(rewrite_implication(premise, conclusion));
+                }
             }
         }
         return createAndOperator(ands);
@@ -10321,8 +10348,8 @@ namespace smt {
                         if ((val[j] < '0' || val[j] > '9') &&
                                 (val.length() == 1 ||
                                 (i < elementNames.size() - 1 && elementNames[i].first == elementNames[i + 1].first) ||
-                                        (j == 0 && elementNames[i].second % QMAX == -1) ||
-                                        (j == val.length() - 1 && elementNames[i].second % QMAX == 0))) {
+                                (j == 0 && elementNames[i].second % QMAX == -1) ||
+                                (j == val.length() - 1 && elementNames[i].second % QMAX == 0))) {
                             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " cannot contain because of str-int" << mk_pp(elementNames[i].first, m) << std::endl;);
                             return nullptr;
                         }
@@ -13608,6 +13635,8 @@ namespace smt {
         to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
         uState.addAssertingConstraints(to_assert);
+
+        setup_str_int_arr(e, start);
     }
 
     void theory_str::reuse_internal_int_vars(expr* v){

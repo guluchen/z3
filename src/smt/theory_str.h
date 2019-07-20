@@ -1400,7 +1400,7 @@ namespace smt {
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_repeat();
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
-                void setup_str_int_var(expr* v, expr* arr);
+                void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr);
                 void setup_regex_var(expr* rexpr, expr* arr);
                 void create_notcontain_map();
