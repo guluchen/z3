@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="196">
-              <caret line="12550" column="45" selection-start-line="12550" selection-start-column="45" selection-end-line="12550" selection-end-column="45" />
+            <state relative-caret-position="392">
+              <caret line="7280" column="28" selection-start-line="7280" selection-start-column="28" selection-end-line="7280" selection-end-column="28" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -142,8 +142,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="212">
-              <caret line="1739" column="22" selection-start-line="1739" selection-start-column="22" selection-end-line="1739" selection-end-column="22" />
+            <state relative-caret-position="197">
+              <caret line="1441" column="44" selection-start-line="1441" selection-start-column="44" selection-end-line="1441" selection-end-column="44" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,7 +155,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>generate_constraint_flat_flat</find>
       <find>generate_constraint_flat_var</find>
       <find>handle_connected_connected_array</find>
       <find>unroll_connected_variable</find>
@@ -185,6 +184,7 @@
       <find>collectCharRange</find>
       <find>findCorrespondRightParentheses</find>
       <find>toConstraint_ConnectedVar</find>
+      <find>setup_flat</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -743,12 +743,12 @@
       <workItem from="1563167619831" duration="15784000" />
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
-      <workItem from="1563546000963" duration="32357000" />
+      <workItem from="1563546000963" duration="35487000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1329176000" />
+    <option name="totallyTimeSpent" value="1332306000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1142,8 +1142,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="212">
-          <caret line="1739" column="22" selection-start-line="1739" selection-start-column="22" selection-end-line="1739" selection-end-column="22" />
+        <state relative-caret-position="197">
+          <caret line="1441" column="44" selection-start-line="1441" selection-start-column="44" selection-end-line="1441" selection-end-column="44" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
           </folding>
@@ -1152,8 +1152,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="196">
-          <caret line="12550" column="45" selection-start-line="12550" selection-start-column="45" selection-end-line="12550" selection-end-column="45" />
+        <state relative-caret-position="392">
+          <caret line="7280" column="28" selection-start-line="7280" selection-start-column="28" selection-end-line="7280" selection-end-column="28" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

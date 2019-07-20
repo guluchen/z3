@@ -7275,9 +7275,9 @@ namespace smt {
         rational max_value = ten_power(str_int_bound) - rational(1);
         expr_ref_vector conclusions(m);
 
-//        conclusions.push_back(lenConstraint);
+        conclusions.push_back(lenConstraint);
         conclusions.push_back(unrollConstraint);
-//        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
+        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
         expr_ref_vector premises(m);
         premises.push_back(boundConstraint);
         premises.push_back(createEqualOperator(num, u.str.mk_stoi(str)));
@@ -8271,7 +8271,7 @@ namespace smt {
     void theory_str::setup_flats(){
         if (should_use_flat() && p_bound == rational(0)) {
             p_bound = rational(2);
-            q_bound = rational(2);
+            q_bound = rational(5);
             assert_axiom(createEqualOperator(get_bound_p_control_var(), mk_int(p_bound)));
             assert_axiom(createEqualOperator(get_bound_q_control_var(), mk_int(q_bound)));
             if (p_bound >= max_p_bound)
@@ -8576,8 +8576,8 @@ namespace smt {
 
             if (it->second.size() == 0)
                 continue;
-
-            if (isInternalRegexVar(it->first) || is_important(it->first) || u.str.is_string(it->first)){
+            expr* reg = nullptr;
+            if (isInternalRegexVar(it->first, reg) || is_important(it->first) || u.str.is_string(it->first)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
                 expr* root_tmp = find_equivalent_variable(it->first);
@@ -8779,26 +8779,13 @@ namespace smt {
         return tmp.find("!tmp") != std::string::npos;
     }
 
-    bool theory_str::isInternalRegexVar(expr* e){
-        for (const auto& we: membership_memo) {
-            if (we.first == e){
-                std::string tmp = expr2str(e);
-                if (tmp.find("!tmp") != std::string::npos)
-                    return true;
-            }
-        }
-        return false;
-    }
-
     bool theory_str::isInternalRegexVar(expr* e, expr* &regex){
         for (const auto& we: membership_memo) {
             if (we.first == e){
                 regex = we.second;
                 STRACE("str", tout << __LINE__ << __FUNCTION__ << " " << mk_pp(e, get_manager()) << " " << mk_pp(regex, get_manager()) << std::endl;);
                 std::string tmp = expr2str(e);
-                bool isreg = isInternalRegexVar(e);
-                SASSERT(isreg);
-                if (tmp.find("!tmp") != std::string::npos)
+                if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second))
                     return true;
             }
         }
@@ -10794,9 +10781,10 @@ namespace smt {
         ast_manager &m = get_manager();
 
         expr_ref_vector constraints(m);
+        expr* reg = nullptr;
         for (int i = currentPos - subElements.size() + 1; i <= currentPos; ++i) {
             if (connectedVariables.find(elementNames[i].first) != connectedVariables.end() ||
-                isInternalRegexVar(elementNames[i].first)) {
+                isInternalRegexVar(elementNames[i].first, reg)) {
                 constraints.push_back(connectedVar_atSpecificLocation(
                         a, /* const or regex */
                         elementNames, /* have connected var */
@@ -10856,7 +10844,9 @@ namespace smt {
             /* sublen = connectedVarLength */
             /* at_0 = x && at_1 == y && ..*/
             int considerLength = connectedVarLength;
-            if (connectedVariables[elementNames[connectedVarPos].first] >= 0 && !isInternalRegexVar(elementNames[connectedVarPos].first))
+            expr* reg = nullptr;
+            if (connectedVariables[elementNames[connectedVarPos].first] >= 0 &&
+                    !isInternalRegexVar(elementNames[connectedVarPos].first, reg))
                 considerLength = std::min(connectedVariables[elementNames[connectedVarPos].first], considerLength);
 
             for (int k = 0; k < considerLength; ++k){
@@ -11595,6 +11585,11 @@ namespace smt {
         else {
             zstring strTmp = parse_regex_content(elementNames[regexPos].first);
             unsigned tmpNum = strTmp.length();
+            if (strTmp.length() == 0) {
+                expr_ref tmp(m.mk_true(), m);
+                return tmp;
+            }
+
             if (!unrollMode){
                 for (int i = 0; i < pMax; ++i) {
                     expr_ref_vector ors(m);
@@ -12026,13 +12021,15 @@ namespace smt {
                 }
         }
 
+        expr* reg = nullptr;
         for (int i = pos - 1; i >= 0; --i) { /* pre-elements */
             zstring value;
             if (u.str.is_string(elementNames[i].first, value) && i > 0 && elementNames[i].second + 1 == elementNames[i - 1].second && (elementNames[i].second % QMAX) == 0) {
                 addElements.push_back(mk_int(value.length()));
                 i--;
             }
-            else if (u.re.is_union(elementNames[i].first) || u.re.is_star(elementNames[i].first) || u.re.is_plus(elementNames[i].first) || isInternalRegexVar(elementNames[i].first)) {
+            else if (u.re.is_union(elementNames[i].first) || u.re.is_star(elementNames[i].first) ||
+                u.re.is_plus(elementNames[i].first) || isInternalRegexVar(elementNames[i].first, reg)) {
                 addElements.push_back(getExprVarFlatSize(elementNames[i]));
             }
             else if (i > 0 && elementNames[i].second - 1 == elementNames[i - 1].second && (elementNames[i].second % QMAX) == QMAX - 1) {
@@ -12548,7 +12545,7 @@ namespace smt {
         }
         else {
             expr* reg = nullptr;
-            if (isInternalRegexVar(a, reg)){ 
+            if (isInternalRegexVar(a, reg)){
                 collectCharRange(reg, chars);
             }
             else {
@@ -13498,15 +13495,16 @@ namespace smt {
 
     std::vector<std::pair<expr*, int>> theory_str::create_equality(ptr_vector<expr> list){
         std::vector<expr*> l;
+        expr* reg;
         for (unsigned i = 0; i < list.size(); ++i)
-            if (!is_regex_var(list[i])){
+            if (!isInternalRegexVar(list[i], reg)){
                 l.push_back(list[i]);
             }
             else {
                 expr_ref_vector eqNodeSet(get_manager());
                 collect_eq_nodes(list[i], eqNodeSet);
                 bool found = false;
-                expr* reg;
+
                 for (int j = 0; j < eqNodeSet.size(); ++j) {
                     if (isInternalRegexVar(eqNodeSet[j].get(), reg)) {
                         l.push_back(eqNodeSet[j].get());

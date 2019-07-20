@@ -1440,7 +1440,6 @@ namespace smt {
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
                 bool isInternalVar(expr* e);
-                bool isInternalRegexVar(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
                 bool isInternalRegexVar(expr* e, expr* &regex);
                 /*
