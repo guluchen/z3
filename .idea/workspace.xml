@@ -97,11 +97,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="392">
-              <caret line="7280" column="28" selection-start-line="7280" selection-start-column="28" selection-end-line="7280" selection-end-column="28" />
+            <state relative-caret-position="77">
+              <caret line="14253" column="32" selection-start-line="14253" selection-start-column="32" selection-end-line="14253" selection-end-column="32" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -139,11 +139,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="197">
-              <caret line="1441" column="44" selection-start-line="1441" selection-start-column="44" selection-end-line="1441" selection-end-column="44" />
+            <state relative-caret-position="212">
+              <caret line="2005" column="73" selection-start-line="2005" selection-start-column="73" selection-end-line="2005" selection-end-column="73" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,10 +155,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>generate_constraint_flat_var</find>
-      <find>handle_connected_connected_array</find>
-      <find>unroll_connected_variable</find>
-      <find>optimizing</find>
       <find>generate_constraint_var_var</find>
       <find>&lt;= '0'</find>
       <find>generate_constraint02</find>
@@ -171,7 +167,6 @@
       <find>unsat_core</find>
       <find>setup_str_int</find>
       <find>setup_str_int_var</find>
-      <find>setup_str_int_arr</find>
       <find>parseRegexComponents</find>
       <find>combineConstStr</find>
       <find>components</find>
@@ -182,9 +177,14 @@
       <find>parse_regex_content</find>
       <find>&lt;= REGEX_CODE</find>
       <find>collectCharRange</find>
-      <find>findCorrespondRightParentheses</find>
       <find>toConstraint_ConnectedVar</find>
       <find>setup_flat</find>
+      <find>setup_str_const</find>
+      <find>init_underapprox</find>
+      <find>setup_str_int_arr</find>
+      <find>findCorrespondRightParentheses</find>
+      <find>string_int_vars</find>
+      <find>update_string_int_vars</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -212,8 +212,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
         <option value="$PROJECT_DIR$/src/ast/seq_decl_plugin.h" />
         <option value="$PROJECT_DIR$/src/util/ref_vector.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
       </list>
     </option>
   </component>
@@ -743,12 +743,12 @@
       <workItem from="1563167619831" duration="15784000" />
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
-      <workItem from="1563546000963" duration="35487000" />
+      <workItem from="1563546000963" duration="41045000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1332306000" />
+    <option name="totallyTimeSpent" value="1337864000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1140,22 +1140,22 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="197">
-          <caret line="1441" column="44" selection-start-line="1441" selection-start-column="44" selection-end-line="1441" selection-end-column="44" />
+        <state relative-caret-position="77">
+          <caret line="14253" column="32" selection-start-line="14253" selection-start-column="32" selection-end-line="14253" selection-end-column="32" />
           <folding>
-            <element signature="e#13206#13218#0" expanded="true" />
+            <element signature="e#0#20#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="392">
-          <caret line="7280" column="28" selection-start-line="7280" selection-start-column="28" selection-end-line="7280" selection-end-column="28" />
+        <state relative-caret-position="212">
+          <caret line="2005" column="73" selection-start-line="2005" selection-start-column="73" selection-end-line="2005" selection-end-column="73" />
           <folding>
-            <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#13206#13218#0" expanded="true" />
           </folding>
         </state>
       </provider>

@@ -4282,6 +4282,7 @@ namespace smt {
 
         if (eval_str_int()) {
             TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
+            newConstraintTriggered = true;
             return FC_CONTINUE;
         }
 
@@ -4403,17 +4404,17 @@ namespace smt {
             STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << Ival.to_string() << std::endl;);
             // if that value is not -1, we can assert (str.to.int S) = Ival --> S = "Ival"
             if (!Ival.is_minus_one()) {
-                zstring Ival_str(Ival.to_string().c_str());
-                expr_ref premise(ctx.mk_eq_atom(a, m_autil.mk_numeral(Ival, true)), m);
-
-                expr_ref conclusion(ctx.mk_eq_atom(S, mk_string(Ival_str)), m);
-                expr_ref axiom(rewrite_implication(conclusion, premise), m);
-                if (!string_int_axioms.contains(axiom)) {
-                    string_int_axioms.insert(axiom);
-                    assert_axiom(axiom);
-                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
-                    axiomAdd = true;
-                }
+//                zstring Ival_str(Ival.to_string().c_str());
+//                expr_ref premise(ctx.mk_eq_atom(a, m_autil.mk_numeral(Ival, true)), m);
+//
+//                expr_ref conclusion(ctx.mk_eq_atom(S, mk_string(Ival_str)), m);
+//                expr_ref axiom(rewrite_implication(conclusion, premise), m);
+//                if (!string_int_axioms.contains(axiom)) {
+//                    string_int_axioms.insert(axiom);
+//                    assert_axiom(axiom);
+//                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+//                    axiomAdd = true;
+//                }
             }
         } else {
             STRACE("str", tout << "integer theory has no assignment for " << mk_pp(a, m) << std::endl;);
@@ -8210,6 +8211,7 @@ namespace smt {
 
     void theory_str::setup_str_int_arr(expr* v, int start){
         ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << std::endl;);
         expr_ref_vector ands(m);
         rational one(1);
         rational zero((int)('0'));
@@ -8218,7 +8220,7 @@ namespace smt {
         expr* zero_e(mk_int(zero));
         expr* nine_e(mk_int(nine));
         for (rational i = one - one; i < str_int_bound; i = i + one){
-            expr* rhs = leng_prefix_rhs(std::make_pair(v, 1), true);
+            expr* rhs = leng_prefix_rhs(std::make_pair(v, start + 1), true);
             ands.push_back(createGreaterEqOperator(createSelectOperator(arr, createAddOperator(rhs, mk_int(i))), zero_e));
             ands.push_back(createLessEqOperator(createSelectOperator(arr, createAddOperator(rhs, mk_int(i))), nine_e));
         }
@@ -8236,7 +8238,7 @@ namespace smt {
 
         expr_ref tmp(createAndOperator(ands), m);
         assert_axiom(tmp.get());
-        uState.addAssertingConstraints(tmp);
+        impliedFacts.push_back(tmp);
     }
 
     void theory_str::setup_str_const(zstring val, expr* arr){
@@ -8245,7 +8247,7 @@ namespace smt {
         for (int i = 0; i < val.length(); ++i){
             expr_ref tmp(createEqualOperator(createSelectOperator(arr, mk_int(i)), mk_int(val[i])), m);
             assert_axiom(tmp.get());
-            uState.addAssertingConstraints(tmp);
+            impliedFacts.push_back(tmp);
         }
     }
 
@@ -8264,7 +8266,7 @@ namespace smt {
             }
             expr_ref tmp(createOrOperator(ors), m);
             assert_axiom(tmp.get());
-            uState.addAssertingConstraints(tmp);
+            impliedFacts.push_back(tmp);
         }
     }
 
@@ -8385,29 +8387,12 @@ namespace smt {
                         arrMap[vv] = v1;
                 }
                 STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
-
-//                zstring val;
-//                if (u.str.is_string(v, val)) {
-//                    STRACE("str", tout << __LINE__ << " " << mk_pp(v1, m) << " = " << val << std::endl;);
-//                    for (int i = 0; i < val.length(); ++i){
-//                        expr* tmp = createEqualOperator(createSelectOperator(v1, mk_int(i)), mk_int(val[i]));
-//                        assert_axiom(tmp, m.mk_true());
-//                    }
-//                }
             }
             else if (arrVar != nullptr) {
                 ensure_enode(arrVar);
                 // I'm assuming that this combination will do the correct thing in the integer theory.
                 STRACE("str", tout << __LINE__ << " arr: " << mk_pp(arrVar, m) << std::endl;);
                 m_trail.push_back(arrVar);
-//                zstring val;
-//                if (u.str.is_string(v, val)){
-//                    STRACE("str", tout << __LINE__ << " " << mk_pp(arrVar, m) << " = " << val << std::endl;);
-//                    for (int i = 0; i < val.length(); ++i){
-//                        expr* tmp = createEqualOperator(createSelectOperator(arrVar, mk_int(i)), mk_int(val[i]));
-//                        assert_axiom(tmp, m.mk_true());
-//                    }
-//                }
             }
         }
 
@@ -13700,6 +13685,8 @@ namespace smt {
     }
 
     void theory_str::setup_str_int_len(expr* e, int start){
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(e, get_manager() )
+                           << std::endl;);
         expr* part1 = getExprVarFlatSize(std::make_pair(e, start));
         expr* part2 = getExprVarFlatSize(std::make_pair(e, start + 1));
         expr* len = mk_strlen(e);
@@ -14215,26 +14202,26 @@ namespace smt {
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
                     vars[s] = str_int_bound.get_int64();
-                    string_int_vars.insert(s);
-                    int_string_vars.insert(a->get_arg(1));
+                    update_string_int_vars(s, string_int_vars);
+                    update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
                     vars[a->get_arg(1)] = str_int_bound.get_int64();
-                    string_int_vars.insert(a->get_arg(1));
-                    int_string_vars.insert(num);
+                    update_string_int_vars(a->get_arg(1), string_int_vars);
+                    update_string_int_vars(num, int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
                     vars[s] = str_int_bound.get_int64();
-                    string_int_vars.insert(s);
-                    int_string_vars.insert(a->get_arg(0));
+                    update_string_int_vars(s, string_int_vars);
+                    update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
                     vars[a->get_arg(0)] = str_int_bound.get_int64();
-                    string_int_vars.insert(a->get_arg(0));
-                    int_string_vars.insert(num);
+                    update_string_int_vars(a->get_arg(0), string_int_vars);
+                    update_string_int_vars(num, int_string_vars);
                 }
             }
 
@@ -14245,32 +14232,39 @@ namespace smt {
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
                     vars[s] = str_int_bound.get_int64();
-                    string_int_vars.insert(s);
-                    int_string_vars.insert(a->get_arg(1));
+                    update_string_int_vars(s, string_int_vars);
+                    update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
                     vars[a->get_arg(1)] = str_int_bound.get_int64();
-                    string_int_vars.insert(a->get_arg(1));
-                    int_string_vars.insert(num);
+                    update_string_int_vars(a->get_arg(1), string_int_vars);
+                    update_string_int_vars(num, int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
                     vars[s] = str_int_bound.get_int64();
-                    string_int_vars.insert(s);
-                    int_string_vars.insert(a->get_arg(0));
+                    update_string_int_vars(s, string_int_vars);
+                    update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
                     vars[a->get_arg(0)] = str_int_bound.get_int64();
-                    string_int_vars.insert(a->get_arg(0));
-                    int_string_vars.insert(num);
+                    update_string_int_vars(a->get_arg(0), string_int_vars);
+                    update_string_int_vars(num, int_string_vars);
                 }
             }
         }
 
         if (vars.size() > 0)
             flat_enabled = true;
+    }
+
+    void theory_str::update_string_int_vars(expr* v, obj_hashtable<expr> &s){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(v, eqs);
+        for (const auto& n : eqs)
+            s.insert(n);
     }
 
     bool theory_str::is_str_int_var(expr* e){

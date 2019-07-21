@@ -2003,6 +2003,7 @@ namespace smt {
                         expr_ref_vector &imppliedEqualities);
             std::set<std::pair<expr*, int>> collect_important_vars();
             void collect_important_vars_str_int(std::map<expr*, int> &vars);
+            void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
             bool is_str_int_var(expr* e);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &importantVars,
