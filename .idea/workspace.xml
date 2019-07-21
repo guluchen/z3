@@ -85,7 +85,6 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="514">
-              <caret line="13853" column="13" selection-start-line="13853" selection-start-column="13" selection-end-line="13853" selection-end-column="13" />
+            <state relative-caret-position="472">
+              <caret line="16912" column="36" selection-start-line="16912" selection-start-column="36" selection-end-line="16912" selection-end-column="36" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -155,11 +154,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>parseRegexComponents</find>
-      <find>combineConstStr</find>
-      <find>components</find>
-      <find>create_internal_int_vars</find>
-      <find>equality_to_arith</find>
       <find>not_impl</find>
       <find>handle_Regex_WithPosition_array</find>
       <find>parse_regex_content</find>
@@ -174,7 +168,6 @@
       <find>string_int_vars</find>
       <find>update_string_int_vars</find>
       <find>iterMap</find>
-      <find>index_tail</find>
       <find>final_check_eh</find>
       <find>vars</find>
       <find>str_int_vars</find>
@@ -185,6 +178,12 @@
       <find>final_check</find>
       <find>init_underapprox_repeat</find>
       <find>underapproximation_repeat</find>
+      <find>setup_str_int_len</find>
+      <find>internal_int_vars</find>
+      <find>mk_arr_var</find>
+      <find>reuse_internal_int_vars</find>
+      <find>str_int</find>
+      <find>index_tail</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -743,12 +742,12 @@
       <workItem from="1563167619831" duration="15784000" />
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
-      <workItem from="1563546000963" duration="47825000" />
+      <workItem from="1563546000963" duration="50295000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1344644000" />
+    <option name="totallyTimeSpent" value="1347114000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1152,8 +1151,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="514">
-          <caret line="13853" column="13" selection-start-line="13853" selection-start-column="13" selection-end-line="13853" selection-end-column="13" />
+        <state relative-caret-position="472">
+          <caret line="16912" column="36" selection-start-line="16912" selection-start-column="36" selection-end-line="16912" selection-end-column="36" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

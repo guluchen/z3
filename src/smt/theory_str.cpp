@@ -13651,7 +13651,7 @@ namespace smt {
 
                     expr_ref ors(createOrOperator(lenConstraints), m);
                     assert_axiom(ors.get());
-                    uState.addAssertingConstraints(ors);
+                    impliedFacts.push_back(ors);
                     return;
                 } else if (u.re.is_star(regex) || u.re.is_plus(regex)) {
                     start = REGEX_CODE - start;
@@ -13683,7 +13683,7 @@ namespace smt {
                     expr_ref ands(createAndOperator(constraints), m);
 
                     assert_axiom(ands.get());
-                    uState.addAssertingConstraints(ands);
+                    impliedFacts.push_back(ands);
                     return;
                 }
             }
@@ -13697,7 +13697,7 @@ namespace smt {
             expr_ref v1(mk_int_var(flatSize), m);
             expr_ref lenConstraint(createGreaterEqOperator(v1, m_autil.mk_int(0)), m);
             assert_axiom(lenConstraint.get());
-            uState.addAssertingConstraints(lenConstraint);
+            impliedFacts.push_back(lenConstraint);
             lenMap[v].push_back(v1);
 
             expr_ref v2(m);
@@ -13708,7 +13708,7 @@ namespace smt {
 //                assert_axiom(createGreaterEqOperator(v2, m_autil.mk_int(0)));
                 expr_ref iteConstraint(createEqualOperator(v2, m_autil.mk_int(1)), m);
                 assert_axiom(iteConstraint.get());
-                uState.addAssertingConstraints(iteConstraint);
+                impliedFacts.push_back(iteConstraint);
                 iterMap[v].push_back(v2);
             }
             adds.push_back(v1);
@@ -13719,12 +13719,12 @@ namespace smt {
         if (u.str.is_string(v, val)){
             expr_ref sumConstraint(createEqualOperator(createAddOperator(adds), mk_int(val.length())), m);
             assert_axiom(sumConstraint.get());
-            uState.addAssertingConstraints(sumConstraint);
+            impliedFacts.push_back(sumConstraint);
         }
         else {
             expr_ref sumConstraint(createEqualOperator(createAddOperator(adds), u.str.mk_length(v)), m);
             assert_axiom(sumConstraint.get());
-            uState.addAssertingConstraints(sumConstraint);
+            impliedFacts.push_back(sumConstraint);
 
             if (string_int_vars.find(v) != string_int_vars.end()){
                 setup_str_int_len(v, start);
@@ -13744,7 +13744,7 @@ namespace smt {
         expr* conclusion = createEqualOperator(part1, mk_int(0));
         expr_ref to_assert(rewrite_implication(premise, conclusion), get_manager());
         assert_axiom(to_assert);
-        uState.addAssertingConstraints(to_assert);
+        impliedFacts.push_back(to_assert);
 
         // len >= bound --> part 2 = bound
         rational bound_1 = str_int_bound + rational(1);
@@ -13752,7 +13752,7 @@ namespace smt {
         conclusion = createEqualOperator(part2, mk_int(str_int_bound));
         to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
-        uState.addAssertingConstraints(to_assert);
+        impliedFacts.push_back(to_assert);
 
         setup_str_int_arr(e, start);
     }
@@ -13785,7 +13785,7 @@ namespace smt {
 
                     expr_ref ors(createOrOperator(lenConstraints), m);
                     assert_axiom(ors.get());
-                    uState.addAssertingConstraints(ors);
+                    impliedFacts.push_back(ors);
                     return;
                 } else if (u.re.is_star(regex) || u.re.is_plus(regex)) {
                     start = REGEX_CODE - start;
@@ -13813,7 +13813,7 @@ namespace smt {
                     expr_ref ands(createAndOperator(constraints), m);
 
                     assert_axiom(ands.get());
-                    uState.addAssertingConstraints(ands);
+                    impliedFacts.push_back(ands);
                     return;
                 }
             }
@@ -13824,8 +13824,7 @@ namespace smt {
             expr_ref v1(getExprVarFlatSize(std::make_pair(v, i)), m);
             expr_ref lenConstraint(createGreaterEqOperator(v1, m_autil.mk_int(0)), m);
             assert_axiom(lenConstraint.get());
-            uState.addAssertingConstraints(lenConstraint);
-
+            impliedFacts.push_back(lenConstraint);
             expr_ref v2(m);
             if (u.str.is_string(v))
                 v2 = mk_int(1);
@@ -13833,7 +13832,7 @@ namespace smt {
                 v2 = iterMap[v][i];
                 expr_ref iteConstraint(createEqualOperator(v2, m_autil.mk_int(1)), m);
                 assert_axiom(iteConstraint.get());
-                uState.addAssertingConstraints(iteConstraint);
+                impliedFacts.push_back(iteConstraint);
             }
             adds.push_back(v1);
         }
@@ -13842,13 +13841,12 @@ namespace smt {
         if (u.str.is_string(v, val)){
             expr_ref sumConstraint(createEqualOperator(createAddOperator(adds), mk_int(val.length())), m);
             assert_axiom(sumConstraint.get());
-            uState.addAssertingConstraints(sumConstraint);
+            impliedFacts.push_back(sumConstraint);
         }
         else {
             expr_ref sumConstraint(createEqualOperator(createAddOperator(adds), u.str.mk_length(v)), m);
             assert_axiom(sumConstraint.get());
-            uState.addAssertingConstraints(sumConstraint);
-
+            impliedFacts.push_back(sumConstraint);
             if (string_int_vars.find(v) != string_int_vars.end()){
                 setup_str_int_len(v, start);
             }
@@ -16891,11 +16889,8 @@ namespace smt {
                         if (u.str.is_string(to_app(arg0)->get_arg(1), value)){
                             if (arg1 == mk_int(value.length())){
                                 if (index_tail.contains(arg0)) {
-                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
-                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
-
-                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
-                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
+                                    assert_axiom(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
+                                    assert_axiom(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
                                     length_relation.insert(std::make_pair(t0, index_tail[arg0].first));
 
                                     // get index key
@@ -16914,11 +16909,9 @@ namespace smt {
                         if (u.str.is_string(to_app(arg1)->get_arg(1), value)){
                             if (arg0 == mk_int(value.length())){
                                 if (index_tail.contains(arg1)) {
-                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
-                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
+                                    assert_axiom(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
+                                    assert_axiom(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
 
-                                    case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
-                                    case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
                                     length_relation.insert(std::make_pair(t0, index_tail[arg1].first));
 
                                     // get index key
