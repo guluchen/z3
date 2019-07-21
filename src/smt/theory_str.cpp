@@ -4256,8 +4256,6 @@ namespace smt {
             return FC_DONE;
         }
 
-        dump_assignments();
-
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
 //            newConstraintTriggered = true;
@@ -4279,6 +4277,8 @@ namespace smt {
             else
                 return FC_DONE;
         }
+
+        dump_assignments();
 
         if (eval_str_int()) {
             TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
@@ -4471,8 +4471,45 @@ namespace smt {
                 }
             }
         }
+        else {
+            expr* eq_node = nullptr;
+            int val = eval_invalid_str2int(S, eq_node);
+            if (val == -1) {
+                expr_ref premise(ctx.mk_eq_atom(S, eq_node), m);
+                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                if (!string_int_axioms.contains(axiom)) {
+                    string_int_axioms.insert(axiom);
+                    assert_axiom(axiom);
+                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                    axiomAdd = true;
+                }
+            }
+        }
 
         return axiomAdd;
+    }
+
+    int theory_str::eval_invalid_str2int(expr* e, expr* &eq_node){
+        ast_manager & m = get_manager();
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(e, eqs);
+        for (const auto& n : eqs){
+            if (u.str.is_concat(n)) {
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(n, nodes);
+                zstring val;
+                for (const auto& nn : nodes)
+                    if (u.str.is_string(nn, val)) {
+                        for (int i = 0; i < val.length(); ++i)
+                            if (val[i] < '0' || val[i] > '9') {
+                                eq_node = n;
+                                return -1;
+                            }
+                    }
+            }
+        }
+        return 0;
     }
 
     bool theory_str::eval_int2str(app * a) {
@@ -4529,7 +4566,19 @@ namespace smt {
                 }
             }
         } else {
-            STRACE("str", tout << "string theory has no assignment for " << mk_pp(a, m) << std::endl;);
+            expr* eq_node = nullptr;
+            int val = eval_invalid_str2int(a, eq_node);
+            if (val == -1) {
+                expr_ref premise(ctx.mk_eq_atom(a, eq_node), m);
+                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                if (!string_int_axioms.contains(axiom)) {
+                    string_int_axioms.insert(axiom);
+                    assert_axiom(axiom);
+                    m_trail_stack.push(insert_obj_trail<theory_str, expr>(string_int_axioms, axiom));
+                    axiomAdd = true;
+                }
+            }
         }
         return axiomAdd;
     }
@@ -4596,7 +4645,6 @@ namespace smt {
                 }
             }
         }
-        str_int_bound = bound;
         return all_upper_bounds;
     }
 
@@ -7504,10 +7552,10 @@ namespace smt {
         ast_manager & m = get_manager();
         for (const auto& com : eq_combination){
             if (line > 0) {
-                STRACE("str", tout << line << "EQ set of " << mk_pp(com.first, m) << std::endl;);
+                STRACE("str", tout << line << " EQ set of " << mk_pp(com.first, m) << std::endl;);
             }
             else
-                STRACE("str", tout << " EQ set of " << mk_pp(com.first, m) << std::endl;);
+                STRACE("str", tout << "EQ set of " << mk_pp(com.first, m) << std::endl;);
             for (const auto& e : com.second)
             STRACE("str",
                    if (!u.str.is_concat(e))
@@ -7883,6 +7931,7 @@ namespace smt {
     }
 
     void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
+        return;
         ast_manager & m = get_manager();
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOperator(lhs, rhs));
@@ -8192,7 +8241,6 @@ namespace smt {
                 }
             }
             else if (arrVar != nullptr) {
-                STRACE("str", tout << __LINE__ << " not e_internalized " << std::endl;);
                 ensure_enode(arrVar);
                 zstring val;
                 if (u.str.is_string(v, val)){
@@ -10250,7 +10298,6 @@ namespace smt {
         expr* iterA = getExprVarFlatIter(a);
         expr* iterB = getExprVarFlatIter(b);
         expr* pre_lhs = leng_prefix_lhs(a, elementNames, pos, false, unrollMode);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << "  pre_lhs: " << mk_pp(pre_lhs, m) << std::endl;);
         expr* pre_rhs = leng_prefix_rhs(b, unrollMode);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " pre_rhs: " << mk_pp(pre_rhs, m) << std::endl;);
         expr_ref_vector ands(m);
@@ -10259,11 +10306,11 @@ namespace smt {
             ands.push_back(createEqualOperator(iterA, iterB));
             ands.push_back(createEqualOperator(lenA, lenB));
 
-            for (rational i = zero; i <= bound; i = i + one) {
+            for (rational i = one; i <= bound; i = i + one) {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                if (i == zero) {
+                if (i_1 == zero) {
 //                    ands.push_back(createGreaterEqOperator(lenA, at_i));
                 }
                 else {
@@ -10276,11 +10323,12 @@ namespace smt {
             }
         }
         else {
-            for (rational i = zero; i <= bound; i = i + one) {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " pre_rhs: " << mk_pp(pre_rhs, m) << std::endl;);
+            for (rational i = one; i <= bound; i = i + one) {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                if (i == zero) {
+                if (i_1 == zero) {
 //                    ands.push_back(createGreaterEqOperator(lenA, at_i));
                 }
                 else {
@@ -13724,12 +13772,16 @@ namespace smt {
                                    << std::endl;);
                 if (u.re.is_union(regex)) {
                     start = REGEX_CODE - start;
+
+                    expr_ref v1(getExprVarFlatSize(std::make_pair(v, start)), m);
                     std::vector<zstring> tmp = collectAlternativeComponents(regex);
                     expr_ref_vector lenConstraints(m);
-                    expr_ref v1(getExprVarFlatSize(std::make_pair(v, start)), m);
+                    std::set<int> sizes;
                     for (int i = 0; i < tmp.size(); ++i) {
-                        lenConstraints.push_back(createEqualOperator(v1, mk_int(tmp[i].length())));
+                        sizes.insert(tmp[i].length());
                     }
+                    for (const auto& num : sizes)
+                        lenConstraints.push_back(createEqualOperator(v1, mk_int(num)));
 
                     expr_ref ors(createOrOperator(lenConstraints), m);
                     assert_axiom(ors.get());
@@ -13796,6 +13848,10 @@ namespace smt {
             expr_ref sumConstraint(createEqualOperator(createAddOperator(adds), u.str.mk_length(v)), m);
             assert_axiom(sumConstraint.get());
             uState.addAssertingConstraints(sumConstraint);
+
+            if (string_int_vars.find(v) != string_int_vars.end()){
+                setup_str_int_len(v, start);
+            }
         }
     }
 

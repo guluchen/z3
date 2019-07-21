@@ -1262,6 +1262,7 @@ namespace smt {
              * Returns true if axioms were added, and false otherwise.
              */
             bool eval_str2int(app * a);
+                int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
             void refined_init_final_check(
                 std::set<std::pair<expr *, int>> &importantVars,
