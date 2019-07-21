@@ -12121,21 +12121,17 @@ namespace smt {
         /* use alias instead of elementNames */
         std::vector<std::vector<int> > allPossibleSplits;
         SASSERT(lhs.second < 0);
+        if (!not_contain_check(lhs.first, elementNames))
+            return {};
+        
         zstring value;
-        if (u.str.is_string(lhs.first, value)) {
-            // overapprox check
-            for (int i = 0; i < elementNames.size() - 1; ++i) {
-                zstring subVar;
-                if  (u.str.is_string(elementNames[i].first, subVar) && (
-                        (elementNames[i].second % QMAX == -1 && i + 1 < elementNames.size()) || subVar.length() == 1)) {
-                    if (!value.contains(subVar)) {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: skip quickly because of " << value << " not contain " << subVar << std::endl;);
-                        return allPossibleSplits;
-                    }
-                }
-            }
-        }
         if (lhs.second <= REGEX_CODE) /* regex */ {
+            expr* reg = nullptr;
+            if (isInternalRegexVar(lhs.first, reg)) {
+                if (!const_vs_regex(reg, elementNames))
+                    return {};
+            }
+            return {};
             NOT_IMPLEMENTED_YET();
 //            std::vector<int> curr;
 //            std::string regexContent = parse_regex_content(lhs.first);
@@ -12342,6 +12338,48 @@ namespace smt {
 //            }
 //        }
 //    }
+
+    bool theory_str::not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames){
+        zstring value;
+        if (u.str.is_string(e, value)) {
+            for (int i = 0; i < elementNames.size() - 1; ++i) {
+                zstring subVar;
+                if  (u.str.is_string(elementNames[i].first, subVar) && (
+                        (elementNames[i].second % QMAX == -1 && i + 1 < elementNames.size()) ||
+                        subVar.length() == 1)) {
+                    if (!value.contains(subVar)) {
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: skip quickly because of " << value << " not contain " << subVar << std::endl;);
+                        return {};
+                    }
+                }
+            }
+        }
+    }
+
+    bool theory_str::const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, get_manager()) << std::endl;);
+        if (u.re.is_union(reg)) {
+            std::vector<zstring> components = collectAlternativeComponents(reg);
+            zstring tmp;
+            for (int i = 0; i < elementNames.size(); ++i)
+                if (u.str.is_string(elementNames[i].first, tmp) &&
+                    (tmp.length() == 1) || (i + 1 < elementNames.size() && elementNames[i].first == elementNames[i + 1].first)) {
+                    bool found = false;
+                    for (const auto& s : components)
+                        if (s.contains(tmp)) {
+                            found = true;
+                            break;
+                        }
+
+                    if (!found)
+                        return false;
+                }
+        }
+        else if (u.re.is_star(reg) || u.re.is_plus(reg)) {
+            return const_vs_regex(to_app(reg)->get_arg(0), elementNames);
+        }
+        return true;
+    }
 
     /*
 	 * textLeft: length of string

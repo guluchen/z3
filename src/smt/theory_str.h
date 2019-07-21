@@ -1785,7 +1785,8 @@ namespace smt {
                         std::pair<expr*, int> lhs,
                         std::vector<std::pair<expr*, int> > elementNames,
                         bool optimizing);
-
+                    bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames);
+                    bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames);
                 /*
                 * textLeft: length of string
                 * nMax: number of flats
