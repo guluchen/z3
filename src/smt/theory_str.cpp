@@ -7929,8 +7929,7 @@ namespace smt {
         }
     }
 
-    void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
-        return;
+    void theory_str::handle_NOTContain(expr* lhs, expr* rhs){ 
         ast_manager & m = get_manager();
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOperator(lhs, rhs));
