@@ -842,7 +842,6 @@ namespace smt {
         } else {
             theory_var v = theory::mk_var(n);
             m_find.mk_var();
-            STRACE("str", tout << "new theory var v#" << v << " find " << m_find.find(v) << std::endl;);
             get_context().attach_th_var(n, this, v);
             get_context().mark_as_relevant(n);
             return v;
@@ -5394,7 +5393,7 @@ namespace smt {
             // skip x = ""
             if (e.lhs() == str::word_term().of_string("\"\"") || e.rhs() == str::word_term().of_string("\"\""))
                 continue;
-            if (curr.m_wes_to_fail.find(e) == curr.m_wes_to_fail.end()) {
+            if (curr.m_wes_to_fail.find(e) == curr.m_wes_to_fail.end() && curr.m_wes_to_satisfy.find(e) != curr.m_wes_to_satisfy.end()) {
                 STRACE("str", tout << __LINE__ <<  " not at_same_state  " << e << std::endl;);
                 return false;
             }
@@ -8331,13 +8330,13 @@ namespace smt {
         }
         else if (should_use_flat() && (p_bound < max_p_bound || q_bound < max_q_bound)){
             if (p_bound < max_p_bound) {
-                p_bound = p_bound + rational(1);
+//                p_bound = p_bound + rational(1);
                 assert_axiom(createEqualOperator(get_bound_p_control_var(), mk_int(p_bound)));
                 if (p_bound >= max_p_bound)
                     impliedFacts.push_back(createEqualOperator(get_bound_p_control_var(), mk_int(p_bound)));
             }
             if (q_bound < max_q_bound) {
-                q_bound = q_bound + rational(5);
+//                q_bound = q_bound + rational(5);
                 assert_axiom(createEqualOperator(get_bound_q_control_var(), mk_int(q_bound)));
                 if (q_bound >= max_q_bound)
                     impliedFacts.push_back(createEqualOperator(get_bound_q_control_var(), mk_int(q_bound)));
@@ -11583,7 +11582,10 @@ namespace smt {
             }
             else {
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << std::endl;);
-                for (int i = 0; i < std::min(connectingSize, 50); ++i) {
+                int bound = std::min(connectingSize, 50);
+                if (flat_enabled)
+                    bound = q_bound.get_int64();
+                for (int i = 0; i < bound; ++i) {
                     expr_ref_vector ors(m);
                     expr_ref_vector ors_range(m);
                     for (int j = 0; j < charRange.size(); ++j) {
@@ -17145,7 +17147,7 @@ namespace smt {
                 std::vector<expr*> elements = createExprFromRegexVector(v);
                 expr* concat = nullptr;
                 for (int i  = 0; i < elements.size(); ++i) {
-                    STRACE("str", tout << __LINE__ << __FUNCTION__ << ":" << elements[i] << std::endl;);
+                    STRACE("str", tout << __LINE__ << __FUNCTION__ << ":" << mk_pp(elements[i], m) << std::endl;);
                     zstring tmpStr;
                     if (u.str.is_string(elements[i], tmpStr)) {
                         tmpLen += tmpStr.length();
@@ -17168,12 +17170,19 @@ namespace smt {
                         assert_axiom(tmp_in_re);
 
                         if (u.re.is_union(elements[i])) {
+                            int maxLen = 0;
                             expr_ref_vector orsTmp(m);
                             for (const auto& l : lenElements) {
+                                maxLen = maxLen > l ? maxLen : l;
                                 expr* tmpExpr = createEqualOperator(mk_strlen(tmp), mk_int(l));
                                 orsTmp.push_back(tmpExpr);
                             }
-                            assert_axiom(createOrOperator(orsTmp));
+                            if ((int)orsTmp.size() > 1) {
+                                assert_axiom(createLessEqOperator(mk_strlen(tmp), mk_int(maxLen)));
+                            }
+                            else {
+                                assert_axiom(createOrOperator(orsTmp));
+                            }
                         }
                         concat = concat == nullptr ? tmp : u.str.mk_concat(concat, tmp);
 
@@ -17433,14 +17442,9 @@ namespace smt {
     app * theory_str::mk_str_var(std::string name) {
         context & ctx = get_context();
 
-        STRACE("str", tout << __FUNCTION__ << ":" << name << " at scope level " << m_scope_level << std::endl;);
-
         sort * string_sort = u.str.mk_string_sort();
         app * a = mk_fresh_const(name.c_str(), string_sort);
         m_trail.push_back(a);
-
-        STRACE("str", tout << "a->get_family_id() = " << a->get_family_id() << std::endl
-                          << "this->get_family_id() = " << this->get_family_id() << std::endl;);
 
         // I have a hunch that this may not get internalized for free...
         ctx.internalize(a, false);
@@ -17449,7 +17453,6 @@ namespace smt {
         // this might help??
         mk_var(ctx.get_enode(a));
         m_basicstr_axiom_todo.push_back(ctx.get_enode(a));
-        STRACE("str", tout << "add " << mk_pp(a, get_manager()) << " to m_basicstr_axiom_todo" << std::endl;);
 
         variable_set.insert(a);
         internal_variable_set.insert(a);
