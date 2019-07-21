@@ -9990,7 +9990,7 @@ namespace smt {
         if (isInternalRegexVar(a.first, reg)) {
             if (!const_vs_regex(reg, {b}))
                 return nullptr;
-            else { 
+            else {
             }
 
         }
@@ -10601,7 +10601,8 @@ namespace smt {
 
             }
 
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            std::string tmpstr = (connectedVariables.find(a.first) != connectedVariables.end()) ? " connected" : " not connected";
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << tmpstr << std::endl;);
             expr_ref addexpr(createAddOperator(adds), m);
             if (optimizing)
                 result.push_back(createEqualOperator(getExprVarSize(a), addexpr));
@@ -13541,6 +13542,7 @@ namespace smt {
             }
             else {
                 newVar = varMap_reverse[varName];
+                importantVars[newVar] = connectingSize;
             }
 
             result.emplace_back(newVar);
