@@ -9965,7 +9965,7 @@ namespace smt {
             std::map<expr*, int> connectedVariables,
             bool optimizing){
         ast_manager &m = get_manager();
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
         bool isConstA = a.second < 0;
         bool isConstB = b.second < 0;
 
@@ -9984,6 +9984,19 @@ namespace smt {
                         return nullptr;
                     }
             }
+        }
+
+        expr* reg = nullptr;
+        if (isInternalRegexVar(a.first, reg)) {
+            if (!const_vs_regex(reg, {b}))
+                return nullptr;
+            else { 
+            }
+
+        }
+        else if (isInternalRegexVar(b.first, reg)) {
+            if (!const_vs_regex(reg, {a}))
+                return nullptr;
         }
 
         expr* nameA = nullptr;
@@ -12123,7 +12136,7 @@ namespace smt {
         SASSERT(lhs.second < 0);
         if (!not_contain_check(lhs.first, elementNames))
             return {};
-        
+
         zstring value;
         if (lhs.second <= REGEX_CODE) /* regex */ {
             expr* reg = nullptr;
