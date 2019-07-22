@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="462">
-              <caret line="14585" column="76" lean-forward="true" selection-start-line="14585" selection-start-column="76" selection-end-line="14585" selection-end-column="76" />
+            <state relative-caret-position="206">
+              <caret line="13801" column="24" selection-start-line="13800" selection-start-column="24" selection-end-line="13801" selection-end-column="24" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -143,7 +143,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="253">
-              <caret line="1442" column="27" selection-start-line="1442" selection-start-column="27" selection-end-line="1442" selection-end-column="27" />
+              <caret line="2329" column="47" selection-start-line="2329" selection-start-column="47" selection-end-line="2329" selection-end-column="47" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,8 +155,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>setup_str_int_len</find>
-      <find>internal_int_vars</find>
       <find>mk_arr_var</find>
       <find>reuse_internal_int_vars</find>
       <find>str_int</find>
@@ -183,8 +181,10 @@
       <find>__flat_</find>
       <find>handle_int2str</find>
       <find>is_importantVar</find>
-      <find>occurrences</find>
       <find>rational(5</find>
+      <find>occurrences</find>
+      <find>rational(10</find>
+      <find>setup_str_int_arr</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -744,12 +744,12 @@
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
       <workItem from="1563546000963" duration="50816000" />
-      <workItem from="1563724697652" duration="14816000" />
+      <workItem from="1563724697652" duration="16294000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1362451000" />
+    <option name="totallyTimeSpent" value="1363929000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1144,7 +1144,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="253">
-          <caret line="1442" column="27" selection-start-line="1442" selection-start-column="27" selection-end-line="1442" selection-end-column="27" />
+          <caret line="2329" column="47" selection-start-line="2329" selection-start-column="47" selection-end-line="2329" selection-end-column="47" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
           </folding>
@@ -1153,8 +1153,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="14585" column="76" lean-forward="true" selection-start-line="14585" selection-start-column="76" selection-end-line="14585" selection-end-column="76" />
+        <state relative-caret-position="206">
+          <caret line="13801" column="24" selection-start-line="13800" selection-start-column="24" selection-end-line="13801" selection-end-column="24" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

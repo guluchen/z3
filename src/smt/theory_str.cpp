@@ -4364,7 +4364,7 @@ namespace smt {
         }
 
         if (string_int_conversion_terms.size() > 0 && str_int_bound == rational(0)) {
-            str_int_bound = rational(10);
+            str_int_bound = rational(5);
             assert_axiom(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
             if (str_int_bound >= max_str_int_bound)
                 impliedFacts.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
@@ -7324,9 +7324,9 @@ namespace smt {
         rational max_value = ten_power(str_int_bound) - rational(1);
         expr_ref_vector conclusions(m);
 
-        conclusions.push_back(lenConstraint);
+//        conclusions.push_back(lenConstraint);
         conclusions.push_back(unrollConstraint);
-        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
+//        conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
         expr_ref_vector premises(m);
         premises.push_back(boundConstraint);
         premises.push_back(createEqualOperator(num, u.str.mk_stoi(str)));
@@ -13798,8 +13798,8 @@ namespace smt {
         expr* premise = createLessEqOperator(len, mk_int(str_int_bound));
         expr* conclusion = createEqualOperator(part1, mk_int(0));
         expr_ref to_assert(rewrite_implication(premise, conclusion), get_manager());
-        assert_axiom(to_assert);
-        impliedFacts.push_back(to_assert);
+//        assert_axiom(to_assert);
+//        impliedFacts.push_back(to_assert);
 
         // len >= bound --> part 2 = bound
         rational bound_1 = str_int_bound + rational(1);
