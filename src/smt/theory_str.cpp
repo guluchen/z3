@@ -4364,7 +4364,7 @@ namespace smt {
         }
 
         if (string_int_conversion_terms.size() > 0 && str_int_bound == rational(0)) {
-            str_int_bound = rational(5);
+            str_int_bound = rational(10);
             assert_axiom(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
             if (str_int_bound >= max_str_int_bound)
                 impliedFacts.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
@@ -14372,8 +14372,10 @@ namespace smt {
     void theory_str::update_string_int_vars(expr* v, obj_hashtable<expr> &s){
         expr_ref_vector eqs(get_manager());
         collect_eq_nodes(v, eqs);
-        for (const auto& n : eqs)
+        for (const auto& n : eqs) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, get_manager()) << " = " << mk_pp(n, get_manager()) << std::endl;);
             s.insert(n);
+        }
     }
 
     bool theory_str::is_str_int_var(expr* e){
@@ -14430,7 +14432,8 @@ namespace smt {
                                        << std::endl;);
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
                         eq_combination[rootTmp].size() <= 20 &&
-                        !is_contain_equality(v.first)) {
+                        !is_contain_equality(v.first) &&
+                            str_int_vars.find(v.first) == str_int_vars.end()) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
@@ -14569,22 +14572,27 @@ namespace smt {
     std::map<expr*, int> theory_str::countOccurrences_from_root(std::set<expr*> eqc_roots){
         std::map<expr*, int> ret;
         for (const auto& n : eqc_roots){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, get_manager()) << std::endl;);
             if (u.str.is_concat(n)){
                 expr* arg0 = to_app(n)->get_arg(0);
                 expr* arg1 = to_app(n)->get_arg(1);
-                if (ret.find(arg0) != ret.end())
-                    ret[arg0]++;
-                else
-                    ret[arg0] = 1;
-                if (ret.find(arg1) != ret.end())
-                    ret[arg1]++;
-                else
-                    ret[arg1] = 1;
+                if (arg0 == arg1)
+                    ret[arg0] = 2;
+                else {
+                    if (ret.find(arg0) != ret.end() && !isInternalVar(arg0))
+                        ret[arg0]++;
+                    else
+                        ret[arg0] = 1;
+                    if (ret.find(arg1) != ret.end() && !isInternalVar(arg0))
+                        ret[arg1]++;
+                    else
+                        ret[arg1] = 1;
+                }
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& p : ret)
-            if (p.second > 2)
+            if (p.second >= 2)
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(p.first, get_manager()) << std::endl;);
 
         return ret;
