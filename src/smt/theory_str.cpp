@@ -8645,7 +8645,7 @@ namespace smt {
             if (it->second.size() == 0)
                 continue;
             expr* reg = nullptr;
-            if (isInternalRegexVar(it->first, reg) || is_important(it->first) || u.str.is_string(it->first)){
+            if ((isInternalRegexVar(it->first, reg) && !u.re.is_star(reg)) || is_important(it->first) || u.str.is_string(it->first)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
                 expr* root_tmp = find_equivalent_variable(it->first);
@@ -8848,12 +8848,17 @@ namespace smt {
     }
 
     bool theory_str::isInternalRegexVar(expr* e, expr* &regex){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(e, eqs);
         for (const auto& we: membership_memo) {
-            if (we.first == e){
+            if (eqs.contains(we.first)){
                 regex = we.second;
-                std::string tmp = expr2str(e);
-                if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second))
-                    return true;
+                for (const auto& n : eqs)
+                    if (!u.str.is_concat(n)){
+                        std::string tmp = expr2str(n);
+                        if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second))
+                            return true;
+                    }
             }
         }
         return false;
@@ -12095,8 +12100,9 @@ namespace smt {
         if (lhs.second <= REGEX_CODE) /* regex */ {
             expr* reg = nullptr;
             if (isInternalRegexVar(lhs.first, reg)) {
-                if (!const_vs_regex(reg, elementNames))
+                if (!const_vs_regex(reg, elementNames)) {
                     return {};
+                }
             }
             return {};
             NOT_IMPLEMENTED_YET();
@@ -12346,14 +12352,21 @@ namespace smt {
                 if (u.str.is_string(elementNames[i].first, tmp) &&
                         ((tmp.length() == 1) || (i + 1 < elementNames.size() && elementNames[i].first == elementNames[i + 1].first))) {
                     bool found = false;
-                    for (const auto& s : components)
+                    bool reverse = false;
+                    for (const auto& s : components) {
                         if (s.contains(tmp)) {
                             found = true;
                             break;
                         }
 
-                    if (!found)
+                        if (tmp.contains(s)) {
+                            reverse = true;
+                        }
+                    }
+                    if ((!found && components.size() == 1) || (!found && components.size() > 1 && !reverse)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, get_manager()) << " cannot contain " << mk_pp(elementNames[i].first, get_manager())<< std::endl;);
                         return false;
+                    }
                 }
         }
         else if (u.re.is_star(reg) || u.re.is_plus(reg)) {

@@ -85,7 +85,6 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="390">
-              <caret line="8319" column="9" lean-forward="true" selection-start-line="8319" selection-start-column="9" selection-end-line="8319" selection-end-column="9" />
+            <state relative-caret-position="279">
+              <caret line="8646" column="18" selection-start-line="8646" selection-start-column="18" selection-end-line="8646" selection-end-column="18" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -156,13 +155,11 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>setup_str_int_arr</find>
-      <find>const_vs_regex</find>
       <find>const_vs_str_int</find>
       <find>generate_constraint01</find>
       <find>length_base_split</find>
       <find>length_relation.find(</find>
       <find>not_contain_check</find>
-      <find>collectAllPossibleSplits</find>
       <find>collectAllPossibleSplits(</find>
       <find>lhs</find>
       <find>lhs,</find>
@@ -185,6 +182,8 @@
       <find>collectAlternativeComponents</find>
       <find>setup_regex_var</find>
       <find>charrang</find>
+      <find>const_vs_regex</find>
+      <find>collectAllPossibleSplits</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -745,12 +744,12 @@
       <workItem from="1563238893403" duration="29025000" />
       <workItem from="1563546000963" duration="50816000" />
       <workItem from="1563724697652" duration="22750000" />
-      <workItem from="1563791575431" duration="6035000" />
+      <workItem from="1563791575431" duration="7751000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1376420000" />
+    <option name="totallyTimeSpent" value="1378136000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1154,8 +1153,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="8319" column="9" lean-forward="true" selection-start-line="8319" selection-start-column="9" selection-end-line="8319" selection-end-column="9" />
+        <state relative-caret-position="279">
+          <caret line="8646" column="18" selection-start-line="8646" selection-start-column="18" selection-end-line="8646" selection-end-column="18" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
