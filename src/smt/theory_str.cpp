@@ -7263,6 +7263,7 @@ namespace smt {
             expr_ref_vector guessedEqs(m), guessedDisEqs(m);
             fetch_guessed_str_int_with_scopes(guessedEqs, guessedDisEqs);
             for (const auto &e : guessedEqs) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(e, get_manager()) << std::endl;);
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
@@ -18892,14 +18893,18 @@ namespace smt {
             if (ctx.is_relevant(s)) {
                 if (!m.is_not(s)) {
                     app* a = to_app(s);
-                    if (a->get_num_args() == 2 && m.is_eq(a) && (u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1)))) {
+                    if (a->get_num_args() == 2 && m.is_eq(a) &&
+                            ((u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) ||
+                                    (u.str.is_itos(a->get_arg(0)) || u.str.is_itos(a->get_arg(1))))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                         guessedEqs.push_back(s);
                     }
                 }
                 else if (to_app(s)->get_num_args() == 1){
                     app* a = to_app(to_app(s)->get_arg(0));
-                    if (a->get_num_args() == 2 && m.is_eq(a) && (u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1)))) {
+                    if (a->get_num_args() == 2 && m.is_eq(a) &&
+                        ((u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) ||
+                                (u.str.is_itos(a->get_arg(0)) || u.str.is_itos(a->get_arg(1))))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                         guessedDisEqs.push_back(s);
                     }

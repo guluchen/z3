@@ -85,7 +85,6 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="163">
-              <caret line="17036" column="181" selection-start-line="17036" selection-start-column="181" selection-end-line="17036" selection-end-column="181" />
+            <state relative-caret-position="527">
+              <caret line="18906" column="78" selection-start-line="18906" selection-start-column="78" selection-end-line="18906" selection-end-column="78" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -142,8 +141,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="343">
-              <caret line="2202" column="20" selection-start-line="2202" selection-start-column="20" selection-end-line="2202" selection-end-column="20" />
+            <state relative-caret-position="242">
+              <caret line="1388" column="32" selection-start-line="1388" selection-start-column="32" selection-end-line="1388" selection-end-column="32" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,8 +154,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>str_int_bound =</find>
-      <find>analyze_upper_bound_str_int</find>
       <find>final_check</find>
       <find>init_underapprox_repeat</find>
       <find>underapproximation_repeat</find>
@@ -183,8 +180,10 @@
       <find>FLATPREFIX</find>
       <find>create_set_of_flat_variables</find>
       <find>pos</find>
-      <find>__flat_</find>
       <find>sync_index_head</find>
+      <find>handle_str_int</find>
+      <find>__flat_</find>
+      <find>handle_int2str</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -219,10 +218,10 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1440" />
+    <option name="x" value="41" />
     <option name="y" value="23" />
-    <option name="width" value="1280" />
-    <option name="height" value="1001" />
+    <option name="width" value="1399" />
+    <option name="height" value="877" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -744,15 +743,15 @@
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
       <workItem from="1563546000963" duration="50816000" />
-      <workItem from="1563724697652" duration="10990000" />
+      <workItem from="1563724697652" duration="11918000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1358625000" />
+    <option name="totallyTimeSpent" value="1359553000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
+    <frame x="41" y="23" width="1399" height="877" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.48347107" weight="0.13264555" />
@@ -769,7 +768,7 @@
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50080776" side_tool="true" weight="0.10231023" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32981133" />
-      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.06380638" />
+      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.07388535" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.27413413" />
@@ -1143,8 +1142,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="343">
-          <caret line="2202" column="20" selection-start-line="2202" selection-start-column="20" selection-end-line="2202" selection-end-column="20" />
+        <state relative-caret-position="242">
+          <caret line="1388" column="32" selection-start-line="1388" selection-start-column="32" selection-end-line="1388" selection-end-column="32" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
           </folding>
@@ -1153,8 +1152,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="163">
-          <caret line="17036" column="181" selection-start-line="17036" selection-start-column="181" selection-end-line="17036" selection-end-column="181" />
+        <state relative-caret-position="527">
+          <caret line="18906" column="78" selection-start-line="18906" selection-start-column="78" selection-end-line="18906" selection-end-column="78" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
