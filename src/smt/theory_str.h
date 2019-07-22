@@ -1766,9 +1766,10 @@ namespace smt {
                 * 2: no const, connected var
                 * 3: have both
                 */
-                int findSplitType(
+                int choose_split_type(
                         std::vector<std::pair<expr*, int>> elementNames,
-                        std::map<expr*, int> connectedVariables);
+                        std::map<expr*, int> connectedVariables,
+                        expr* lhs);
 
                 /*
                 * Input: constA and a number of flats

@@ -8645,7 +8645,7 @@ namespace smt {
             if (it->second.size() == 0)
                 continue;
             expr* reg = nullptr;
-            if ((isInternalRegexVar(it->first, reg) && !u.re.is_star(reg)) || is_important(it->first) || u.str.is_string(it->first)){
+            if ((isInternalRegexVar(it->first, reg)) || is_important(it->first) || u.str.is_string(it->first)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
                 /* compare with others */
                 expr* root_tmp = find_equivalent_variable(it->first);
@@ -10367,16 +10367,11 @@ namespace smt {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                if (i_1 == zero) {
-//                    ands.push_back(createGreaterEqOperator(lenA, at_i));
-                }
-                else {
-                    expr *premise = createGreaterEqOperator(lenA, at_i);
-                    expr *conclusion = createEqualOperator(
-                            createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
-                            createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
-                    ands.push_back(rewrite_implication(premise, conclusion));
-                }
+                expr *premise = createGreaterEqOperator(lenA, at_i);
+                expr *conclusion = createEqualOperator(
+                        createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
+                        createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
+                ands.push_back(rewrite_implication(premise, conclusion));
             }
         }
         else {
@@ -10385,16 +10380,11 @@ namespace smt {
                 expr *at_i = mk_int(i);
                 rational i_1 = i - one;
                 expr *at_i_1 = mk_int(i_1);
-                if (i_1 == zero) {
-//                    ands.push_back(createGreaterEqOperator(lenA, at_i));
-                }
-                else {
-                    expr *premise = createGreaterEqOperator(lenB, at_i);
-                    expr *conclusion = createEqualOperator(
-                            createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
-                            createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
-                    ands.push_back(rewrite_implication(premise, conclusion));
-                }
+                expr *premise = createGreaterEqOperator(lenB, at_i);
+                expr *conclusion = createEqualOperator(
+                        createSelectOperator(arrA, createAddOperator(pre_lhs, at_i_1)),
+                        createSelectOperator(arrB, createAddOperator(pre_rhs, at_i_1)));
+                ands.push_back(rewrite_implication(premise, conclusion));
             }
         }
         return createAndOperator(ands);
@@ -10508,7 +10498,7 @@ namespace smt {
             else
                 result.push_back(createEqualOperator(getExprVarFlatSize(a), createAddOperator(adds)));
 
-            int splitType = findSplitType(elementNames, connectedVariables);
+            int splitType = choose_split_type(elementNames, connectedVariables, a.first);
             /*
              * 0: No const, No connected var
              * 1: const		No connected var
@@ -11845,7 +11835,7 @@ namespace smt {
 									arrayRhs.c_str());
 							__debugPrint(logFile, "%d %s\n", __LINE__, strTmp);
 #endif
-                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ...: " << mk_pp(subLen, m) << std::endl;);
+                            STRACE("str", tout << __LINE__ << " const|regex = connected var + ...: " << content << " " << mk_pp(subLen, m) << std::endl;);
                             int localSplit = connectedVariables[elementNames[i].first];
                             expr_ref_vector possibleCases(m); /* sublen = 0 || sublen = 1 || .. */
                             if (!unrollMode) {
@@ -11863,48 +11853,22 @@ namespace smt {
                                 }
                             }
                             else {
-                                for (int j = 0; j <= std::min(localSplit, (int)content.length()); j++){
-                                    expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
-                                    subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
-                                    for (int k = 0; k < j; ++k){
-                                        expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
-                                        rational atValue;
-                                        expr* lhsExpr = nullptr;
-                                        if (!m_autil.is_numeral(at, atValue))
-                                            lhsExpr = createSelectOperator(arrayLhs, at);
-                                        else {
-                                            if (is_str_int_var(elementNames[i].first) && (content[atValue.get_int64()] < '0' || content[atValue.get_int64()] > '9')){
-                                                STRACE("str", tout << __LINE__ << " break because of str-int" << std::endl;);
-                                                subpossibleCases.reset();
-                                                break;
-                                            }
-                                            lhsExpr = mk_int(content[atValue.get_int64()]);
-                                        }
-
-                                        subpossibleCases.push_back(createEqualOperator(
-                                                lhsExpr,
-                                                createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
-                                    }
-                                    if (subpossibleCases.size() > 0)
-                                        possibleCases.push_back(createAndOperator(subpossibleCases));
-                                }
-
-                                if (is_str_int_var(elementNames[i].first)) {
-                                    // must be 0
-                                    for (int j = std::min(localSplit, (int)content.length()) + 1; j < (int)content.length(); ++j){
+                                if (content != zstring("uNkNoWn")) {
+                                    for (int j = 0; j <= std::min(localSplit, (int) content.length()); j++) {
                                         expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
                                         subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
-
-                                        // zero part: [0, j - bound)
-                                        for (int k = 0; k < j - str_int_bound.get_int64(); ++k){
-                                            expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
+                                        for (int k = 0; k < j; ++k) {
+                                            expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
                                             rational atValue;
-                                            expr* lhsExpr = nullptr;
+                                            expr *lhsExpr = nullptr;
                                             if (!m_autil.is_numeral(at, atValue))
                                                 lhsExpr = createSelectOperator(arrayLhs, at);
                                             else {
-                                                if (content[atValue.get_int64()] != '0'){
-                                                    STRACE("str", tout << __LINE__ << " break because of str-int: first part = 0" << std::endl;);
+                                                if (is_str_int_var(elementNames[i].first) &&
+                                                    (content[atValue.get_int64()] < '0' ||
+                                                     content[atValue.get_int64()] > '9')) {
+                                                    STRACE("str", tout << __LINE__ << " break because of str-int"
+                                                                       << std::endl;);
                                                     subpossibleCases.reset();
                                                     break;
                                                 }
@@ -11913,38 +11877,89 @@ namespace smt {
 
                                             subpossibleCases.push_back(createEqualOperator(
                                                     lhsExpr,
-                                                    createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
-                                            subpossibleCases.push_back(createEqualOperator(
-                                                    lhsExpr,
-                                                    mk_int('0')));
+                                                    createSelectOperator(arrayRhs, createAddOperator(m_autil.mk_int(k),
+                                                                                                     prefix_rhs))));
                                         }
-
-                                        if (subpossibleCases.size() == 0)
-                                            break;
-
-                                        // bounded part [j - bound, j)
-                                        for (int k = j - str_int_bound.get_int64(); k < j; ++k){
-                                            expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
-                                            rational atValue;
-                                            expr* lhsExpr = nullptr;
-                                            if (!m_autil.is_numeral(at, atValue))
-                                                lhsExpr = createSelectOperator(arrayLhs, at);
-                                            else {
-                                                if (content[atValue.get_int64()] < '0' || content[atValue.get_int64()] > '9'){
-                                                    STRACE("str", tout << __LINE__ << " break because of str-int: first part = 0" << std::endl;);
-                                                    subpossibleCases.reset();
-                                                    break;
-                                                }
-                                                lhsExpr = mk_int(content[atValue.get_int64()]);
-                                            }
-
-                                            subpossibleCases.push_back(createEqualOperator(
-                                                    lhsExpr,
-                                                    createSelectOperator(arrayRhs,  createAddOperator(m_autil.mk_int(k), prefix_rhs))));
-                                        }
-
                                         if (subpossibleCases.size() > 0)
                                             possibleCases.push_back(createAndOperator(subpossibleCases));
+                                    }
+
+                                    if (is_str_int_var(elementNames[i].first)) {
+                                        // must be 0
+                                        for (int j = std::min(localSplit, (int) content.length()) + 1;
+                                             j < (int) content.length(); ++j) {
+                                            expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
+                                            subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
+
+                                            // zero part: [0, j - bound)
+                                            for (int k = 0; k < j - str_int_bound.get_int64(); ++k) {
+                                                expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
+                                                rational atValue;
+                                                expr *lhsExpr = nullptr;
+                                                if (!m_autil.is_numeral(at, atValue))
+                                                    lhsExpr = createSelectOperator(arrayLhs, at);
+                                                else {
+                                                    if (content[atValue.get_int64()] != '0') {
+                                                        STRACE("str", tout << __LINE__
+                                                                           << " break because of str-int: first part = 0"
+                                                                           << std::endl;);
+                                                        subpossibleCases.reset();
+                                                        break;
+                                                    }
+                                                    lhsExpr = mk_int(content[atValue.get_int64()]);
+                                                }
+
+                                                subpossibleCases.push_back(createEqualOperator(
+                                                        lhsExpr,
+                                                        createSelectOperator(arrayRhs,
+                                                                             createAddOperator(m_autil.mk_int(k),
+                                                                                               prefix_rhs))));
+                                                subpossibleCases.push_back(createEqualOperator(
+                                                        lhsExpr,
+                                                        mk_int('0')));
+                                            }
+
+                                            if (subpossibleCases.size() == 0)
+                                                break;
+
+                                            // bounded part [j - bound, j)
+                                            for (int k = j - str_int_bound.get_int64(); k < j; ++k) {
+                                                expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
+                                                rational atValue;
+                                                expr *lhsExpr = nullptr;
+                                                if (!m_autil.is_numeral(at, atValue))
+                                                    lhsExpr = createSelectOperator(arrayLhs, at);
+                                                else {
+                                                    if (content[atValue.get_int64()] < '0' ||
+                                                        content[atValue.get_int64()] > '9') {
+                                                        STRACE("str", tout << __LINE__
+                                                                           << " break because of str-int: first part = 0"
+                                                                           << std::endl;);
+                                                        subpossibleCases.reset();
+                                                        break;
+                                                    }
+                                                    lhsExpr = mk_int(content[atValue.get_int64()]);
+                                                }
+
+                                                subpossibleCases.push_back(createEqualOperator(
+                                                        lhsExpr,
+                                                        createSelectOperator(arrayRhs,
+                                                                             createAddOperator(m_autil.mk_int(k),
+                                                                                               prefix_rhs))));
+                                            }
+
+                                            if (subpossibleCases.size() > 0)
+                                                possibleCases.push_back(createAndOperator(subpossibleCases));
+                                        }
+                                    }
+                                }
+                                else {
+                                    expr* to_assert = generate_constraint_flat_flat(a, elementNames, i, pMax, q_bound);
+                                    possibleCases.push_back(to_assert);
+                                    if (partCnt == 2) {
+                                        to_assert = generate_constraint_flat_flat(a, elementNames, i + 1, pMax,
+                                                                                  q_bound);
+                                        resultParts.push_back(to_assert);
                                     }
                                 }
                             }
@@ -12706,18 +12721,40 @@ namespace smt {
 	 * 2: no const, connected var
 	 * 3: have both
 	 */
-    int theory_str::findSplitType(
+    int theory_str::choose_split_type(
             std::vector<std::pair<expr*, int>> elementNames,
-            std::map<expr*, int> connectedVariables){
+            std::map<expr*, int> connectedVariables,
+            expr* lhs){
 
         bool havingConst = false;
         bool havingConnectedVar = false;
-
+        expr* reg = nullptr;
+        if (lhs != nullptr) {
+            isInternalRegexVar(lhs, reg);
+        }
         /* check if containing const */
         for (unsigned i = 0 ; i < elementNames.size(); ++i)
             if (elementNames[i].second < 0) {
-                havingConst = true;
-                break;
+                bool skip = false;
+                if (reg != nullptr){
+                    zstring val;
+                    expr* regTmp = nullptr;
+                    if (u.str.is_string(elementNames[i].first, val)){
+                        if (matchRegex(reg, val)){
+                            skip = true;
+                        }
+                    }
+                    else if (isInternalRegexVar(elementNames[i].first, regTmp)){
+                        if (matchRegex(reg, regTmp)){
+                            skip = true;
+                        }
+                    }
+                }
+
+                if (!skip) {
+                    havingConst = true;
+                    break;
+                }
             }
 
         /* check if containing connected vars */
