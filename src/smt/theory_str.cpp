@@ -8232,7 +8232,7 @@ namespace smt {
                 if (u.str.is_string(v, val)){
                     setup_str_const(val, v1);
                 }
-                else if (is_regex_var(v, rexpr)) {
+                else if (isInternalRegexVar(v, rexpr)) {
                     setup_regex_var(rexpr, v1);
                 }
                 else if (is_str_int_var(v)){
@@ -8300,21 +8300,57 @@ namespace smt {
 
     void theory_str::setup_regex_var(expr* rexpr, expr* arr){
         ast_manager & m = get_manager();
-        if (u.re.is_union(rexpr)) {
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(rexpr, m) << std::endl;);
+        expr* ret = setup_char_range_arr(rexpr, arr);
+        if (ret != nullptr) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(ret, m) << std::endl;);
+        }
+        else {
             std::vector<zstring> elements;
             expr_ref_vector ors(m);
             collectAlternativeComponents(rexpr, elements);
             for (int i = 0; i < elements.size(); ++i) {
                 expr_ref_vector ands(m);
-                for (int j = 0; j < elements[i].length(); ++j){
+                for (int j = 0; j < elements[i].length(); ++j) {
                     ands.push_back(createEqualOperator(createSelectOperator(arr, mk_int(j)), mk_int(elements[i][j])));
                 }
                 ors.push_back(createAndOperator(ands));
             }
-            expr_ref tmp(createOrOperator(ors), m);
-            assert_axiom(tmp.get());
-            impliedFacts.push_back(tmp);
+            ret = createOrOperator(ors);
         }
+
+        assert_axiom(ret);
+        impliedFacts.push_back(ret);
+    }
+
+    expr* theory_str::setup_char_range_arr(expr* e, expr* arr){
+        ast_manager & m = get_manager();
+        std::vector<std::pair<int, int>> charRange = collectCharRange(e);
+        expr* pre_lhs = mk_int(0);
+        if (charRange[0].first != -1) {
+            expr_ref_vector ret(m);
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << std::endl;);
+            int bound = std::min(connectingSize, 50);
+            if (flat_enabled)
+                bound = q_bound.get_int64();
+            for (int i = 0; i < bound; ++i) {
+                expr_ref_vector ors(m);
+                expr_ref_vector ors_range(m);
+                for (int j = 0; j < charRange.size(); ++j) {
+                    expr_ref_vector ands(m);
+                    ands.push_back(createGreaterEqOperator(
+                            createSelectOperator(arr, m_autil.mk_int(i)),
+                            m_autil.mk_int(charRange[j].first)));
+                    ands.push_back(createLessEqOperator(
+                            createSelectOperator(arr, m_autil.mk_int(i)),
+                            m_autil.mk_int(charRange[j].second)));
+                    ors_range.push_back(createAndOperator(ands));
+                }
+                ret.push_back(createOrOperator(ors_range));
+            }
+            return createAndOperator(ret);
+        }
+        return nullptr;
     }
 
     void theory_str::setup_flats(){
@@ -8815,7 +8851,6 @@ namespace smt {
         for (const auto& we: membership_memo) {
             if (we.first == e){
                 regex = we.second;
-                STRACE("str", tout << __LINE__ << __FUNCTION__ << " " << mk_pp(e, get_manager()) << " " << mk_pp(regex, get_manager()) << std::endl;);
                 std::string tmp = expr2str(e);
                 if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second))
                     return true;
@@ -8918,6 +8953,7 @@ namespace smt {
         }
 
         SASSERT (u.re.is_star(e) || u.re.is_plus(e) || u.re.is_union(e));
+
         if (u.re.is_union(e)) {
             return "";
         }
@@ -9242,8 +9278,24 @@ namespace smt {
         else if (u.re.is_concat(v)){
             return false;
         }
-        else
+        else if (u.re.is_range(v)){
+            expr* arg0 = to_app(v)->get_arg(0);
+            expr* arg1 = to_app(v)->get_arg(1);
+            zstring start, finish;
+            u.str.is_string(arg0, start);
+            u.str.is_string(arg1, finish);
+            SASSERT(start.length() == 1);
+            SASSERT(finish.length() == 1);
+
+            for (int i = start[0]; i <= finish[0]; ++i){
+                zstring tmp(i);
+                ret.push_back(tmp);
+            }
+        }
+        else {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v, get_manager()) << std::endl;);
             SASSERT(false);
+        }
         return true;
     }
 
@@ -11681,52 +11733,84 @@ namespace smt {
                     if (a.second == REGEX_CODE) {
                         if (content.length() == 0)
                             continue;
+                        STRACE("str", tout << __LINE__ << " const|regex = connected; content = " << content << std::endl;);
                         expr_ref_vector conditions(m);
                         if (partCnt == 1) {
                             STRACE("str", tout << __LINE__ << " const|regex = connected var partCnt = 1. NOT TESTED" << std::endl;);
                             /* this part = regex */
                             /* prefix mod lenth = 0 */
-                            conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(prefix_rhs, m_autil.mk_int(content.length()))));
-                            conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(subLen, m_autil.mk_int(content.length()))));
+                            if (content != zstring("uNkNoWn")) {
+                                conditions.push_back(createEqualOperator(m_autil.mk_int(0),
+                                                                         createModOperator(prefix_rhs, m_autil.mk_int(
+                                                                                 content.length()))));
+                                conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(subLen,
+                                                                                                              m_autil.mk_int(
+                                                                                                                      content.length()))));
 
 #if 0
-                            std::string partArray = generateFlatArray_forComponent(elementNames[i], rhs);
-							for (unsigned int j = 0; j < content.length(); ++j)
-								subcase.emplace_back(createEqualConstraint(createSelectConstraint(partArray, std::to_string(j)), std::to_string(content[j])));
+                                std::string partArray = generateFlatArray_forComponent(elementNames[i], rhs);
+                                for (unsigned int j = 0; j < content.length(); ++j)
+                                    subcase.emplace_back(createEqualConstraint(createSelectConstraint(partArray, std::to_string(j)), std::to_string(content[j])));
 
 #else
-                            expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
-                            expr_ref prefix(leng_prefix_rhs(elementNames[i], unrollMode), m);
+                                expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
+                                expr_ref prefix(leng_prefix_rhs(elementNames[i], unrollMode), m);
 
-                            expr_ref_vector cases(m);
-                            for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
-                                expr_ref_vector subcase(m);
-                                subcase.push_back(createEqualOperator(subLen, m_autil.mk_int(iter * content.length())));
-                                for (unsigned j = 0; j < iter * content.length(); ++j) {
-                                    subcase.push_back(createEqualOperator(createSelectOperator(arrName, createAddOperator(prefix, m_autil.mk_int(j))),
-                                            m_autil.mk_int(content[j % content.length()])));
+                                expr_ref_vector cases(m);
+                                for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
+                                    expr_ref_vector subcase(m);
+                                    subcase.push_back(
+                                            createEqualOperator(subLen, m_autil.mk_int(iter * content.length())));
+                                    for (unsigned j = 0; j < iter * content.length(); ++j) {
+                                        subcase.push_back(createEqualOperator(createSelectOperator(arrName,
+                                                                                                   createAddOperator(
+                                                                                                           prefix,
+                                                                                                           m_autil.mk_int(
+                                                                                                                   j))),
+                                                                              m_autil.mk_int(
+                                                                                      content[j % content.length()])));
+                                    }
+                                    cases.push_back(createAndOperator(subcase));
                                 }
-                                cases.push_back(createAndOperator(subcase));
-                            }
-                            conditions.push_back(createOrOperator(cases));
+                                conditions.push_back(createOrOperator(cases));
 #endif
-                            resultParts.push_back(createAndOperator(conditions));
+                                resultParts.push_back(createAndOperator(conditions));
+                            }
+                            else {
+                                expr* to_assert = generate_constraint_flat_flat(a, elementNames, i, pMax, q_bound);
+                                resultParts.push_back(to_assert);
+                            }
                         }
                         else {
                             STRACE("str", tout << __LINE__ << " const|regex = connected var partCnt = 2." << std::endl;);
                             SASSERT(partCnt == 2);
+                            if (content != zstring("uNkNoWn")) {
+                                /* this part = regex */
+                                /* prefix mod length = 0 */
+                                conditions.push_back(createEqualOperator(m_autil.mk_int(0),
+                                                                         createModOperator(prefix_rhs, m_autil.mk_int(
+                                                                                 content.length()))));
+                                conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(subLen,
+                                                                                                              m_autil.mk_int(
+                                                                                                                      content.length()))));
 
-                            /* this part = regex */
-                            /* prefix mod lenth = 0 */
-                            conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(prefix_rhs, m_autil.mk_int(content.length()))));
-                            conditions.push_back(createEqualOperator(m_autil.mk_int(0), createModOperator(subLen, m_autil.mk_int(content.length()))));
-
-                            expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
-                            for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
-                                for (unsigned j = 0; j < content.length(); ++j)
-                                    conditions.push_back(createEqualOperator(createSelectOperator(arrName, m_autil.mk_int(j + iter * content.length())), m_autil.mk_int(content[j])));
+                                expr_ref arrName(getExprVarFlatArray(elementNames[i]), m);
+                                for (unsigned iter = 0; iter < connectingSize / content.length(); ++iter) {
+                                    for (unsigned j = 0; j < content.length(); ++j)
+                                        conditions.push_back(createEqualOperator(createSelectOperator(arrName,
+                                                                                                      m_autil.mk_int(j +
+                                                                                                                     iter *
+                                                                                                                     content.length())),
+                                                                                 m_autil.mk_int(content[j])));
+                                }
+                                resultParts.push_back(createAndOperator(conditions));
                             }
-                            resultParts.push_back(createAndOperator(conditions));
+                            else {
+                                expr* to_assert = generate_constraint_flat_flat(a, elementNames, i, pMax, q_bound);
+                                resultParts.push_back(to_assert);
+                                to_assert = generate_constraint_flat_flat(a, elementNames, i + 1, pMax, q_bound);
+                                resultParts.push_back(to_assert);
+                            }
                         }
                     }
                     else {
@@ -17131,6 +17215,12 @@ namespace smt {
             }
             regex_terms_by_string[str].push_back(ex);
 
+            expr* tmp = is_regex_plus_breakdown(regex);
+            if (tmp != nullptr){
+                regex = to_app(tmp);
+                assert_axiom(rewrite_implication(ex, createGreaterEqOperator(mk_strlen(ex->get_arg(0)), mk_int(1))));
+            }
+
             std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parse_regex_components(underApproxRegex(getStdRegexStr(regex)))));
             int boundLen = 100000;
             STRACE("str", tout << __LINE__ << __FUNCTION__ << ":" << regexElements.size() << std::endl;);
@@ -17339,6 +17429,26 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " "  << "ERROR: unknown regex expression " << mk_pp(regex, m) << "!" << std::endl;);
             NOT_IMPLEMENTED_YET();
         }
+    }
+
+    expr* theory_str::is_regex_plus_breakdown(expr* e){
+        if (u.re.is_concat(e)){
+            expr* arg0 = to_app(e)->get_arg(0);
+            expr* arg1 = to_app(e)->get_arg(1);
+
+            if (u.re.is_star(arg1)){
+                expr* arg10 = to_app(arg1)->get_arg(0);
+                if (arg10 == arg0)
+                    return arg1;
+            }
+
+            if (u.re.is_star(arg0)){
+                expr* arg00 = to_app(arg0)->get_arg(0);
+                if (arg00 == arg1)
+                    return arg0;
+            }
+        }
+        return nullptr;
     }
 
     void theory_str::instantiate_axiom_str_to_int(enode * e) {

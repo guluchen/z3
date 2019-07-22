@@ -1404,6 +1404,7 @@ namespace smt {
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr);
                 void setup_regex_var(expr* rexpr, expr* arr);
+                    expr* setup_char_range_arr(expr* e, expr* arr);
                 void create_notcontain_map();
                 void create_const_set();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
@@ -2194,6 +2195,7 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
+        expr* is_regex_plus_breakdown(expr* e);
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);
         app * mk_strlen(expr * e);
