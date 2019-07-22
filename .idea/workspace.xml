@@ -100,10 +100,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="206">
-              <caret line="13801" column="24" selection-start-line="13800" selection-start-column="24" selection-end-line="13801" selection-end-column="24" />
+            <state relative-caret-position="272">
+              <caret line="12342" column="33" lean-forward="true" selection-start-line="12342" selection-start-column="33" selection-end-line="12343" selection-end-column="36" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#523616#524022#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -143,7 +144,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="253">
-              <caret line="2329" column="47" selection-start-line="2329" selection-start-column="47" selection-end-line="2329" selection-end-column="47" />
+              <caret line="1707" column="33" selection-start-line="1707" selection-start-column="33" selection-end-line="1707" selection-end-column="33" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,25 +156,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>mk_arr_var</find>
-      <find>reuse_internal_int_vars</find>
-      <find>str_int</find>
-      <find>index_tail</find>
-      <find>handle_not</find>
-      <find>to m_basicstr_axiom_todo</find>
-      <find>* rationa</find>
-      <find>p_bound</find>
-      <find>q_bound</find>
-      <find>collectAlternativeComponents</find>
-      <find>const_vs_regex</find>
-      <find>***: skip quickly because of</find>
-      <find>because of</find>
-      <find>create_internal_va</find>
-      <find>collect_im</find>
-      <find>connectedVariables</find>
-      <find>convert_equalities</find>
-      <find>create_equality</find>
-      <find>FLATPREFIX</find>
       <find>create_set_of_flat_variables</find>
       <find>pos</find>
       <find>sync_index_head</find>
@@ -183,8 +165,27 @@
       <find>is_importantVar</find>
       <find>rational(5</find>
       <find>occurrences</find>
-      <find>rational(10</find>
       <find>setup_str_int_arr</find>
+      <find>const_vs_regex</find>
+      <find>const_vs_str_int</find>
+      <find>generate_constraint01</find>
+      <find>length_base_split</find>
+      <find>length_relation.find(</find>
+      <find>not_contain_check</find>
+      <find>collectAllPossibleSplits</find>
+      <find>collectAllPossibleSplits(</find>
+      <find>lhs</find>
+      <find>lhs,</find>
+      <find>toConstraint_NoConnectedVar</find>
+      <find>connectedVar_atSpecificLocation</find>
+      <find>lengthConstraint_toConnectedVarConstraint</find>
+      <find>toConstraint_havingConnectedVar_andConst</find>
+      <find>rational(10</find>
+      <find>generate_constraint02</find>
+      <find>handle_SubConst_WithPosition_array</find>
+      <find>handle_Const_WithPosition_array</find>
+      <find>unroll_connected_variable</find>
+      <find>collectAllPossibleSplits_const</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -744,12 +745,12 @@
       <workItem from="1563230424658" duration="3908000" />
       <workItem from="1563238893403" duration="29025000" />
       <workItem from="1563546000963" duration="50816000" />
-      <workItem from="1563724697652" duration="16294000" />
+      <workItem from="1563724697652" duration="20406000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1363929000" />
+    <option name="totallyTimeSpent" value="1368041000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1144,7 +1145,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="253">
-          <caret line="2329" column="47" selection-start-line="2329" selection-start-column="47" selection-end-line="2329" selection-end-column="47" />
+          <caret line="1707" column="33" selection-start-line="1707" selection-start-column="33" selection-end-line="1707" selection-end-column="33" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
           </folding>
@@ -1153,10 +1154,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="206">
-          <caret line="13801" column="24" selection-start-line="13800" selection-start-column="24" selection-end-line="13801" selection-end-column="24" />
+        <state relative-caret-position="272">
+          <caret line="12342" column="33" lean-forward="true" selection-start-line="12342" selection-start-column="33" selection-end-line="12343" selection-end-column="36" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#523616#524022#0" expanded="true" />
           </folding>
         </state>
       </provider>

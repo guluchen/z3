@@ -1613,7 +1613,6 @@ namespace smt {
             expr* generate_constraint02(
                 std::pair<expr*, int> a,
                 std::vector<std::pair<expr*, int>> elements,
-                std::string lhs_str, std::string rhs_str,
                 int pMax,
                 std::map<expr*, int> connectedVariables,
                 bool optimizing);
@@ -1626,7 +1625,6 @@ namespace smt {
                         std::pair<expr*, int> a, /* const || regex */
                         std::vector<std::pair<expr*, int> > elementNames, /* const + connected var */
                         std::vector<int> split,
-                        std::string lhs, std::string rhs,
                         std::map<expr*, int> connectedVariables,
                         bool optimizing,
                         int pMax);
@@ -1640,7 +1638,6 @@ namespace smt {
                             expr_ref_vector subElements,
                             int currentPos,
                             int subLength,
-                            std::string lhs, std::string rhs,
                             std::map<expr*, int> connectedVariables,
                             bool optimizing,
                             int pMax);
@@ -1653,7 +1650,6 @@ namespace smt {
                                 std::vector<std::pair<expr*, int>> elementNames, /* have connected var */
                                 int connectedVarPos,
                                 int connectedVarLength,
-                                std::string lhs, std::string rhs,
                                 std::map<expr*, int> connectedVariables,
                                 bool optimizing,
                                 int pMax);
@@ -1665,7 +1661,6 @@ namespace smt {
                         std::pair<expr*, int> a, /* const || regex */
                         std::vector<std::pair<expr*, int> > elementNames, /* no connected var */
                         std::vector<int> split,
-                        std::string lhs, std::string rhs,
                         bool optimizing);
                 /*
                  *
@@ -1673,7 +1668,6 @@ namespace smt {
                 expr* unroll_connected_variable(
                         std::pair<expr*, int> a, /* connected variable */
                         std::vector<std::pair<expr*, int> > elementNames, /* contain const */
-                        std::string lhs_str, std::string rhs_str,
                         std::map<expr*, int> connectedVariables,
                         bool optimizing,
                         int pMax = PMAX);
@@ -1686,7 +1680,6 @@ namespace smt {
                     expr_ref handle_SubConst_WithPosition_array(
                             std::pair<expr*, int> a, // connected var
                             std::vector<std::pair<expr*, int>> elementNames,
-                            std::string lhs_str, std::string rhs_str,
                             int constPos,
                             bool optimizing,
                             int pMax = PMAX);
@@ -1715,7 +1708,6 @@ namespace smt {
                         expr_ref handle_Const_WithPosition_array(
                                 std::pair<expr*, int> a,
                                 std::vector<std::pair<expr*, int>> elementNames,
-                                std::string lhs_str, std::string rhs_str,
                                 int constPos,
                                 zstring value, /* value of regex */
                                 int start, int finish,
@@ -1787,6 +1779,8 @@ namespace smt {
                         bool optimizing);
                     bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames);
                     bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames);
+                    bool const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames);
+                    bool length_base_split(expr* e, std::vector<std::pair<expr*, int> > elementNames);
                 /*
                 * textLeft: length of string
                 * nMax: number of flats
