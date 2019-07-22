@@ -1,25 +1,25 @@
 (declare-fun word () String)
 (declare-fun abbr () String)
 
-(assert (not ( < ( + ( + ( + 0 1  ) 1  ) 1  ) ( str.len abbr  )  )))
 
-(assert (not ( = ( str.to.int ( str.at abbr 2  )  ) 0  )))
+(assert (not ( >= ( + 0 ( + ( * 0 10  ) ( ite ( str.prefixof "-" ( str.at abbr 0  )  ) ( - ( str.to.int ( str.substr ( str.at abbr 0  ) 1 ( - ( str.len ( str.at abbr 0  )  ) 1  )  )  )  ) ( str.to.int ( str.at abbr 0  )  )  )  )  ) ( str.len word  )  )))
 
-(assert ( str.in.re ( str.at abbr 2  ) ( re.++ ( re.opt ( str.to.re "-"  )  ) ( re.+ ( re.range "0" "9"  )  )  )  ))
-(assert ( < ( + ( + 0 1  ) 1  ) ( str.len abbr  )  ))
-(assert (not ( = ( str.to.int ( str.at abbr 1  )  ) 0  )))
+(assert ( str.in.re ( str.at abbr 0  ) ( re.+ ( re.range "0" "9"  )  )  ))
 
-(assert ( str.in.re ( str.at abbr 1  ) ( re.++ ( re.opt ( str.to.re "-"  )  ) ( re.+ ( re.range "0" "9"  )  )  )  ))
-(assert ( < ( + 0 1  ) ( str.len abbr  )  ))
-(assert (not ( not ( = ( str.at word 0  ) ( str.at abbr 0  )  )  )))
+(assert ( < 0 ( str.len abbr  )  ))
 
-(assert (not ( >= ( + 0 0  ) ( str.len word  )  )))
+(assert (not ( = ( ite ( str.prefixof "-" ( str.at abbr 0  )  ) ( - ( str.to.int ( str.substr ( str.at abbr 0  ) 1 ( - ( str.len ( str.at abbr 0  )  ) 1  )  )  )  ) ( str.to.int ( str.at abbr 0  )  )  ) 0  )))
 
-(assert (not ( str.in.re ( str.at abbr 0  ) ( re.++ ( re.opt ( str.to.re "-"  )  ) ( re.+ ( re.range "0" "9"  )  )  )  )))
+(assert ( ite ( str.prefixof "-" ( str.at abbr 0  )  ) ( ite ( = (- 1) ( str.to.int ( str.substr ( str.at abbr 0  ) 1 ( - ( str.len ( str.at abbr 0  )  ) 1  )  )  )  ) false true  ) ( ite ( = (- 1) ( str.to.int ( str.at abbr 0  )  )  ) false true  )  ))
 
-(assert ( < 0 ( str.len abbr  )  ))(assert ( = ( + ( + ( + 0 0  ) 1  ) ( + ( * ( + ( * 0 10  ) ( str.to.int ( str.at abbr 1  )  )  ) 10  ) ( str.to.int ( str.at abbr 2  )  )  )  ) ( str.len word  )  ))(assert (str.in.re word (re.+ (re.range "a" "z"))))(assert (str.in.re abbr (re.+ (re.union (re.range "0" "9") (re.range "a" "z")))))
+(assert ( str.in.re ( str.at abbr 0  ) ( re.+ ( re.range "0" "9"  )  )  ))
+
+(assert ( < 0 ( str.len abbr  )  ))
+(assert (not ( not ( = ( str.at word 1  ) ( str.at abbr 0  )  )  )))
+
 
 (check-sat)
+
 
 (get-value (word))
 (get-value (abbr))
