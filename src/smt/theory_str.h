@@ -2200,7 +2200,7 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
-
+        void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);
         app * mk_strlen(expr * e);
         expr * mk_string(zstring const& str);

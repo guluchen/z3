@@ -7929,7 +7929,7 @@ namespace smt {
         }
     }
 
-    void theory_str::handle_NOTContain(expr* lhs, expr* rhs){ 
+    void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
         ast_manager & m = get_manager();
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOperator(lhs, rhs));
@@ -12376,7 +12376,7 @@ namespace smt {
             zstring tmp;
             for (int i = 0; i < elementNames.size(); ++i)
                 if (u.str.is_string(elementNames[i].first, tmp) &&
-                    (tmp.length() == 1) || (i + 1 < elementNames.size() && elementNames[i].first == elementNames[i + 1].first)) {
+                        ((tmp.length() == 1) || (i + 1 < elementNames.size() && elementNames[i].first == elementNames[i + 1].first))) {
                     bool found = false;
                     for (const auto& s : components)
                         if (s.contains(tmp)) {
@@ -16627,7 +16627,7 @@ namespace smt {
 
         if (index_tail.contains(ex)) {
             STRACE("str",
-                   tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].second, m)
+                   tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].first, m)
                         << std::endl;);
             assert_axiom(createEqualOperator(x2.get(), index_tail[ex].second));
             assert_axiom(createEqualOperator(index_tail[ex].first, mk_concat(x1.get(), ex->get_arg(1))));
@@ -16640,7 +16640,7 @@ namespace smt {
 
         if (index_head.contains(ex)) {
             STRACE("str",
-                   tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[ex], m)
+                   tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[ex], m)
                         << std::endl;);
             assert_axiom(createEqualOperator(x1.get(), index_head[ex]));
         }
@@ -16666,7 +16666,6 @@ namespace smt {
 
         if (oneCharCase){
             assert_axiom(mk_not(m, mk_contains(x1, ex->get_arg(1))));
-//            thenItems.push_back(mk_not(m, mk_contains(x1, ex->get_arg(1))));
         }
         else {
             //     args[0]  = x3 . x4
@@ -16921,70 +16920,18 @@ namespace smt {
         if (!startFromHead) {
             case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
             case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(pos, m) << std::endl;);
-            if (u.str.is_index(to_app(pos))){
-                if (to_app(pos)->get_arg(0) == base){
-                    // index >= 0 --> substr0 == head of index
-                    if (index_head.contains(pos)) {
-                        STRACE("str",
-                               tout << __LINE__ << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[pos], m)
-                                    << std::endl;);
-                        case2_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
-                        case3_conclusion_terms.push_back(ctx.mk_eq_atom(t0, index_head[pos]));
-                    }
-                    else
-                        index_head.insert(pos, t0);
-                }
-            }
-            else {
-                if (m_autil.is_add(pos, arg0, arg1)){
-                    if (u.str.is_index(to_app(arg0))){
-                        zstring value;
-                        if (u.str.is_string(to_app(arg0)->get_arg(1), value)){
-                            if (arg1 == mk_int(value.length())){
-                                if (index_tail.contains(arg0)) {
-                                    assert_axiom(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg0].second));
-                                    assert_axiom(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
-                                    length_relation.insert(std::make_pair(t0, index_tail[arg0].first));
 
-                                    // get index key
-                                    length_relation.insert(std::make_pair(t0, to_app(arg0)->get_arg(1)));
-                                    STRACE("str",
-                                           tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[arg0].second, m)
-                                                << std::endl;);
-                                }
-                                else
-                                    index_tail.insert(arg0, std::make_pair(t0, mk_concat(t3, t4)));
-                            }
-                        }
-                    }
-                    else if (u.str.is_index(to_app(arg1))) {
-                        zstring value;
-                        if (u.str.is_string(to_app(arg1)->get_arg(1), value)){
-                            if (arg0 == mk_int(value.length())){
-                                if (index_tail.contains(arg1)) {
-                                    assert_axiom(ctx.mk_eq_atom(mk_concat(t3, t4), index_tail[arg1].second));
-                                    assert_axiom(ctx.mk_eq_atom(t0, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
 
-                                    length_relation.insert(std::make_pair(t0, index_tail[arg1].first));
-
-                                    // get index key
-                                    length_relation.insert(std::make_pair(t0, to_app(arg1)->get_arg(1)));
-
-                                    STRACE("str",
-                                           tout << __LINE__ << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[arg1].second, m)
-                                                << std::endl;);
-                                }
-                                else
-                                    index_tail.insert(arg1, std::make_pair(t0, mk_concat(t3, t4)));
-                            }
-                        }
-                    }
-                }
-            }
+            sync_index_head(pos, base, t0, mk_concat(t3, t4));
         }
-        else
+        else {
             case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
+            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
+
+            sync_index_head(len, base, t3, t4);
+        }
 
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
@@ -16999,13 +16946,6 @@ namespace smt {
 
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
-
-        if (!startFromHead) {
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
-        }
-        else
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
 
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), len));
         case3_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
@@ -17028,9 +16968,87 @@ namespace smt {
             rw(case3_rw);
             assert_axiom(case3_rw);
         }
-//        ctx.force_phase(premise_l);
     }
 
+    void theory_str::sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part){
+        context & ctx = get_context();
+        ast_manager & m = get_manager();
+        STRACE("str",
+               tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(pos, m) << " = " << mk_pp(first_part, m) << std::endl;);
+        if (u.str.is_index(to_app(pos))){
+            if (to_app(pos)->get_arg(0) == base){
+                // index >= 0 --> substr0 == head of index
+                if (index_head.contains(pos)) {
+                    assert_axiom(ctx.mk_eq_atom(first_part, index_head[pos]));
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_head[pos], m)
+                                << std::endl;);
+                }
+                else {
+                    index_head.insert(pos, first_part);
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_head[pos], m)
+                                << std::endl;);
+                }
+            }
+        }
+        else {
+            expr* arg0 = nullptr;
+            expr* arg1 = nullptr;
+            if (m_autil.is_add(pos, arg0, arg1)){
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(pos, m) << " = " << mk_pp(first_part, m)
+                            << std::endl;);
+                if (u.str.is_index(to_app(arg0))){
+                    zstring value;
+                    if (u.str.is_string(to_app(arg0)->get_arg(1), value)){
+                        if (arg1 == mk_int(value.length())){
+                            if (index_tail.contains(arg0)) {
+                                assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg0].second));
+                                assert_axiom(ctx.mk_eq_atom(first_part, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
+
+                                length_relation.insert(std::make_pair(first_part, index_tail[arg0].first));
+                                length_relation.insert(std::make_pair(first_part, to_app(arg0)->get_arg(1)));
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg0].second, m)
+                                            << std::endl;);
+                            }
+                            else {
+                                index_tail.insert(arg0, std::make_pair(first_part, second_part));
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg0].second, m)
+                                            << std::endl;);
+                            }
+                        }
+                    }
+                }
+                else if (u.str.is_index(to_app(arg1))) {
+                    zstring value;
+                    if (u.str.is_string(to_app(arg1)->get_arg(1), value)){
+                        if (arg0 == mk_int(value.length())){
+                            if (index_tail.contains(arg1)) {
+                                assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg1].second));
+                                assert_axiom(ctx.mk_eq_atom(first_part, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
+
+                                length_relation.insert(std::make_pair(first_part, index_tail[arg1].first));
+                                length_relation.insert(std::make_pair(first_part, to_app(arg1)->get_arg(1)));
+
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg1].first, m)
+                                            << std::endl;);
+                            }
+                            else {
+                                index_tail.insert(arg1, std::make_pair(first_part, second_part));
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg1].first, m)
+                                            << std::endl;);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     /*
      * Similar to IndexOf
      * If arg0 contains arg1
