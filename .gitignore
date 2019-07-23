@@ -23,6 +23,7 @@ release/*
 build/*
 build-dist/*
 dist/*
+cmake-build-debug/*
 doc/html/*
 # GTAGS generated files
 src/GPATH
@@ -38,6 +39,7 @@ ncscope.out
 # CEDET files
 .cproject
 .project
+.idea
 # Commonly used directories for code
 bld_dbg/*
 bld_rel/*
@@ -79,3 +81,7 @@ doc/code
 .vs
 examples/**/obj
 CMakeSettings.json
+# Benchmark log files
+benchmarks/*.log
+benchmarks/*.log.err
+*.Ds_store
