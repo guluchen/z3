@@ -1290,6 +1290,9 @@ namespace smt {
 
             bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);
                 bool equal_parikh(expr* nn, expr* n);
+                    void get_parikh_from_strs(zstring s, std::map<char, int> &img);
+                    bool eq_parikh(std::map<char, int> lhs, std::map<char, int> rhs);
+                bool same_prefix_same_parikh(expr* nn, expr* n);
                 bool can_match(zstring value, expr* n);
                 void not_contain_string_in_expr(expr* n, expr_ref_vector &constList);
                 bool agree_on_not_contain(expr* n, expr* key);

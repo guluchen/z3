@@ -5084,8 +5084,77 @@ namespace smt {
                         if (!equal_parikh(e, ee))
                             return false;
                     }
+
+                for (const auto& ee : v.second)
+                    if (e != ee){
+                        if (!same_prefix_same_parikh(e, ee))
+                            return false;
+                    }
             }
         }
+        return true;
+    }
+
+    bool theory_str::same_prefix_same_parikh(expr* nn, expr* n){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+
+        ptr_vector<expr> nnodes;
+        get_nodes_in_concat(nn, nnodes);
+
+        ptr_vector<expr> lhs;
+        ptr_vector<expr> rhs;
+        std::map<char, int> img_lhs;
+        std::map<char, int> img_rhs;
+        int diff_len = 0;
+        for (int i = 0; i < std::max(nodes.size(), nnodes.size()); ++i){
+            zstring val;
+            bool remove_lhs = false;
+            bool remove_rhs = false;
+            if (i < nodes.size()) {
+                if (u.str.is_string(nodes[i], val)) {
+                    get_parikh_from_strs(val, img_lhs);
+                    diff_len += val.length();
+                    remove_lhs = true;
+                } else {
+                    // try to remove
+                    if (rhs.contains(nodes[i])) {
+                        rhs.erase(nodes[i]);
+                        remove_lhs = true;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << i << std::endl;);
+                    }
+                }
+            }
+
+            if (i < nnodes.size()) {
+                if (u.str.is_string(nnodes[i], val)) {
+                    get_parikh_from_strs(val, img_rhs);
+                    diff_len -= val.length();
+                    remove_rhs = true;
+                } else {
+                    // try to remove
+                    if (lhs.contains(nnodes[i])) {
+                        lhs.erase(nnodes[i]);
+                        remove_rhs = true;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << i << std::endl;);
+                    }
+                    // if cannot remove
+                }
+            }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << i << " " << lhs.size() << " " << rhs.size()<< " " << diff_len << std::endl;);
+
+            if (lhs.size() == 0 && rhs.size() == 0 && diff_len == 0) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << i << std::endl;);
+                if (!eq_parikh(img_lhs, img_rhs))
+                    return false;
+            }
+            if (i < nodes.size() && !remove_lhs)
+                lhs.push_back(nodes[i]);
+            if (i < nnodes.size() && !remove_rhs)
+                rhs.push_back(nnodes[i]);
+        }
+
         return true;
     }
 
@@ -5115,8 +5184,7 @@ namespace smt {
                 return true;
             }
             else {
-                for (int i = 0; i < val.length(); ++i)
-                    parikh_nn[val[i]]++;
+                get_parikh_from_strs(val, parikh_nn);
             }
 
         for (const auto& e : remain_vector)
@@ -5124,8 +5192,7 @@ namespace smt {
                 return true;
             }
             else {
-                for (int i = 0; i < val.length(); ++i)
-                    parikh_n[val[i]]++;
+                get_parikh_from_strs(val, parikh_n);
             }
 
         // only const left
@@ -5136,9 +5203,8 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " rhs: " << mk_pp(e, get_manager()) << std::endl;);
 
         // check two parikhs
-        for (const auto& ch : parikh_n)
-            if (parikh_nn[ch.first] != ch.second)
-                return false;
+        if (!eq_parikh(parikh_n, parikh_nn))
+            return false;
 
         // special case for a . x = x . a
         if (nnodes.size() == 1 && remain_vector.size() == 1){
@@ -5151,6 +5217,18 @@ namespace smt {
                 return false;
         }
 
+        return true;
+    }
+
+    void theory_str::get_parikh_from_strs(zstring s, std::map<char, int> &img){
+        for (int i = 0; i < s.length(); ++i)
+            img[s[i]]++;
+    }
+
+    bool theory_str::eq_parikh(std::map<char, int> lhs, std::map<char, int> rhs){
+        for (const auto& ch : lhs)
+            if (rhs[ch.first] != ch.second)
+                return false;
         return true;
     }
 
