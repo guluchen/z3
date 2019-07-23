@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="337">
-              <caret line="10373" column="73" selection-start-line="10373" selection-start-column="73" selection-end-line="10373" selection-end-column="73" />
+            <state relative-caret-position="270">
+              <caret line="17148" column="33" selection-start-line="17148" selection-start-column="33" selection-end-line="17148" selection-end-column="33" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -143,7 +143,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="217">
-              <caret line="1291" column="25" selection-start-line="1291" selection-start-column="25" selection-end-line="1291" selection-end-column="25" />
+              <caret line="1291" column="21" selection-start-line="1291" selection-start-column="21" selection-end-line="1291" selection-end-column="21" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -155,10 +155,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collectAllPossibleSplits(</find>
-      <find>lhs</find>
-      <find>lhs,</find>
-      <find>toConstraint_NoConnectedVar</find>
       <find>connectedVar_atSpecificLocation</find>
       <find>lengthConstraint_toConnectedVarConstraint</find>
       <find>toConstraint_havingConnectedVar_andConst</find>
@@ -185,6 +181,10 @@
       <find>choose_split_type</find>
       <find>unknown</find>
       <find>(content != zstring(&quot;uNkNoWn&quot;))</find>
+      <find>occurrence</find>
+      <find>parikh</find>
+      <find>concat_astNode_map</find>
+      <find>index_tail</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -747,12 +747,12 @@
       <workItem from="1563546000963" duration="50816000" />
       <workItem from="1563724697652" duration="22750000" />
       <workItem from="1563791575431" duration="8696000" />
-      <workItem from="1563812495527" duration="1851000" />
+      <workItem from="1563812495527" duration="6233000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1380932000" />
+    <option name="totallyTimeSpent" value="1385314000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="6" />
@@ -1147,7 +1147,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="217">
-          <caret line="1291" column="25" selection-start-line="1291" selection-start-column="25" selection-end-line="1291" selection-end-column="25" />
+          <caret line="1291" column="21" selection-start-line="1291" selection-start-column="21" selection-end-line="1291" selection-end-column="21" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
           </folding>
@@ -1156,8 +1156,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="337">
-          <caret line="10373" column="73" selection-start-line="10373" selection-start-column="73" selection-end-line="10373" selection-end-column="73" />
+        <state relative-caret-position="270">
+          <caret line="17148" column="33" selection-start-line="17148" selection-start-column="33" selection-end-line="17148" selection-end-column="33" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

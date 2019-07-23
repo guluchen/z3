@@ -5078,8 +5078,79 @@ namespace smt {
                         }
                     }
                 }
+
+                for (const auto& ee : v.second)
+                    if (e != ee){
+                        if (!equal_parikh(e, ee))
+                            return false;
+                    }
             }
         }
+        return true;
+    }
+
+    bool theory_str::equal_parikh(expr* nn, expr* n){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(n, nodes);
+
+        ptr_vector<expr> nnodes;
+        get_nodes_in_concat(nn, nnodes);
+
+        ptr_vector<expr> remain_vector;
+        // remove common vars
+        for (const auto& e : nodes)
+            if (nnodes.contains(e)) {
+                nnodes.erase(e);
+            }
+            else
+                remain_vector.push_back(e);
+
+        std::map<char, int> parikh_n;
+        std::map<char, int> parikh_nn;
+
+        // eval parikh
+        zstring val;
+        for (const auto& e : nnodes)
+            if (!u.str.is_string(e, val)) {
+                return true;
+            }
+            else {
+                for (int i = 0; i < val.length(); ++i)
+                    parikh_nn[val[i]]++;
+            }
+
+        for (const auto& e : remain_vector)
+            if (!u.str.is_string(e, val)) {
+                return true;
+            }
+            else {
+                for (int i = 0; i < val.length(); ++i)
+                    parikh_n[val[i]]++;
+            }
+
+        // only const left
+        for (const auto& e : nnodes)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lhs: " << mk_pp(e, get_manager()) << std::endl;);
+
+        for (const auto& e : remain_vector)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " rhs: " << mk_pp(e, get_manager()) << std::endl;);
+
+        // check two parikhs
+        for (const auto& ch : parikh_n)
+            if (parikh_nn[ch.first] != ch.second)
+                return false;
+
+        // special case for a . x = x . a
+        if (nnodes.size() == 1 && remain_vector.size() == 1){
+            u.str.is_string(nnodes[0], val);
+            zstring lhs = val + val;
+
+            zstring rhs;
+            u.str.is_string(remain_vector[0], rhs);
+            if (!lhs.contains(rhs))
+                return false;
+        }
+
         return true;
     }
 
@@ -14619,23 +14690,20 @@ namespace smt {
 
     std::map<expr*, int> theory_str::countOccurrences_from_root(std::set<expr*> eqc_roots){
         std::map<expr*, int> ret;
-        for (const auto& n : eqc_roots){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, get_manager()) << std::endl;);
-            if (u.str.is_concat(n)){
-                expr* arg0 = to_app(n)->get_arg(0);
-                expr* arg1 = to_app(n)->get_arg(1);
-                if (arg0 == arg1)
-                    ret[arg0] = 2;
-                else {
-                    if (ret.find(arg0) != ret.end() && !isInternalVar(arg0))
-                        ret[arg0]++;
-                    else
-                        ret[arg0] = 1;
-                    if (ret.find(arg1) != ret.end() && !isInternalVar(arg0))
-                        ret[arg1]++;
-                    else
-                        ret[arg1] = 1;
-                }
+        for (const auto& n : concat_astNode_map){
+            expr* arg0 = n.get_key1();
+            expr* arg1 = n.get_key2();
+            if (arg0 == arg1)
+                ret[arg0] = 2;
+            else {
+                if (ret.find(arg0) != ret.end() && !isInternalVar(arg0))
+                    ret[arg0]++;
+                else
+                    ret[arg0] = 1;
+                if (ret.find(arg1) != ret.end() && !isInternalVar(arg0))
+                    ret[arg1]++;
+                else
+                    ret[arg1] = 1;
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -16687,12 +16755,13 @@ namespace smt {
                    tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].first, m)
                         << std::endl;);
             assert_axiom(createEqualOperator(x2.get(), index_tail[ex].second));
-            assert_axiom(createEqualOperator(index_tail[ex].first, mk_concat(x1.get(), ex->get_arg(1))));
+            expr* x1_arg1 = mk_concat(x1.get(), ex->get_arg(1));
+            assert_axiom(createEqualOperator(index_tail[ex].first, x1_arg1));
             length_relation.insert(std::make_pair(index_tail[ex].first, x1.get()));
             length_relation.insert(std::make_pair(index_tail[ex].first, ex->get_arg(1)));
         }
         else {
-            index_tail.insert(ex, std::make_pair(x1.get(), x2.get()));
+            index_tail.insert(ex, std::make_pair(mk_concat(x1.get(), ex->get_arg(1)), x2.get()));
         }
 
         if (index_head.contains(ex)) {
@@ -17061,11 +17130,18 @@ namespace smt {
                     if (u.str.is_string(to_app(arg0)->get_arg(1), value)){
                         if (arg1 == mk_int(value.length())){
                             if (index_tail.contains(arg0)) {
-                                assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg0].second));
-                                assert_axiom(ctx.mk_eq_atom(first_part, mk_concat(index_tail[arg0].first, to_app(arg0)->get_arg(1))));
+                                if (second_part != index_tail[arg0].second)
+                                    assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg0].second));
+                                if (first_part != index_tail[arg0].first)
+                                    assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg0].first));
 
-                                length_relation.insert(std::make_pair(first_part, index_tail[arg0].first));
-                                length_relation.insert(std::make_pair(first_part, to_app(arg0)->get_arg(1)));
+                                if (u.str.is_concat(index_tail[arg0].first)) {
+                                    expr* concat_0 = to_app(index_tail[arg0].first)->get_arg(0);
+                                    expr* concat_1 = to_app(index_tail[arg0].first)->get_arg(1);
+                                    length_relation.insert(std::make_pair(first_part, concat_0));
+                                    length_relation.insert(std::make_pair(first_part, concat_1));
+                                }
+
                                 STRACE("str",
                                        tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg0].second, m)
                                             << std::endl;);
@@ -17084,11 +17160,17 @@ namespace smt {
                     if (u.str.is_string(to_app(arg1)->get_arg(1), value)){
                         if (arg0 == mk_int(value.length())){
                             if (index_tail.contains(arg1)) {
-                                assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg1].second));
-                                assert_axiom(ctx.mk_eq_atom(first_part, mk_concat(index_tail[arg1].first, to_app(arg1)->get_arg(1))));
+                                if (second_part != index_tail[arg1].second)
+                                    assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg1].second));
+                                if (first_part != index_tail[arg1].first)
+                                    assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg1].first));
 
-                                length_relation.insert(std::make_pair(first_part, index_tail[arg1].first));
-                                length_relation.insert(std::make_pair(first_part, to_app(arg1)->get_arg(1)));
+                                if (u.str.is_concat(index_tail[arg1].first)) {
+                                    expr* concat_0 = to_app(index_tail[arg1].first)->get_arg(0);
+                                    expr* concat_1 = to_app(index_tail[arg1].first)->get_arg(1);
+                                    length_relation.insert(std::make_pair(first_part, concat_0));
+                                    length_relation.insert(std::make_pair(first_part, concat_1));
+                                }
 
                                 STRACE("str",
                                        tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_tail[arg1].first, m)
