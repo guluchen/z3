@@ -84,3 +84,4 @@ CMakeSettings.json
 # Benchmark log files
 benchmarks/*.log
 benchmarks/*.log.err
+*.Ds_store
