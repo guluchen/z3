@@ -682,7 +682,6 @@ namespace smt {
                             if (len_int != -1) {
                                 zstring strValue;
                                 if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
-
                                 }
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
                                                    << std::endl;);
@@ -692,8 +691,12 @@ namespace smt {
 
                         if (regex != nullptr) {
                             zstring strValue;
+                            if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue))
+                                return to_app(th.mk_string(strValue));
+
                             if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
                                 return to_app(th.mk_string(strValue));
+
                             if (constructFromRegex(mg, len_int, m_root2value, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
                                                    << std::endl;);
@@ -821,11 +824,10 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m)  << ": NOT important" << std::endl;);
                 if (len_int != -1) {
                     // non root var
-                    bool constraint01 =
-                            th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
-                    bool constraint02 = (th.backwardDep.find(node) != th.backwardDep.end() && th.backwardDep[node].size() > 0);
+                    bool constraint01 = th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
+                    bool constraint02 = th.backwardDep[node].size() > 0;
                     if (constraint01 || constraint02) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.backwardDep[node].size()<< std::endl;);
                         if (!constraint02) {
                             // free var
                             for (int i = 0; i < len_int; ++i)
@@ -875,10 +877,12 @@ namespace smt {
             }
 
             bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+                SASSERT(arr->get_owner() != nullptr);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << std::endl;);
 
                 app* arr_val = nullptr;
                 if (m_root2value.find(arr, arr_val)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                     std::vector<int> vValue (len_int, -1);
 
                     func_decl * fd = to_func_decl(arr_val->get_parameter(0).get_ast());
@@ -901,6 +905,8 @@ namespace smt {
                         }
                     }
 
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
                     bool completed = true;
                     zstring value;
                     for (int i = 0; i < vValue.size(); ++i) {
@@ -918,11 +924,8 @@ namespace smt {
                         return false;
                     }
 
-
                     return true;
                 }
-
-
 
                 return false;
             }
@@ -994,6 +997,8 @@ namespace smt {
                                 return true;
                             }
                         }
+
+
 
                         // find in its eq
                         if (th.uState.eq_combination.find(ancestor) !=
@@ -1393,9 +1398,10 @@ namespace smt {
                     void handle_int2str(expr* num, expr* str);
                         expr* unroll_str2int(expr* n);
                         expr* unroll_str_int(expr* num, expr* str);
+                        expr* valid_str_int(expr* str);
                         expr* lower_bound_str_int(expr* num, expr* str);
                         expr* lower_bound_int_str(expr* num, expr* str);
-                        expr* fill_0_at_begining(expr* n);
+                        expr* fill_0_1st_loop(expr* num, expr* str);
                 std::map<expr*, std::vector<expr*>> mapset2mapvector(std::map<expr*, std::set<expr*>> m);
                 std::map<expr*, int> set2map(std::set<std::pair<expr*, int>> s);
                 void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination, int line = -1);
@@ -1407,8 +1413,8 @@ namespace smt {
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr);
-                void setup_regex_var(expr* rexpr, expr* arr);
-                    expr* setup_char_range_arr(expr* e, expr* arr);
+                expr* setup_regex_var(expr* rexpr, expr* arr, rational bound);
+                    expr* setup_char_range_arr(expr* e, expr* arr, rational bound);
                 void create_notcontain_map();
                 void create_const_set();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
@@ -1608,7 +1614,8 @@ namespace smt {
                 std::vector<std::pair<expr*, int>> elementNames,
                 int pos,
                 int pMax,
-                rational bound);
+                rational bound,
+                bool skip_init = false);
             int lcd(int x, int y);
             bool matchRegex(expr* a, zstring b);
             bool matchRegex(expr* a, expr* b);
