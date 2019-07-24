@@ -969,7 +969,6 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
-            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -1066,6 +1065,9 @@ namespace smt {
                     if (ctx.e_internalized(nn)){
                         result->add_entry(ctx.get_enode(nn));
                     }
+
+                if (linkers.find(owner) != linkers.end())
+                    result->set_linker(linkers[owner]);
             }
 
             if (!u.str.is_concat(owner)) {
@@ -14572,6 +14574,7 @@ namespace smt {
             expr_ref_vector guessedEqs(m), guessedDisEqs(m);
             fetch_guessed_str_int_with_scopes(guessedEqs, guessedDisEqs);
             for (const auto &e : guessedEqs) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())<< std::endl;);
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
@@ -14600,7 +14603,7 @@ namespace smt {
             }
 
             for (const auto &e : guessedDisEqs) {
-                TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())<< std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())<< std::endl;);
 
                 app* a = to_app(to_app(e)->get_arg(0));
                 if (u.str.is_stoi(a->get_arg(0))){
@@ -14910,13 +14913,19 @@ namespace smt {
     bool theory_str::checkIfVarInUnionMembership(expr* nn, int &len){
         for (const auto& we : membership_memo)
             if (we.first.get() == nn){
-                std::vector<zstring> components = collectAlternativeComponents(we.second);
-                int maxLenTmp = 0;
-                if (components.size() > 0){
-                    for (const auto& s : components)
-                        maxLenTmp = std::max((int)s.length(), maxLenTmp);
-                    len = maxLenTmp;
+                if (u.re.is_star(we.second.get()) || u.re.is_star(we.second.get())) {
+                    len = q_bound.get_int64();
                     return true;
+                }
+                else {
+                    std::vector<zstring> components = collectAlternativeComponents(we.second);
+                    int maxLenTmp = 0;
+                    if (components.size() > 0) {
+                        for (const auto &s : components)
+                            maxLenTmp = std::max((int) s.length(), maxLenTmp);
+                        len = maxLenTmp;
+                        return true;
+                    }
                 }
             }
         return false;
@@ -15092,6 +15101,10 @@ namespace smt {
         ast_manager &m = get_manager();
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << len << std::endl;);
+
+        if (checkIfVarInUnionMembership(nn, len))
+            return true;
+
         std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
@@ -18700,27 +18713,59 @@ namespace smt {
             expr* reg = nullptr;
             for (const auto& nn : dep)
                 if (u.str.is_string(nn) || is_important(nn) || isInternalRegexVar(nn, reg) || is_regex_concat(nn)) {
-                    backwardDep[ctx.get_enode(n.first)->get_root()->get_owner()].insert(ctx.get_enode(nn)->get_root()->get_owner());
+                    if (!are_equal_exprs(n.first, nn))
+                        backwardDep[ctx.get_enode(n.first)->get_root()->get_owner()].insert(ctx.get_enode(nn)->get_root()->get_owner());
                     included_nodes.insert(ctx.get_enode(nn)->get_root()->get_owner());
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(nn)->get_root()->get_owner(), m) << std::endl;);
                 }
         }
 
         for (const auto& c : concat_astNode_map) {
-            if (included_nodes.find(ctx.get_enode(c.get_key2())->get_root()->get_owner()) == included_nodes.end()) {
-                backwardDep[ctx.get_enode(c.get_key2())->get_root()->get_owner()].insert(
-                        ctx.get_enode(c.get_value())->get_root()->get_owner());
-                backwardDep[ctx.get_enode(c.get_key2())->get_root()->get_owner()].insert(
-                        c.get_value());
+            if (!ctx.is_relevant(c.get_value()) || !ctx.is_relevant(c.get_key1()) || !ctx.is_relevant(c.get_key2()))
+                continue;
+
+            expr* key1_root = ctx.get_enode(c.get_key1())->get_root()->get_owner();
+            expr* key2_root = ctx.get_enode(c.get_key2())->get_root()->get_owner();
+            expr* c_root = ctx.get_enode(c.get_value())->get_root()->get_owner();
+            expr* reg = nullptr;
+
+            // arg0
+            if (u.str.is_string(key2_root) || is_important(key2_root) || isInternalRegexVar(key2_root, reg) || is_regex_concat(key2_root)) {
+                if (!are_equal_exprs(c_root, key2_root)) {
+                    backwardDep[c_root].insert(c.get_key2());
+                    if (key2_root != c.get_value())
+                        backwardDep[c_root].insert(key2_root);
+                }
+            }
+            else if (included_nodes.find(key2_root) == included_nodes.end()) {
+                if (are_equal_exprs(c.get_key2(), c.get_value()))
+                    continue;
+
+                if (key2_root != c.get_value())
+                    backwardDep[key2_root].insert(c.get_value());
 
                 backwardDep[c.get_key2()].insert(c.get_value());
+                if (c.get_key2() != key2_root)
+                    linkers[key2_root] = c.get_key2();
             }
-            if (included_nodes.find(ctx.get_enode(c.get_key1())->get_root()->get_owner()) == included_nodes.end()) {
-                backwardDep[ctx.get_enode(c.get_key1())->get_root()->get_owner()].insert(
-                        ctx.get_enode(c.get_value())->get_root()->get_owner());
-                backwardDep[ctx.get_enode(c.get_key1())->get_root()->get_owner()].insert(
-                        c.get_value());
+
+            // arg1
+            if (u.str.is_string(key1_root) || is_important(key1_root) || isInternalRegexVar(key1_root, reg) || is_regex_concat(key1_root)) {
+                if (!are_equal_exprs(c_root, key1_root)) {
+                    backwardDep[c_root].insert(c.get_key1());
+                    if (key1_root != c.get_value())
+                        backwardDep[c_root].insert(key1_root);
+                }
+            }
+            else if (included_nodes.find(key1_root) == included_nodes.end()) {
+                if (are_equal_exprs(c.get_key1(), c.get_value()))
+                    continue;
+
+                backwardDep[key1_root].insert(c.get_value());
                 backwardDep[c.get_key1()].insert(c.get_value());
+
+                if (c.get_key1() != key1_root)
+                    linkers[key1_root] = c.get_key1();
             }
         }
 
@@ -19249,18 +19294,19 @@ namespace smt {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                         if ((u.str.is_stoi(a->get_arg(0)) || u.str.is_itos(a->get_arg(0))) &&
                             !stored_diseq.contains(a->get_arg(0))) {
-                            guessedEqs.push_back(s);
+                            guessedDisEqs.push_back(s);
                             stored_diseq.push_back(a->get_arg(0));
                         }
                         else if ((u.str.is_stoi(a->get_arg(1)) || u.str.is_itos(a->get_arg(1))) &&
                                  !stored_diseq.contains(a->get_arg(1))) {
-                            guessedEqs.push_back(s);
+                            guessedDisEqs.push_back(s);
                             stored_diseq.push_back(a->get_arg(1));
                         }
                     }
                 }
             }
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " leave " << std::endl;);
     }
 
 

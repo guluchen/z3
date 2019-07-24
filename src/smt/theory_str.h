@@ -607,6 +607,7 @@ namespace smt {
             enode*                          arr_node;
             bool                            importantVar;
             expr*                           regex;
+            expr*                           linker;
             int                             len;
         public:
 
@@ -641,6 +642,10 @@ namespace smt {
             void add_entry(enode * value){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, th.get_manager()) << " --> " << mk_pp(value->get_owner(), th.get_manager()) << std::endl;);
                 m_dependencies.push_back(model_value_dependency(value));
+            }
+
+            void set_linker(expr * link){
+                linker = link;
             }
 
             void get_dependencies(buffer<model_value_dependency> & result) override {
@@ -815,8 +820,22 @@ namespace smt {
                     expr* arg0 = to_app(v)->get_arg(0);
                     collectAlternativeComponents(arg0, ret);
                 }
+                else if (th.u.re.is_range(v)){
+                    expr* arg0 = to_app(v)->get_arg(0);
+                    expr* arg1 = to_app(v)->get_arg(1);
+                    zstring start, finish;
+                    th.u.str.is_string(arg0, start);
+                    th.u.str.is_string(arg1, finish);
+                    SASSERT(start.length() == 1);
+                    SASSERT(finish.length() == 1);
+
+                    for (int i = start[0]; i <= finish[0]; ++i){
+                        zstring tmp(i);
+                        ret.push_back(tmp);
+                    }
+                }
                 else
-                    SASSERT(false);
+                    NOT_IMPLEMENTED_YET();
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
@@ -909,17 +928,51 @@ namespace smt {
 
                     bool completed = true;
                     zstring value;
-                    for (int i = 0; i < vValue.size(); ++i) {
-                        if (vValue[i] <= 0 || vValue[i] >= 128) {
-                            value = value + th.defaultChar;
-                            completed = false;
-                        }
-                        else
-                            value = value + (char) vValue[i];
-                    }
+
+                    std::set<char> char_set;
+                    get_char_range(char_set);
+                    value = fill_chars(vValue, char_set, completed);
 
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
                     val = value;
+
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
+                    // revise string basing on regex
+                    if (char_set.size() == 0) {
+                        if (regex != nullptr) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                               << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
+                            if (!matchRegex(regex, val)) {
+                                std::vector<zstring> elements = collectAlternativeComponents(regex);
+                                for (int i = 0; i < value.length(); ++i) {
+                                    zstring tmp = val.extract(0, i);
+                                    STRACE("str",
+                                           tout << __LINE__ << " " << __FUNCTION__ << " tmp: " << tmp << std::endl;);
+                                    if (!matchRegex(regex, tmp)) {
+                                        int err_pos = i;
+                                        for (err_pos = i + 1; err_pos < value.length(); ++err_pos)
+                                            if (value[err_pos] != value[i]) {
+                                                break;
+                                            }
+
+                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                                           << mk_pp(node, th.get_manager()) << " " << value
+                                                           << std::endl;);
+                                        zstring working_str = val.extract(0, i - 1);
+                                        zstring new_str("");
+
+                                        if (createStringWithLength(elements, new_str, err_pos - i)) {
+                                            val = working_str + new_str + val.extract(i + new_str.length() - 1,
+                                                                                      val.length() -
+                                                                                      (i + new_str.length() - 1));
+                                        } else NOT_IMPLEMENTED_YET();
+                                        i = i + new_str.length() - 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (completed == false) {
                         return false;
                     }
@@ -928,6 +981,55 @@ namespace smt {
                 }
 
                 return false;
+            }
+
+            bool get_char_range(std::set<char> & char_set){
+                if (regex != nullptr) {
+                    // special case for numbers
+                    std::vector<zstring> elements = collectAlternativeComponents(regex);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
+                                       << mk_pp(regex, th.get_manager()) << " "
+                                       << elements.size()
+                                       << std::endl;);
+                    for (const auto& s : elements) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
+                                           << s
+                                           << std::endl;);
+                        if (s.length() != 1) {
+                            char_set.clear();
+                            return false;
+                        } else {
+                            char_set.insert(s[0]);
+                        }
+                    }
+                    for (const auto& ch : char_set)
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " ch: "
+                                       << ch
+                                       << std::endl;);
+                    return true;
+                }
+                return false;
+            }
+
+            zstring fill_chars(std::vector<int> vValue, std::set<char> char_set, bool &completed){
+                zstring value("");
+                for (int i = 0; i < vValue.size(); ++i) {
+                    if (char_set.size() > 0){
+                        char tmp = (char)vValue[i];
+                        if (char_set.find(tmp) == char_set.end())
+                            value = value + (char)(*(char_set.begin()));
+                        else
+                            value = value + (char) vValue[i];
+                    }
+                    else {
+                        if (vValue[i] <= 0 || vValue[i] >= 128) {
+                            value = value + th.defaultChar;
+                            completed = false;
+                        } else
+                            value = value + (char) vValue[i];
+                    }
+                }
+                return value;
             }
 
             void constructStr(model_generator & mg, expr* eq, obj_map<enode, app *> m_root2value, std::vector<int> &val){
@@ -1029,9 +1131,14 @@ namespace smt {
                     ptr_vector<expr> leafNodes;
                     th.get_all_nodes_in_concat(concat, leafNodes);
 
-                    if (leafNodes.contains(node)) {
+                    if (leafNodes.contains(node) || (linker != nullptr && leafNodes.contains(linker))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << std::endl;);
-                        int prefix = findPrefixLen(mg, concat, node, m_root2value);
+                        expr* tmp = nullptr;
+                        if (leafNodes.contains(node))
+                            tmp = node;
+                        else
+                            tmp = linker;
+                        int prefix = findPrefixLen(mg, concat, tmp, m_root2value);
                         value = concatValue.extract(prefix, len);
                         return true;
                     }
@@ -1195,6 +1302,30 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(n->get_owner(), th.get_manager()) << std::endl;);
                     return false;
                 }
+            }
+
+            bool matchRegex(expr* a, zstring b){
+                expr* tmp = th.u.re.mk_to_re(th.u.str.mk_string(b));
+                return matchRegex(a, tmp);
+            }
+
+            bool matchRegex(expr* a, expr* b) {
+                expr* intersection = th.u.re.mk_inter(a, b);
+                eautomaton *au01 = get_automaton(intersection);
+                return !au01->is_empty();
+            }
+
+            eautomaton* get_automaton(expr* re) {
+                eautomaton* result = nullptr;
+                if (th.m_re2aut.find(re, result)) {
+                    return result;
+                }
+
+                result = th.m_mk_aut(re);
+                th.m_automata.push_back(result);
+                th.m_re2aut.insert(re, result);
+                th.m_res.push_back(re);
+                return result;
             }
         };
 
@@ -2389,6 +2520,7 @@ namespace smt {
         std::map<expr*, std::set<expr*>> notContainMap;
 
         std::map<expr*, std::set<expr*>> backwardDep;
+        std::map<expr*, expr*> linkers;
         std::map<expr*, expr*> arrMap;
         std::map<std::string, expr*> arrMap_reverse;
         std::map<std::string, expr*> varMap_reverse;
