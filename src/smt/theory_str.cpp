@@ -8408,14 +8408,18 @@ namespace smt {
                 SASSERT(arr_linker.find(arrMap_reverse[arr_str]) != arr_linker.end());
                 if (!are_equal_exprs(v, arr_linker[arrMap_reverse[arr_str]])) {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
-                    arrVar = nullptr; 
+                    arrVar = nullptr;
                     continue;
                 }
 
                 zstring val;
                 if (u.str.is_string(v, val)){
-                    setup_str_const(val, arrVar);
+                    if (v != arr_linker[arrVar])
+                        setup_str_const(val, arrVar, createEqualOperator(v, arr_linker[arrVar]));
+                    else
+                        setup_str_const(val, arrVar);
                 }
+
                 continue;
             }
 
@@ -8496,13 +8500,23 @@ namespace smt {
         impliedFacts.push_back(tmp);
     }
 
-    void theory_str::setup_str_const(zstring val, expr* arr){
+    void theory_str::setup_str_const(zstring val, expr* arr, expr* premise){
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ << " " << mk_pp(arr, m) << " = " << val << std::endl;);
+        expr_ref_vector ands(m);
         for (int i = 0; i < val.length(); ++i){
-            expr_ref tmp(createEqualOperator(createSelectOperator(arr, mk_int(i)), mk_int(val[i])), m);
-            assert_axiom(tmp.get());
+            ands.push_back(createEqualOperator(createSelectOperator(arr, mk_int(i)), mk_int(val[i])));
+        }
+
+        expr* to_assert = createAndOperator(ands);
+        if (premise != nullptr) {
+            expr* tmp = rewrite_implication(premise, to_assert);
+            assert_axiom(tmp);
             impliedFacts.push_back(tmp);
+        }
+        else {
+            assert_axiom(to_assert);
+            impliedFacts.push_back(to_assert);
         }
     }
 
