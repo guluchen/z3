@@ -860,30 +860,31 @@ namespace smt {
                             if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
                                 return to_app(th.mk_string(strValue));
                         }
-                    } else {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
-                        // root var
-                        std::vector<int> val;
-                        for (int i = 0; i < len_int; ++i)
-                            val.push_back(-1);
-
-                        if (th.u.str.is_concat(node))
-                            constructStr(mg, node, m_root2value, val);
-
-                        for (const auto &eq : th.uState.eq_combination[node]) {
-                            constructStr(mg, eq, m_root2value, val);
-                        }
-
-                        for (int i = 0; i < len_int; ++i)
-                            if (val[i] == -1) {
-                                strValue = strValue + th.defaultChar;
-                            } else
-                                strValue = strValue + val[i];
-
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
-                                           << std::endl;);
-                        return to_app(th.mk_string(strValue));
                     }
+
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
+                    // root var
+                    std::vector<int> val;
+                    for (int i = 0; i < len_int; ++i)
+                        val.push_back(-1);
+
+                    if (th.u.str.is_concat(node))
+                        constructStr(mg, node, m_root2value, val);
+
+                    for (const auto &eq : th.uState.eq_combination[node]) {
+                        constructStr(mg, eq, m_root2value, val);
+                    }
+
+                    for (int i = 0; i < len_int; ++i)
+                        if (val[i] == -1) {
+                            strValue = strValue + th.defaultChar;
+                        } else
+                            strValue = strValue + val[i];
+
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                                       << std::endl;);
+                    return to_app(th.mk_string(strValue));
+
                 }
                 else {
                     STRACE("str",

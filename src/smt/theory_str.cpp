@@ -7446,6 +7446,7 @@ namespace smt {
 
             for (const auto &e : guessedDisEqs) {
                 app* a = to_app(to_app(e)->get_arg(0));
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, get_manager()) << std::endl;);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
                     if (!m_autil.is_numeral(a->get_arg(1)))
@@ -7594,9 +7595,9 @@ namespace smt {
 
         // if !valid --> value = -1, else ands_tmp
         expr* valid_s2i = valid_str_int(str);
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " valid_s2i: " << mk_pp(valid_s2i, m) << std::endl;);
         ands.push_back(rewrite_implication(valid_s2i, createAndOperator(ands_tmp)));
-        ands.push_back(createEqualOperator(mk_not(m, valid_s2i), createEqualOperator(num, mk_int(- 1))));
+        ands.push_back(rewrite_implication(mk_not(m, valid_s2i), createEqualOperator(num, mk_int(- 1))));
         return createAndOperator(ands);
     }
 
