@@ -8408,8 +8408,7 @@ namespace smt {
                 SASSERT(arr_linker.find(arrMap_reverse[arr_str]) != arr_linker.end());
                 if (!are_equal_exprs(v, arr_linker[arrMap_reverse[arr_str]])) {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
-                    arrVar = nullptr;
-                    SASSERT(false);
+                    arrVar = nullptr; 
                     continue;
                 }
 
