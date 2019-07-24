@@ -8395,6 +8395,31 @@ namespace smt {
         // create all tmp vars
         for(const auto& v : allStrExprs){
             expr* arrVar = getExprVarFlatArray(v);
+            if (arrVar != nullptr) {
+                // check if we can use that: cannot use if two nodes are not equal
+
+                ensure_enode(arrVar);
+                std::string arr_str = expr2str(arrVar);
+                if (arr_str[0] == '|')
+                    arr_str = arr_str.substr(1, arr_str.length());
+
+                arr_str = arr_str.substr(0, arr_str.find_last_of("!"));
+                SASSERT(arrMap_reverse.find(arr_str) != arrMap_reverse.end());
+                SASSERT(arr_linker.find(arrMap_reverse[arr_str]) != arr_linker.end());
+                if (!are_equal_exprs(v, arr_linker[arrMap_reverse[arr_str]])) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
+                    arrVar = nullptr;
+                    SASSERT(false);
+                    continue;
+                }
+
+                zstring val;
+                if (u.str.is_string(v, val)){
+                    setup_str_const(val, arrVar);
+                }
+                continue;
+            }
+
             if (!u.str.is_concat(v) && arrVar == nullptr) {
                 STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
                 std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
@@ -8405,6 +8430,7 @@ namespace smt {
                 else {
                     v1 = mk_arr_var(flatArr);
                     arrMap_reverse[flatArr] = v1;
+                    arr_linker[v1] = v;
                 }
 
                 {
@@ -8427,13 +8453,6 @@ namespace smt {
                 }
                 else if (is_str_int_var(v)){
                     // setup_str_int_arr
-                }
-            }
-            else if (arrVar != nullptr) {
-                ensure_enode(arrVar);
-                zstring val;
-                if (u.str.is_string(v, val)){
-                    setup_str_const(val, arrVar);
                 }
             }
         }

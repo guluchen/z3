@@ -2515,6 +2515,7 @@ namespace smt {
         std::map<expr*, expr*> arrMap;
         std::map<std::string, expr*> arrMap_reverse;
         std::map<std::string, expr*> varMap_reverse;
+        std::map<expr*, expr*> arr_linker;
         int connectingSize;
         char defaultChar = 'a';
         UnderApproxState uState;
