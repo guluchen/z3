@@ -651,6 +651,7 @@ namespace smt {
             void get_dependencies(buffer<model_value_dependency> & result) override {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__  << " " << mk_pp(node, th.get_manager()) << std::endl;);
                 result.append(m_dependencies.size(), m_dependencies.c_ptr());
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__  << " " << mk_pp(node, th.get_manager()) << std::endl;);
             }
 
             app * mk_value(model_generator & mg, ptr_vector<expr> & values) override {
@@ -992,9 +993,6 @@ namespace smt {
                                        << elements.size()
                                        << std::endl;);
                     for (const auto& s : elements) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
-                                           << s
-                                           << std::endl;);
                         if (s.length() != 1) {
                             char_set.clear();
                             return false;
@@ -1002,10 +1000,6 @@ namespace smt {
                             char_set.insert(s[0]);
                         }
                     }
-                    for (const auto& ch : char_set)
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " ch: "
-                                       << ch
-                                       << std::endl;);
                     return true;
                 }
                 return false;
@@ -1544,8 +1538,8 @@ namespace smt {
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr);
-                expr* setup_regex_var(expr* rexpr, expr* arr, rational bound);
-                    expr* setup_char_range_arr(expr* e, expr* arr, rational bound);
+                expr* setup_regex_var(expr* rexpr, expr* arr, rational bound, expr* prefix);
+                    expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
                 char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
@@ -1644,7 +1638,6 @@ namespace smt {
              * convert lhs == rhs to SMT formula
              */
             expr* equality_to_arith(
-                std::string lhs, std::string rhs,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::map<expr*, int> connectedVariables,
@@ -1660,7 +1653,6 @@ namespace smt {
              *
              */
             expr_ref_vector collect_all_possible_arrangements(
-                std::string lhs_str, std::string rhs_str,
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::map<expr*, int> connectedVariables,
@@ -1694,7 +1686,6 @@ namespace smt {
             expr* generate_smt(int p,
                                             std::vector<int> left_arr,
                                             std::vector<int> right_arr,
-                                            std::string lhs_str, std::string rhs_str,
                                             std::vector<std::pair<expr*, int>> lhs_elements,
                                             std::vector<std::pair<expr*, int>> rhs_elements,
                                             std::map<expr*, int> connectedVariables);
@@ -1714,7 +1705,6 @@ namespace smt {
              * size = size && it = 1
              */
             expr* generate_constraint01(
-                    std::string lhs_str, std::string rhs_str,
                     std::pair<expr*, int> a, std::pair<expr*, int> b,
                     int pMax,
                     std::map<expr*, int> connectedVariables,
@@ -2096,14 +2086,14 @@ namespace smt {
             /*
              * extra variables
              */
-            std::vector<expr*> create_set_of_flat_variables(int flatP, std::map<expr*, int> &importantVars);
+            std::vector<expr*> create_set_of_flat_variables(int flatP, std::map<expr*, int> &importantVars, expr* root);
             /*
              * Input: x . y
              * Output: flat . flat . flat . flat . flat . flat
              */
-            std::vector<std::pair<expr*, int>> create_equality(expr* node);
-            std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> list);
-            std::vector<std::pair<expr*, int>> create_equality(std::vector<expr*> list);
+            std::vector<std::pair<expr*, int>> create_equality(expr* node, bool unfold = true);
+            std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> list, bool unfold = true);
+            std::vector<std::pair<expr*, int>> create_equality(std::vector<expr*> list, bool unfold = true);
                 void create_internal_int_vars(expr* v);
                 void setup_str_int_len(expr* e, int start);
                 void reuse_internal_int_vars(expr* v);
