@@ -83,7 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -98,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="9664">
-              <caret line="12537" column="38" selection-start-line="12537" selection-start-column="21" selection-end-line="12537" selection-end-column="38" />
+            <state relative-caret-position="217">
+              <caret line="14995" column="63" lean-forward="true" selection-start-line="14995" selection-start-column="63" selection-end-line="14995" selection-end-column="63" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -140,8 +140,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="1521" column="31" selection-start-line="1521" selection-start-column="21" selection-end-line="1521" selection-end-column="35" />
+            <state>
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
                 <element signature="e#40267#46305#0" />
@@ -166,8 +165,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>releva</find>
-      <find>|(0\|1\|2\|3\|4\|5\|6\|7\|8\|9)*!tmp12|</find>
       <find>is_importantVar_recheck</find>
       <find>completed</find>
       <find>fill_chars</find>
@@ -195,7 +192,9 @@
       <find>m_root2value</find>
       <find>setup_char_range_arr</find>
       <find>fetchValueFromDepGraph</find>
+      <find>is_trivial_in</find>
       <find>handle_str_int</find>
+      <find>is_trivial_inequality</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -730,12 +729,12 @@
       <workItem from="1563791575431" duration="8696000" />
       <workItem from="1563812495527" duration="7476000" />
       <workItem from="1563846497332" duration="4695000" />
-      <workItem from="1563862842671" duration="48090000" />
+      <workItem from="1563862842671" duration="48480000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1439342000" />
+    <option name="totallyTimeSpent" value="1439732000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1280" height="877" extended-state="0" />
@@ -1129,8 +1128,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="1521" column="31" selection-start-line="1521" selection-start-column="21" selection-end-line="1521" selection-end-column="35" />
+        <state>
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
             <element signature="e#40267#46305#0" />
@@ -1143,8 +1141,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="9664">
-          <caret line="12537" column="38" selection-start-line="12537" selection-start-column="21" selection-end-line="12537" selection-end-column="38" />
+        <state relative-caret-position="217">
+          <caret line="14995" column="63" lean-forward="true" selection-start-line="14995" selection-start-column="63" selection-end-line="14995" selection-end-column="63" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

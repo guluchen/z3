@@ -8073,7 +8073,7 @@ namespace smt {
 
         cases.push_back(notLenEq);
         int val = -1;
-        if (is_important(lhs, val)) {
+        if (is_important(lhs, val) && !is_trivial_inequality(lhs, rhs)) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = getExprVarFlatArray(lhs);
             if (arrLhs == nullptr)
@@ -8093,14 +8093,6 @@ namespace smt {
 
             expr_ref tmpAxiom(createEqualOperator(premise.get(), conclusion.get()), m);
             assert_axiom(tmpAxiom.get());
-
-//            literal assertLiteral = ctx.get_literal(assertExpr);
-//            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
-
-//            expr_ref notcause(createEqualOperator(lhs, u.str.mk_string(rhs)), m);
-//            expr_ref axiom(createEqualOperator(mk_not(notcause), createOrOperator(cases)), m);
-//            assert_axiom(axiom);
-//            uState.addAssertingConstraints(axiom);
         }
 
     }
