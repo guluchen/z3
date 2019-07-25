@@ -8163,10 +8163,7 @@ namespace smt {
             if (u.str.is_string(constValue, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << ")\n";);
                 if (value.indexof(rhs, 0) >= 0) {
-
-                    expr_ref_vector ands(m);
-                    ands.push_back(createEqualOperator(lhs, constValue));
-                    assert_axiom(rewrite_implication(premise, createAndOperator(ands)));
+                    negate_context();
                 }
             }
             return;
