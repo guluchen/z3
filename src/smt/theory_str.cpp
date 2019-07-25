@@ -4720,17 +4720,18 @@ namespace smt {
                     not_imp.find(rhs) != not_imp.end())
                     continue;
 
-                if (is_contain_equality(lhs, contain)) {
+                zstring needle;
+                if (is_contain_equality(lhs, contain) && u.str.is_string(contain, needle)) {
 
-                    if (is_not_important(rhs, contain, eq_combination)){
+                    if (is_not_important(rhs, needle, eq_combination)){
                         expr_ref_vector vec(m);
                         collect_eq_nodes(rhs, vec);
                         for (const auto& e : vec)
                             not_imp.insert(e);
                     }
                 }
-                else if (is_contain_equality(rhs, contain)) {
-                    if (is_not_important(lhs, contain, eq_combination)){
+                else if (is_contain_equality(rhs, contain) && u.str.is_string(contain, needle)) {
+                    if (is_not_important(lhs, needle, eq_combination)){
                         expr_ref_vector vec(m);
                         collect_eq_nodes(lhs, vec);
                         for (const auto& e : vec)
@@ -4741,7 +4742,7 @@ namespace smt {
         }
 
         std::set<std::pair<expr *, int>> tmp;
-        for (const auto& p : tmp) {
+        for (const auto& p : importantVars) {
             if (not_imp.find(p.first) != not_imp.end() && p.second == -1) {
                 continue;
             }
@@ -4758,14 +4759,14 @@ namespace smt {
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
     }
 
-    bool theory_str::is_not_important(expr* haystack, expr* needle, std::map<expr *, std::set<expr *>> eq_combination){
+    bool theory_str::is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination){
         ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << needle << std::endl;);
         for (const auto& eq : eq_combination) {
             if (eq.second.size() > 1 && appear_in_eq(haystack, needle, eq.second)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " appear_in_eq: " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " appear_in_eq: " << mk_pp(haystack, m) << " " << needle << std::endl;);
                 if (!appear_in_other_eq(eq.first, needle, eq_combination)) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " !appear_in_other_eq: " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " !appear_in_other_eq: " << mk_pp(haystack, m) << " " << needle << std::endl;);
                     return true;
                 }
                 else
@@ -4775,14 +4776,14 @@ namespace smt {
         return false;
     }
 
-    bool theory_str::appear_in_eq(expr* haystack, expr* needle, std::set<expr *> s) {
+    bool theory_str::appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s) {
         ast_manager & m = get_manager();
         for (const auto& n : s)
             if (u.str.is_concat(n)){
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(n, nodes);
-                if (nodes.contains(haystack) && nodes.contains(needle)) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << " in " << mk_pp(n, m) << std::endl;);
+                if (nodes.contains(haystack) && nodes.contains(u.str.mk_string(needle))) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << needle << " in " << mk_pp(n, m) << std::endl;);
                     // compare with other elements in s
                     for (const auto& nn : s)
                         if (nn != n) {
@@ -4791,14 +4792,14 @@ namespace smt {
                                 return false;
                             }
                         }
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << " in " << mk_pp(n, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << needle << " in " << mk_pp(n, m) << std::endl;);
                     return true;
                 }
             }
         return false;
     }
 
-    bool theory_str::can_omit(expr* lhs, expr* rhs, expr* needle){
+    bool theory_str::can_omit(expr* lhs, expr* rhs, zstring needle){
         ast_manager & m = get_manager();
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
@@ -4806,43 +4807,45 @@ namespace smt {
         ptr_vector<expr> rhsVec;
         get_nodes_in_concat(rhs, rhsVec);
 
-        expr_ref_vector andLhs(m);
-        expr_ref_vector andRhs(m);
-
         /* cut prefix */
         int prefix = -1;
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
-            if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
-                if (lhsVec[i] != rhsVec[i]) {
-                    andLhs.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
-                }
+            if (are_equal_exprs(lhsVec[i], rhsVec[i])) { 
                 prefix = i;
             }
+            else
+                break;
 
         prefix = prefix + 1;
 
         int suffix = 0;
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])) {
-                if (lhsVec[lhsVec.size() - 1 - i] != rhsVec[rhsVec.size() - 1 - i])
-                    andRhs.push_back(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 suffix = i;
             }
+            else
+                break;
 
+        zstring val;
         for (int i = prefix; i < rhsVec.size() - suffix; ++i)
-            if (needle == rhsVec[i])
-                return false;
+            if (u.str.is_string(rhsVec[i], val))
+                if (val.contains(needle) || needle.contains(val))
+                    return false;
+
         return true;
     }
 
-    bool theory_str::appear_in_other_eq(expr* root, expr* needle, std::map<expr *, std::set<expr *>> eq_combination) {
+    bool theory_str::appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination) {
         for (const auto& eq : eq_combination)
             if (eq.first != root) {
                 for (const auto& n : eq.second) {
                     ptr_vector<expr> nodes;
                     get_nodes_in_concat(n, nodes);
-                    if (nodes.contains(needle))
-                        return true;
+                    zstring val;
+                    for (const auto& nn : nodes)
+                        if (u.str.is_string(nn, val))
+                            if (val.contains(needle) || needle.contains(val))
+                                return true;
                 }
             }
         return false;

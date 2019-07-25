@@ -1409,10 +1409,10 @@ namespace smt {
             void refine_not_contain_vars(
                 std::set<std::pair<expr *, int>> &importantVars,
                 std::map<expr *, std::set<expr *>> eq_combination);
-            bool is_not_important(expr* haystack, expr* needle, std::map<expr *, std::set<expr *>> eq_combination);
-                bool appear_in_eq(expr* haystack, expr* needle, std::set<expr *> s);
-            bool can_omit(expr* lhs, expr* rhs, expr* needle);
-            bool appear_in_other_eq(expr* root, expr* needle, std::map<expr *, std::set<expr *>> eq_combination);
+            bool is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
+                bool appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s);
+            bool can_omit(expr* lhs, expr* rhs, zstring needle);
+            bool appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
             bool is_completed_branch(bool &addAxiom);
             void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
