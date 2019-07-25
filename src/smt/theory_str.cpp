@@ -8415,7 +8415,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
                     arrVar = nullptr;
                     continue;
-                } 
+                }
 
                 zstring val;
                 if (u.str.is_string(v, val)){
