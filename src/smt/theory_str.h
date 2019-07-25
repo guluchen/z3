@@ -2116,6 +2116,7 @@ namespace smt {
                     expr* rhs,
                     ptr_vector<expr> &new_lhs,
                     ptr_vector<expr> &new_rhs);
+                expr* create_concat_from_vector(ptr_vector<expr> v, int from_pos);
                 bool have_same_len(expr* lhs, expr* rhs);
             /*
              * cut the same prefix and suffix

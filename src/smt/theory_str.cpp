@@ -4766,6 +4766,7 @@ namespace smt {
      * a . b = c .d && |a| = |b| --> a = b
      */
     bool theory_str::propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
         fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
@@ -14363,6 +14364,7 @@ namespace smt {
             expr* rhs,
             expr_ref_vector &impliedEqualities){
         ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " \n" << mk_pp(lhs, m) << "\n" << mk_pp(rhs, m) <<std::endl;);
         /* cut prefix */
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
@@ -14447,10 +14449,13 @@ namespace smt {
             else
                 break;
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
+
         // reach the end of equality
         if (prefix == std::min(lhsVec.size(), rhsVec.size()) - 1 || suffix == std::min(lhsVec.size(), rhsVec.size()) - 1)
             return true;
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
         andLhs.append(andRhs);
 
         if (lhsVec.size() == rhsVec.size()) {
@@ -14463,10 +14468,10 @@ namespace smt {
                         impliedEqualities.push_back(tmp);
                 }
         }
-        else if (prefix >= 0 && prefix == (int)lhsVec.size() - 2 && prefix == (int)rhsVec.size() - 3){
+        else if (prefix >= 0 && prefix == (int)lhsVec.size() - 2 && prefix <= (int)rhsVec.size() - 3){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
-            expr* concatTmp = u.str.mk_concat(rhsVec[prefix + 1], rhsVec[prefix + 2]);
+            expr* concatTmp = create_concat_from_vector(rhsVec, prefix);
             if (!are_equal_exprs(lhsVec[prefix + 1], concatTmp)) {
                 expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(lhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
@@ -14474,10 +14479,10 @@ namespace smt {
                     impliedEqualities.push_back(tmp);
             }
         }
-        else if (prefix >= 0 && prefix == (int)lhsVec.size() - 3 && prefix == (int)rhsVec.size() - 2){
+        else if (prefix >= 0 && prefix <= (int)lhsVec.size() - 3 && prefix == (int)rhsVec.size() - 2){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhsVec.size() << std::endl;);
             // only 1 var left
-            expr* concatTmp = u.str.mk_concat(lhsVec[prefix + 1], lhsVec[prefix + 2]);
+            expr* concatTmp = create_concat_from_vector(lhsVec, prefix);
             if (!are_equal_exprs(rhsVec[prefix + 1], concatTmp)) {
                 expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(rhsVec[prefix + 1], concatTmp));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(tmp , m) << std::endl;);
@@ -14486,6 +14491,15 @@ namespace smt {
             }
         }
         return true;
+    }
+
+
+    expr* theory_str::create_concat_from_vector(ptr_vector<expr> v, int from_pos){
+        expr* ret = v[v.size() - 1];
+        for (int i = v.size() - 2; i > from_pos; --i) {
+            ret = u.str.mk_concat(v[i], ret);
+        }
+        return ret;
     }
 
     bool theory_str::have_same_len(expr* lhs, expr* rhs){
