@@ -969,6 +969,7 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
+            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
