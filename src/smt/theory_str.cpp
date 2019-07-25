@@ -4712,6 +4712,7 @@ namespace smt {
 
         expr* contain = nullptr;
         std::set<expr *> not_imp;
+        std::set<expr *> mustbe_imp;
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -4722,20 +4723,27 @@ namespace smt {
 
                 zstring needle;
                 if (is_contain_equality(lhs, contain) && u.str.is_string(contain, needle)) {
-
+                    expr_ref_vector vec(m);
+                    collect_eq_nodes(rhs, vec);
                     if (is_not_important(rhs, needle, eq_combination)){
-                        expr_ref_vector vec(m);
-                        collect_eq_nodes(rhs, vec);
                         for (const auto& e : vec)
                             not_imp.insert(e);
                     }
+                    else {
+                        for (const auto& e : vec)
+                            mustbe_imp.insert(e);
+                    }
                 }
                 else if (is_contain_equality(rhs, contain) && u.str.is_string(contain, needle)) {
+                    expr_ref_vector vec(m);
+                    collect_eq_nodes(lhs, vec);
                     if (is_not_important(lhs, needle, eq_combination)){
-                        expr_ref_vector vec(m);
-                        collect_eq_nodes(lhs, vec);
                         for (const auto& e : vec)
                             not_imp.insert(e);
+                    }
+                    else {
+                        for (const auto& e : vec)
+                            mustbe_imp.insert(e);
                     }
                 }
             }
@@ -4743,7 +4751,7 @@ namespace smt {
 
         std::set<std::pair<expr *, int>> tmp;
         for (const auto& p : importantVars) {
-            if (not_imp.find(p.first) != not_imp.end() && p.second == -1) {
+            if (not_imp.find(p.first) != not_imp.end() && p.second == -1 && mustbe_imp.find(p.first) == mustbe_imp.end()) {
                 continue;
             }
             else {
@@ -4810,7 +4818,7 @@ namespace smt {
         /* cut prefix */
         int prefix = -1;
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
-            if (are_equal_exprs(lhsVec[i], rhsVec[i])) { 
+            if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
                 prefix = i;
             }
             else
