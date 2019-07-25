@@ -8166,7 +8166,7 @@ namespace smt {
 
                     expr_ref_vector ands(m);
                     ands.push_back(createEqualOperator(lhs, constValue));
-                    assert_axiom(createEqualOperator(premise, createAndOperator(ands)));
+                    assert_axiom(rewrite_implication(premise, createAndOperator(ands)));
                 }
             }
             return;

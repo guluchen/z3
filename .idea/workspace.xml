@@ -83,9 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="407">
-              <caret line="14484" column="73" selection-start-line="14484" selection-start-column="73" selection-end-line="14484" selection-end-column="73" />
+            <state relative-caret-position="334">
+              <caret line="8168" column="53" selection-start-line="8168" selection-start-column="53" selection-end-line="8168" selection-end-column="53" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -741,12 +739,12 @@
       <workItem from="1563791575431" duration="8696000" />
       <workItem from="1563812495527" duration="7476000" />
       <workItem from="1563846497332" duration="4695000" />
-      <workItem from="1563862842671" duration="63177000" />
+      <workItem from="1563862842671" duration="64352000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1454429000" />
+    <option name="totallyTimeSpent" value="1455604000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1154,8 +1152,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="407">
-          <caret line="14484" column="73" selection-start-line="14484" selection-start-column="73" selection-end-line="14484" selection-end-column="73" />
+        <state relative-caret-position="334">
+          <caret line="8168" column="53" selection-start-line="8168" selection-start-column="53" selection-end-line="8168" selection-end-column="53" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
