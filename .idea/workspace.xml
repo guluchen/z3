@@ -83,7 +83,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -98,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="971" column="51" selection-start-line="971" selection-start-column="51" selection-end-line="971" selection-end-column="51" />
+            <state relative-caret-position="271">
+              <caret line="8417" column="18" selection-start-line="8417" selection-start-column="18" selection-end-line="8417" selection-end-column="18" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -149,8 +151,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="1540" column="84" selection-start-line="1540" selection-start-column="84" selection-end-line="1540" selection-end-column="84" />
+            <state relative-caret-position="259">
+              <caret line="2054" column="65" selection-start-line="2054" selection-start-column="65" selection-end-line="2054" selection-end-column="65" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
                 <element signature="e#40267#46305#0" />
@@ -175,7 +177,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>fill_chars</find>
       <find>fetch_guessed_str_int_with_scopes</find>
       <find>result</find>
       <find>get_char_range</find>
@@ -203,8 +204,9 @@
       <find>is_trivial_inequality</find>
       <find>mk_arr_</find>
       <find>handle_str_int</find>
-      <find>setup_str_const</find>
       <find>mk_value</find>
+      <find>setup_str_const</find>
+      <find>generateFlatArray</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -739,12 +741,12 @@
       <workItem from="1563791575431" duration="8696000" />
       <workItem from="1563812495527" duration="7476000" />
       <workItem from="1563846497332" duration="4695000" />
-      <workItem from="1563862842671" duration="53297000" />
+      <workItem from="1563862842671" duration="57628000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1444549000" />
+    <option name="totallyTimeSpent" value="1448880000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1440" y="23" width="1280" height="1001" extended-state="6" />
@@ -1129,10 +1131,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="239">
+          <caret line="980" column="20" selection-start-line="980" selection-start-column="20" selection-end-line="980" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="1540" column="84" selection-start-line="1540" selection-start-column="84" selection-end-line="1540" selection-end-column="84" />
+        <state relative-caret-position="259">
+          <caret line="2054" column="65" selection-start-line="2054" selection-start-column="65" selection-end-line="2054" selection-end-column="65" />
           <folding>
             <element signature="e#13206#13218#0" expanded="true" />
             <element signature="e#40267#46305#0" />
@@ -1143,17 +1152,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="239">
-          <caret line="980" column="20" selection-start-line="980" selection-start-column="20" selection-end-line="980" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="971" column="51" selection-start-line="971" selection-start-column="51" selection-end-line="971" selection-end-column="51" />
+        <state relative-caret-position="271">
+          <caret line="8417" column="18" selection-start-line="8417" selection-start-column="18" selection-end-line="8417" selection-end-column="18" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

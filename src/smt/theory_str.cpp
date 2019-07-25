@@ -8401,17 +8401,21 @@ namespace smt {
 
                 ensure_enode(arrVar);
                 std::string arr_str = expr2str(arrVar);
-                if (arr_str[0] == '|')
-                    arr_str = arr_str.substr(1, arr_str.length());
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str << " " << mk_pp(arrVar, m) << " " << std::endl;);
+                SASSERT(arr_str.find_last_of("!", arr_str.length() - 3) != std::string::npos);
 
-                arr_str = arr_str.substr(0, arr_str.find_last_of("!"));
-                SASSERT(arrMap_reverse.find(arr_str) != arrMap_reverse.end());
-                SASSERT(arr_linker.find(arrMap_reverse[arr_str]) != arr_linker.end());
-                if (!are_equal_exprs(v, arr_linker[arrMap_reverse[arr_str]])) {
+                arr_str = arr_str.substr(0, arr_str.find_last_of("!", arr_str.length() - 3));
+
+                if (arr_str[0] == '|')
+                    arr_str = arr_str.substr(1, arr_str.length() - 1);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str  << " of " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
+
+                SASSERT(arr_linker.find(arrVar) != arr_linker.end());
+                if (!are_equal_exprs(v, arr_linker[arrVar])) {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
                     arrVar = nullptr;
                     continue;
-                }
+                } 
 
                 zstring val;
                 if (u.str.is_string(v, val)){
@@ -8426,7 +8430,7 @@ namespace smt {
 
             if (!u.str.is_concat(v) && arrVar == nullptr) {
                 STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
-                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
                 expr_ref v1(m);
                 if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
                     v1 = arrMap_reverse[flatArr];
@@ -8434,6 +8438,7 @@ namespace smt {
                 else {
                     v1 = mk_arr_var(flatArr);
                     arrMap_reverse[flatArr] = v1;
+                    STRACE("str", tout << __LINE__ << " making arr: " << flatArr << " --> " << mk_pp(v1, m) << std::endl;);
                     arr_linker[v1] = v;
                 }
 
@@ -8664,9 +8669,9 @@ namespace smt {
             if (arrVar == nullptr)
                 continue;
             if (!u.str.is_concat(ap) && arrVar == nullptr) {
-                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0), "");
+                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
                 if (u.str.is_string(v))
-                    flatArr = generateFlatArray(std::make_pair(v, 0), "");
+                    flatArr = generateFlatArray(std::make_pair(v, 0));
 
                 expr_ref v1(m);
                 if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
@@ -13138,7 +13143,7 @@ namespace smt {
 	 * Given a flat,
 	 * generate its array name
 	 */
-    std::string theory_str::generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs){
+    std::string theory_str::generateFlatArray(std::pair<expr*, int> a){
         std::string result = "";
         if (a.second >= 0) {
             std::string tmp = expr2str(a.first);
@@ -13151,7 +13156,7 @@ namespace smt {
             zstring value;
             SASSERT(u.str.is_string(a.first, value));
             result += ARRPREFIX;
-            result += ("\"" + value.encode() + "\"");
+            result += ("\"" + expr2str(a.first) + "\"");
         }
         return result;
     }
@@ -13835,7 +13840,7 @@ namespace smt {
 
             result.emplace_back(newVar);
 
-            std::string flatArr = generateFlatArray(std::make_pair(newVar.get(), 0), "");
+            std::string flatArr = generateFlatArray(std::make_pair(newVar.get(), 0));
             expr_ref v1(m);
             if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
                 v1 = arrMap_reverse[flatArr];

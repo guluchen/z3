@@ -2052,7 +2052,7 @@ namespace smt {
              * Given a flat,
              * generate its array name
              */
-            std::string generateFlatArray(std::pair<expr*, int> a, std::string l_r_hs = "");
+            std::string generateFlatArray(std::pair<expr*, int> a);
             expr* getExprVarFlatArray(std::pair<expr*, int> a);
             expr* getExprVarFlatArray(expr* e);
             expr* get_bound_str_int_control_var();
