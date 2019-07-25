@@ -4690,7 +4690,6 @@ namespace smt {
     void theory_str::refined_init_final_check(
             std::set<std::pair<expr *, int>> &importantVars,
             std::map<expr *, std::set<expr *>> &eq_combination){
-
         sigmaDomain = collect_char_domain_from_eqmap(eq_combination);
 
         std::set<expr*> notImportant;
@@ -4700,6 +4699,153 @@ namespace smt {
         std::map<expr*, std::set<expr*>> _premises;
         std::set<expr*> subNodes;
         eq_combination = construct_eq_combination(_premises, subNodes, importantVars);
+        refine_not_contain_vars(importantVars, eq_combination);
+    }
+
+    void theory_str::refine_not_contain_vars(
+            std::set<std::pair<expr *, int>> &importantVars,
+            std::map<expr *, std::set<expr *>> eq_combination){
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        ast_manager & m = get_manager();
+        for (const auto& nn : importantVars)
+            STRACE("str", tout << __LINE__ << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+
+        expr* contain = nullptr;
+        std::set<expr *> not_imp;
+        for (const auto &wi : m_wi_expr_memo) {
+            if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
+                expr* lhs = wi.first.get();
+                expr* rhs = wi.second.get();
+                if (not_imp.find(lhs) != not_imp.end() ||
+                    not_imp.find(rhs) != not_imp.end())
+                    continue;
+
+                if (is_contain_equality(lhs, contain)) {
+
+                    if (is_not_important(rhs, contain, eq_combination)){
+                        expr_ref_vector vec(m);
+                        collect_eq_nodes(rhs, vec);
+                        for (const auto& e : vec)
+                            not_imp.insert(e);
+                    }
+                }
+                else if (is_contain_equality(rhs, contain)) {
+                    if (is_not_important(lhs, contain, eq_combination)){
+                        expr_ref_vector vec(m);
+                        collect_eq_nodes(lhs, vec);
+                        for (const auto& e : vec)
+                            not_imp.insert(e);
+                    }
+                }
+            }
+        }
+
+        std::set<std::pair<expr *, int>> tmp;
+        for (const auto& p : tmp) {
+            if (not_imp.find(p.first) != not_imp.end() && p.second == -1) {
+                continue;
+            }
+            else {
+                tmp.insert(p);
+            }
+        }
+
+        importantVars.clear();
+        importantVars = tmp;
+
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        for (const auto& nn : importantVars)
+            STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
+    }
+
+    bool theory_str::is_not_important(expr* haystack, expr* needle, std::map<expr *, std::set<expr *>> eq_combination){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+        for (const auto& eq : eq_combination) {
+            if (eq.second.size() > 1 && appear_in_eq(haystack, needle, eq.second)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " appear_in_eq: " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+                if (!appear_in_other_eq(eq.first, needle, eq_combination)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " !appear_in_other_eq: " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << std::endl;);
+                    return true;
+                }
+                else
+                    return false;
+            }
+        }
+        return false;
+    }
+
+    bool theory_str::appear_in_eq(expr* haystack, expr* needle, std::set<expr *> s) {
+        ast_manager & m = get_manager();
+        for (const auto& n : s)
+            if (u.str.is_concat(n)){
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(n, nodes);
+                if (nodes.contains(haystack) && nodes.contains(needle)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << " in " << mk_pp(n, m) << std::endl;);
+                    // compare with other elements in s
+                    for (const auto& nn : s)
+                        if (nn != n) {
+                            // shorten two parts
+                            if (!can_omit(n, nn, needle)){
+                                return false;
+                            }
+                        }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << mk_pp(needle, m) << " in " << mk_pp(n, m) << std::endl;);
+                    return true;
+                }
+            }
+        return false;
+    }
+
+    bool theory_str::can_omit(expr* lhs, expr* rhs, expr* needle){
+        ast_manager & m = get_manager();
+        ptr_vector<expr> lhsVec;
+        get_nodes_in_concat(lhs, lhsVec);
+
+        ptr_vector<expr> rhsVec;
+        get_nodes_in_concat(rhs, rhsVec);
+
+        expr_ref_vector andLhs(m);
+        expr_ref_vector andRhs(m);
+
+        /* cut prefix */
+        int prefix = -1;
+        for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
+                if (lhsVec[i] != rhsVec[i]) {
+                    andLhs.push_back(createEqualOperator(lhsVec[i], rhsVec[i]));
+                }
+                prefix = i;
+            }
+
+        prefix = prefix + 1;
+
+        int suffix = 0;
+        for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
+            if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])) {
+                if (lhsVec[lhsVec.size() - 1 - i] != rhsVec[rhsVec.size() - 1 - i])
+                    andRhs.push_back(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
+                suffix = i;
+            }
+
+        for (int i = prefix; i < rhsVec.size() - suffix; ++i)
+            if (needle == rhsVec[i])
+                return false;
+        return true;
+    }
+
+    bool theory_str::appear_in_other_eq(expr* root, expr* needle, std::map<expr *, std::set<expr *>> eq_combination) {
+        for (const auto& eq : eq_combination)
+            if (eq.first != root) {
+                for (const auto& n : eq.second) {
+                    ptr_vector<expr> nodes;
+                    get_nodes_in_concat(n, nodes);
+                    if (nodes.contains(needle))
+                        return true;
+                }
+            }
+        return false;
     }
 
     /*

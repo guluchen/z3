@@ -1405,6 +1405,14 @@ namespace smt {
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
                 rational ten_power(rational n);
+
+            void refine_not_contain_vars(
+                std::set<std::pair<expr *, int>> &importantVars,
+                std::map<expr *, std::set<expr *>> eq_combination);
+            bool is_not_important(expr* haystack, expr* needle, std::map<expr *, std::set<expr *>> eq_combination);
+                bool appear_in_eq(expr* haystack, expr* needle, std::set<expr *> s);
+            bool can_omit(expr* lhs, expr* rhs, expr* needle);
+            bool appear_in_other_eq(expr* root, expr* needle, std::map<expr *, std::set<expr *>> eq_combination);
             bool is_completed_branch(bool &addAxiom);
             void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
