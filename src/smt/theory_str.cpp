@@ -8554,75 +8554,7 @@ namespace smt {
 
         // create all tmp vars
         for(const auto& v : allStrExprs){
-            expr* arrVar = getExprVarFlatArray(v);
-            if (arrVar != nullptr) {
-                // check if we can use that: cannot use if two nodes are not equal
-
-                ensure_enode(arrVar);
-                std::string arr_str = expr2str(arrVar);
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str << " " << mk_pp(arrVar, m) << " " << std::endl;);
-                SASSERT(arr_str.find_last_of("!", arr_str.length() - 3) != std::string::npos);
-
-                arr_str = arr_str.substr(0, arr_str.find_last_of("!", arr_str.length() - 3));
-
-                if (arr_str[0] == '|')
-                    arr_str = arr_str.substr(1, arr_str.length() - 1);
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str  << " of " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
-
-                SASSERT(arr_linker.find(arrVar) != arr_linker.end());
-                if (!are_equal_exprs(v, arr_linker[arrVar])) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
-                    arrVar = nullptr;
-                    continue;
-                }
-
-                zstring val;
-                if (u.str.is_string(v, val)){
-                    if (v != arr_linker[arrVar])
-                        setup_str_const(val, arrVar, createEqualOperator(v, arr_linker[arrVar]));
-                    else
-                        setup_str_const(val, arrVar);
-                }
-
-                continue;
-            }
-
-            if ((!u.str.is_concat(v) || importantVars.find(v) != importantVars.end()) && arrVar == nullptr) {
-                STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
-                std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
-                expr_ref v1(m);
-                if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
-                    v1 = arrMap_reverse[flatArr];
-                }
-                else {
-                    v1 = mk_arr_var(flatArr);
-                    arrMap_reverse[flatArr] = v1;
-                    STRACE("str", tout << __LINE__ << " making arr: " << flatArr << " --> " << mk_pp(v1, m) << std::endl;);
-                    arr_linker[v1] = v;
-                }
-
-                {
-                    expr_ref_vector eqs(m);
-                    collect_eq_nodes(v, eqs);
-
-                    for (const auto& vv : eqs)
-                        arrMap[vv] = v1;
-                }
-
-
-                STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
-
-                zstring val;
-                expr* rexpr;
-                if (u.str.is_string(v, val)){
-                    setup_str_const(val, v1);
-                }
-                else if (isInternalRegexVar(v, rexpr)) {
-                }
-                else if (is_str_int_var(v)){
-                    // setup_str_int_arr
-                }
-            }
+            mk_and_setup_arr(v, importantVars);
         }
 
         create_notcontain_map();
@@ -8631,6 +8563,82 @@ namespace smt {
         init_connecting_size(eq_combination, importantVars, false);
         init_connecting_size(eq_combination, importantVars);
         createAppearanceMap(eq_combination);
+    }
+
+    void theory_str::mk_and_setup_arr(
+            expr* v,
+            std::map<expr*, int> &importantVars){
+        ast_manager & m = get_manager();
+        context & ctx = get_context();
+
+        expr* arrVar = getExprVarFlatArray(v);
+        if (arrVar != nullptr) {
+            // check if we can use that: cannot use if two nodes are not equal
+
+            ensure_enode(arrVar);
+            std::string arr_str = expr2str(arrVar);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str << " " << mk_pp(arrVar, m) << " " << std::endl;);
+            SASSERT(arr_str.find_last_of("!", arr_str.length() - 3) != std::string::npos);
+
+            arr_str = arr_str.substr(0, arr_str.find_last_of("!", arr_str.length() - 3));
+
+            if (arr_str[0] == '|')
+                arr_str = arr_str.substr(1, arr_str.length() - 1);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str  << " of " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
+
+            SASSERT(arr_linker.find(arrVar) != arr_linker.end());
+            if (!are_equal_exprs(v, arr_linker[arrVar])) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
+                arrVar = nullptr;
+            }
+            else {
+                zstring val;
+                if (u.str.is_string(v, val)) {
+                    if (v != arr_linker[arrVar])
+                        setup_str_const(val, arrVar, createEqualOperator(v, arr_linker[arrVar]));
+                    else
+                        setup_str_const(val, arrVar);
+                }
+                return;
+            }
+        }
+
+        if ((!u.str.is_concat(v) || importantVars.find(v) != importantVars.end()) && arrVar == nullptr) {
+            STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
+            std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
+            expr_ref v1(m);
+            if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
+                v1 = arrMap_reverse[flatArr];
+            }
+            else {
+                v1 = mk_arr_var(flatArr);
+                arrMap_reverse[flatArr] = v1;
+                STRACE("str", tout << __LINE__ << " making arr: " << flatArr << " --> " << mk_pp(v1, m) << std::endl;);
+                arr_linker[v1] = v;
+            }
+
+            {
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(v, eqs);
+
+                for (const auto& vv : eqs)
+                    arrMap[vv] = v1;
+            }
+
+
+            STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
+
+            zstring val;
+            expr* rexpr;
+            if (u.str.is_string(v, val)){
+                setup_str_const(val, v1);
+            }
+            else if (isInternalRegexVar(v, rexpr)) {
+            }
+            else if (is_str_int_var(v)){
+                // setup_str_int_arr
+            }
+        }
     }
 
     void theory_str::setup_str_int_arr(expr* v, int start){
@@ -9099,7 +9107,8 @@ namespace smt {
                 std::vector<std::pair<expr*, int>> lhs_elements = create_equality(it->first, false);
                 uState.importantVars.insert(std::make_pair(it->first, connectingSize));
                 importantVars.insert(std::make_pair(it->first, connectingSize));
-
+                mk_and_setup_arr(it->first, importantVars);
+                
                 /* compare with others */
                 for (const auto& element: it->second) {
                     std::vector<std::pair<expr*, int>> rhs_elements = create_equality(element);
