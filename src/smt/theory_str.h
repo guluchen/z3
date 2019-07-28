@@ -2466,7 +2466,7 @@ namespace smt {
         rational p_bound;
         rational q_bound;
         rational str_int_bound;
-        rational max_str_int_bound = rational(5);
+        rational max_str_int_bound = rational(10);
         rational max_p_bound = rational(3);
         rational max_q_bound = rational(20);
         expr* str_int_bound_expr = nullptr;
