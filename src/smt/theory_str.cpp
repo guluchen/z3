@@ -9108,7 +9108,7 @@ namespace smt {
                 uState.importantVars.insert(std::make_pair(it->first, connectingSize));
                 importantVars.insert(std::make_pair(it->first, connectingSize));
                 mk_and_setup_arr(it->first, importantVars);
-                
+
                 /* compare with others */
                 for (const auto& element: it->second) {
                     std::vector<std::pair<expr*, int>> rhs_elements = create_equality(element);
@@ -10400,12 +10400,14 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
         bool isConstA = a.second < 0;
         bool isConstB = b.second < 0;
+        expr_ref_vector result(m);
 
         /*
          * str-int var
          */
-        if (!const_vs_str_int(a.first, {b})){
-            return nullptr;
+        expr* extra_assert = nullptr;
+        if (!const_vs_str_int(a.first, {b}, extra_assert)){
+            result.push_back(extra_assert);
         }
 
         expr* reg = nullptr;
@@ -10433,7 +10435,6 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
         /* do not need AND */
-        expr_ref_vector result(m);
         result.push_back(createEqualOperator(nameA, nameB));
 
         if (!isConstA && !isConstB) {
@@ -10843,15 +10844,15 @@ namespace smt {
             return nullptr;
         }
 
-        if (!const_vs_str_int(a.first, elementNames)) {
-            return nullptr;
+        expr_ref_vector result(m);
+        expr* extra_assert = nullptr;
+        if (!const_vs_str_int(a.first, elementNames, extra_assert)) {
+            result.push_back(extra_assert);
         }
 
         if (!not_contain_check(a.first, elementNames)){
             return nullptr;
         }
-
-        expr_ref_vector result(m);
 
         if (a.second < 0) { /* const string or regex */
             /* check feasibility */
@@ -12827,7 +12828,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_str::const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames){
+    bool theory_str::const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames, expr* &extra_assert){
         if (string_int_vars.contains(e)){
             for (int i = 0; i < elementNames.size(); ++i) {
                 zstring val;
@@ -12840,6 +12841,7 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())
                                                << " cannot contain because of str-int" << mk_pp(elementNames[i].first, get_manager())
                                                << std::endl;);
+                            extra_assert = createEqualOperator(u.str.mk_stoi(e), mk_int(-1));
                             return false;
                         }
                 }
