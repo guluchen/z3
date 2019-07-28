@@ -1411,6 +1411,7 @@ namespace smt {
                 std::map<expr *, std::set<expr *>> eq_combination);
             bool is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
                 bool appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s);
+                bool eq_in_list(expr* n, ptr_vector<expr> nodes);
             bool can_omit(expr* lhs, expr* rhs, zstring needle);
             bool appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
             bool is_completed_branch(bool &addAxiom);
