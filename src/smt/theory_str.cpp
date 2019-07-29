@@ -18917,18 +18917,25 @@ namespace smt {
 
         // prepare backwardDep
         for (const auto& n : uState.eq_combination) {
+            if (!ctx.is_relevant(n.first))
+                continue;
+
             std::set<expr*> dep = getDependency(n.first);
             expr_ref_vector tmp(m);
             collect_eq_nodes(n.first, tmp);
             expr* reg = nullptr;
-            for (const auto& nn : dep)
+            for (const auto& nn : dep) {
+                if (!ctx.is_relevant(nn))
+                    continue;
                 if (u.str.is_string(nn) || is_important(nn) || isInternalRegexVar(nn, reg) || is_regex_concat(nn)) {
                     if (!are_equal_exprs(n.first, nn))
-                        backwardDep[ctx.get_enode(n.first)->get_root()->get_owner()].insert(ctx.get_enode(nn)->get_root()->get_owner());
+                        backwardDep[ctx.get_enode(n.first)->get_root()->get_owner()].insert(
+                                ctx.get_enode(nn)->get_root()->get_owner());
                     included_nodes.insert(ctx.get_enode(nn)->get_root()->get_owner());
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(nn)->get_root()->get_owner(), m) << std::endl;);
                 }
+            }
         }
+
 
         for (const auto& c : concat_astNode_map) {
             if (!ctx.is_relevant(c.get_value()) || !ctx.is_relevant(c.get_key1()) || !ctx.is_relevant(c.get_key2()))
