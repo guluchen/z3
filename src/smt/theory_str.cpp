@@ -5388,15 +5388,15 @@ namespace smt {
             return false;
 
         // special case for a . x = x . a
-        if (nnodes.size() == 1 && remain_vector.size() == 1){
-            u.str.is_string(nnodes[0], val);
-            zstring lhs = val + val;
-
-            zstring rhs;
-            u.str.is_string(remain_vector[0], rhs);
-            if (!lhs.contains(rhs))
-                return false;
-        }
+//        if (nnodes.size() == 1 && remain_vector.size() == 1){
+//            u.str.is_string(nnodes[0], val);
+//            zstring lhs = val + val;
+//
+//            zstring rhs;
+//            u.str.is_string(remain_vector[0], rhs);
+//            if (!lhs.contains(rhs))
+//                return false;
+//        }
 
         return true;
     }
@@ -8018,7 +8018,7 @@ namespace smt {
             }
         }
 
-        if (currState.eq_combination < preState.eq_combination) {
+        if (currState.eq_combination.size() < preState.eq_combination.size()) {
             // check if all missing combinations are trivial
             for (const auto& n : preState.eq_combination)
                 if (checked.find(n.first) == checked.end()) {
@@ -10033,15 +10033,6 @@ namespace smt {
         }
         return Arrangment(left_arr, right_arr);
     }
-
-    bool theory_str::passSelfConflict(
-            Arrangment a,
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements){
-        return true;
-    }
-
-
 
     /*
      * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
