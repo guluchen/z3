@@ -8299,35 +8299,35 @@ namespace smt {
             expr* lhs = to_app(equality)->get_arg(0);
             expr* rhs = to_app(equality)->get_arg(1);
 
-            handle_NOTContain(lhs, rhs);
+            handle_NOTContain(lhs, rhs, true);
         }
     }
 
-    void theory_str::handle_NOTContain(expr* lhs, expr* rhs){
+    void theory_str::handle_NOTContain(expr* lhs, expr* rhs, bool cached){
         ast_manager & m = get_manager();
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOperator(lhs, rhs));
         if (is_contain_equality(lhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
-                handle_NOTContain_const(rhs, value, premise);
+                handle_NOTContain_const(rhs, value, premise, cached);
             else
-                handle_NOTContain_var(rhs, contain, premise);
+                handle_NOTContain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_equality(rhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value))
-                handle_NOTContain_const(lhs, value, premise);
+                handle_NOTContain_const(lhs, value, premise, cached);
             else
-                handle_NOTContain_var(lhs, contain, premise);
+                handle_NOTContain_var(lhs, contain, premise, cached);
         }
     }
 
-    void theory_str::handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise){
+    void theory_str::handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise, bool cached){
 
     }
 
-    void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise){
+    void theory_str::handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise, bool cached){
         zstring tmp("U");
         if (rhs == tmp)
             return;
@@ -8342,7 +8342,7 @@ namespace smt {
 
             if (u.str.is_string(constValue, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << ")\n";);
-                if (value.indexof(rhs, 0) >= 0) {
+                if (value.indexof(rhs, 0) >= 0 && !cached) {
                     negate_context();
                 }
             }

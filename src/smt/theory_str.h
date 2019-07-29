@@ -1573,9 +1573,9 @@ namespace smt {
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
                 void handle_NOTContain();
                 void handle_NOTContain_cached();
-                    void handle_NOTContain(expr* lhs, expr* rhs);
-                    void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise);
-                    void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise);
+                    void handle_NOTContain(expr* lhs, expr* rhs, bool cached = false);
+                    void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise, bool cached);
+                    void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise, bool cached);
                     bool is_contain_equality(expr* n);
                     bool is_contain_equality(expr* n, expr* &contain);
                     bool is_trivial_contain(zstring s);
