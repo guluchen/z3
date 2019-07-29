@@ -83,8 +83,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -96,11 +96,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="94">
-              <caret line="4793" column="29" selection-start-line="4793" selection-start-column="29" selection-end-line="4793" selection-end-column="29" />
+            <state relative-caret-position="-637">
+              <caret line="17762" column="140" selection-start-line="17762" selection-start-column="140" selection-end-line="17762" selection-end-column="140" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -147,11 +147,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="242">
-              <caret line="1413" column="21" selection-start-line="1413" selection-start-column="21" selection-end-line="1413" selection-end-column="21" />
+            <state relative-caret-position="212">
+              <caret line="1411" column="92" selection-start-line="1411" selection-start-column="92" selection-end-line="1411" selection-end-column="92" />
               <folding>
                 <element signature="e#13206#13218#0" expanded="true" />
               </folding>
@@ -172,8 +172,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>setup_regex_var</find>
-      <find>m_root2value</find>
       <find>setup_char_range_arr</find>
       <find>fetchValueFromDepGraph</find>
       <find>is_trivial_in</find>
@@ -202,6 +200,8 @@
       <find>is_not_important</find>
       <find>mustbe_imp</find>
       <find>appear_in_eq</find>
+      <find>inconsistent</find>
+      <find>m_delayed_assertions_todo</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -230,8 +230,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
         <option value="$PROJECT_DIR$/src/ast/seq_decl_plugin.h" />
         <option value="$PROJECT_DIR$/src/util/ref_vector.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
       </list>
     </option>
   </component>
@@ -738,12 +738,12 @@
       <workItem from="1563846497332" duration="4695000" />
       <workItem from="1563862842671" duration="75922000" />
       <workItem from="1564106416055" duration="7567000" />
-      <workItem from="1564318752328" duration="3403000" />
+      <workItem from="1564318752328" duration="4551000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1478144000" />
+    <option name="totallyTimeSpent" value="1479292000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="139" y="23" width="1280" height="877" extended-state="0" />
@@ -1135,22 +1135,22 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="94">
-          <caret line="4793" column="29" selection-start-line="4793" selection-start-column="29" selection-end-line="4793" selection-end-column="29" />
+        <state relative-caret-position="212">
+          <caret line="1411" column="92" selection-start-line="1411" selection-start-column="92" selection-end-line="1411" selection-end-column="92" />
           <folding>
-            <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#13206#13218#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="242">
-          <caret line="1413" column="21" selection-start-line="1413" selection-start-column="21" selection-end-line="1413" selection-end-column="21" />
+        <state relative-caret-position="-637">
+          <caret line="17762" column="140" selection-start-line="17762" selection-start-column="140" selection-end-line="17762" selection-end-column="140" />
           <folding>
-            <element signature="e#13206#13218#0" expanded="true" />
+            <element signature="e#0#20#0" expanded="true" />
           </folding>
         </state>
       </provider>

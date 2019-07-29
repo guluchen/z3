@@ -7684,7 +7684,7 @@ namespace smt {
 
         expr_ref_vector conclusions(m);
 
-        conclusions.push_back(lenConstraint);
+//        conclusions.push_back(lenConstraint);
         conclusions.push_back(unrollConstraint);
         conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
         conclusions.push_back(fill_0);
@@ -7844,11 +7844,9 @@ namespace smt {
     }
 
     /*
-     * 0 <= val < 10 --> len = 2
-     * 10 <= val < 100 --> len = 3
-     * ..
-     * -1 >= val > -10 --> len = 3
-     * -10 >= val > -100 --> len = 4
+     * 0 <= val < 10 --> len < 2
+     * 10 <= val < 100 --> len < 3
+     * ...
      */
     expr* theory_str::lower_bound_int_str(expr* num, expr* str){
         ast_manager & m = get_manager();
@@ -17762,7 +17760,7 @@ namespace smt {
             expr* tmp = is_regex_plus_breakdown(regex);
             if (tmp != nullptr){
                 regex = to_app(tmp);
-                assert_axiom(rewrite_implication(ex, createGreaterEqOperator(mk_strlen(ex->get_arg(0)), mk_int(1))));
+                m_delayed_assertions_todo.push_back(rewrite_implication(ex, createGreaterEqOperator(mk_strlen(ex->get_arg(0)), mk_int(1))));
             }
 
             std::vector<std::vector<zstring>> regexElements = combineConstStr(refineVectors(parse_regex_components(underApproxRegex(getStdRegexStr(regex)))));
