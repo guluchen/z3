@@ -100,10 +100,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="478">
-              <caret line="5390" column="19" lean-forward="true" selection-start-line="5390" selection-start-column="19" selection-end-line="5398" selection-end-column="11" />
+            <state relative-caret-position="145">
+              <caret line="11676" column="46" selection-start-line="11676" selection-start-column="46" selection-end-line="11676" selection-end-column="46" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#488933#489238#0" expanded="true" />
+                <element signature="e#518159#518573#0" expanded="true" />
+                <element signature="e#530165#530489#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -151,10 +154,10 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="192">
-              <caret line="1691" selection-start-line="1691" selection-end-line="1691" />
+            <state relative-caret-position="217">
+              <caret line="1767" column="22" selection-start-line="1767" selection-start-column="22" selection-end-line="1767" selection-end-column="22" />
               <folding>
-                <element signature="e#13206#13218#0" expanded="true" />
+                <element signature="e#13208#13220#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -173,25 +176,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>can_omit</find>
-      <find>appear_in_other_eq</find>
-      <find>cond % QMAX ==</find>
-      <find>const_vs_regex</find>
-      <find>generate_constraint01</find>
-      <find>update_string_int_vars</find>
-      <find>handle_diseq</find>
-      <find>expr</find>
-      <find>underapproximation_repeat</find>
-      <find>handle_str_int</find>
-      <find>propagate(</find>
-      <find>str_int_bound</find>
-      <find>mk_arr</find>
-      <find>mk_arr_va</find>
-      <find>12840</find>
-      <find>const_vs_str_int</find>
-      <find>is_not_important</find>
-      <find>mustbe_imp</find>
-      <find>appear_in_eq</find>
       <find>inconsistent</find>
       <find>m_delayed_assertions_todo</find>
       <find>lower_bound_int_str</find>
@@ -203,6 +187,25 @@
       <find>passSelfConflict</find>
       <find>handleCase</find>
       <find>same_prefix_same_parikh</find>
+      <find>importantVars</find>
+      <find>construct_eq_</find>
+      <find>connectedvar</find>
+      <find>connectedVars</find>
+      <find>ConnectedVars</find>
+      <find>unroll_connected_variable</find>
+      <find>handle_str_int</find>
+      <find>NON_FRESH__ONLY</find>
+      <find>CONST_NON_FRESH</find>
+      <find>const_vs_regex</find>
+      <find>collectAllPossibleSplits</find>
+      <find>collectCharRange</find>
+      <find>charRange[0] =</find>
+      <find>vector&lt;std::pair&lt;int, int&gt;&gt; charRange = collectCharRa</find>
+      <find>&amp; charRange[0].first ==</find>
+      <find>charRange[0].first ==</find>
+      <find>ctor&lt;std::pair&lt;int, int&gt;&gt; charRange = collectCharRange(</find>
+      <find>connected</find>
+      <find>9950 *** arrange ***</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -217,6 +220,10 @@
       <replace>arrange</replace>
       <replace>_cached</replace>
       <replace>setup</replace>
+      <replace>non_fresh_vars</replace>
+      <replace>non_fresh_map</replace>
+      <replace>unroll_non_fresh_variable</replace>
+      <replace>non_fresh_</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -235,8 +242,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
         <option value="$PROJECT_DIR$/src/ast/seq_decl_plugin.h" />
         <option value="$PROJECT_DIR$/src/util/ref_vector.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
       </list>
     </option>
   </component>
@@ -743,12 +750,12 @@
       <workItem from="1563846497332" duration="4695000" />
       <workItem from="1563862842671" duration="75922000" />
       <workItem from="1564106416055" duration="7567000" />
-      <workItem from="1564318752328" duration="11738000" />
+      <workItem from="1564318752328" duration="14455000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1486479000" />
+    <option name="totallyTimeSpent" value="1489196000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="139" y="23" width="1280" height="877" extended-state="0" />
@@ -1142,20 +1149,23 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="192">
-          <caret line="1691" selection-start-line="1691" selection-end-line="1691" />
+        <state relative-caret-position="217">
+          <caret line="1767" column="22" selection-start-line="1767" selection-start-column="22" selection-end-line="1767" selection-end-column="22" />
           <folding>
-            <element signature="e#13206#13218#0" expanded="true" />
+            <element signature="e#13208#13220#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="478">
-          <caret line="5390" column="19" lean-forward="true" selection-start-line="5390" selection-start-column="19" selection-end-line="5398" selection-end-column="11" />
+        <state relative-caret-position="145">
+          <caret line="11676" column="46" selection-start-line="11676" selection-start-column="46" selection-end-line="11676" selection-end-column="46" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#488933#489238#0" expanded="true" />
+            <element signature="e#518159#518573#0" expanded="true" />
+            <element signature="e#530165#530489#0" expanded="true" />
           </folding>
         </state>
       </provider>
