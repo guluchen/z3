@@ -1528,6 +1528,7 @@ namespace smt {
             bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
                 std::set<std::pair<expr*, int>> importantVars);
+                bool assert_state(expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs, str::state root);
                 bool handle_str_int();
                     void handle_str2int(expr* num, expr* str);
                     void handle_int2str(expr* num, expr* str);
@@ -1544,7 +1545,7 @@ namespace smt {
                     bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
                 bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
-            bool underapproximation_repeat();
+            bool underapproximation_cached();
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &importantVars);
                 void mk_and_setup_arr(
                     expr* v,
@@ -1562,16 +1563,16 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> eq_combination);
                 void setup_flats();
                 bool should_use_flat();
-            void init_underapprox_repeat();
+            void init_underapprox_cached();
 
-            void handle_diseq(bool repeat = false);
+            void handle_diseq(bool cached = false);
                 void handle_NOTEqual();
-                void handle_NOTEqual_repeat();
+                void handle_NOTEqual_cached();
                     void handle_NOTEqual(expr* lhs, expr* rhs);
                     void handle_NOTEqual_const(expr* lhs, zstring rhs);
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
                 void handle_NOTContain();
-                void handle_NOTContain_repeat();
+                void handle_NOTContain_cached();
                     void handle_NOTContain(expr* lhs, expr* rhs);
                     void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise);
                     void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise);
@@ -1665,11 +1666,16 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              *
              */
-            expr_ref_vector collect_all_possible_arrangements(
+            expr_ref_vector arrange(
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::map<expr*, int> connectedVariables,
                 int p = PMAX);
+
+            void get_arrangements(std::vector<std::pair<expr*, int>> lhs_elements,
+                                          std::vector<std::pair<expr*, int>> rhs_elements,
+                                          std::map<expr*, int> connectedVariables,
+                                          std::vector<Arrangment> &possibleCases);
 
             void update_possible_arrangements(
                 std::vector<std::pair<expr*, int>> lhs_elements,
@@ -1684,11 +1690,6 @@ namespace smt {
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements);
 
-            bool passNotContainMapReview(
-                Arrangment a,
-                std::vector<std::pair<expr*, int>> lhs_elements,
-                std::vector<std::pair<expr*, int>> rhs_elements);
-
             bool passSelfConflict(
                 Arrangment a,
                 std::vector<std::pair<expr*, int>> lhs_elements,
@@ -1696,7 +1697,7 @@ namespace smt {
             /*
              * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
              */
-            expr* generate_smt(int p,
+            expr* to_arith(int p,
                                             std::vector<int> left_arr,
                                             std::vector<int> right_arr,
                                             std::vector<std::pair<expr*, int>> lhs_elements,
@@ -2075,19 +2076,19 @@ namespace smt {
             /*
             * First base case
             */
-            void handleCase_0_0_general();
+            void setup_0_0_general();
             /*
              * 2nd base case [0] = (sum rhs...)
              */
-            void handleCase_0_n_general(int lhs, int rhs);
+            void setup_0_n_general(int lhs, int rhs);
             /*
              * 2nd base case (sum lhs...) = [0]
              */
-            void handleCase_n_0_general(int lhs, int rhs);
+            void setup_n_0_general(int lhs, int rhs);
             /*
              * general case
              */
-            void handleCase_n_n_general(int lhs, int rhs);
+            void setup_n_n_general(int lhs, int rhs);
             std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v);
             std::string expr2str(expr* node);
             /*

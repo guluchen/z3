@@ -1225,7 +1225,7 @@ namespace smt {
             return;
         }
 
-        if (underapproximation_repeat()) {
+        if (underapproximation_cached()) {
             need_change = true;
             uState.reassertEQ = true;
             newConstraintTriggered = true;
@@ -4894,7 +4894,7 @@ namespace smt {
             else {
                 if (!uState.reassertEQ){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertEQ = false " << uState.eqLevel << std::endl;);
-                    underapproximation_repeat();
+                    underapproximation_cached();
                     uState.eqLevel = get_actual_trau_lvl();
                 }
 
@@ -7539,34 +7539,7 @@ namespace smt {
         UnderApproxState state(m, get_actual_trau_lvl(), get_actual_trau_lvl(), eq_combination, importantVars, guessedEqs, guessedDisEqs, root, str_int_bound);
 
         if (is_equal(uState, state)) {
-            expr_ref_vector corePrev(m);
-            fetch_guessed_exprs_from_cache(uState, corePrev);
-
-            // update guessed exprs
-            uState.equalities.reset();
-            uState.equalities.append(guessedEqs);
-
-            uState.disequalities.reset();
-            uState.disequalities.append(guessedDisEqs);
-
-            bool axiomAdded = false;
-//            if (!is_weaker_expr_sets(guessedEqs, corePrev)) {
-            if (is_equal(corePrev, guessedEqs)) {
-                axiomAdded = true;
-                underapproximation_repeat();
-                handle_diseq(true);
-                uState.eqLevel = get_actual_trau_lvl();
-                uState.diseqLevel = get_actual_trau_lvl();
-            }
-            else if (!uState.reassertDisEQ){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
-                handle_diseq(true);
-                uState.diseqLevel = get_actual_trau_lvl();
-                axiomAdded = true;
-            }
-            uState.currState = root;
-            uState.reassertEQ = true;
-            uState.reassertDisEQ = true;
+            bool axiomAdded = assert_state(guessedEqs, guessedDisEqs, root);
             return axiomAdded;
         }
         else {
@@ -7584,6 +7557,38 @@ namespace smt {
         bool axiomAdded = handle_str_int();
         axiomAdded = convert_equalities(mapset2mapvector(eq_combination), connectedVars, createAndOperator(guessedEqs)) || axiomAdded;
 
+        return axiomAdded;
+    }
+
+    bool theory_str::assert_state(expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs, str::state root){
+        expr_ref_vector corePrev(get_manager());
+        fetch_guessed_exprs_from_cache(uState, corePrev);
+
+        // update guessed exprs
+        uState.equalities.reset();
+        uState.equalities.append(guessedEqs);
+
+        uState.disequalities.reset();
+        uState.disequalities.append(guessedDisEqs);
+
+        bool axiomAdded = false;
+//            if (!is_weaker_expr_sets(guessedEqs, corePrev)) {
+        if (is_equal(corePrev, guessedEqs)) {
+            axiomAdded = true;
+            underapproximation_cached();
+            handle_diseq(true);
+            uState.eqLevel = get_actual_trau_lvl();
+            uState.diseqLevel = get_actual_trau_lvl();
+        }
+        else if (!uState.reassertDisEQ){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reassertDisEQ = false " << uState.diseqLevel << std::endl;);
+            handle_diseq(true);
+            uState.diseqLevel = get_actual_trau_lvl();
+            axiomAdded = true;
+        }
+        uState.currState = root;
+        uState.reassertEQ = true;
+        uState.reassertDisEQ = true;
         return axiomAdded;
     }
 
@@ -7684,7 +7689,7 @@ namespace smt {
 
         expr_ref_vector conclusions(m);
 
-//        conclusions.push_back(lenConstraint);
+        conclusions.push_back(lenConstraint);
         conclusions.push_back(unrollConstraint);
         conclusions.push_back(createLessEqOperator(num, mk_int(max_value)));
         conclusions.push_back(fill_0);
@@ -7874,8 +7879,10 @@ namespace smt {
             ands.push_back(rewrite_implication(
                     createAndOperator(tmpAnds),
                     createEqualOperator(mk_strlen(str), mk_int(len_minus_one))));
+            prePower = powerOf;
         }
         ands.push_back(createLessEqOperator(len_e, mk_int(str_int_bound)));
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(createAndOperator(ands), m) << std::endl;);
         return createAndOperator(ands);
     }
 
@@ -8095,7 +8102,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_str::underapproximation_repeat(){
+    bool theory_str::underapproximation_cached(){
         ast_manager & m = get_manager();
         context & ctx = get_context();
 
@@ -8105,7 +8112,7 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << " @lvl " << m_scope_level << std::endl;);
         if (uState.assertingConstraints.size() > 0)
-            init_underapprox_repeat();
+            init_underapprox_cached();
         bool axiomAdded = false;
 
         for (const auto& a : uState.assertingConstraints){
@@ -8121,16 +8128,16 @@ namespace smt {
         return axiomAdded;
     }
 
-    void theory_str::handle_diseq(bool repeat){
+    void theory_str::handle_diseq(bool cached){
 //        return;
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " repeat = " << repeat << " @lvl " << m_scope_level << "\n";);
-        if (!repeat){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
+        if (!cached){
             handle_NOTEqual();
             handle_NOTContain();
         }
         else {
-            handle_NOTEqual_repeat();
-            handle_NOTContain_repeat();
+            handle_NOTEqual_cached();
+            handle_NOTContain_cached();
         }
 
     }
@@ -8148,7 +8155,7 @@ namespace smt {
         }
     }
 
-    void theory_str::handle_NOTEqual_repeat(){
+    void theory_str::handle_NOTEqual_cached(){
         for (const auto &wi : uState.disequalities) {
             SASSERT(to_app(wi)->get_num_args() == 1);
             expr* equality = to_app(wi)->get_arg(0);
@@ -8283,7 +8290,7 @@ namespace smt {
         }
     }
 
-    void theory_str::handle_NOTContain_repeat(){
+    void theory_str::handle_NOTContain_cached(){
         for (const auto &wi : uState.disequalities) {
             SASSERT(to_app(wi)->get_num_args() == 1);
             expr* equality = to_app(wi)->get_arg(0);
@@ -8788,7 +8795,7 @@ namespace smt {
         return false;
     }
 
-    void theory_str::init_underapprox_repeat(){
+    void theory_str::init_underapprox_cached(){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         context & ctx = get_context();
@@ -9092,8 +9099,8 @@ namespace smt {
                         std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
 
                         expr* result = equality_to_arith(lhs_elements,
-                                                     rhs_elements,
-                                                     importantVars);
+                                                         rhs_elements,
+                                                         importantVars);
 
                         if (result != nullptr) {
                             expr_ref tmp(result, m);
@@ -9110,11 +9117,6 @@ namespace smt {
             }
             else if (maxLocal > maxPConsidered) {
                 /* add an eq = flat . flat . flat, then other equalities will compare with it */
-//                std::vector<expr*> genericFlat = create_set_of_flat_variables(flatP, importantVars, it->first);
-
-//                SASSERT(genericFlat.size() == 1);
-//                uState.importantVars.insert(std::make_pair(genericFlat[0], connectingSize));
-//                assert_axiom(createEqualOperator(genericFlat[0], it->first));
 
                 std::vector<std::pair<expr*, int>> lhs_elements = create_equality(it->first, false);
                 uState.importantVars.insert(std::make_pair(it->first, connectingSize));
@@ -9895,7 +9897,7 @@ namespace smt {
             tmp01 = tmp01 + "+++" + expr2str(rhs_elements[i].first);
         if (generatedEqualities.find(tmp01) == generatedEqualities.end() &&
                 lhs_elements.size() != 0 && rhs_elements.size() != 0){
-            expr_ref_vector cases = collect_all_possible_arrangements(
+            expr_ref_vector cases = arrange(
                     lhs_elements,
                     rhs_elements,
                     connectedVariables,
@@ -9923,7 +9925,7 @@ namespace smt {
      * Pre-Condition: x_i == 0 --> x_i+1 == 0
      *
      */
-    expr_ref_vector theory_str::collect_all_possible_arrangements(
+    expr_ref_vector theory_str::arrange(
             std::vector<std::pair<expr*, int>> lhs_elements,
             std::vector<std::pair<expr*, int>> rhs_elements,
             std::map<expr*, int> connectedVariables,
@@ -9933,29 +9935,18 @@ namespace smt {
         ast_manager &m = get_manager();
 #if 1
         /* because arrangements are reusable, we use "general" functions */
-        handleCase_0_0_general();
+        setup_0_0_general();
         /* second base case : first row and first column */
-        handleCase_0_n_general(lhs_elements.size(), rhs_elements.size());
-        handleCase_n_0_general(lhs_elements.size(), rhs_elements.size());
+        setup_0_n_general(lhs_elements.size(), rhs_elements.size());
+        setup_n_0_general(lhs_elements.size(), rhs_elements.size());
         /* general cases */
-        handleCase_n_n_general(lhs_elements.size(), rhs_elements.size());
+        setup_n_n_general(lhs_elements.size(), rhs_elements.size());
 
         /* because of "general" functions, we need to refine arrangements */
         std::vector<Arrangment> possibleCases;
-
-        std::string firstVar = expr2str(lhs_elements[0].first);
-        if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == QMAX)||
-            (lhs_elements.size() == 2 &&
-             ((connectedVariables.find(lhs_elements[0].first) != connectedVariables.end() && lhs_elements[1].second % QMAX == 1) ||
-              (lhs_elements[0].second % QCONSTMAX == -1 && lhs_elements[1].second % QCONSTMAX == 0)))) {
-            /* create manually */
-            /*9999999 10000000 vs 1 1 1 1 1 */
-            possibleCases.emplace_back(manuallyCreate_arrangment(lhs_elements, rhs_elements));
-        }
-        else {
-            update_possible_arrangements(lhs_elements, rhs_elements, arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)], possibleCases);
-        }
+        get_arrangements(lhs_elements, rhs_elements, connectedVariables, possibleCases);
 #endif
+
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
             STRACE("str", tout << mk_pp(lhs_elements[i].first, m) << " ";);
@@ -9969,29 +9960,39 @@ namespace smt {
         /* 1 vs n, 1 vs 1, n vs 1 */
         for (unsigned i = 0; i < possibleCases.size(); ++i) {
 
-            if (passNotContainMapReview(possibleCases[i], lhs_elements, rhs_elements) && passSelfConflict(possibleCases[i], lhs_elements, rhs_elements)) {
-                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
-                expr* tmp = generate_smt(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_elements, rhs_elements, connectedVariables);
+            arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
+            expr* tmp = to_arith(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_elements, rhs_elements, connectedVariables);
 
-                if (tmp != nullptr) {
-                    cases.push_back(tmp);
-//                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
-//                    for (unsigned i = 0; i < lhs_elements.size(); ++i)
-//                        STRACE("str", tout << mk_pp(lhs_elements[i].first, m) << " ";);
-//
-//                    STRACE("str", tout << std::endl;);
-//                    for (unsigned i = 0; i < rhs_elements.size(); ++i)
-//                        STRACE("str", tout << mk_pp(rhs_elements[i].first, m) << " ";);
-//                    STRACE("str", tout <<  std::endl;);
-                    arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
-                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
-                }
-                else {
-                }
+            if (tmp != nullptr) {
+                cases.push_back(tmp);
+                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
+                STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
+            }
+            else {
             }
         }
         return cases;
 
+    }
+
+    void theory_str::get_arrangements(std::vector<std::pair<expr*, int>> lhs_elements,
+                                      std::vector<std::pair<expr*, int>> rhs_elements,
+                                      std::map<expr*, int> connectedVariables,
+                                      std::vector<Arrangment> &possibleCases) {
+        std::string firstVar = expr2str(lhs_elements[0].first);
+        if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == QMAX) ||
+            (lhs_elements.size() == 2 &&
+             ((connectedVariables.find(lhs_elements[0].first) != connectedVariables.end() &&
+               lhs_elements[1].second % QMAX == 1) ||
+              (lhs_elements[0].second % QCONSTMAX == -1 && lhs_elements[1].second % QCONSTMAX == 0)))) {
+            /* create manually */
+            /*9999999 10000000 vs 1 1 1 1 1 */
+            possibleCases.emplace_back(manuallyCreate_arrangment(lhs_elements, rhs_elements));
+        } else {
+            update_possible_arrangements(lhs_elements, rhs_elements,
+                                         arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)],
+                                         possibleCases);
+        }
     }
 
     void theory_str::update_possible_arrangements(
@@ -10033,52 +10034,6 @@ namespace smt {
         return Arrangment(left_arr, right_arr);
     }
 
-    bool theory_str::passNotContainMapReview(
-            Arrangment a,
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements){
-        /* do the left */
-//        for (unsigned i = 0; i < lhs_elements.size(); ++i)
-//            if (a.left_arr[i] == SUMFLAT) { /* a = bx + cy */
-//
-//                for (unsigned j = 0; j < rhs_elements.size(); ++j)
-//                    if (a.right_arr[j] == (int)i) {
-//                        if (rhs_elements[j].second < 0) {
-//                            zstring strContent;
-//                            if (isRegexStr(rhs_elements[j].first)) {
-//                                if (rhs_elements[j].first.find('+') != std::string::npos)
-//                                    strContent = parse_regex_full_content(rhs_elements[j].first);
-//                            }
-//                            else
-//                                strContent = u.str.is_string(rhs_elements[j].first);
-//                            for (const auto notContain : notContainMap)
-//                                if (notContain.first.first.compare(lhs_elements[i].first) == 0 &&
-//                                    strContent.find(notContain.first.second) != std::string::npos) {
-//                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << notContain.first.first << " cannot contain " << rhs_elements[j].first << " because of " << notContain.first.second << std::endl;);
-//                                    return false;
-//                                }
-//                        }
-//                    }
-//            }
-//
-//        /* do the right */
-//        for (unsigned i = 0; i < rhs_elements.size(); ++i)
-//            if (a.right_arr[i] == SUMFLAT) { /* a = bx + cy */
-//
-//                for (unsigned j = 0; j < lhs_elements.size(); ++j)
-//                    if (a.left_arr[j] == (int)i) {
-//                        if (lhs_elements[j].second < 0)
-//                            for (const auto notContain : notContainMap)
-//                                if (notContain.first.first.compare(rhs_elements[i].first) == 0 &&
-//                                    lhs_elements[j].first.find(notContain.first.second) != std::string::npos) {
-//                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << notContain.first.first << " cannot contain " << lhs_elements[j].first << " because of " << notContain.first.second << std::endl;);
-//                                    return false;
-//                                }
-//                    }
-//            }
-        return true;
-    }
-
     bool theory_str::passSelfConflict(
             Arrangment a,
             std::vector<std::pair<expr*, int>> lhs_elements,
@@ -10091,7 +10046,7 @@ namespace smt {
     /*
      * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
      */
-    expr* theory_str::generate_smt(int p,
+    expr* theory_str::to_arith(int p,
                             std::vector<int> left_arr,
                             std::vector<int> right_arr,
                             std::vector<std::pair<expr*, int>> lhs_elements,
@@ -13795,7 +13750,7 @@ namespace smt {
     /*
      * First base case
      */
-    void theory_str::handleCase_0_0_general(){
+    void theory_str::setup_0_0_general(){
         std::vector<int> tmpLeft;
         std::vector<int> tmpRight;
 
@@ -13810,7 +13765,7 @@ namespace smt {
     /*
      * 2nd base case [0] = (sum rhs...)
      */
-    void theory_str::handleCase_0_n_general(int lhs, int rhs){
+    void theory_str::setup_0_n_general(int lhs, int rhs){
 
         /* left always has SUMFLAT */
         std::vector<int> tmpLeft;
@@ -13837,7 +13792,7 @@ namespace smt {
     /*
      * 2nd base case (sum lhs...) = [0]
      */
-    void theory_str::handleCase_n_0_general(int lhs, int rhs){
+    void theory_str::setup_n_0_general(int lhs, int rhs){
 
         /* right always has SUMFLAT */
         std::vector<int> tmpRight;
@@ -13863,7 +13818,7 @@ namespace smt {
     /*
      * general case
      */
-    void theory_str::handleCase_n_n_general(
+    void theory_str::setup_n_n_general(
             int lhs,
             int rhs){
 
