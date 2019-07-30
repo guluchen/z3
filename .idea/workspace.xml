@@ -83,7 +83,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -98,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="97">
-              <caret line="12599" column="49" selection-start-line="12599" selection-start-column="49" selection-end-line="12599" selection-end-column="49" />
+            <state relative-caret-position="-1026">
+              <caret line="849" column="35" selection-start-line="849" selection-start-column="27" selection-end-line="849" selection-end-column="35" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -149,8 +152,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="2504" column="25" selection-start-line="2504" selection-start-column="25" selection-end-line="2504" selection-end-column="25" />
+            <state relative-caret-position="227">
+              <caret line="2468" column="24" selection-start-line="2468" selection-start-column="17" selection-end-line="2468" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -168,17 +171,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>construct_eq_</find>
-      <find>connectedvar</find>
-      <find>connectedVars</find>
-      <find>ConnectedVars</find>
-      <find>unroll_connected_variable</find>
-      <find>handle_str_int</find>
-      <find>NON_FRESH__ONLY</find>
-      <find>CONST_NON_FRESH</find>
-      <find>const_vs_regex</find>
-      <find>collectAllPossibleSplits</find>
-      <find>collectCharRange</find>
       <find>charRange[0] =</find>
       <find>vector&lt;std::pair&lt;int, int&gt;&gt; charRange = collectCharRa</find>
       <find>&amp; charRange[0].first ==</find>
@@ -194,10 +186,21 @@
       <find>refine_not</find>
       <find>content</find>
       <find>pmax</find>
-      <find>p_bound</find>
       <find>qmax</find>
       <find>QMAX</find>
       <find>QCONSTMAX</find>
+      <find>p_bound</find>
+      <find>PMAX</find>
+      <find>notContainMap</find>
+      <find>does_contain</find>
+      <find>implies_empty_tail_str_from_notContain</find>
+      <find>implies_empty_str_from_notContain</find>
+      <find>352</find>
+      <find>feasibleSplit_const</find>
+      <find>rational(2)</find>
+      <find>add</find>
+      <find>p_bound =</find>
+      <find>setup_flats</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -743,12 +746,12 @@
       <workItem from="1563862842671" duration="75922000" />
       <workItem from="1564106416055" duration="7567000" />
       <workItem from="1564318752328" duration="18353000" />
-      <workItem from="1564452184130" duration="2574000" />
+      <workItem from="1564452184130" duration="7311000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1495668000" />
+    <option name="totallyTimeSpent" value="1500405000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
@@ -1142,15 +1145,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="2504" column="25" selection-start-line="2504" selection-start-column="25" selection-end-line="2504" selection-end-column="25" />
+        <state relative-caret-position="227">
+          <caret line="2468" column="24" selection-start-line="2468" selection-start-column="17" selection-end-line="2468" selection-end-column="24" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="97">
-          <caret line="12599" column="49" selection-start-line="12599" selection-start-column="49" selection-end-line="12599" selection-end-column="49" />
+        <state relative-caret-position="-1026">
+          <caret line="849" column="35" selection-start-line="849" selection-start-column="27" selection-end-line="849" selection-end-column="35" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

@@ -769,8 +769,6 @@ namespace smt {
               uState(m),
               impliedFacts(m){
         str_int_bound = rational(0);
-        p_bound = rational(0);
-        q_bound = rational(0);
     }
 
     void theory_str::display(std::ostream& os) const {
@@ -4308,12 +4306,12 @@ namespace smt {
 
         print_eq_combination(eq_combination);
 
-        if (implies_empty_str_from_notContain(eq_combination)) {
-            TRACE("str", tout << "Resuming search due to axioms added by implies_empty_str_from_notContain." << std::endl;);
-            newConstraintTriggered = true;
-            update_state();
-            return FC_CONTINUE;
-        }
+//        if (implies_empty_str_from_notContain(eq_combination)) {
+//            TRACE("str", tout << "Resuming search due to axioms added by implies_empty_str_from_notContain." << std::endl;);
+//            newConstraintTriggered = true;
+//            update_state();
+//            return FC_CONTINUE;
+//        }
 
         if (!parikh_image_check(eq_combination)){
             negate_context();
@@ -5108,10 +5106,10 @@ namespace smt {
                 expr* real_haystack = nullptr;
                 if (does_contain(nodes[i], key, real_haystack)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], m) << " " << mk_pp(key, m) << " " <<  mk_pp(real_haystack, m) << std::endl;);
-                    zstring tmp = "";
+                    zstring emptystr = "";
                     app* a = u.str.mk_contains(real_haystack, key);
                     enode* tmpenode = ensure_enode(a);
-                    if (!are_equal_exprs(u.str.mk_string(tmp), contain_split_map[tmpenode].second->get_owner())) {
+                    if (!are_equal_exprs(u.str.mk_string(emptystr), contain_split_map[tmpenode].second->get_owner())) {
                         expr_ref_vector ands(m);
 //                        ands.push_back(createEqualOperator(lhs, s));
                         if (real_haystack != nodes[i])
@@ -5120,14 +5118,14 @@ namespace smt {
                         rational len;
                         if (lower_bound(contain_split_map[tmpenode].second->get_owner(), len) && len.get_int64() > 0)
                             ret.push_back(rewrite_implication(createAndOperator(ands),
-                                    createEqualOperator(u.str.mk_string(tmp), contain_split_map[tmpenode].second->get_owner())));
+                                    createEqualOperator(u.str.mk_string(emptystr), contain_split_map[tmpenode].second->get_owner())));
                         return ret;
                     }
                 }
 
                 if (not_contain(nodes[i], key, real_haystack)){
-                    zstring tmp = "";
-                    if (!are_equal_exprs(nodes[i], u.str.mk_string(tmp))) {
+                    zstring emptystr = "";
+                    if (!are_equal_exprs(nodes[i], u.str.mk_string(emptystr))) {
                         expr_ref_vector ands(m);
 //                        ands.push_back(createEqualOperator(lhs, s));
                         if (real_haystack != nodes[i])
@@ -5139,7 +5137,7 @@ namespace smt {
                         ands.push_back(mk_not(m, contain_pair_bool_map[std::make_pair(real_haystack, key)]));
                         rational len;
                         if (lower_bound(nodes[i], len) && len.get_int64() > 0)
-                            ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(tmp))));
+                            ret.push_back(rewrite_implication(createAndOperator(ands), createEqualOperator(nodes[i], u.str.mk_string(emptystr))));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], m) << " must be empty" << std::endl;);
                         return ret;
                     }
@@ -9068,9 +9066,20 @@ namespace smt {
                     ptr_vector<expr> lhs;
                     ptr_vector<expr> rhs;
                     optimize_equality(root_tmp, element, lhs, rhs);
+                    STRACE("str",
+                           tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << lhs.size() << " vs ";
+                                   tout << rhs.size() << std::endl;
+                    );
                     std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
+                    STRACE("str",
+                           tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << lhs.size() << " vs ";
+                                   tout << rhs.size() << std::endl;
+                    );
                     std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
-
+                    STRACE("str",
+                           tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << lhs_elements.size() << " vs ";
+                                   tout << rhs_elements.size() << std::endl;
+                    );
                     t = clock();
                     expr* result = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
                     t = clock() - t;
@@ -12853,7 +12862,7 @@ namespace smt {
         /* reach end */
         if (currentSplit.size() == elementNames.size()){
             if (pos == (int)str.length() &&
-                feasibleSplit_const(str, elementNames, currentSplit)) {
+                feasibleSplit_const(str, elementNames, currentSplit, p_bound.get_int64())) {
                 allPossibleSplits.emplace_back(currentSplit);
             }
             else {
@@ -13084,7 +13093,8 @@ namespace smt {
     bool theory_str::feasibleSplit_const(
             zstring str,
             std::vector<std::pair<expr*, int> > elementNames,
-            std::vector<int> currentSplit){
+            std::vector<int> currentSplit,
+            int bound){
         /* check feasible const split */
         int pos = 0;
         for (unsigned i = 0; i < currentSplit.size(); ++i) {
@@ -14128,7 +14138,7 @@ namespace smt {
                 currVarPieces[list[k]] += 1;
             }
             else {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(list[k], get_manager()) << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(list[k], get_manager()) << "; bound = " << p_bound.get_int64() << std::endl;);
                 // check if it is a regex var
                 if (currVarPieces.find(list[k]) == currVarPieces.end())
                     currVarPieces[list[k]] = 0;
@@ -14284,14 +14294,14 @@ namespace smt {
         to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
         impliedFacts.push_back(to_assert);
-
-//        setup_str_int_arr(e, start);
     }
 
     void theory_str::reuse_internal_int_vars(expr* v){
         ast_manager &m = get_manager();
+
         int start = currVarPieces[v];
         int end = currVarPieces[v] + p_bound.get_int64();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(v, get_manager()) << " " << start << " " << end << std::endl;);
         if (u.str.is_string(v)){
             start ++;
             end ++;

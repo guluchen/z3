@@ -334,7 +334,8 @@ namespace smt {
             bool feasibleSplit_const(
                     std::string str,
                     std::vector<std::pair<std::string, int> > elementNames,
-                    std::vector<int> currentSplit){
+                    std::vector<int> currentSplit,
+                    int bound){
                 /* check feasible const split */
                 int pos = 0;
                 for (unsigned i = 0; i < currentSplit.size(); ++i) {
@@ -349,15 +350,14 @@ namespace smt {
 
                         std::string lhs = str.substr(pos, currentSplit[i]);
                         std::string rhs = "";
-                        if (elementNames[i].second % QCONSTMAX == -1) /* head */ {
+                        if (elementNames[i].second % bound == -1) /* head */ {
                             rhs = elementNames[i].first.substr(0, currentSplit[i]);
 
                             if (i + 1 < elementNames.size()) {
-                                if (QCONSTMAX == 1 || elementNames[i].first.length() == 1) {
+                                if (bound == 1 || elementNames[i].first.length() == 1) {
                                     SASSERT (currentSplit[i] == (int)elementNames[i].first.length()); /* const length must be equal to length of const */
                                 }
                                 else {
-                                    SASSERT (elementNames[i + 1].second % QCONSTMAX == 0);
                                     SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)elementNames[i].first.length())); /* sum of all const parts must be equal to length of const */
                                 }
                             }
@@ -1952,7 +1952,8 @@ namespace smt {
                 bool feasibleSplit_const(
                         zstring str,
                         std::vector<std::pair<expr*, int> > elementNames,
-                        std::vector<int> currentSplit);
+                        std::vector<int> currentSplit,
+                        int bound);
             /*
              * Given a flat,
              * generate its size constraint
@@ -2465,7 +2466,7 @@ namespace smt {
         obj_map<expr, eautomaton*>     m_re2aut;
         re2automaton                   m_mk_aut;
         expr_ref_vector                m_res;
-        rational p_bound;
+        rational p_bound = rational(2);
         rational q_bound;
         rational str_int_bound;
         rational max_str_int_bound = rational(10);
@@ -2502,8 +2503,6 @@ namespace smt {
 
         // under approximation vars
         const int CONNECTINGSIZE = 300;
-        static const int QCONSTMAX = 2;
-        static const int QMAX = 2;
         static const int PMAX = 2;
         const std::string FLATPREFIX = "__flat_";
         int noFlatVariables = 0;
