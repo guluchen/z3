@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -99,8 +98,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="248">
-              <caret line="4719" column="124" selection-start-line="4719" selection-start-column="124" selection-end-line="4719" selection-end-column="124" />
+            <state relative-caret-position="97">
+              <caret line="12599" column="49" selection-start-line="12599" selection-start-column="49" selection-end-line="12599" selection-end-column="49" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -129,7 +128,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="18645">
+            <state relative-caret-position="652">
               <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
             </state>
           </provider>
@@ -150,11 +149,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="23580">
-              <caret line="1572" column="67" selection-start-line="1572" selection-start-column="67" selection-end-line="1572" selection-end-column="67" />
-              <folding>
-                <element signature="e#13208#13220#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="217">
+              <caret line="2504" column="25" selection-start-line="2504" selection-start-column="25" selection-end-line="2504" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -172,13 +168,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collect_all_possible_arrangements</find>
-      <find>firstVar</find>
-      <find>generate_smt</find>
-      <find>passSelfConflict</find>
-      <find>handleCase</find>
-      <find>same_prefix_same_parikh</find>
-      <find>importantVars</find>
       <find>construct_eq_</find>
       <find>connectedvar</find>
       <find>connectedVars</find>
@@ -202,6 +191,13 @@
       <find>connected</find>
       <find>refine_notcon</find>
       <find>is_not_important</find>
+      <find>refine_not</find>
+      <find>content</find>
+      <find>pmax</find>
+      <find>p_bound</find>
+      <find>qmax</find>
+      <find>QMAX</find>
+      <find>QCONSTMAX</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -245,8 +241,8 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds">
-    <option name="x" value="139" />
-    <option name="y" value="23" />
+    <option name="x" value="137" />
+    <option name="y" value="25" />
     <option name="width" value="1280" />
     <option name="height" value="877" />
   </component>
@@ -747,15 +743,15 @@
       <workItem from="1563862842671" duration="75922000" />
       <workItem from="1564106416055" duration="7567000" />
       <workItem from="1564318752328" duration="18353000" />
-      <workItem from="1564452184130" duration="327000" />
+      <workItem from="1564452184130" duration="2574000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1493421000" />
+    <option name="totallyTimeSpent" value="1495668000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="139" y="23" width="1280" height="877" extended-state="0" />
+    <frame x="137" y="25" width="1280" height="877" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.48347107" weight="0.13264555" />
@@ -1106,16 +1102,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="248">
-          <caret line="4719" column="124" selection-start-line="4719" selection-start-column="124" selection-end-line="4719" selection-end-column="124" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="14700">
@@ -1130,13 +1116,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="18645">
-          <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="23760">
@@ -1147,20 +1126,34 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="23580">
-          <caret line="1572" column="67" selection-start-line="1572" selection-start-column="67" selection-end-line="1572" selection-end-column="67" />
-          <folding>
-            <element signature="e#13208#13220#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3315">
           <caret line="221" column="26" selection-start-line="221" selection-start-column="26" selection-end-line="221" selection-end-column="26" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="652">
+          <caret line="1243" column="41" selection-start-line="1243" selection-start-column="41" selection-end-line="1243" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="217">
+          <caret line="2504" column="25" selection-start-line="2504" selection-start-column="25" selection-end-line="2504" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="97">
+          <caret line="12599" column="49" selection-start-line="12599" selection-start-column="49" selection-end-line="12599" selection-end-column="49" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

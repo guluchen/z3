@@ -6248,7 +6248,7 @@ namespace smt {
 
                         zstring solverValue = solverValues[varName];
                         std::vector<std::pair<int, int>> iters;
-                        for (unsigned i = 0; i < QMAX; ++i){
+                        for (unsigned i = 0; i < p_bound.get_int64(); ++i){
                             rational len, iter;
                             if (get_arith_value(getExprVarFlatSize(std::make_pair(varName, i)), len) &&
                                 get_arith_value(getExprVarFlatIter(std::make_pair(varName, i)), iter))
@@ -6448,9 +6448,9 @@ namespace smt {
 
         /* update values found by the solver & previous iterations */
         /* collect iter */
-//	assert(iters.size() == QMAX);
+//	assert(iters.size() == p_bound.get_int64());
 //	int pos = 0;
-//	for (int i = 0; i < QMAX; ++i){
+//	for (int i = 0; i < p_bound.get_int64(); ++i){
 //		__debugPrint(logFile, "%d iter_%d : %d %d\n", __LINE__, i, iters[i].first, iters[i].second);
         /* part i */
 //		for (int j = 0; j < iters[i].second; ++j)
@@ -9979,10 +9979,10 @@ namespace smt {
                                       std::map<expr*, int> non_fresh_Variables,
                                       std::vector<Arrangment> &possibleCases) {
         std::string firstVar = expr2str(lhs_elements[0].first);
-        if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == QMAX) ||
+        if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == p_bound.get_int64()) ||
             (lhs_elements.size() == 2 &&
-             ((non_fresh_Variables.find(lhs_elements[0].first) != non_fresh_Variables.end() && lhs_elements[1].second % QMAX == 1) ||
-              (lhs_elements[0].second % QCONSTMAX == -1 && lhs_elements[1].first == lhs_elements[0].first)))) {
+             ((non_fresh_Variables.find(lhs_elements[0].first) != non_fresh_Variables.end() && lhs_elements[1].second % p_bound.get_int64() == 1) ||
+              (lhs_elements[0].second % p_bound.get_int64() == -1 && lhs_elements[1].first == lhs_elements[0].first)))) {
             /* create manually */
             /*9999999 10000000 vs 1 1 1 1 1 */
             possibleCases.emplace_back(manuallyCreate_arrangment(lhs_elements, rhs_elements));
@@ -10223,12 +10223,12 @@ namespace smt {
                         if (value.length() == 1) {
                             return nullptr;
                         } else {
-                            if (lhs_elements[i].second % QCONSTMAX == -1 && i + 1 < left_arr.size() && left_arr[i + 1] == EMPTYFLAT)
+                            if (lhs_elements[i].second % p_bound.get_int64() == -1 && i + 1 < left_arr.size() && left_arr[i + 1] == EMPTYFLAT)
                                 return nullptr;
                         }
                     }
                     else {
-                        if (lhs_elements[i].second % QMAX == 0 && i + 1 < left_arr.size() && left_arr[i + 1] == EMPTYFLAT){
+                        if (lhs_elements[i].second % p_bound.get_int64() == 0 && i + 1 < left_arr.size() && left_arr[i + 1] == EMPTYFLAT){
                             rational bound;
                             if (lower_bound(lhs_elements[i].first, bound) && bound.get_int64() > 0){
                                 STRACE("str", tout << __LINE__ <<  " " << mk_pp(lhs_elements[i].first, m) << " cannot be empty because of lowerbound " << bound.get_int64() << std::endl;);
@@ -10248,12 +10248,12 @@ namespace smt {
                         if (value.length() == 1) {
                             return nullptr;
                         } else {
-                            if (rhs_elements[i].second % QCONSTMAX == -1 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT)
+                            if (rhs_elements[i].second % p_bound.get_int64() == -1 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT)
                                 return nullptr;
                         }
                     }
                     else {
-                        if (rhs_elements[i].second % QMAX == 0 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT){
+                        if (rhs_elements[i].second % p_bound.get_int64() == 0 && i + 1 < right_arr.size() && right_arr[i + 1] == EMPTYFLAT){
                             rational bound;
                             if (lower_bound(rhs_elements[i].first, bound) && bound.get_int64() > 0){
                                 STRACE("str", tout << __LINE__ <<  " " << mk_pp(rhs_elements[i].first, m) << " cannot be empty because of lowerbound " << bound.get_int64() << std::endl;);
@@ -10404,8 +10404,8 @@ namespace smt {
                     if (!flat_enabled)
                         result.push_back(unroll_non_fresh_variable(b, {a}, non_fresh_Variables, optimizing, pMax));
                     else {
-                        if ((string_int_vars.find(a.first) != string_int_vars.end() && a.second % QMAX == 1) ||
-                                (string_int_vars.find(b.first) != string_int_vars.end() && b.second % QMAX == 1))
+                        if ((string_int_vars.find(a.first) != string_int_vars.end() && a.second % p_bound.get_int64() == 1) ||
+                                (string_int_vars.find(b.first) != string_int_vars.end() && b.second % p_bound.get_int64() == 1))
                             result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, str_int_bound));
                         else
                             result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, p_bound));
@@ -10434,11 +10434,11 @@ namespace smt {
             zstring valB;
             u.str.is_string(a.first, valA);
             u.str.is_string(b.first, valB);
-            if ((QCONSTMAX == 1 || optimizing) && valA != valB) /* const = const */
+            if ((p_bound.get_int64() == 1 || optimizing) && valA != valB) /* const = const */
                 return nullptr;
             expr_ref_vector possibleCases(m);
 
-            if (a.second <= REGEX_CODE && b.second % QMAX == -1){
+            if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == -1){
                 expr* regex = reg;
                 unsigned length = 0;
                 if (u.re.is_plus(regex))
@@ -10459,7 +10459,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
                 }
             }
-            else if (a.second <= REGEX_CODE && b.second % QMAX == 0){
+            else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == 0){
                 expr* regex = reg;
                 unsigned length = 0;
                 if (u.re.is_plus(regex))
@@ -10474,7 +10474,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
                 }
             }
-            else if (b.second <= REGEX_CODE && a.second % QMAX == -1){
+            else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == -1){
                 expr* regex = reg;
                 unsigned length = 0;
                 if (u.re.is_plus(regex))
@@ -10489,7 +10489,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
                 }
             }
-            else if (b.second <= REGEX_CODE && a.second % QMAX == 0){
+            else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == 0){
                 expr* regex = reg;
                 unsigned length = 0;
                 if (u.re.is_plus(regex))
@@ -10545,7 +10545,7 @@ namespace smt {
             }
             else if (!optimizing) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                if ((a.second % QMAX == -1 || valA.length() == 1) && (b.second % QMAX  == -1 || valB.length() == 1)) /* head vs head */ {
+                if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* head vs head */ {
                     expr* realHaystack = nullptr;
                     if (not_contain(a.first, b.first, realHaystack) || not_contain(b.first, a.first, realHaystack))
                         return nullptr;
@@ -10559,7 +10559,7 @@ namespace smt {
                         }
                     }
                 }
-                else if ((a.second % QMAX == -1 || valA.length() == 1) && b.second % QMAX == 0) /* head vs tail */ {
+                else if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && b.second % p_bound.get_int64() == 0) /* head vs tail */ {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(0, i) == valB.extract(valB.length() - i, i)) {
@@ -10568,7 +10568,7 @@ namespace smt {
                         }
                     }
                 }
-                else if (a.second % QMAX == 0 && (b.second % QMAX  == -1 || valB.length() == 1)) /* tail vs head */ {
+                else if (a.second % p_bound.get_int64() == 0 && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* tail vs head */ {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valB.extract(0, i) == valA.extract(valA.length() - i, i)) {
@@ -10577,7 +10577,7 @@ namespace smt {
                         }
                     }
                 }
-                else if (a.second % QMAX == 0 && b.second % QMAX == 0) /* tail vs tail */ {
+                else if (a.second % p_bound.get_int64() == 0 && b.second % p_bound.get_int64() == 0) /* tail vs tail */ {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
                     for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
                         if (valA.extract(valA.length() - i, i) == valB.extract(valB.length() - i, i)) {
@@ -10818,11 +10818,11 @@ namespace smt {
                 int max_lhs = value.length();
                 int min_rhs = 0;
                 for (unsigned i = 0; i < elementNames.size(); ++i) {
-                    if (elementNames[i].second % QCONSTMAX == -1) {
+                    if (elementNames[i].second % p_bound.get_int64() == -1) {
                         u.str.is_string(elementNames[i].first, value);
-                        if (QCONSTMAX == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % QCONSTMAX == 0)
+                        if (p_bound.get_int64() == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % p_bound.get_int64() == 0)
                             min_rhs += value.length();
-                        else if (QCONSTMAX == 1)
+                        else if (p_bound.get_int64() == 1)
                             min_rhs += value.length();
                     }
                     else if (elementNames[i].second <= REGEX_CODE){
@@ -11096,14 +11096,14 @@ namespace smt {
 
                 }
                 zstring value;
-                if (u.str.is_string(elementNames[i].first, value) && elementNames[i].second % QCONSTMAX == -1 && i < elementNames.size() - 1) {
-                    if (QCONSTMAX == 1 || value.length() == 1) {
+                if (u.str.is_string(elementNames[i].first, value) && elementNames[i].second % p_bound.get_int64() == -1 && i < elementNames.size() - 1) {
+                    if (p_bound.get_int64() == 1 || value.length() == 1) {
                         strAnd.push_back(createEqualOperator(getExprVarFlatSize(elementNames[i]), m_autil.mk_int(split[splitPos])));
                         splitPos++;
                     }
                     else {
                         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << " " << elementNames[i].second << mk_pp(elementNames[i + 1].first, m) << " " << elementNames[i + 1].second <<  std::endl;);
-                        SASSERT(elementNames[i + 1].second % QCONSTMAX == 0);
+                        SASSERT(elementNames[i + 1].second % p_bound.get_int64() == 0);
                         strAnd.push_back(createEqualOperator(createAddOperator(getExprVarFlatSize(elementNames[i]), getExprVarFlatSize(elementNames[i + 1])),
                                 m_autil.mk_int(split[splitPos] + split[splitPos + 1])));
                         i++;
@@ -11454,14 +11454,14 @@ namespace smt {
                 }
 
                 STRACE("str", tout << __LINE__ <<  " const|regex = const + ...: work as usual" << std::endl;);
-                if (elementNames[i].second % QCONSTMAX == -1 && i < elementNames.size() - 1 && elementNames[i].second > REGEX_CODE) {
+                if (elementNames[i].second % p_bound.get_int64() == -1 && i < elementNames.size() - 1 && elementNames[i].second > REGEX_CODE) {
                     zstring value;
                     u.str.is_string(elementNames[i].first, value);
-                    if (QCONSTMAX == 1 || value.length() == 1) {
+                    if (p_bound.get_int64() == 1 || value.length() == 1) {
                         splitPos++;
                     }
                     else {
-                        SASSERT(elementNames[i + 1].second % QCONSTMAX == 0);
+                        SASSERT(elementNames[i + 1].second % p_bound.get_int64() == 0);
                         i++;
                         splitPos += 2;
                     }
@@ -11535,10 +11535,10 @@ namespace smt {
         expr_ref_vector possibleCases(m);
 
         for (unsigned i = 0 ; i < elementNames.size(); ++i){
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << mk_pp(elementNames[i].first, m) << ", " << elementNames[i].second << " " << elementNames[i].second % QCONSTMAX << std::endl;);
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << mk_pp(elementNames[i].first, m) << ", " << elementNames[i].second << " " << elementNames[i].second % p_bound.get_int64() << std::endl;);
             if (elementNames[i].second < 0){ /* const || regex */
                 /* |lhs| = 1 vs |rhs| = 1*/
-                if (elementNames.size() == 1 && QCONSTMAX > 1) {
+                if (elementNames.size() == 1 && p_bound.get_int64() > 1) {
                     possibleCases.push_back(
                             handle_SubConst_WithPosition_array(
                                     a, elementNames,
@@ -11557,7 +11557,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(e.get(), m) << std::endl;);
                 }
                     /* tail of string, head of elements*/
-                else if (i == 0 && elementNames[i].second % QCONSTMAX == 0 && QCONSTMAX > 1) {
+                else if (i == 0 && elementNames[i].second % p_bound.get_int64() == 0 && p_bound.get_int64() > 1) {
                     possibleCases.push_back(handle_SubConst_WithPosition_array(
                             a, elementNames,
                             i,
@@ -11565,7 +11565,7 @@ namespace smt {
                             pMax));
                 }
                     /* head of string, tail of elements */
-                else if (i == elementNames.size() - 1 && elementNames[i].second % QCONSTMAX == -1 && QCONSTMAX > 1)  {
+                else if (i == elementNames.size() - 1 && elementNames[i].second % p_bound.get_int64() == -1 && p_bound.get_int64() > 1)  {
                     possibleCases.push_back(handle_SubConst_WithPosition_array(
                             a, elementNames,
                             i,
@@ -11573,7 +11573,7 @@ namespace smt {
                             pMax));
                 }
                     /* only care about first element */
-                else if (elementNames[i].second % QCONSTMAX == -1)  {
+                else if (elementNames[i].second % p_bound.get_int64() == -1)  {
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***"  << std::endl;);
                     zstring value;
                     u.str.is_string(elementNames[i].first, value);
@@ -11588,7 +11588,7 @@ namespace smt {
             }
             else if (elementNames[i].second >= 0 &&
                      non_fresh_Variables.find(elementNames[i].first) != non_fresh_Variables.end()){
-                if (elementNames[i].second % QMAX == 1 && i > 0)
+                if (elementNames[i].second % p_bound.get_int64() == 1 && i > 0)
                     continue;
                 int bound = std::max(non_fresh_Variables[elementNames[i].first], non_fresh_Variables[a.first]);
                 if (bound >= connectingSize)
@@ -11657,7 +11657,7 @@ namespace smt {
             }
 
             for (const auto& v : components) {
-                if (elementNames[constPos].second % QCONSTMAX == -1 || elementNames[constPos].second <= REGEX_CODE) {
+                if (elementNames[constPos].second % p_bound.get_int64() == -1 || elementNames[constPos].second <= REGEX_CODE) {
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
                     /* head of const */
                     expr_ref_vector oneCase(m);
@@ -11766,11 +11766,11 @@ namespace smt {
         expr* lenRhs = nullptr;
         /* combine two parts if it is possible */
         bool can_combine = false;
-        if (elementNames[pos].second % QMAX == 0 &&
+        if (elementNames[pos].second % p_bound.get_int64() == 0 &&
             pos < (int)elementNames.size() - 1 &&
-            QMAX > 1 && elementNames[pos].second >= 0) {
-            SASSERT(elementNames[pos + 1].second % QMAX == 1);
-            SASSERT(QMAX == 2);
+                p_bound.get_int64() > 1 && elementNames[pos].second >= 0) {
+            SASSERT(elementNames[pos + 1].second % p_bound.get_int64() == 1);
+            SASSERT(p_bound.get_int64() == 2);
             lenRhs = getExprVarSize(elementNames[pos]);
             can_combine = true;
         }
@@ -11835,7 +11835,7 @@ namespace smt {
             }
             else {
                 if (optimizing) {
-                    if (can_combine && elementNames.size() == QMAX) {
+                    if (can_combine && elementNames.size() == p_bound.get_int64()) {
                         andConstraints.push_back(generate_constraint_var_var(a, elementNames[0], pMax, q_bound));
                     }
                     else {
@@ -12192,7 +12192,7 @@ namespace smt {
                     else {
                         expr_ref arrayRhs(getExprVarFlatArray(elementNames[i]), m);
 
-                        if (QCONSTMAX == 1) {
+                        if (p_bound.get_int64() == 1) {
                             resultParts.push_back(createEqualOperator(subLen, m_autil.mk_int(content.length())));
                             for (unsigned k = 0; k < content.length(); ++k){
                                 expr* at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
@@ -12237,7 +12237,7 @@ namespace smt {
                                                     (content[atValue.get_int64()] < '0' ||
                                                      content[atValue.get_int64()] > '9')) {
                                                     STRACE("str", tout << __LINE__ << " break because of str-int"
-                                                                       << std::endl;);
+                                                            << std::endl;);
                                                     subpossibleCases.reset();
                                                     break;
                                                 }
@@ -12252,16 +12252,21 @@ namespace smt {
                                         if (subpossibleCases.size() > 0)
                                             possibleCases.push_back(createAndOperator(subpossibleCases));
                                     }
-
+                                    STRACE("str", tout << __LINE__ << " "
+                                                       << std::endl;);
                                     if (is_str_int_var(elementNames[i].first)) {
                                         // must be 0
                                         for (int j = std::min(localSplit, (int) content.length()) + 1;
                                              j < (int) content.length(); ++j) {
+                                            STRACE("str", tout << __LINE__ << " "
+                                                               << std::endl;);
                                             expr_ref_vector subpossibleCases(m); /*at_0 = x && at_1 == y && ..*/
                                             subpossibleCases.push_back(createEqualOperator(subLen, m_autil.mk_int(j)));
 
                                             // zero part: [0, j - bound)
                                             for (int k = 0; k < j - str_int_bound.get_int64(); ++k) {
+                                                STRACE("str", tout << __LINE__ << " "
+                                                                   << std::endl;);
                                                 expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
                                                 rational atValue;
                                                 expr *lhsExpr = nullptr;
@@ -12287,12 +12292,16 @@ namespace smt {
                                                         lhsExpr,
                                                         mk_int('0')));
                                             }
-
+                                            STRACE("str", tout << __LINE__ << " "
+                                                               << std::endl;);
                                             if (subpossibleCases.size() == 0)
                                                 break;
-
+                                            STRACE("str", tout << __LINE__ << " "
+                                                               << std::endl;);
                                             // bounded part [j - bound, j)
                                             for (int k = j - str_int_bound.get_int64(); k < j; ++k) {
+                                                STRACE("str", tout << __LINE__ << " "
+                                                                   << std::endl;);
                                                 expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
                                                 rational atValue;
                                                 expr *lhsExpr = nullptr;
@@ -12307,6 +12316,8 @@ namespace smt {
                                                         subpossibleCases.reset();
                                                         break;
                                                     }
+                                                    STRACE("str", tout << __LINE__ << " " << content << " " << atValue.get_int64()
+                                                                       << std::endl;);
                                                     lhsExpr = mk_int(content[atValue.get_int64()]);
                                                 }
 
@@ -12316,11 +12327,14 @@ namespace smt {
                                                                              createAddOperator(m_autil.mk_int(k),
                                                                                                prefix_rhs))));
                                             }
-
+                                            STRACE("str", tout << __LINE__ << " "
+                                                               << std::endl;);
                                             if (subpossibleCases.size() > 0)
                                                 possibleCases.push_back(createAndOperator(subpossibleCases));
                                         }
                                     }
+                                    STRACE("str", tout << __LINE__ << " "
+                                                       << std::endl;);
                                 }
                                 else {
                                     expr_ref_vector parts(m);
@@ -12381,7 +12395,7 @@ namespace smt {
             if (elementNames[j].second > elementNames[j - 1].second &&
                 elementNames[j].second > 0 &&
                 elementNames[j].first == elementNames[j - 1].first &&
-                elementNames[j].second % QMAX != 0 &&
+                elementNames[j].second % p_bound.get_int64() != 0 &&
                 elementNames[j].second != REGEX_CODE) {
                 partCnt++;
                 addElements.push_back(createMultiplyOperator(getExprVarFlatSize(elementNames[j]),
@@ -12407,23 +12421,23 @@ namespace smt {
         expr_ref_vector addElements(m);
 
         if (a.second > REGEX_CODE && !optimizing && unrollMode) {
-            if (a.second % QCONSTMAX != -1)
+            if (a.second % p_bound.get_int64() != -1)
                 for (int i = a.second + 1; i < 0; ++i){ /* prefix of a - const */
                     addElements.push_back(
                             createMultiplyOperator(
                                     getExprVarFlatSize(std::make_pair(a.first, i)),
                                     getExprVarFlatIter(std::make_pair(a.first, i))));
-                    if (i % QCONSTMAX == -1)
+                    if (i % p_bound.get_int64() == -1)
                         break;
                 }
 
-            if (a.second % QMAX != 0)
+            if (a.second % p_bound.get_int64() != 0)
                 for (int i = a.second - 1; i >= 0; --i){ /* a is var */
                     addElements.push_back(
                             createMultiplyOperator(
                                     getExprVarFlatSize(std::make_pair(a.first, i)),
                                     getExprVarFlatIter(std::make_pair(a.first, i))));
-                    if (i % QMAX == 0)
+                    if (i % p_bound.get_int64() == 0)
                         break;
                 }
         }
@@ -12431,7 +12445,7 @@ namespace smt {
         expr* reg = nullptr;
         for (int i = pos - 1; i >= 0; --i) { /* pre-elements */
             zstring value;
-            if (u.str.is_string(elementNames[i].first, value) && i > 0 && elementNames[i].second + 1 == elementNames[i - 1].second && (elementNames[i].second % QMAX) == 0) {
+            if (u.str.is_string(elementNames[i].first, value) && i > 0 && elementNames[i].second + 1 == elementNames[i - 1].second && (elementNames[i].second % p_bound.get_int64()) == 0) {
                 addElements.push_back(mk_int(value.length()));
                 i--;
             }
@@ -12439,7 +12453,7 @@ namespace smt {
                 u.re.is_plus(elementNames[i].first) || isInternalRegexVar(elementNames[i].first, reg)) {
                 addElements.push_back(getExprVarFlatSize(elementNames[i]));
             }
-            else if (i > 0 && elementNames[i].second - 1 == elementNames[i - 1].second && (elementNames[i].second % QMAX) == QMAX - 1) {
+            else if (i > 0 && elementNames[i].second - 1 == elementNames[i - 1].second && (elementNames[i].second % p_bound.get_int64()) == p_bound.get_int64() - 1) {
                 addElements.push_back(mk_strlen(elementNames[i].first));
                 i--;
             }
@@ -12460,17 +12474,17 @@ namespace smt {
         ast_manager &m = get_manager();
         expr_ref_vector addElements(m);
         if (a.second > REGEX_CODE && unrollMode) {
-            if (a.second % QCONSTMAX != -1)
+            if (a.second % p_bound.get_int64() != -1)
                 for (int i = a.second + 1; i < 0; ++i){ /* a is const */
                     addElements.push_back(createMultiplyOperator(getExprVarFlatSize(std::make_pair(a.first, i)), getExprVarFlatIter(std::make_pair(a.first, i))));
-                    if (i % QCONSTMAX == -1)
+                    if (i % p_bound.get_int64() == -1)
                         break;
                 }
 
-            if (a.second % QMAX != 0)
+            if (a.second % p_bound.get_int64() != 0)
                 for (int i = a.second - 1; i >= 0; --i){ /* a is var */
                     addElements.push_back(createMultiplyOperator(getExprVarFlatSize(std::make_pair(a.first, i)), getExprVarFlatIter(std::make_pair(a.first, i))));
-                    if (i % QMAX == 0)
+                    if (i % p_bound.get_int64() == 0)
                         break;
                 }
         }
@@ -12509,7 +12523,7 @@ namespace smt {
 //            zstring regexContent = parse_regex_content(lhs.first);
 //            collectAllPossibleSplits_regex(0, regexContent, 10, alias, curr, allPossibleSplits);
         }
-        else if (lhs.second % QMAX == 0) /* tail */ {
+        else if (lhs.second % p_bound.get_int64() == 0) /* tail */ {
             if (optimizing){
                 std::vector<int> curr;
                 collectAllPossibleSplits_const(0, value, 10, elementNames, curr, allPossibleSplits);
@@ -12519,8 +12533,8 @@ namespace smt {
                     collectAllPossibleSplits_const(0, value.extract(i, value.length() - i), 10, elementNames, curr, allPossibleSplits);
                 }
         }
-        else if (lhs.second % QMAX == -1) /* head */ {
-            if (QCONSTMAX == 1 || optimizing) {
+        else if (lhs.second % p_bound.get_int64() == -1) /* head */ {
+            if (p_bound.get_int64() == 1 || optimizing) {
                 std::vector<int> curr;
                 collectAllPossibleSplits_const(0, value, 10, elementNames, curr, allPossibleSplits);
             }
@@ -12569,7 +12583,7 @@ namespace smt {
 //        if (isRegexAll(str) || isRegexChar(str))
 //            regexLen = 1;
 //        /* special case for const: regex = .* const .* */
-//        if (elementNames[currentSplit.size()].second == -1 && QCONSTMAX == 1) {
+//        if (elementNames[currentSplit.size()].second == -1 && p_bound.get_int64() == 1) {
 //            /* compare text, check whether the string can start from the location pos in text */
 //            if (const_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos)) {
 //                currentSplit.emplace_back(elementNames[currentSplit.size()].first.length());
@@ -12579,7 +12593,7 @@ namespace smt {
 //        }
 //
 //            /* special case for const tail, when we know the length of const head */
-//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == 0 &&
+//        else if (elementNames[currentSplit.size()]p_bound.get_int64() p_bound.get_int64() == 0 &&
 //                 elementNames[currentSplit.size()].second < 0 &&
 //                 elementNames[currentSplit.size()].second > REGEX_CODE &&
 //                 currentSplit.size() > 0) /* tail, not the first */ {
@@ -12591,7 +12605,7 @@ namespace smt {
 //            currentSplit.pop_back();
 //        }
 //
-//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == 0 &&
+//        else if (elementNames[currentSplit.size()].second % p_bound.get_int64() == 0 &&
 //                 elementNames[currentSplit.size()].second < 0 &&
 //                 elementNames[currentSplit.size()].second > REGEX_CODE &&
 //                 currentSplit.size() == 0) /* tail, first */ {
@@ -12604,11 +12618,11 @@ namespace smt {
 //            }
 //        }
 //
-//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+//        else if (elementNames[currentSplit.size()].second % p_bound.get_int64() == -1 &&
 //                 elementNames[currentSplit.size()].second < 0 &&
 //                 elementNames[currentSplit.size()].second > REGEX_CODE &&
 //                 currentSplit.size() + 1 == elementNames.size() &&
-//                 QCONSTMAX == 2) /* head, the last element */ {
+//                 p_bound.get_int64() == 2) /* head, the last element */ {
 //            /* find all possible start points */
 //            std::vector<int> head = head_in_regex_at_pos(str, elementNames[currentSplit.size()].first, pos);
 //            for (unsigned i = 0 ; i < head.size(); ++i) {
@@ -12618,11 +12632,11 @@ namespace smt {
 //            }
 //        }
 //
-//        else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+//        else if (elementNames[currentSplit.size()].second % p_bound.get_int64() == -1 &&
 //                 elementNames[currentSplit.size()].second < 0 &&
 //                 elementNames[currentSplit.size()].second > REGEX_CODE &&
 //                 currentSplit.size() + 1 < elementNames.size() &&
-//                 QCONSTMAX == 2) /* head, not the last element */ {
+//                 p_bound.get_int64() == 2) /* head, not the last element */ {
 //            /* check full string */
 //            bool canProcess;
 //            if (isUnionStr(str))
@@ -12717,7 +12731,7 @@ namespace smt {
             for (int i = 0; i < elementNames.size(); ++i) {
                 zstring subVar;
                 if  (u.str.is_string(elementNames[i].first, subVar) &&
-                        ((elementNames[i].second % QMAX == -1 && i + 1 < elementNames.size()) ||
+                        ((elementNames[i].second % p_bound.get_int64() == -1 && i + 1 < elementNames.size()) ||
                         subVar.length() == 1)) {
                     if (!value.contains(subVar)) {
                         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: skip quickly because of " << value << " not contain " << subVar << std::endl;);
@@ -12730,7 +12744,7 @@ namespace smt {
         for (int i = 0; i < elementNames.size(); ++i) {
             zstring subVar;
             if  (u.str.is_string(elementNames[i].first, subVar) &&
-                 ((elementNames[i].second % QMAX == -1 && i + 1 < elementNames.size()) ||
+                 ((elementNames[i].second % p_bound.get_int64() == -1 && i + 1 < elementNames.size()) ||
                   subVar.length() == 1)) {
                 expr* real_haystack = nullptr;
                 if (not_contain(e, elementNames[i].first, real_haystack)) {
@@ -12779,7 +12793,7 @@ namespace smt {
         zstring tmp;
         for (int i = 0; i < elementNames.size(); ++i)
             if (u.str.is_string(elementNames[i].first, tmp) &&
-                ((tmp.length() == 1) || (i < elementNames.size() - 1 && elementNames[i].second % QMAX == -1))) {
+                ((tmp.length() == 1) || (i < elementNames.size() - 1 && elementNames[i].second % p_bound.get_int64() == -1))) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, get_manager()) << " vs " << tmp << std::endl;);
                 if (!matchRegex(reg, tmp))
                     return false;
@@ -12806,8 +12820,8 @@ namespace smt {
                     for (int j = 0; j < val.length(); ++j)
                         if ((val[j] < '0' || val[j] > '9') &&
                             (val.length() == 1 ||
-                             (j == 0 && elementNames[i].second % QMAX == -1) ||
-                             (j == val.length() - 1 && elementNames[i].second % QMAX == 0))) {
+                             (j == 0 && elementNames[i].second % p_bound.get_int64() == -1) ||
+                             (j == val.length() - 1 && elementNames[i].second % p_bound.get_int64() == 0))) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())
                                                << " cannot contain because of str-int" << mk_pp(elementNames[i].first, get_manager())
                                                << std::endl;);
@@ -12823,7 +12837,6 @@ namespace smt {
     /*
 	 * textLeft: length of string
 	 * nMax: number of flats
-	 * pMax: size of a flat
 	 *
 	 * Pre-Condition: 1st flat and n-th flat must be greater than 0
 	 * Output: of the form 1 * 1 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 3 + 2 * 3 = 10
@@ -12854,7 +12867,7 @@ namespace smt {
 //        if (value.length() > 0)
 //            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << str << " vs " << value << " " << elementNames[currentSplit.size()].second << std::endl;);
         /* special case for const: leng = leng */
-        if (QCONSTMAX == 1 || value.length() == 1) {
+        if (p_bound.get_int64() == 1 || value.length() == 1) {
             if (value.length() <= textLeft) {
                 zstring constValue = str.extract(pos, value.length());
 
@@ -12867,10 +12880,10 @@ namespace smt {
         }
 
         /* const head */
-        else if (elementNames[currentSplit.size()].second % QCONSTMAX == -1 &&
+        else if (elementNames[currentSplit.size()].second % p_bound.get_int64() == -1 &&
                 elementNames[currentSplit.size()].second < 0 &&
                 elementNames[currentSplit.size()].second > REGEX_CODE &&
-                 QCONSTMAX == 2) {
+                p_bound.get_int64() == 2) {
             STRACE("str", tout << __LINE__ << " checking str: " << value << std::endl;);
             if (value.length() <= textLeft) {
                 std::set<zstring> values;
@@ -12898,11 +12911,11 @@ namespace smt {
 
         /* special case for const tail, when we know the length of const head */
         else if (currentSplit.size() > 0 &&
-                 elementNames[currentSplit.size()].second % QCONSTMAX == 0 &&
+                 elementNames[currentSplit.size()].second % p_bound.get_int64() == 0 &&
                  elementNames[currentSplit.size()].second < 0 &&
                  elementNames[currentSplit.size()].second > REGEX_CODE &&
-                 QCONSTMAX == 2) /* const */ {
-            SASSERT (elementNames[currentSplit.size() - 1].second % QCONSTMAX == -1);
+                p_bound.get_int64() == 2) /* const */ {
+            SASSERT (elementNames[currentSplit.size() - 1].second % p_bound.get_int64() == -1);
             std::set<zstring> values;
             values.insert(value);
             for (const auto& v : values) {
@@ -12921,10 +12934,10 @@ namespace smt {
 
         /* head is const part 2*/
         else if (currentSplit.size() == 0 &&
-                 elementNames[0].second % QCONSTMAX == 0 &&
+                 elementNames[0].second % p_bound.get_int64() == 0 &&
                  elementNames[0].second < 0 &&
                  elementNames[0].second > REGEX_CODE &&
-                 QCONSTMAX == 2) /* const */ {
+                p_bound.get_int64() == 2) /* const */ {
             std::set<zstring> values;
             if (isUnionStr(value)){
                 values = extendComponent(value);
@@ -13087,15 +13100,15 @@ namespace smt {
 
                 zstring lhs = str.extract(pos, currentSplit[i]);
                 zstring rhs = "";
-                if (elementNames[i].second % QCONSTMAX == -1) /* head */ {
+                if (elementNames[i].second % p_bound.get_int64() == -1) /* head */ {
                     rhs = value.extract(0, currentSplit[i]);
 
                     if (i + 1 < elementNames.size()) {
-                        if (QCONSTMAX == 1 || value.length() == 1) {
+                        if (p_bound.get_int64() == 1 || value.length() == 1) {
                             SASSERT (currentSplit[i] == (int)value.length()); /* const length must be equal to length of const */
                         }
                         else {
-                            SASSERT (elementNames[i + 1].second % QCONSTMAX == 0);
+                            SASSERT (elementNames[i + 1].second % p_bound.get_int64() == 0);
                             SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)value.length())); /* sum of all const parts must be equal to length of const */
                         }
                     }
@@ -14082,19 +14095,19 @@ namespace smt {
                 if (content.length() > 1) /* const string */ {
                     if (currVarPieces.find(list[k]) == currVarPieces.end())
                         currVarPieces[list[k]] = 0;
-                    for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QCONSTMAX; ++j) { /* split variables into QMAX parts */
+                    for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                         elements.emplace_back(std::make_pair(list[k], -(j + 1)));
                     }
                     if (varPieces.find(list[k]) == varPieces.end() ||
                             (currVarPieces.find(list[k]) != currVarPieces.end() &&
                             currVarPieces[list[k]] >= varPieces[list[k]])){
                         create_internal_int_vars(list[k]);
-                        varPieces[list[k]] += QCONSTMAX;
+                        varPieces[list[k]] += p_bound.get_int64();
                     }
                     else {
                         reuse_internal_int_vars(list[k]);
                     }
-                    currVarPieces[list[k]] += QCONSTMAX;
+                    currVarPieces[list[k]] += p_bound.get_int64();
                 }
                 else if (content.length() == 1)
                     elements.emplace_back(std::make_pair(list[k], -1));
@@ -14119,7 +14132,7 @@ namespace smt {
                 // check if it is a regex var
                 if (currVarPieces.find(list[k]) == currVarPieces.end())
                     currVarPieces[list[k]] = 0;
-                for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + QMAX; ++j) { /* split variables into QMAX parts */
+                for (int j = currVarPieces[list[k]]; j < currVarPieces[list[k]] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                     elements.emplace_back(std::make_pair(list[k], j));
                 }
 
@@ -14127,12 +14140,12 @@ namespace smt {
                     (currVarPieces.find(list[k]) != currVarPieces.end() &&
                      currVarPieces[list[k]] >= varPieces[list[k]])) {
                     create_internal_int_vars(list[k]);
-                    varPieces[list[k]] += QMAX;
+                    varPieces[list[k]] += p_bound.get_int64();
                 }
                 else {
                     reuse_internal_int_vars(list[k]);
                 }
-                currVarPieces[list[k]] += QMAX;
+                currVarPieces[list[k]] += p_bound.get_int64();
             }
         }
         return elements;
@@ -14141,7 +14154,7 @@ namespace smt {
     void theory_str::create_internal_int_vars(expr* v){
         ast_manager &m = get_manager();
         int start = varPieces[v];
-        int end = varPieces[v] + QMAX;
+        int end = varPieces[v] + p_bound.get_int64();
         expr* regex = nullptr;
         if (u.str.is_string(v)){
             start ++;
@@ -14278,7 +14291,7 @@ namespace smt {
     void theory_str::reuse_internal_int_vars(expr* v){
         ast_manager &m = get_manager();
         int start = currVarPieces[v];
-        int end = currVarPieces[v] + QMAX;
+        int end = currVarPieces[v] + p_bound.get_int64();
         if (u.str.is_string(v)){
             start ++;
             end ++;
