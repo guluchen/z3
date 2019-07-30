@@ -8341,7 +8341,7 @@ namespace smt {
             zstring value;
 
             if (u.str.is_string(constValue, value)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << ")\n";);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << "; cached" << cached << ")\n";);
                 if (value.indexof(rhs, 0) >= 0 && !cached) {
                     negate_context();
                 }
