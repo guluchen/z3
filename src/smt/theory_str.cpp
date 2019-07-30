@@ -4255,7 +4255,6 @@ namespace smt {
     final_check_status theory_str::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         ast_manager &m = get_manager();
-        context& ctx = get_context();
 
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty()) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
@@ -4717,23 +4716,19 @@ namespace smt {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
-                if (not_imp.find(lhs) != not_imp.end() ||
-                    not_imp.find(rhs) != not_imp.end())
-                    continue;
-
                 zstring needle;
                 if (is_contain_equality(lhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(rhs, vec);
                     if (is_not_important(rhs, needle, eq_combination)){
-                        for (const auto& e : vec)
-                            not_imp.insert(e);
+                        if (not_imp.find(rhs) == not_imp.end())
+                            for (const auto& e : vec)
+                                not_imp.insert(e);
                     }
                     else {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " must be important " << mk_pp(lhs, m) << " " << needle << std::endl;);
                         for (const auto& e : vec) {
                             mustbe_imp.insert(e);
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " must be important " << mk_pp(e, m) << " " << needle << std::endl;);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " must be nonfresh " << mk_pp(e, m) << " " << needle << std::endl;);
                         }
                     }
                 }
@@ -4741,16 +4736,20 @@ namespace smt {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(lhs, vec);
                     if (is_not_important(lhs, needle, eq_combination)){
-                        for (const auto& e : vec)
-                            not_imp.insert(e);
+                        if (not_imp.find(rhs) == not_imp.end())
+                            for (const auto& e : vec)
+                                not_imp.insert(e);
                     }
                     else {
                         for (const auto& e : vec) {
                             mustbe_imp.insert(e);
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "  must be important " << mk_pp(e, m) << " " << needle << std::endl;);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "  must be nonfresh " << mk_pp(e, m) << " " << needle << std::endl;);
                         }
                     }
                 }
+                else {
+                }
+
             }
         }
 
