@@ -12305,10 +12305,13 @@ namespace smt {
                                                                << std::endl;);
                                             if (subpossibleCases.size() == 0)
                                                 break;
-                                            STRACE("str", tout << __LINE__ << " "
+                                            STRACE("str", tout << __LINE__ << " " << content
                                                                << std::endl;);
                                             // bounded part [j - bound, j)
-                                            for (int k = j - str_int_bound.get_int64(); k < j; ++k) {
+                                            int start_pos = 0;
+                                            if (j - str_int_bound.get_int64() > 0)
+                                                start_pos = j - str_int_bound.get_int64();
+                                            for (int k = start_pos; k < j; ++k) {
                                                 STRACE("str", tout << __LINE__ << " "
                                                                    << std::endl;);
                                                 expr *at = createAddOperator(m_autil.mk_int(k), prefix_lhs);
@@ -12317,6 +12320,9 @@ namespace smt {
                                                 if (!m_autil.is_numeral(at, atValue))
                                                     lhsExpr = createSelectOperator(arrayLhs, at);
                                                 else {
+                                                    STRACE("str", tout << __LINE__
+                                                                       << " " << atValue.get_int64() << " " << mk_pp(at, m)
+                                                                       << std::endl;);
                                                     if (content[atValue.get_int64()] < '0' ||
                                                         content[atValue.get_int64()] > '9') {
                                                         STRACE("str", tout << __LINE__
