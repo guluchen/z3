@@ -14505,13 +14505,6 @@ namespace smt {
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
-//            else if (have_same_len(lhsVec[i], rhsVec[i])){
-//                prefix = i;
-//                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
-//
-//                assert_axiom(tmp.get());
-//                impliedFacts.push_back(tmp);
-//            }
             else
                 break;
 
@@ -14520,13 +14513,6 @@ namespace smt {
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
-//            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
-//                suffix = i;
-//                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
-//
-//                assert_axiom(tmp.get());
-//                impliedFacts.push_back(tmp);
-//            }
             else
                 break;
 
@@ -14561,6 +14547,7 @@ namespace smt {
         int prefix = -1;
 
         zstring lValue, rValue;
+        rational lenTmp;
         for (int i = 0; i < (int)std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i])) {
                 if (lhsVec[i] != rhsVec[i]) {
@@ -14592,6 +14579,36 @@ namespace smt {
                 expr* tmp = rewrite_implication(createAndOperator(andLhs), createEqualOperator(lhsVec[i], rhsVec[i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
+            }
+            else if (u.str.is_string(lhsVec[i], lValue) && get_len_value(rhsVec[i], lenTmp) && lenTmp.get_int64() > 0){
+                if (lValue.length() == lenTmp.get_int64()){
+                    SASSERT(false);
+                }
+                else {
+                    if (lValue.length() > lenTmp.get_int64()){
+                        andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)));
+                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)), createEqualOperator(rhsVec[i], mk_string(lValue.extract(0, lenTmp.get_int64()))));
+                        impliedEqualities.push_back(tmp_assert);
+                        return true;
+                    }
+                    else
+                        break;
+                }
+            }
+            else if (u.str.is_string(rhsVec[i], lValue) && get_len_value(lhsVec[i], lenTmp) && lenTmp.get_int64() > 0){
+                if (lValue.length() == lenTmp.get_int64()){
+                    SASSERT(false);
+                }
+                else {
+                    if (lValue.length() > lenTmp.get_int64()){
+                        andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)));
+                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)), createEqualOperator(lhsVec[i], mk_string(lValue.extract(0, lenTmp.get_int64()))));
+                        impliedEqualities.push_back(tmp_assert);
+                        return true;
+                    }
+                    else
+                        break;
+                }
             }
             else
                 break;
@@ -14628,6 +14645,36 @@ namespace smt {
                 expr* tmp = rewrite_implication(createAndOperator(andRhs), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]));
                 if (!impliedEqualities.contains(tmp))
                     impliedEqualities.push_back(tmp);
+            }
+            else if (u.str.is_string(lhsVec[lhsVec.size() - 1 - i], lValue) && get_len_value(rhsVec[rhsVec.size() - 1 - i], lenTmp) && lenTmp.get_int64() > 0){
+                if (lValue.length() == lenTmp.get_int64()){
+                    SASSERT(false);
+                }
+                else {
+                    if (lValue.length() > lenTmp.get_int64()){
+                        andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)));
+                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)), createEqualOperator(rhsVec[rhsVec.size() - 1 - i], mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()))));
+                        impliedEqualities.push_back(tmp_assert);
+                        return true;
+                    }
+                    else
+                        break;
+                }
+            }
+            else if (u.str.is_string(rhsVec[rhsVec.size() - 1 - i], lValue) && get_len_value(lhsVec[lhsVec.size() - 1 - i], lenTmp) && lenTmp.get_int64() > 0){
+                if (lValue.length() == lenTmp.get_int64()){
+                    SASSERT(false);
+                }
+                else {
+                    if (lValue.length() > lenTmp.get_int64()){
+                        andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)));
+                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()))));
+                        impliedEqualities.push_back(tmp_assert);
+                        return true;
+                    }
+                    else
+                        break;
+                }
             }
             else
                 break;
@@ -14721,13 +14768,6 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
-//            else if (have_same_len(lhsVec[i], rhsVec[i])){
-//                prefix = i;
-//                expr_ref tmp(createEqualOperator(lhsVec[i], rhsVec[i]), m);
-//
-//                assert_axiom(tmp.get());
-//                impliedFacts.push_back(tmp);
-//            }
             else
                 break;
 
@@ -14736,13 +14776,6 @@ namespace smt {
         for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
-//            else if (have_same_len(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i])){
-//                suffix = i;
-//                expr_ref tmp(createEqualOperator(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]), m);
-//
-//                assert_axiom(tmp.get());
-//                impliedFacts.push_back(tmp);
-//            }
             else
                 break;
 
