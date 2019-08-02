@@ -14592,10 +14592,17 @@ namespace smt {
                 }
                 else {
                     if (lValue.length() > lenTmp.get_int64()){
-                        andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)));
-                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)), createEqualOperator(rhsVec[i], mk_string(lValue.extract(0, lenTmp.get_int64()))));
-                        impliedEqualities.push_back(tmp_assert);
-                        return true;
+                        expr* const_str = mk_string(lValue.extract(0, lenTmp.get_int64()));
+                        if (!are_equal_exprs(rhsVec[i], const_str)) {
+                            andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)));
+                            expr *tmp_assert = rewrite_implication(
+                                    createEqualOperator(mk_strlen(rhsVec[i]), mk_int(lenTmp)),
+                                    createEqualOperator(rhsVec[i], const_str));
+                            impliedEqualities.push_back(tmp_assert);
+                            return true;
+                        }
+                        else
+                            break;
                     }
                     else
                         break;
@@ -14607,10 +14614,17 @@ namespace smt {
                 }
                 else {
                     if (lValue.length() > lenTmp.get_int64()){
-                        andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)));
-                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)), createEqualOperator(lhsVec[i], mk_string(lValue.extract(0, lenTmp.get_int64()))));
-                        impliedEqualities.push_back(tmp_assert);
-                        return true;
+                        expr* const_str = mk_string(lValue.extract(0, lenTmp.get_int64()));
+                        if (!are_equal_exprs(lhsVec[i], const_str)) {
+                            andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)));
+                            expr *tmp_assert = rewrite_implication(
+                                    createEqualOperator(mk_strlen(lhsVec[i]), mk_int(lenTmp)),
+                                    createEqualOperator(lhsVec[i], const_str));
+                            impliedEqualities.push_back(tmp_assert);
+                            return true;
+                        }
+                        else
+                            break;
                     }
                     else
                         break;
@@ -14658,10 +14672,18 @@ namespace smt {
                 }
                 else {
                     if (lValue.length() > lenTmp.get_int64()){
-                        andLhs.push_back(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)));
-                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)), createEqualOperator(rhsVec[rhsVec.size() - 1 - i], mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()))));
-                        impliedEqualities.push_back(tmp_assert);
-                        return true;
+                        expr* const_str = mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()));
+                        if (!are_equal_exprs(rhsVec[rhsVec.size() - 1 - i], const_str)) {
+                            andLhs.push_back(
+                                    createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)));
+                            expr *tmp_assert = rewrite_implication(
+                                    createEqualOperator(mk_strlen(rhsVec[rhsVec.size() - 1 - i]), mk_int(lenTmp)),
+                                    createEqualOperator(rhsVec[rhsVec.size() - 1 - i], const_str));
+                            impliedEqualities.push_back(tmp_assert);
+                            return true;
+                        }
+                        else
+                            break;
                     }
                     else
                         break;
@@ -14673,10 +14695,18 @@ namespace smt {
                 }
                 else {
                     if (lValue.length() > lenTmp.get_int64()){
-                        andLhs.push_back(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)));
-                        expr* tmp_assert = rewrite_implication(createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)), createEqualOperator(lhsVec[lhsVec.size() - 1 - i], mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()))));
-                        impliedEqualities.push_back(tmp_assert);
-                        return true;
+                        expr* const_str = mk_string(lValue.extract(lValue.length() - lenTmp.get_int64(), lenTmp.get_int64()));
+                        if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], const_str)) {
+                            andLhs.push_back(
+                                    createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)));
+                            expr *tmp_assert = rewrite_implication(
+                                    createEqualOperator(mk_strlen(lhsVec[lhsVec.size() - 1 - i]), mk_int(lenTmp)),
+                                    createEqualOperator(lhsVec[lhsVec.size() - 1 - i], const_str));
+                            impliedEqualities.push_back(tmp_assert);
+                            return true;
+                        }
+                        else
+                            break;
                     }
                     else
                         break;
