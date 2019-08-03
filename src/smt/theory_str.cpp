@@ -9338,7 +9338,7 @@ namespace smt {
             }
             else {
                 zstring tmp = v[i];
-                if (tmp.length() > 0 && tmp[0] == '"')
+                if (tmp.length() > 0 && tmp[0] == '"' && tmp.length() >= 2)
                     tmp = tmp.extract(1, tmp.length() - 2);
                 STRACE("str", tout << __LINE__ <<  " tmp = " << tmp << std::endl;);
                 ret.push_back(u.str.mk_string(tmp));
@@ -9449,10 +9449,16 @@ namespace smt {
         else
             result = list;
 
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << result.size() << std::endl;);
+
         for (unsigned i = 0; i < result.size(); ++i)
-            for (unsigned j = 0; j < result[i].size(); ++j)
-                if (result[i][j][0] != '(')
+            for (unsigned j = 0; j < result[i].size(); ++j) {
+                if (result[i][j].length() == 0)
+                    result[i][j] = zstring("\"\"");
+                else if (result[i][j][0] != '(')
                     result[i][j] = zstring("\"") + result[i][j] + "\"";
+            }
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << result.size() << std::endl;);
         return result;
     }
 
@@ -9477,6 +9483,8 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
         if (str.length() == 0)
             return {};
+        else if (!str.contains("(") && !str.contains(")"))
+            return {{str}};
 
         std::vector<std::vector<zstring>> result;
 
@@ -9532,6 +9540,7 @@ namespace smt {
         }
         else if (rightParentheses == (int)str.length() - 1){
             /* (a) */
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
             removeExtraParentheses(str);
             return parse_regex_components(str);
         }
@@ -9598,12 +9607,21 @@ namespace smt {
     void theory_str::optimizeFlatAutomaton(zstring &s){
         zstring org = s;
         zstring tmp = s.extract(1, s.length() - 3);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << tmp << std::endl;);
+        if (!tmp.contains("(") && !tmp.contains(")")) {
+            s = tmp;
+            return;
+        }
+
         std::set<zstring> ret = extendComponent(tmp);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << tmp << std::endl;);
         SASSERT(ret.size() > 0);
         s = "";
         for (const auto& it: ret){
             s = s + "|" + it;
         }
+
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << s << std::endl;);
 
         if (org[org.length() - 1] == '*')
             s = zstring("(") + s.extract(1, s.length() - 1) + ")*";
@@ -9618,12 +9636,15 @@ namespace smt {
      * (a)|(b | c) --> {a, b, c}
      */
     std::set<zstring> theory_str::extendComponent(zstring s){
+        if (s.length() == 1)
+            return {s};
         std::vector<zstring> components = collectAlternativeComponents(s);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         if (components.size() > 0) {
             if (components.size() == 1)
                 return {components[0]};
             std::set<zstring> ret;
-            for (unsigned int i = 0 ; i < components.size(); ++i) {
+            for (unsigned i = 0 ; i < components.size(); ++i) {
                 removeExtraParentheses(components[i]);
                 std::set<zstring> tmp = extendComponent(components[i]);
                 ret.insert(tmp.begin(), tmp.end());
@@ -9639,6 +9660,9 @@ namespace smt {
      * (a) | (b) --> {a, b}
      */
     std::vector<zstring> theory_str::collectAlternativeComponents(zstring str){
+        if (str.length() <= 2)
+            return {str};
+
         std::vector<zstring> result;
         int counter = 0;
         unsigned startPos = 0;
@@ -9783,7 +9807,7 @@ namespace smt {
      * (a) --> a
      */
     void theory_str::removeExtraParentheses(zstring &s){
-        while (s[0] == '(' && find_correspond_right_parentheses(0, s) == (int)s.length() - 1)
+        while (s[0] == '(' && find_correspond_right_parentheses(0, s) == (int)s.length() - 1 && s.length() > 2)
             s = s.extract(1, s.length() - 2);
     }
 
