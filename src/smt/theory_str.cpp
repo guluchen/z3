@@ -9620,14 +9620,15 @@ namespace smt {
             for (const auto &it: ret) {
                 s = s + "|(" + it + ")";
             }
+            s = s.extract(1, s.length() - 1);
 
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << s << std::endl;);
         }
 
         if (org[org.length() - 1] == '*')
-            s = zstring("(") + s.extract(1, s.length() - 1) + ")*";
+            s = zstring("(") + s + ")*";
         else if (org[org.length() - 1] == '+')
-            s = zstring("(") + s.extract(1, s.length() - 1) + ")+";
+            s = zstring("(") + s + ")+";
         else {
             SASSERT(false);
         }
@@ -9889,7 +9890,7 @@ namespace smt {
             SASSERT(finish.length() == 1);
             zstring ret;
             for (unsigned i = start[0]; i <= (unsigned)finish[0]; ++i)
-                ret = ret + "~" + (char)i;
+                ret = ret + "~(" + (char)i + ")";
             return ret.extract(1, ret.length() - 1);
         }
         else if (u.re.is_full_seq(regex)){
