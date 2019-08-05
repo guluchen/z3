@@ -99,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="9396" selection-start-line="9396" selection-end-line="9396" />
+            <state relative-caret-position="322">
+              <caret line="9614" column="15" selection-start-line="9614" selection-start-column="15" selection-end-line="9614" selection-end-column="15" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -169,12 +169,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ctor&lt;std::pair&lt;int, int&gt;&gt; charRange = collectCharRange(</find>
-      <find>9950 *** arrange ***</find>
-      <find>handle_NOTContain_const</find>
-      <find>negate_context</find>
-      <find>handle_NOTContain</find>
-      <find>connected</find>
       <find>refine_notcon</find>
       <find>is_not_important</find>
       <find>refine_not</find>
@@ -199,6 +193,12 @@
       <find>propagate</find>
       <find>&quot;|&quot;</find>
       <find>regexal</find>
+      <find>createExprFromRegexVector</find>
+      <find>parse_regex_</find>
+      <find>&quot;|&quot; +</find>
+      <find>find_correspond_right_parentheses</find>
+      <find>mk_var</find>
+      <find>mk_regex_rep_var</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -746,15 +746,16 @@
       <workItem from="1564318752328" duration="18353000" />
       <workItem from="1564452184130" duration="7429000" />
       <workItem from="1564534898922" duration="467000" />
-      <workItem from="1564621943816" duration="8102000" />
+      <workItem from="1564621943816" duration="11542000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1509092000" />
+    <option name="totallyTimeSpent" value="1512532000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" sideWeight="0.48347107" weight="0.13264555" />
       <window_info id="Structure" order="1" sideWeight="0.5165289" side_tool="true" weight="0.13264555" />
@@ -1151,8 +1152,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="9396" selection-start-line="9396" selection-end-line="9396" />
+        <state relative-caret-position="322">
+          <caret line="9614" column="15" selection-start-line="9614" selection-start-column="15" selection-end-line="9614" selection-end-column="15" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

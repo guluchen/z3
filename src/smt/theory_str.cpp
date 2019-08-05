@@ -9321,7 +9321,7 @@ namespace smt {
                     SASSERT(false);
                 }
             }
-            else if (isUnionStr(v[i])){
+            else if (isUnionStr(v[i]) && v[i].contains("(") && v[i].contains(")")){
                 zstring tmp = v[i];
                 if (tmp.length() > 0 && tmp[0] == '"')
                     tmp = tmp.extract(1, tmp.length() - 2);
@@ -9503,7 +9503,7 @@ namespace smt {
                     break;
                 }
                 else if (s.size() > 0)
-                    tmp = tmp + "|" + s[0];
+                    tmp = tmp + "|(" + s[0] + ")";
 
             if (merge == true) {
                 tmp = tmp.extract(1, tmp.length() - 1);
@@ -9546,6 +9546,7 @@ namespace smt {
         }
         else if (rightParentheses == (int)str.length() - 2 && (str[str.length() - 1] == '*' || str[str.length() - 1] == '+')){
             /* (a)* */
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << str << std::endl;);
             optimizeFlatAutomaton(str);
             return {{str}};
         }
@@ -9610,18 +9611,18 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << tmp << std::endl;);
         if (!tmp.contains("(") && !tmp.contains(")")) {
             s = tmp;
-            return;
         }
+        else {
+            std::set<zstring> ret = extendComponent(tmp);
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << tmp << std::endl;);
+            SASSERT(ret.size() > 0);
+            s = "";
+            for (const auto &it: ret) {
+                s = s + "|(" + it + ")";
+            }
 
-        std::set<zstring> ret = extendComponent(tmp);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << tmp << std::endl;);
-        SASSERT(ret.size() > 0);
-        s = "";
-        for (const auto& it: ret){
-            s = s + "|" + it;
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** " << s << std::endl;);
         }
-
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << s << std::endl;);
 
         if (org[org.length() - 1] == '*')
             s = zstring("(") + s.extract(1, s.length() - 1) + ")*";
@@ -9662,29 +9663,37 @@ namespace smt {
     std::vector<zstring> theory_str::collectAlternativeComponents(zstring str){
         if (str.length() <= 2)
             return {str};
-
-        std::vector<zstring> result;
-        int counter = 0;
-        unsigned startPos = 0;
-        for (unsigned j = 0; j < str.length(); ++j) {
-            if (str[j] == ')'){
-                counter--;
-            }
-            else if (str[j] == '('){
-                counter++;
-            }
-            else if ((str[j] == '|' || str[j] == '~') && counter == 0) {
-                result.push_back(str.extract(startPos, j - startPos));
-                startPos = j + 1;
-            }
+        else if (str[0] == '(' && str[str.length() - 1] == ')' && find_correspond_right_parentheses(0, str) == str.length() - 1) {
+            return collectAlternativeComponents(str.extract(1, str.length() - 2));
         }
-        if (startPos != 0)
-            result.push_back(str.extract(startPos, str.length() - startPos));
         else {
-            return {str};
-        }
+            std::vector<zstring> result;
+            int counter = 0;
+            unsigned startPos = 0;
+            for (unsigned j = 0; j < str.length(); ++j) {
+                if (str[j] == ')') {
+                    counter--;
+                } else if (str[j] == '(') {
+                    counter++;
+                } else if ((str[j] == '|' || str[j] == '~') && counter == 0) {
+                    zstring tmp = str.extract(startPos, j - startPos);
+                    std::vector<zstring> tmp_vec = collectAlternativeComponents(tmp);
 
-        return result;
+                    result.insert(result.end(), tmp_vec.begin(), tmp_vec.end());
+                    startPos = j + 1;
+                }
+            }
+            if (startPos != 0) {
+                zstring tmp = str.extract(startPos, str.length() - startPos);
+                std::vector<zstring> tmp_vec = collectAlternativeComponents(tmp);
+
+                result.insert(result.end(), tmp_vec.begin(), tmp_vec.end());
+            }
+            else {
+                return {str};
+            }
+            return result;
+        }
     }
 
     std::vector<zstring> theory_str::collectAlternativeComponents(expr* v){
