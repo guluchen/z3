@@ -732,7 +732,7 @@ namespace smt {
 
             bool constructFromRegex(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
                 ast_manager & m = mg.get_manager();
-                std::vector<zstring> elements = collectAlternativeComponents(regex);
+                std::vector<zstring> elements = collect_alternative_components(regex);
                 if (th.u.re.is_union(regex)) {
                     SASSERT(elements.size() > 0);
                     for (int i = 0; i < elements.size(); ++i) {
@@ -797,14 +797,14 @@ namespace smt {
                 return false;
             }
 
-            std::vector<zstring> collectAlternativeComponents(expr* v){
+            std::vector<zstring> collect_alternative_components(expr* v){
                 std::vector<zstring> result;
-                collectAlternativeComponents(v, result);
+                collect_alternative_components(v, result);
                 return result;
             }
 
 
-            void collectAlternativeComponents(expr* v, std::vector<zstring>& ret){
+            void collect_alternative_components(expr* v, std::vector<zstring>& ret){
                 if (th.u.re.is_to_re(v)){
                     expr* arg0 = to_app(v)->get_arg(0);
                     zstring tmpStr;
@@ -813,13 +813,13 @@ namespace smt {
                 }
                 else if (th.u.re.is_union(v)){
                     expr* arg0 = to_app(v)->get_arg(0);
-                    collectAlternativeComponents(arg0, ret);
+                    collect_alternative_components(arg0, ret);
                     expr* arg1 = to_app(v)->get_arg(1);
-                    collectAlternativeComponents(arg1, ret);
+                    collect_alternative_components(arg1, ret);
                 }
                 else if (th.u.re.is_star(v) || th.u.re.is_plus(v)) {
                     expr* arg0 = to_app(v)->get_arg(0);
-                    collectAlternativeComponents(arg0, ret);
+                    collect_alternative_components(arg0, ret);
                 }
                 else if (th.u.re.is_range(v)){
                     expr* arg0 = to_app(v)->get_arg(0);
@@ -945,7 +945,7 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
                                                << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
                             if (!matchRegex(regex, val)) {
-                                std::vector<zstring> elements = collectAlternativeComponents(regex);
+                                std::vector<zstring> elements = collect_alternative_components(regex);
                                 for (int i = 0; i < value.length(); ++i) {
                                     zstring tmp = val.extract(0, i);
                                     STRACE("str",
@@ -988,7 +988,7 @@ namespace smt {
             bool get_char_range(std::set<char> & char_set){
                 if (regex != nullptr) {
                     // special case for numbers
-                    std::vector<zstring> elements = collectAlternativeComponents(regex);
+                    std::vector<zstring> elements = collect_alternative_components(regex);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
                                        << mk_pp(regex, th.get_manager()) << " "
                                        << elements.size()
@@ -1601,7 +1601,8 @@ namespace smt {
                 /*
                  * a b c (abc)* --> abc (abc)*
                  */
-                std::vector<std::vector<zstring>> combineConstStr(std::vector<std::vector<zstring>> regexElements);
+                std::vector<std::vector<zstring>> combine_const_str(std::vector<std::vector<zstring>> regexElements);
+                std::vector<expr*> combine_const_str(std::vector<expr*> v);
                     bool isRegexStr(zstring str);
                     bool isUnionStr(zstring str);
                 /*
@@ -1613,6 +1614,7 @@ namespace smt {
                     */
                     bool equalStrVector(std::vector<zstring> a, std::vector<zstring> b);
 
+                std::vector<expr*> parse_regex_components(expr* reg);
                 /*
                 *
                 */
@@ -1630,9 +1632,10 @@ namespace smt {
                     /*
                     * (a) | (b) --> {a, b}
                     */
-                    std::vector<zstring> collectAlternativeComponents(zstring str);
-                    std::vector<zstring> collectAlternativeComponents(expr* v);
-                    bool collectAlternativeComponents(expr* v, std::vector<zstring>& ret);
+                    std::vector<zstring> collect_alternative_components(zstring str);
+                    std::vector<expr*> collect_alternative_components(expr* v);
+                    bool collect_alternative_components(expr* v, std::vector<zstring>& ret);
+                    bool collect_alternative_components(expr* v, std::vector<expr*>& ret);
 
                     /*
                     *
@@ -1646,7 +1649,8 @@ namespace smt {
 
                 std::set<zstring> collect_strs_in_membership(expr* v);
                 void collect_strs_in_membership(expr* v, std::set<zstring> &ret);
-                zstring underApproxRegex(zstring str);
+                    expr* remove_star_in_star(expr* reg);
+                    bool contain_star(expr* reg);
                 zstring getStdRegexStr(expr* regex);
             /*
              * convert lhs == rhs to SMT formula
@@ -2134,7 +2138,7 @@ namespace smt {
              */
             void optimize_equality(
                     expr* lhs,
-                    std::vector<expr*> rhs,
+                    ptr_vector<expr> rhs,
                     ptr_vector<expr> &new_lhs,
                     ptr_vector<expr> &new_rhs);
             /*
@@ -2363,6 +2367,7 @@ namespace smt {
         app * mk_arr_var(std::string name);
 
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
+        void get_nodes_in_reg_concat(expr * node, ptr_vector<expr> & nodeList);
         void get_all_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         expr * get_eqc_value(expr * n, bool & hasEqcValue);
         expr * z3str2_get_eqc_value(expr * n , bool & hasEqcValue);
@@ -2467,9 +2472,9 @@ namespace smt {
         re2automaton                   m_mk_aut;
         expr_ref_vector                m_res;
         rational p_bound = rational(2);
-        rational q_bound;
+        rational q_bound = rational(5);
         rational str_int_bound;
-        rational max_str_int_bound = rational(10);
+        rational max_str_int_bound = rational(5);
         rational max_p_bound = rational(3);
         rational max_q_bound = rational(20);
         expr* str_int_bound_expr = nullptr;

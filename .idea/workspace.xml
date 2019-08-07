@@ -85,6 +85,7 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,10 +100,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="396">
-              <caret line="9892" column="47" selection-start-line="9892" selection-start-column="47" selection-end-line="9892" selection-end-column="47" />
+            <state relative-caret-position="203">
+              <caret line="4108" column="48" lean-forward="true" selection-start-line="4108" selection-start-column="48" selection-end-line="4108" selection-end-column="48" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#499259#499564#0" expanded="true" />
+                <element signature="e#528691#529105#0" expanded="true" />
+                <element signature="e#540699#541023#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -120,8 +124,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3735">
-              <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
+            <state relative-caret-position="666">
+              <caret line="335" column="13" selection-start-line="335" selection-start-column="13" selection-end-line="335" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -150,8 +154,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="652">
-              <caret line="1622" column="25" selection-start-line="1622" selection-start-column="25" selection-end-line="1622" selection-end-column="25" />
+            <state relative-caret-position="217">
+              <caret line="2474" column="27" selection-start-line="2474" selection-start-column="27" selection-end-line="2474" selection-end-column="27" />
             </state>
           </provider>
         </entry>
@@ -169,36 +173,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>refine_notcon</find>
-      <find>is_not_important</find>
-      <find>refine_not</find>
-      <find>content</find>
-      <find>pmax</find>
-      <find>qmax</find>
-      <find>QMAX</find>
-      <find>QCONSTMAX</find>
-      <find>p_bound</find>
-      <find>PMAX</find>
-      <find>notContainMap</find>
-      <find>does_contain</find>
-      <find>implies_empty_tail_str_from_notContain</find>
-      <find>implies_empty_str_from_notContain</find>
-      <find>352</find>
-      <find>feasibleSplit_const</find>
-      <find>rational(2)</find>
-      <find>add</find>
-      <find>p_bound =</find>
-      <find>setup_flats</find>
-      <find>lValue</find>
-      <find>propagate</find>
-      <find>&quot;|&quot;</find>
-      <find>regexal</find>
-      <find>createExprFromRegexVector</find>
-      <find>parse_regex_</find>
       <find>&quot;|&quot; +</find>
       <find>find_correspond_right_parentheses</find>
       <find>mk_var</find>
       <find>mk_regex_rep_var</find>
+      <find>underApproxRegex</find>
+      <find>get_ma</find>
+      <find>optimizeFlatAutomaton</find>
+      <find>manager</find>
+      <find>collectAlternativeComponents</find>
+      <find>refineVectors</find>
+      <find>get_nodes</find>
+      <find>ptr_vector</find>
+      <find>collect_alternative_components</find>
+      <find>regexElements</find>
+      <find>get_nodes_in_reg_concat</find>
+      <find>combineConstStr</find>
+      <find>remove_star_in_star</find>
+      <find>parse_regex_components</find>
+      <find>combine_const_str(parse_regex_components</find>
+      <find>expr2</find>
+      <find>e</find>
+      <find>combine_const_str</find>
+      <find>compleme</find>
+      <find>else if (u.re.is_rang</find>
+      <find>update_string_int_vars</find>
+      <find>rational(10</find>
+      <find>setup_char_range_arr</find>
+      <find>setup_regex_var</find>
+      <find>checkIfVarInUnionMembership</find>
+      <find>q_bound</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -217,6 +221,9 @@
       <replace>non_fresh_map</replace>
       <replace>unroll_non_fresh_variable</replace>
       <replace>non_fresh_</replace>
+      <replace>remove_star_in_star</replace>
+      <replace>collect_alternative_components</replace>
+      <replace>combine_const_str</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -235,8 +242,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_internalizer.cpp" />
         <option value="$PROJECT_DIR$/src/ast/seq_decl_plugin.h" />
         <option value="$PROJECT_DIR$/src/util/ref_vector.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
       </list>
     </option>
   </component>
@@ -746,12 +753,12 @@
       <workItem from="1564318752328" duration="18353000" />
       <workItem from="1564452184130" duration="7429000" />
       <workItem from="1564534898922" duration="467000" />
-      <workItem from="1564621943816" duration="11962000" />
+      <workItem from="1564621943816" duration="30578000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1512952000" />
+    <option name="totallyTimeSpent" value="1531568000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
@@ -979,13 +986,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="35610">
-          <caret line="2374" selection-start-line="2374" selection-end-line="2374" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/lbool.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="283">
@@ -1112,13 +1112,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3735">
-          <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="18645">
@@ -1143,19 +1136,36 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="666">
+          <caret line="335" column="13" selection-start-line="335" selection-start-column="13" selection-end-line="335" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/ast.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="652">
-          <caret line="1622" column="25" selection-start-line="1622" selection-start-column="25" selection-end-line="1622" selection-end-column="25" />
+          <caret line="2374" column="43" selection-start-line="2374" selection-start-column="43" selection-end-line="2374" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="217">
+          <caret line="2474" column="27" selection-start-line="2474" selection-start-column="27" selection-end-line="2474" selection-end-column="27" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="9892" column="47" selection-start-line="9892" selection-start-column="47" selection-end-line="9892" selection-end-column="47" />
+        <state relative-caret-position="203">
+          <caret line="4108" column="48" lean-forward="true" selection-start-line="4108" selection-start-column="48" selection-end-line="4108" selection-end-column="48" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#499259#499564#0" expanded="true" />
+            <element signature="e#528691#529105#0" expanded="true" />
+            <element signature="e#540699#541023#0" expanded="true" />
           </folding>
         </state>
       </provider>
