@@ -2472,9 +2472,9 @@ namespace smt {
         re2automaton                   m_mk_aut;
         expr_ref_vector                m_res;
         rational p_bound = rational(2);
-        rational q_bound = rational(5);
+        rational q_bound = rational(10);
         rational str_int_bound;
-        rational max_str_int_bound = rational(5);
+        rational max_str_int_bound = rational(10);
         rational max_p_bound = rational(3);
         rational max_q_bound = rational(20);
         expr* str_int_bound_expr = nullptr;

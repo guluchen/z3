@@ -4368,7 +4368,7 @@ namespace smt {
         }
 
         if (string_int_conversion_terms.size() > 0 && str_int_bound == rational(0)) {
-            str_int_bound = rational(5);
+            str_int_bound = rational(10);
             assert_axiom(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
             if (str_int_bound >= max_str_int_bound)
                 impliedFacts.push_back(createEqualOperator(get_bound_str_int_control_var(), mk_int(str_int_bound)));
