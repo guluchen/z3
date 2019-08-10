@@ -1134,6 +1134,7 @@ namespace smt {
                         else
                             tmp = linker;
                         int prefix = findPrefixLen(mg, concat, tmp, m_root2value);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                         value = concatValue.extract(prefix, len);
                         return true;
                     }
@@ -1170,7 +1171,11 @@ namespace smt {
                 }
                 else {
                     int subLen = -1;
-                    if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
+                    zstring val_str;
+                    if (th.u.str.is_string(concat, val_str)){
+                        prefix += val_str.length();
+                    }
+                    else if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
                         prefix += subLen;
                     }
                     else {
@@ -1189,6 +1194,10 @@ namespace smt {
                     for (int i = 0; i < leafNodes.size(); ++i) {
                         int val = -1;
                         if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, val)){
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << " "
+                                        << val
+                                        << std::endl;);
                             sum += val;
                         }
                         else
@@ -1211,9 +1220,17 @@ namespace smt {
                             << std::endl;);
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << mk_pp(n->get_owner(), th.get_manager())
+                                << std::endl;);
                     rational valInt;
                     if (th.m_autil.is_numeral(val, valInt)) {
                         value = valInt.get_int32();
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__ << " "
+                                    << mk_pp(n->get_owner(), th.get_manager()) << " " << value
+                                    << std::endl;);
                         return true;
                     }
                     else {
@@ -1225,6 +1242,11 @@ namespace smt {
                     }
                 }
                 else {
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__
+                                << mk_pp(n->get_owner(), th.get_manager())
+                                << std::endl;);
+
                     // query int theory
                     expr *value_ral = th.query_theory_arith_core(n->get_owner(), mg);
                     if (value_ral != nullptr) {
@@ -1232,6 +1254,10 @@ namespace smt {
                         rational tmp;
                         if (th.m_autil.is_numeral(value_ral, tmp)) {
                             value = tmp.get_int32();
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << " "
+                                        << mk_pp(n->get_owner(), th.get_manager()) << " " << value
+                                        << std::endl;);
                             return true;
                         }
                         else
