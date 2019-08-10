@@ -1376,15 +1376,9 @@ namespace smt {
         bool wrongStart, wrongEnd;
         if (is_inconsisten(eqc_concat_lhs, eqc_concat_rhs, eqc_const_lhs, eqc_const_rhs, wrongStart, wrongEnd)){
             STRACE("str", tout << __LINE__ << " is_inconsisten " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
-            if (wrongStart){
-                expr_ref_vector tmp(collect_all_empty_start(lhs, rhs));
-                assert_axiom(mk_not(m, createAndOperator(tmp)));
-            }
-
-            if (wrongEnd){
-                expr_ref_vector tmp(collect_all_empty_end(lhs, rhs));
-                assert_axiom(mk_not(m, createAndOperator(tmp)));
-            }
+            if (wrongStart || wrongEnd){
+                negate_equality(lhs, rhs);
+            } 
 
             return;
         }
@@ -1643,6 +1637,9 @@ namespace smt {
                     if (len.get_int64() == 0){
                         ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
                     }
+                    else if (u.str.is_string(v[i]) && lhs != e){
+                        ret.push_back(createEqualOperator(lhs, e));
+                    }
                     else
                         break;
                 }
@@ -1682,6 +1679,9 @@ namespace smt {
                 if (get_len_value(v[i], len)){
                     if (len.get_int64() == 0){
                         ret.push_back(createEqualOperator(mk_strlen(v[i]), mk_int(0)));
+                    }
+                    else if (u.str.is_string(v[i]) && lhs != e){
+                        ret.push_back(createEqualOperator(lhs, e));
                     }
                     else
                         break;
