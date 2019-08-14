@@ -990,8 +990,8 @@ namespace smt {
         context& ctx = get_context();
         expr* a = nullptr, *s = nullptr, *t = nullptr;
         VERIFY(m_util_s.str.is_replace(r, a, s, t));
-        expr_ref x  = mk_skolem(symbol("m_indexof_left"), a, s);
-        expr_ref y  = mk_skolem(symbol("m_indexof_right"), a, s);
+        expr_ref x  = mk_skolem(symbol("m_contains_left"), a, s);
+        expr_ref y  = mk_skolem(symbol("m_contains_right"), a, s);
         expr_ref xty = mk_concat(x, mk_concat(t, y));
         expr_ref xsy = mk_concat(x, mk_concat(s, y));
         literal a_emp = mk_eq_empty(a, true);
@@ -1031,8 +1031,8 @@ namespace smt {
             add_axiom({~t_eq_empty, s_eq_empty, i_eq_m1});
 
             if (!offset || (m_util_a.is_numeral(offset, r) && r.is_zero())) {
-                expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s);
-                expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s);
+                expr_ref x = mk_skolem(symbol("m_contains_left"), t, s);
+                expr_ref y = mk_skolem(symbol("m_contains_right"), t, s);
                 expr_ref xsy(m_util_s.str.mk_concat(x, s, y), m);
                 string_theory_propagation(xsy);
 
@@ -1054,8 +1054,8 @@ namespace smt {
                 add_axiom({offset_le_len, i_eq_m1});
                 add_axiom({~offset_ge_len, ~offset_le_len, ~s_eq_empty, i_eq_offset});
 
-                expr_ref x = mk_skolem(symbol("m_indexof_left"), t, s, offset);
-                expr_ref y = mk_skolem(symbol("m_indexof_right"), t, s, offset);
+                expr_ref x = mk_skolem(symbol("m_contains_left"), t, s, offset);
+                expr_ref y = mk_skolem(symbol("m_contains_right"), t, s, offset);
                 expr_ref xy(m_util_s.str.mk_concat(x, y), m);
                 string_theory_propagation(xy);
 
