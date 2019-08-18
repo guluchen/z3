@@ -1378,7 +1378,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " is_inconsisten " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             if (wrongStart || wrongEnd){
                 negate_equality(lhs, rhs);
-            } 
+            }
 
             return;
         }
@@ -4158,6 +4158,7 @@ namespace smt {
             STRACE("str", tout << __FUNCTION__ << " suffix " << mk_pp(var, m) << " is_true: " << is_true << std::endl;);
         }
         else if (u.str.is_in_re(var)){
+            newConstraintTriggered = true;
             STRACE("str", tout << __FUNCTION__ << " regex in " << mk_pp(var, m) << " is_true: " << is_true << std::endl;);
             expr* n1 = to_app(var)->get_arg(0);
             expr* n2 = to_app(var)->get_arg(1);
@@ -4254,7 +4255,7 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         ast_manager &m = get_manager();
 
-        if (m_we_expr_memo.empty() && m_wi_expr_memo.empty()) {
+        if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
@@ -7652,6 +7653,11 @@ namespace smt {
 
     void theory_str::handle_str2int(expr* num, expr* str){
         ast_manager & m = get_manager();
+        rational len_val;
+        if (get_len_value(str, len_val) && len_val == rational(0)){
+            assert_axiom(rewrite_implication(createEqualOperator(str, mk_string("")), createEqualOperator(num, mk_int(-1))));
+            return;
+        }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
         expr* unrollConstraint = unroll_str_int(num, str);
         expr* lenConstraint = lower_bound_str_int(num, str);
@@ -7676,6 +7682,11 @@ namespace smt {
 
     void theory_str::handle_int2str(expr* num, expr* str){
         ast_manager & m = get_manager();
+        rational len_val;
+        if (get_len_value(str, len_val) && len_val == rational(0)){
+            assert_axiom(rewrite_implication(createEqualOperator(str, mk_string("")), createEqualOperator(num, mk_int(-1))));
+            return;
+        }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
         expr* unrollConstraint = unroll_str_int(num, str);
         expr* lenConstraint = lower_bound_int_str(num, str);
@@ -8608,6 +8619,7 @@ namespace smt {
                 arrVar = nullptr;
             }
             else {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
                 zstring val;
                 if (u.str.is_string(v, val)) {
                     if (v != arr_linker[arrVar])
@@ -8620,7 +8632,7 @@ namespace smt {
         }
 
         if ((!u.str.is_concat(v) || non_fresh_vars.find(v) != non_fresh_vars.end()) && arrVar == nullptr) {
-            STRACE("str", tout << __LINE__ << " making arr: " << mk_pp(v, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " var: " << mk_pp(v, m) << std::endl;);
             std::string flatArr = generateFlatArray(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
             expr_ref v1(m);
             if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
@@ -8650,6 +8662,8 @@ namespace smt {
                 setup_str_const(val, v1);
             }
             else if (isInternalRegexVar(v, rexpr)) {
+                expr *to_assert = setup_regex_var(rexpr, v1, rational(non_fresh_vars[v]), mk_int(0));
+                assert_axiom(to_assert);
             }
             else if (is_str_int_var(v)){
                 // setup_str_int_arr
@@ -15145,16 +15159,25 @@ namespace smt {
             }
         }
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << vars.size() << std::endl;);
         if (vars.size() > 0)
             flat_enabled = true;
     }
 
     void theory_str::update_string_int_vars(expr* v, obj_hashtable<expr> &s){
-        expr_ref_vector eqs(get_manager());
-        collect_eq_nodes(v, eqs);
-        for (const auto& n : eqs) {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, get_manager()) << " = " << mk_pp(n, get_manager()) << std::endl;);
-            s.insert(n);
+        rational len_val;
+        if (!(u.str.is_string_term(v) && get_len_value(v, len_val) && len_val == rational(0))) {
+            expr_ref_vector eqs(get_manager());
+            collect_eq_nodes(v, eqs);
+            for (const auto &n : eqs) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, get_manager()) << " = "
+                                   << mk_pp(n, get_manager()) << std::endl;);
+                s.insert(n);
+            }
+        }
+        else {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, get_manager())
+                               << std::endl;);
         }
     }
 
@@ -15178,6 +15201,9 @@ namespace smt {
 
         for (const auto& nn : non_fresh_vars) {
             if (retTmp.find(nn.first) == retTmp.end()) {
+                rational len_val;
+                if (get_len_value(nn.first, len_val) && len_val == rational(0))
+                    continue;
                 if (is_importantVar_recheck(nn.first, nn.second, eq_combination) || str_int_vars.find(nn.first) != str_int_vars.end()) {
                     expr_ref_vector eqs(m);
                     collect_eq_nodes(nn.first, eqs);
