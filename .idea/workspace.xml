@@ -83,8 +83,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="566">
-              <caret line="8621" column="107" selection-start-line="8621" selection-start-column="107" selection-end-line="8621" selection-end-column="107" />
+            <state relative-caret-position="367">
+              <caret line="990" column="51" selection-start-line="990" selection-start-column="51" selection-end-line="990" selection-end-column="51" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#499259#499564#0" expanded="true" />
@@ -141,8 +141,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="23760">
-              <caret line="1584" column="34" selection-start-line="1584" selection-start-column="15" selection-end-line="1584" selection-end-column="34" />
+            <state relative-caret-position="600">
+              <caret line="283" column="16" selection-start-line="283" selection-start-column="16" selection-end-line="283" selection-end-column="16" />
               <folding>
                 <element signature="e#30447#30471#0" expanded="true" />
               </folding>
@@ -153,8 +153,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="2178" column="17" selection-start-line="2178" selection-start-column="17" selection-end-line="2178" selection-end-column="17" />
+            <state relative-caret-position="227">
+              <caret line="979" selection-start-line="979" selection-end-line="979" />
             </state>
           </provider>
         </entry>
@@ -172,8 +172,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>combine_const_str(parse_regex_components</find>
-      <find>expr2</find>
       <find>e</find>
       <find>combine_const_str</find>
       <find>compleme</find>
@@ -202,6 +200,8 @@
       <find>get_len_value(</find>
       <find>handle_str_int</find>
       <find>rational(1</find>
+      <find>vValue</find>
+      <find>collect_im</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -752,12 +752,12 @@
       <workItem from="1564318752328" duration="18353000" />
       <workItem from="1564452184130" duration="7429000" />
       <workItem from="1564534898922" duration="467000" />
-      <workItem from="1564621943816" duration="42439000" />
+      <workItem from="1564621943816" duration="44926000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1543429000" />
+    <option name="totallyTimeSpent" value="1545916000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
@@ -1118,16 +1118,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="23760">
-          <caret line="1584" column="34" selection-start-line="1584" selection-start-column="15" selection-end-line="1584" selection-end-column="34" />
-          <folding>
-            <element signature="e#30447#30471#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3315">
@@ -1151,15 +1141,25 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="2178" column="17" selection-start-line="2178" selection-start-column="17" selection-end-line="2178" selection-end-column="17" />
+        <state relative-caret-position="227">
+          <caret line="979" selection-start-line="979" selection-end-line="979" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="600">
+          <caret line="283" column="16" selection-start-line="283" selection-start-column="16" selection-end-line="283" selection-end-column="16" />
+          <folding>
+            <element signature="e#30447#30471#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="566">
-          <caret line="8621" column="107" selection-start-line="8621" selection-start-column="107" selection-end-line="8621" selection-end-column="107" />
+        <state relative-caret-position="367">
+          <caret line="990" column="51" selection-start-line="990" selection-start-column="51" selection-end-line="990" selection-end-column="51" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#499259#499564#0" expanded="true" />

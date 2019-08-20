@@ -899,7 +899,7 @@ namespace smt {
 
             bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
                 SASSERT(arr->get_owner() != nullptr);
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
 
                 app* arr_val = nullptr;
                 if (m_root2value.find(arr, arr_val)) {

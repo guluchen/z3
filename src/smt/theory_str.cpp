@@ -979,11 +979,26 @@ namespace smt {
             if (is_important(owner.get()) && arr_var != nullptr) {
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                expr* arr_expr = getExprVarFlatArray(owner.get());
+                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
+                                   << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                if (arr_expr != nullptr) {
+                    STRACE("str", tout << __LINE__ << "arr_expr of: " << mk_ismt2_pp(arr_expr, m) << " (sort "
+                                       << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
 
-                enode* arrNode = ctx.get_enode(getExprVarFlatArray(owner.get()));
-
-                result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
-                importantNode = owner.get();
+                    STRACE("str", tout << __LINE__ << "arr_expr of: " << mk_ismt2_pp(arr_expr, m) << " (sort "
+                                       << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                    if (ctx.e_internalized(arr_expr)) {
+                        enode *arrNode = ctx.get_enode(arr_expr);
+                        result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex,
+                                       vLen.get_int64());
+                    }
+                    else
+                        return alloc(expr_wrapper_proc, owner);
+                    importantNode = owner.get();
+                }
+                else
+                    return alloc(expr_wrapper_proc, owner);
             }
             else {
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
