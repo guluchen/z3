@@ -719,7 +719,10 @@ namespace smt {
 
     void setup::setup_QF_S() {
         if (m_params.m_string_solver == "z3str3") {
-            setup_str();
+            setup_trau();
+        }
+        else if (m_params.m_string_solver == "trau") {
+            setup_trau();
         }
         else if (m_params.m_string_solver == "seq") {
             setup_unknown();
@@ -728,7 +731,7 @@ namespace smt {
             setup_unknown();
         }
         else {
-            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'seq', 'auto'");
+            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'trau', 'seq', 'auto'");
         }
     }
 

@@ -83,9 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/smt_setup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/smt_setup.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/smt_setup.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/smt_setup.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -112,8 +110,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="720" column="47" selection-start-line="720" selection-start-column="41" selection-end-line="720" selection-end-column="47" />
+            <state relative-caret-position="245">
+              <caret line="720" column="44" selection-start-line="720" selection-start-column="10" selection-end-line="720" selection-end-column="44" />
             </state>
           </provider>
         </entry>
@@ -188,7 +186,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>compleme</find>
       <find>else if (u.re.is_rang</find>
       <find>rational(10</find>
       <find>setup_char_range_arr</find>
@@ -218,6 +215,7 @@
       <find>collect_im</find>
       <find>setup_str</find>
       <find>z3str3</find>
+      <find>(m_params.m_string_solver == &quot;z3s</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -796,12 +794,12 @@
       <workItem from="1564534898922" duration="467000" />
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
-      <workItem from="1566917158043" duration="1237000" />
+      <workItem from="1566917158043" duration="1408000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1547443000" />
+    <option name="totallyTimeSpent" value="1547614000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
@@ -1205,8 +1203,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="720" column="47" selection-start-line="720" selection-start-column="41" selection-end-line="720" selection-end-column="47" />
+        <state relative-caret-position="245">
+          <caret line="720" column="44" selection-start-line="720" selection-start-column="10" selection-end-line="720" selection-end-column="44" />
         </state>
       </provider>
     </entry>
