@@ -83,7 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/smt/smt_setup.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/smt_setup.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_str.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_str.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -95,11 +95,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="652">
-              <caret line="990" column="34" selection-start-line="990" selection-start-column="34" selection-end-line="990" selection-end-column="34" />
+            <state relative-caret-position="420">
+              <caret line="1012" column="51" selection-start-line="1012" selection-start-column="51" selection-end-line="1012" selection-end-column="51" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -107,11 +107,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="245">
-              <caret line="720" column="44" selection-start-line="720" selection-start-column="10" selection-end-line="720" selection-end-column="44" />
+            <state relative-caret-position="272">
+              <caret line="924" column="45" selection-start-line="924" selection-start-column="45" selection-end-line="924" selection-end-column="45" />
             </state>
           </provider>
         </entry>
@@ -167,8 +167,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="14685">
-              <caret line="979" selection-start-line="979" selection-end-line="979" />
+            <state relative-caret-position="329">
+              <caret line="215" column="10" selection-start-line="215" selection-start-column="10" selection-end-line="215" selection-end-column="10" />
             </state>
           </provider>
         </entry>
@@ -256,9 +256,9 @@
         <option value="$PROJECT_DIR$/src/ast/seq_decl_plugin.h" />
         <option value="$PROJECT_DIR$/src/util/ref_vector.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
         <option value="$PROJECT_DIR$/src/smt/smt_setup.h" />
         <option value="$PROJECT_DIR$/src/smt/smt_setup.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
       </list>
     </option>
   </component>
@@ -794,12 +794,12 @@
       <workItem from="1564534898922" duration="467000" />
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
-      <workItem from="1566917158043" duration="1408000" />
+      <workItem from="1566917158043" duration="2434000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1547614000" />
+    <option name="totallyTimeSpent" value="1548640000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="137" y="25" width="1280" height="877" extended-state="0" />
@@ -1160,13 +1160,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="14685">
-          <caret line="979" selection-start-line="979" selection-end-line="979" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3315">
@@ -1184,16 +1177,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="652">
-          <caret line="990" column="34" selection-start-line="990" selection-start-column="34" selection-end-line="990" selection-end-column="34" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="358">
@@ -1203,8 +1186,25 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="245">
-          <caret line="720" column="44" selection-start-line="720" selection-start-column="10" selection-end-line="720" selection-end-column="44" />
+        <state relative-caret-position="272">
+          <caret line="924" column="45" selection-start-line="924" selection-start-column="45" selection-end-line="924" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="329">
+          <caret line="215" column="10" selection-start-line="215" selection-start-column="10" selection-end-line="215" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="420">
+          <caret line="1012" column="51" selection-start-line="1012" selection-start-column="51" selection-end-line="1012" selection-end-column="51" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

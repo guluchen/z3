@@ -1009,13 +1009,17 @@ namespace smt {
                 expr* reg = nullptr;
                 for (int i = 0; i < eqSet.size(); ++i) {
                     if ((is_important(eqSet[i].get()) && !u.str.is_concat(eqSet[i].get())) || isInternalRegexVar(eqSet[i].get(), reg)) {
-
-                        enode* arrNode = ctx.get_enode(getExprVarFlatArray(eqSet[i].get()));
-                        result = alloc(string_value_proc, *this, s, n->get_owner(), true,
-                                       arrNode, regex, vLen.get_int64());
-                        found = true;
-                        importantNode = eqSet[i].get();
-                        break;
+                        expr* arr_expr = getExprVarFlatArray(owner.get());
+                        if (arr_expr != nullptr && ctx.e_internalized(arr_expr)) {
+                            enode* arrNode = ctx.get_enode(arr_expr);
+                            result = alloc(string_value_proc, *this, s, n->get_owner(), true,
+                                           arrNode, regex, vLen.get_int64());
+                            found = true;
+                            importantNode = eqSet[i].get();
+                            break;
+                        }
+                        else
+                            return alloc(expr_wrapper_proc, owner);
                     }
                 }
 
