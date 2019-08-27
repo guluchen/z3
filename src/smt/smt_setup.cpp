@@ -880,8 +880,11 @@ namespace smt {
     void setup::setup_seq_str(static_features const & st) {
         // check params for what to do here when it's ambiguous
         if (m_params.m_string_solver == "z3str3") {
-            setup_str();
-        } 
+            setup_trau();
+        }
+        else if (m_params.m_string_solver == "trau") {
+            setup_trau();
+        }
         else if (m_params.m_string_solver == "seq") {
             setup_seq();
         } 
@@ -894,7 +897,7 @@ namespace smt {
             }
         } 
         else {
-            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'seq', 'auto'");
+            throw default_exception("invalid parameter for smt.string_solver, valid options are 'z3str3', 'trau', 'seq', 'auto'");
         }
     }
 
@@ -908,6 +911,12 @@ namespace smt {
     }
 
     void setup::setup_str() {
+        setup_arith();
+        setup_arrays();
+        m_context.register_plugin(alloc(theory_str, m_manager, m_params));
+    }
+
+    void setup::setup_trau() {
         setup_arith();
         setup_arrays();
         m_context.register_plugin(alloc(theory_str, m_manager, m_params));
