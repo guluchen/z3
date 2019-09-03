@@ -550,7 +550,7 @@ namespace smt {
             }
 
             void addAssertingConstraints(expr_ref_vector _assertingConstraints){
-                for (int i = 0; i < _assertingConstraints.size(); ++i)
+                for (int i = 0; i < (int)_assertingConstraints.size(); ++i)
                     assertingConstraints.push_back(_assertingConstraints.get(i));
             }
 
@@ -662,7 +662,7 @@ namespace smt {
                 obj_map<enode, app *> m_root2value = mg.get_root2value();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
 
-                for (int i = 0; i < m_dependencies.size(); ++i){
+                for (int i = 0; i < (int)m_dependencies.size(); ++i){
                     app* val = nullptr;
                     if (m_root2value.find(m_dependencies[i].get_enode(), val)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " " << mk_pp(val, m) << std::endl;);
@@ -674,7 +674,6 @@ namespace smt {
 
                 sort * int_sort = m.mk_sort(th.m_autil.get_family_id(), INT_SORT);
                 sort * str_sort = th.u.str.mk_string_sort();
-                sort * arr_sort = th.m_arrayUtil.mk_array_sort(int_sort, int_sort);
                 bool is_string = str_sort == m_sort;
 
 
@@ -731,7 +730,6 @@ namespace smt {
             }
 
             bool constructFromRegex(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
-                ast_manager & m = mg.get_manager();
                 std::vector<zstring> elements = collect_alternative_components(regex);
                 if (th.u.re.is_union(regex)) {
                     SASSERT(elements.size() > 0);
@@ -752,7 +750,7 @@ namespace smt {
                 }
                 else if (th.u.re.is_star(regex) || th.u.re.is_plus(regex)) {
                     zstring valueStr("");
-                    for (int i = 0; i < elements.size(); ++i) {
+                    for (int i = 0; i < (int)elements.size(); ++i) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << elements[i] << std::endl;);
                     }
                     if (createStringWithLength(elements, valueStr, len_int)) {
@@ -782,7 +780,7 @@ namespace smt {
                         }
                         else {
                             int tmpRemainLength = remainLength % s.length();
-                            while (currentStr.length() > bak_len) {
+                            while ((int)currentStr.length() > bak_len) {
                                 if (createStringWithLength(elements, currentStr, tmpRemainLength)) {
                                     return true;
                                 } else {
@@ -830,7 +828,7 @@ namespace smt {
                     SASSERT(start.length() == 1);
                     SASSERT(finish.length() == 1);
 
-                    for (int i = start[0]; i <= finish[0]; ++i){
+                    for (int i = start[0]; i <= (int)finish[0]; ++i){
                         zstring tmp(i);
                         ret.push_back(tmp);
                     }
@@ -840,8 +838,7 @@ namespace smt {
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
-                ast_manager & m = mg.get_manager();
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m)  << ": NOT important" << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
                 if (len_int != -1) {
                     // non root var
                     bool constraint01 = th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
@@ -889,7 +886,7 @@ namespace smt {
                 else {
                     STRACE("str",
                            tout << __LINE__ << " " << __FUNCTION__
-                                << mk_pp(node, m)
+                                << mk_pp(node, mg.get_manager())
                                 << std::endl;);
                     SASSERT(false);
                 }
@@ -920,7 +917,7 @@ namespace smt {
 
                             rational value;
                             if (th.m_autil.is_numeral(v, value)) {
-                                if (key.get_int32() < vValue.size())
+                                if (key.get_int32() < (int)vValue.size())
                                     vValue[key.get_int32()] = value.get_int32();
                             }
                         }
@@ -946,13 +943,13 @@ namespace smt {
                                                << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
                             if (!matchRegex(regex, val)) {
                                 std::vector<zstring> elements = collect_alternative_components(regex);
-                                for (int i = 0; i < value.length(); ++i) {
+                                for (int i = 0; i < (int)value.length(); ++i) {
                                     zstring tmp = val.extract(0, i);
                                     STRACE("str",
                                            tout << __LINE__ << " " << __FUNCTION__ << " tmp: " << tmp << std::endl;);
                                     if (!matchRegex(regex, tmp)) {
                                         int err_pos = i;
-                                        for (err_pos = i + 1; err_pos < value.length(); ++err_pos)
+                                        for (err_pos = i + 1; err_pos < (int)value.length(); ++err_pos)
                                             if (value[err_pos] != value[i]) {
                                                 break;
                                             }
@@ -1008,7 +1005,7 @@ namespace smt {
 
             zstring fill_chars(std::vector<int> vValue, std::set<char> char_set, bool &completed){
                 zstring value("");
-                for (int i = 0; i < vValue.size(); ++i) {
+                for (int i = 0; i < (int)vValue.size(); ++i) {
                     if (char_set.size() > 0){
                         char tmp = (char)vValue[i];
                         if (char_set.find(tmp) == char_set.end())
@@ -1034,7 +1031,7 @@ namespace smt {
                     th.get_nodes_in_concat(eq, leafNodes);
 
                     int sum = 0;
-                    for (int i = 0; i < leafNodes.size(); ++i){
+                    for (int i = 0; i < (int)leafNodes.size(); ++i){
                         if (th.is_important(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
                             zstring leafVal;
 
@@ -1079,11 +1076,10 @@ namespace smt {
 
             bool fetchValueFromDepGraph(model_generator & mg, obj_map<enode, app *> m_root2value, int len, zstring& value){
                 // component var
-                ast_manager & m = mg.get_manager();
                 for (const auto &ancestor : th.backwardDep[node]) {
                     STRACE("str",
                            tout << __LINE__ << " " << __FUNCTION__
-                                << mk_pp(ancestor, m)
+                                << mk_pp(ancestor, mg.get_manager())
                                 << std::endl;);
                     zstring ancestorValue;
                     if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
@@ -1191,7 +1187,7 @@ namespace smt {
                     ptr_vector<expr> leafNodes;
                     th.get_nodes_in_concat(n, leafNodes);
                     int sum = 0;
-                    for (int i = 0; i < leafNodes.size(); ++i) {
+                    for (int i = 0; i < (int)leafNodes.size(); ++i) {
                         int val = -1;
                         if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, val)){
                             STRACE("str",

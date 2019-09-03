@@ -937,7 +937,7 @@ namespace smt {
             else
                 leafNodes.push_back(n->get_owner());
 
-            for (int i = 0; i < leafNodes.size(); ++i) {
+            for (unsigned i = 0; i < leafNodes.size(); ++i) {
                 STRACE("str", tout << __LINE__ << " get len value :  " << mk_pp(leafNodes[i], m) << std::endl;);
                 zstring valueStr;
                 if (u.str.is_string(leafNodes[i], valueStr)) {
@@ -1007,7 +1007,7 @@ namespace smt {
                 expr_ref_vector eqSet(m);
                 collect_eq_nodes(owner.get(), eqSet);
                 expr* reg = nullptr;
-                for (int i = 0; i < eqSet.size(); ++i) {
+                for (unsigned i = 0; i < eqSet.size(); ++i) {
                     if ((is_important(eqSet[i].get()) && !u.str.is_concat(eqSet[i].get())) || isInternalRegexVar(eqSet[i].get(), reg)) {
                         expr* arr_expr = getExprVarFlatArray(owner.get());
                         if (arr_expr != nullptr && ctx.e_internalized(arr_expr)) {
@@ -1139,7 +1139,7 @@ namespace smt {
     bool theory_str::is_regex_concat(expr* n){
         ptr_vector<expr> argVec;
         get_nodes_in_concat(n, argVec);
-        for (int i = 0; i < argVec.size(); ++i)
+        for (unsigned i = 0; i < argVec.size(); ++i)
             if (!u.str.is_string(argVec[i]) && !is_regex_var(argVec[i])) {
                 return false;
             }
@@ -1157,7 +1157,7 @@ namespace smt {
             ptr_vector<expr> argVec;
             get_all_nodes_in_concat(n, argVec);
 
-            for (int i = 0; i < argVec.size(); ++i) {
+            for (unsigned i = 0; i < argVec.size(); ++i) {
                 if (!eq.contains(argVec[i]))
                     ret.insert(argVec[i]);
                 else {
@@ -1165,14 +1165,14 @@ namespace smt {
             }
         }
 
-        for (int j = 0; j < eq.size(); ++j) {
+        for (unsigned j = 0; j < eq.size(); ++j) {
             if (uState.eq_combination.find(eq[j].get()) != uState.eq_combination.end()) {
                 for (const auto &nn : uState.eq_combination[eq[j].get()]) {
                     if (u.str.is_concat(nn)) {
                         ptr_vector<expr> argVec;
                         get_all_nodes_in_concat(nn, argVec);
 
-                        for (int i = 0; i < argVec.size(); ++i) {
+                        for (unsigned i = 0; i < argVec.size(); ++i) {
                             if (!eq.contains(argVec[i]))
                                 ret.insert(argVec[i]);
                         }
@@ -1650,7 +1650,7 @@ namespace smt {
         for (const auto& e : eqLhs){
             ptr_vector<expr> v;
             get_nodes_in_concat(e, v);
-            for (int i = 0; i < v.size(); ++i){
+            for (unsigned i = 0; i < v.size(); ++i){
                 rational len;
                 if (get_len_value(v[i], len)){
                     if (len.get_int64() == 0){
@@ -1729,11 +1729,11 @@ namespace smt {
         expr_ref_vector eqRhs(m);
         collect_eq_nodes(rhs, eqRhs);
 
-        for (int i = 0; i < eqLhs.size(); ++i)
+        for (unsigned i = 0; i < eqLhs.size(); ++i)
             if (lhs != eqLhs[i].get())
                 ret.push_back(createEqualOperator(lhs, eqLhs[i].get()));
 
-        for (int i = 0; i < eqRhs.size(); ++i)
+        for (unsigned i = 0; i < eqRhs.size(); ++i)
             if (rhs != eqRhs[i].get())
                 ret.push_back(createEqualOperator(rhs, eqRhs[i].get()));
 
@@ -1778,8 +1778,8 @@ namespace smt {
         // all issues
 
         // check all starts
-        for (int i = 0; i < starts.size(); ++i)
-            for (int j = i + 1; j < starts.size(); ++j)
+        for (unsigned i = 0; i < starts.size(); ++i)
+            for (unsigned j = i + 1; j < starts.size(); ++j)
                 if (starts[j].prefixof(starts[i]) || starts[i].prefixof(starts[j])) {
 
                 }
@@ -1789,8 +1789,8 @@ namespace smt {
                 }
 
         // check all starts
-        for (int i = 0; i < ends.size(); ++i)
-            for (int j = i + 1; j < ends.size(); ++j)
+        for (unsigned i = 0; i < ends.size(); ++i)
+            for (unsigned j = i + 1; j < ends.size(); ++j)
                 if (ends[j].suffixof(ends[i]) || ends[i].suffixof(ends[j])) {
 
                 }
@@ -2684,10 +2684,10 @@ namespace smt {
                     if (*itor != concat)
                         litems_lhs.push_back(ctx.mk_eq_atom(concat, *itor));
 
-                    for (int i = 0; i < litems_lhs.size(); ++i)
+                    for (unsigned i = 0; i < litems_lhs.size(); ++i)
                         litems_rhs.push_back(litems_lhs[i].get());
 
-                    for (int i = 0; i < litems.size(); ++i)
+                    for (unsigned i = 0; i < litems.size(); ++i)
                         litems_rhs.push_back(litems[i].get());
                     expr_ref implyL(mk_and(litems_rhs), m);
                     assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(concat, new_concat)));
@@ -2823,7 +2823,7 @@ namespace smt {
                         if (*itor01 != nn1)
                             litems_rhs.push_back(ctx.mk_eq_atom(nn1, *itor01));
 
-                        for (int i = 0; i < litems.size(); ++i)
+                        for (unsigned i = 0; i < litems.size(); ++i)
                             litems_rhs.push_back(litems[i].get());
 
                         expr_ref implyL(mk_and(litems_rhs), m);
@@ -2912,7 +2912,7 @@ namespace smt {
                             return nullptr;
                         }
                         else {
-                            for (int i = 0; i < tmpList.size(); ++i)
+                            for (unsigned i = 0; i < tmpList.size(); ++i)
                                 litems.push_back(tmpList[i].get());
                             lhs = u.re.mk_concat(lhs, tmp);
                             STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
@@ -3745,7 +3745,6 @@ namespace smt {
                     ptr_vector<expr> v;
                     get_all_nodes_in_concat(eq, v);
                     for (const auto &n : v) {
-                        expr * boolVar;
 //                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it "  << mk_pp(n, get_manager())<< std::endl;);
 //                        if (contain_pair_bool_map.find(n, str, boolVar) && n != lhs){
 //                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it "  << mk_pp(n, get_manager())<< std::endl;);
@@ -3826,7 +3825,7 @@ namespace smt {
     bool theory_str::is_not_added_diseq(expr_ref n1, expr_ref n2){
         const str::expr_pair w01 = std::make_pair(n1, n2);
         const str::expr_pair w02 = std::make_pair(n2, n1);
-        for (int i = 0; i < m_wi_expr_memo.size(); ++i)
+        for (unsigned i = 0; i < m_wi_expr_memo.size(); ++i)
             if (m_wi_expr_memo[i] == w01 || m_wi_expr_memo[i] == w02){
                 return false;
             }
@@ -3973,7 +3972,7 @@ namespace smt {
         }
         else {
             std::set<zstring> ret;
-            for (int i = 0; i < eq.size(); ++i)
+            for (unsigned i = 0; i < eq.size(); ++i)
                 if (u.str.is_concat(eq[i].get())) {
                     std::set<zstring> const00 = extract_const(to_app(eq[i].get())->get_arg(0), lvl + 1);
                     std::set<zstring> const01 = extract_const(to_app(eq[i].get())->get_arg(1), lvl + 1);
@@ -4214,7 +4213,7 @@ namespace smt {
             uState.reset_diseq();
         }
         context& ctx = get_context();
-        for (int i = 0; i < ctx.get_unsat_core_size(); ++i) {
+        for (unsigned i = 0; i < ctx.get_unsat_core_size(); ++i) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " unsat core " << i << mk_pp(ctx.get_unsat_core_expr(i), get_manager()) << std::endl;);
         }
 
@@ -4272,7 +4271,6 @@ namespace smt {
 
     final_check_status theory_str::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-        ast_manager &m = get_manager();
 
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
@@ -4524,7 +4522,7 @@ namespace smt {
                 zstring val;
                 for (const auto& nn : nodes)
                     if (u.str.is_string(nn, val)) {
-                        for (int i = 0; i < val.length(); ++i)
+                        for (unsigned i = 0; i < val.length(); ++i)
                             if (val[i] < '0' || val[i] > '9') {
                                 eq_node = n;
                                 return -1;
@@ -4841,7 +4839,6 @@ namespace smt {
     }
 
     bool theory_str::can_omit(expr* lhs, expr* rhs, zstring needle){
-        ast_manager & m = get_manager();
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
 
@@ -4974,8 +4971,8 @@ namespace smt {
             if (c.second.find(c.first) == c.second.end())
                 tmp.push_back(c.first);
 
-            for (int i = 0; i < tmp.size(); ++i)
-                for (int j = i + 1; j < tmp.size(); ++j) {
+            for (unsigned i = 0; i < tmp.size(); ++i)
+                for (unsigned j = i + 1; j < tmp.size(); ++j) {
                     if (!propagate_equality(tmp[i], tmp[j], impliedEqualites)){
                         // found some inconsistence
                         return true;
@@ -5419,7 +5416,7 @@ namespace smt {
     }
 
     void theory_str::get_parikh_from_strs(zstring s, std::map<char, int> &img){
-        for (int i = 0; i < s.length(); ++i)
+        for (unsigned i = 0; i < s.length(); ++i)
             img[s[i]]++;
     }
 
@@ -5773,8 +5770,8 @@ namespace smt {
                     ends.push_back(constStr);
                 }
             // check all starts
-            for (int i = 0; i < starts.size(); ++i)
-                for (int j = i + 1; j < starts.size(); ++j)
+            for (unsigned i = 0; i < starts.size(); ++i)
+                for (unsigned j = i + 1; j < starts.size(); ++j)
                     if (starts[i].prefixof(starts[j]) || starts[j].prefixof(starts[i])) {
 
                     }
@@ -5785,8 +5782,8 @@ namespace smt {
                     }
 
             // check all ends
-            for (int i = 0; i < ends.size(); ++i)
-                for (int j = i + 1; j < ends.size(); ++j)
+            for (unsigned i = 0; i < ends.size(); ++i)
+                for (unsigned j = i + 1; j < ends.size(); ++j)
                     if (ends[i].suffixof(ends[j]) || ends[j].suffixof(ends[i])) {
 
                     }
@@ -5835,7 +5832,7 @@ namespace smt {
 
             }
             else if (u.str.is_string(we.first.get(), value)) {
-                for (int i = 0; i < value.length(); ++i)
+                for (unsigned i = 0; i < value.length(); ++i)
                     charDomain.insert(value[i]);
             }
 
@@ -5845,14 +5842,14 @@ namespace smt {
                 get_nodes_in_concat(we.second.get(), childNodes);
                 for (const auto& n : childNodes){
                     if (u.str.is_string(n, value)) {
-                        for (int i = 0; i < value.length(); ++i)
+                        for (unsigned i = 0; i < value.length(); ++i)
                             charDomain.insert(value[i]);
                     }
                 }
 
             }
             else if (u.str.is_string(we.second.get(), value)) {
-                for (int i = 0; i < value.length(); ++i)
+                for (unsigned i = 0; i < value.length(); ++i)
                     charDomain.insert(value[i]);
             }
         }
@@ -5860,7 +5857,7 @@ namespace smt {
         for (const auto& mem : membership_memo){
             std::set<zstring> tmp = collect_strs_in_membership(mem.second);
             for (const auto& s : tmp)
-                for (int i = 0; i < s.length(); ++i)
+                for (unsigned i = 0; i < s.length(); ++i)
                     charDomain.insert(s[i]);
         }
 
@@ -5889,13 +5886,13 @@ namespace smt {
                 get_nodes_in_concat(v.first, childNodes);
                 for (const auto& n : childNodes){
                     if (u.str.is_string(n, value)) {
-                        for (int i = 0; i < value.length(); ++i)
+                        for (unsigned i = 0; i < value.length(); ++i)
                             charDomain.insert(value[i]);
                     }
                 }
             }
             else if (u.str.is_string(v.first, value)) {
-                for (int i = 0; i < value.length(); ++i)
+                for (unsigned i = 0; i < value.length(); ++i)
                     charDomain.insert(value[i]);
             }
 
@@ -5905,13 +5902,13 @@ namespace smt {
                     get_nodes_in_concat(e, childNodes);
                     for (const auto& n : childNodes){
                         if (u.str.is_string(n, value)) {
-                            for (int i = 0; i < value.length(); ++i)
+                            for (unsigned i = 0; i < value.length(); ++i)
                                 charDomain.insert(value[i]);
                         }
                     }
                 }
                 else if (u.str.is_string(e, value)) {
-                    for (int i = 0; i < value.length(); ++i)
+                    for (unsigned i = 0; i < value.length(); ++i)
                         charDomain.insert(value[i]);
                 }
             }
@@ -5920,7 +5917,7 @@ namespace smt {
         for (const auto& mem : membership_memo){
             std::set<zstring> tmp = collect_strs_in_membership(mem.second);
             for (const auto& s : tmp)
-                for (int i = 0; i < s.length(); ++i)
+                for (unsigned i = 0; i < s.length(); ++i)
                     charDomain.insert(s[i]);
         }
 
@@ -5947,8 +5944,8 @@ namespace smt {
             if (v.second.size() > 1) {
                 std::vector<expr *> tmpVector;
                 tmpVector.insert(tmpVector.end(), v.second.begin(), v.second.end());
-                for (int i = 0; i < tmpVector.size(); ++i)
-                    for (int j = i + 1; j < tmpVector.size(); ++j) {
+                for (unsigned i = 0; i < tmpVector.size(); ++i)
+                    for (unsigned j = i + 1; j < tmpVector.size(); ++j) {
                         expr* tmp = create_equations_over_contain_vars(tmpVector[i], tmpVector[j]);
                         if (tmp != nullptr)
                             ands.push_back(tmp);
@@ -6017,14 +6014,13 @@ namespace smt {
     bool theory_str::handle_charAt_family(
             std::map<expr *, std::set<expr *>> eq_combination) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
-        clock_t t = clock();
         ast_manager & m = get_manager();
         expr_ref_vector ands(m);
         for (const auto &v : eq_combination)
             if (v.second.size() > 1) {
                 std::vector<expr *> tmpVector;
                 tmpVector.insert(tmpVector.end(), v.second.begin(), v.second.end());
-                for (int i = 0; i < tmpVector.size(); ++i) {
+                for (unsigned i = 0; i < tmpVector.size(); ++i) {
                     ptr_vector<expr> nodes_i;
                     get_nodes_in_concat(tmpVector[i], nodes_i);
                     if (nodes_i.size() > 1) { // charAt
@@ -6035,7 +6031,7 @@ namespace smt {
                             collect_eq_nodes(nodes_i[1], eqNodes1);
                             collect_eq_nodes(nodes_i[0], eqNodes0);
 
-                            for (int j = i + 1; j < tmpVector.size(); ++j) {
+                            for (unsigned j = i + 1; j < tmpVector.size(); ++j) {
                                 ptr_vector<expr> nodes_j;
                                 get_nodes_in_concat(tmpVector[j], nodes_j);
                                 if (nodes_j.size() > 1) {
@@ -6229,7 +6225,7 @@ namespace smt {
             if (strValue.find(var) == strValue.end()){
                 expr_ref_vector eqNodes(m);
                 collect_eq_nodes(var, eqNodes);
-                for (int i = 0; i < eqNodes.size(); ++i)
+                for (unsigned i = 0; i < eqNodes.size(); ++i)
                     if (strValue.find(eqNodes[i].get()) != strValue.end()){
                         strValue[var] = strValue[eqNodes[i].get()];
                         break;
@@ -6546,7 +6542,7 @@ namespace smt {
                 if (value.length() == 0)
                     continue;
                 std::vector<int> tmp;
-                for (int i = 0; i < value.length(); ++i)
+                for (unsigned i = 0; i < value.length(); ++i)
                     tmp.emplace_back(value[i]);
                 strValue[var.first] = tmp;
                 propagatingList.emplace(var.first);
@@ -6564,7 +6560,7 @@ namespace smt {
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(eq, nodes);
 
-                for (int i = 0; i < nodes.size(); ++i){
+                for (unsigned i = 0; i < nodes.size(); ++i){
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
                     int lengthS = getVarLength(nodes[i], len).get_int64();
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(nodes[i], m) << std::endl;);
@@ -6637,7 +6633,6 @@ namespace smt {
                 continue;
 
             std::vector<int> value = getVarValue(var.first, len, strValue);
-            int varLen = value.size();
             for (unsigned i = 0; i < value.size(); ++i)
                 if (value[i] != 0) {
                     STRACE("str", tout << (char) value[i];);
@@ -6652,7 +6647,7 @@ namespace smt {
                 if (std::find(nodes.begin(), nodes.end(), newlyUpdate) != nodes.end()) {
                     int pos = 0;
 
-                    for (int i = 0; i < nodes.size(); ++i) {
+                    for (unsigned i = 0; i < nodes.size(); ++i) {
                         int varLength = getVarLength(nodes[i], len).get_int64();
                         if (nodes[i] == newlyUpdate) {
 
@@ -6690,7 +6685,7 @@ namespace smt {
                         int pos = 0;
                         ptr_vector<expr> nodes;
                         get_nodes_in_concat(eq, nodes);
-                        for (int i = 0; i < nodes.size(); ++i){
+                        for (unsigned i = 0; i < nodes.size(); ++i){
                             if (u.str.is_string(nodes[i])) {
                                 pos += getVarLength(nodes[i], len).get_int64();
                             }
@@ -6749,7 +6744,7 @@ namespace smt {
             int pos = 0;
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
-            for (int i = 0; i < nodes.size(); ++i) {
+            for (unsigned i = 0; i < nodes.size(); ++i) {
                 int lengthVar = getVarLength(nodes[i], len).get_int64();
                 if (u.str.is_string(nodes[i])) {
                 }
@@ -6833,7 +6828,7 @@ namespace smt {
             int pos = 0;
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
-            for (int i = 0; i < nodes.size(); ++i)
+            for (unsigned i = 0; i < nodes.size(); ++i)
                 if (nodes[i] != newlyUpdate) {
                     if (u.str.is_string(nodes[i])) {
                         int lengthVar = getVarLength(nodes[i], len).get_int64();
@@ -6902,7 +6897,7 @@ namespace smt {
         zstring value;
         if (u.str.is_string(newlyUpdate, value)){
             std::vector<int> tmp;
-            for (int i = 0; i < value.length(); ++i)
+            for (unsigned i = 0; i < value.length(); ++i)
                 tmp.push_back(value[i]);
             return tmp;
         }
@@ -6912,7 +6907,7 @@ namespace smt {
             if (valueExpr != nullptr){
                 u.str.is_string(valueExpr, value);
                 std::vector<int> tmp;
-                for (int i = 0; i < value.length(); ++i)
+                for (unsigned i = 0; i < value.length(); ++i)
                     tmp.push_back(value[i]);
                 return tmp;
             }
@@ -6952,7 +6947,7 @@ namespace smt {
                     ptr_vector<expr> nodes;
                     get_nodes_in_concat(newlyUpdate, nodes);
                     rational lenTmp(0);
-                    for (int i = 0; i < nodes.size(); ++i)
+                    for (unsigned i = 0; i < nodes.size(); ++i)
                         lenTmp = lenTmp + len[nodes[i]];
                     len[newlyUpdate] = lenTmp;
                 }
@@ -7046,7 +7041,7 @@ namespace smt {
 
             expr_ref_vector eqNodeSet(m);
             collect_eq_nodes(*it, eqNodeSet);
-            for (int i = 0; i < eqNodeSet.size(); ++i)
+            for (unsigned i = 0; i < eqNodeSet.size(); ++i)
                 if (eqNodeSet[i].get() != *it) {
                     rational len_i;
                     if (get_len_value(eqNodeSet[i].get(), len_i)) {
@@ -7404,7 +7399,7 @@ namespace smt {
                 expr_ref lcExpr (ctx.mk_eq_atom(concatlenExpr, concatLenValueExpr), m);
                 l_items.push_back(lcExpr);
                 int pos = -1;
-                for (int i = 0; i < leafNodes.size(); ++i) {
+                for (unsigned i = 0; i < leafNodes.size(); ++i) {
                     rational leafLenValue;
                     if (get_len_value(leafNodes[i], leafLenValue)) {
                         expr_ref leafItLenExpr (mk_strlen(leafNodes[i]), m);
@@ -7546,7 +7541,6 @@ namespace smt {
             std::set<std::pair<expr*, int>> non_fresh_vars) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
         ast_manager & m = get_manager();
-        context & ctx = get_context();
         print_eq_combination(eq_combination, __LINE__);
 
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
@@ -7971,7 +7965,7 @@ namespace smt {
                        ptr_vector<expr> childrenVector;
                        get_nodes_in_concat(e, childrenVector);
                        tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
+                       for (unsigned i = 0; i < childrenVector.size(); ++i)
                            tout << mk_pp(childrenVector[i], m)  << " ";
                        tout << std::endl;
                    });
@@ -8069,7 +8063,7 @@ namespace smt {
             if (elements.size() <= tmp.size()){
                 int pos = 0;
 
-                for (int i = 0; i < tmp.size(); ++i){
+                for (unsigned i = 0; i < tmp.size(); ++i){
                     if (get_len_value(tmp[i], len) && len.get_int64() == 0) // skip empty vars
                         continue;
 
@@ -8096,7 +8090,6 @@ namespace smt {
 
     bool theory_str::is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        ast_manager & m = get_manager();
 
         if (coreCurr.size() != corePrev.size())
             return false;
@@ -8131,7 +8124,6 @@ namespace smt {
 
     bool theory_str::underapproximation_cached(){
         ast_manager & m = get_manager();
-        context & ctx = get_context();
 
         expr_ref_vector guessedExprs(m);
         fetch_guessed_exprs_from_cache(uState, guessedExprs);
@@ -8288,7 +8280,7 @@ namespace smt {
             if (arrLhs == nullptr)
                 return;
 
-            for (int i = 0; i < rhs.length(); ++i) {
+            for (unsigned i = 0; i < rhs.length(); ++i) {
                 expr_ref_vector subcases(m);
                 subcases.push_back(createGreaterEqOperator(lenLhs.get(), m_autil.mk_int(i + 1)));
                 expr_ref tmp(createEqualOperator(createSelectOperator(arrLhs, m_autil.mk_int(i)), m_autil.mk_int(rhs[i])), m);
@@ -8409,7 +8401,7 @@ namespace smt {
     }
 
     bool theory_str::is_trivial_contain(zstring s){
-        for (int i = 0; i < s.length(); ++i)
+        for (unsigned i = 0; i < s.length(); ++i)
             if (sigmaDomain.find(s[i]) == sigmaDomain.end())
                 return true;
 
@@ -8480,7 +8472,7 @@ namespace smt {
         for (const auto& v : eq_combination){
             expr_ref_vector eqNodeSet(m);
             collect_eq_nodes(v.first, eqNodeSet);
-            for (int i = 0; i < eqNodeSet.size(); ++i)
+            for (unsigned i = 0; i < eqNodeSet.size(); ++i)
                 allStrExprs.insert(eqNodeSet[i].get());
 
             if (u.str.is_string(v.first))
@@ -8563,7 +8555,7 @@ namespace smt {
                     else {
                         expr_ref_vector eqNodes(m);
                         collect_eq_nodes(tmp, eqNodes);
-                        for (int i = 0; i < eqNodes.size(); ++i)
+                        for (unsigned i = 0; i < eqNodes.size(); ++i)
                             if (!u.str.is_concat(eqNodes[i].get())) {
                                 allStrExprs.insert(eqNodes[i].get());
                                 break;
@@ -8726,7 +8718,7 @@ namespace smt {
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ << " " << mk_pp(arr, m) << " = " << val << std::endl;);
         expr_ref_vector ands(m);
-        for (int i = 0; i < val.length(); ++i){
+        for (unsigned i = 0; i < val.length(); ++i){
             ands.push_back(createEqualOperator(createSelectOperator(arr, mk_int(i)), mk_int(val[i])));
         }
 
@@ -8751,7 +8743,7 @@ namespace smt {
             std::vector<zstring> elements;
             expr_ref_vector ors(m);
             collect_alternative_components(rexpr, elements);
-            for (int i = 0; i < elements.size(); ++i) {
+            for (unsigned i = 0; i < elements.size(); ++i) {
                 expr_ref_vector ands(m);
                 for (int j = 0; j < bound.get_int64(); ++j) {
                     int pos = j % elements[i].length();
@@ -8768,14 +8760,13 @@ namespace smt {
     expr* theory_str::setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix){
         ast_manager & m = get_manager();
         std::vector<std::pair<int, int>> charRange = collectCharRange(e);
-        expr* pre_lhs = mk_int(0);
         if (charRange[0].first != -1) {
             expr_ref_vector ret(m);
 
-            for (int i = 0; i < bound.get_int64(); ++i) {
+            for (unsigned i = 0; i < bound.get_int64(); ++i) {
                 expr_ref_vector ors(m);
                 expr_ref_vector ors_range(m);
-                for (int j = 0; j < charRange.size(); ++j) {
+                for (unsigned j = 0; j < charRange.size(); ++j) {
                     expr_ref_vector ands(m);
                     ands.push_back(createGreaterEqOperator(
                             createSelectOperator(arr, createAddOperator(prefix, m_autil.mk_int(i))),
@@ -8845,7 +8836,7 @@ namespace smt {
                     else {
                         expr_ref_vector eqNodes(m);
                         collect_eq_nodes(tmp, eqNodes);
-                        for (int i = 0; i < eqNodes.size(); ++i)
+                        for (unsigned i = 0; i < eqNodes.size(); ++i)
                             if (!u.str.is_concat(eqNodes[i].get())) {
                                 allStrExprs.insert(eqNodes[i].get());
                                 break;
@@ -8987,7 +8978,7 @@ namespace smt {
                 ptr_vector<expr> exprVector;
                 get_nodes_in_concat(v, exprVector);
                 /* push to map */
-                for (int i = 0; i < exprVector.size(); ++i)
+                for (unsigned i = 0; i < exprVector.size(); ++i)
                     if (u.str.is_string(exprVector[i], value)){
                         constSet.insert(value);
                     }
@@ -9035,7 +9026,7 @@ namespace smt {
             for (const auto& eq : var.second) {
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(eq, nodes);
-                for (int i = 0; i < nodes.size(); ++i)
+                for (unsigned i = 0; i < nodes.size(); ++i)
                     appearanceMap[nodes[i]].emplace(var.first);
             }
         }
@@ -9064,7 +9055,6 @@ namespace smt {
                                        expr* premise){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         ast_manager &m = get_manager();
-        context & ctx = get_context();
         clock_t t = clock();
         currVarPieces.clear();
         generatedEqualities.clear();
@@ -9077,7 +9067,6 @@ namespace smt {
             clock_t t;
 
             /* different tactic for size of it->second */
-            const int flatP = 1;
             const int maxPConsidered = 6;
             unsigned maxLocal = findMaxP(it->second);
             STRACE("str", tout << __LINE__ << " " << mk_pp(it->first, m) <<  " maxLocal:  " << maxLocal << std::endl;);
@@ -9234,7 +9223,6 @@ namespace smt {
     }
 
     void theory_str::assert_breakdown_combination(expr* e, expr* premise){
-        context &ctx = get_context();
         ensure_enode(e);
         assert_axiom(e, premise);
     }
@@ -9275,7 +9263,7 @@ namespace smt {
             // change from concat to variable if it is possible
             expr_ref_vector eqNodeSet(get_manager());
             collect_eq_nodes(e, eqNodeSet);
-            for (int i = 0; i < eqNodeSet.size(); ++i)
+            for (unsigned i = 0; i < eqNodeSet.size(); ++i)
                 if (!u.str.is_concat(eqNodeSet[i].get())) {
                     return eqNodeSet[i].get();
                 }
@@ -9311,7 +9299,7 @@ namespace smt {
         for (const auto& s : v)
             STRACE("str", tout << __LINE__ << __FUNCTION__ << " " << s << std::endl;);
         std::vector<expr*> ret;
-        for (int i = 0; i < v.size(); ++i){
+        for (unsigned i = 0; i < v.size(); ++i){
             if (isRegexStr(v[i])){
                 if (v[i][v[i].length() - 1] == '*'){
                     zstring tmp = parse_regex_content(v[i]);
@@ -9323,7 +9311,7 @@ namespace smt {
                         std::vector<zstring> tmpVectorStr = collect_alternative_components(tmp);
                         std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
                         expr * args[tmpVectorExpr.size()];
-                        for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                        for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
                             args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
                         }
                         expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
@@ -9340,7 +9328,7 @@ namespace smt {
                         std::vector<zstring> tmpVectorStr = collect_alternative_components(tmp);
                         std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
                         expr * args[tmpVectorExpr.size()];
-                        for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                        for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
                             args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
                         }
                         expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
@@ -9360,7 +9348,7 @@ namespace smt {
                 std::vector<zstring> tmpV = collect_alternative_components(tmp);
                 std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpV);
                 expr * args[tmpVectorExpr.size()];
-                for (int j = 0; j < tmpVectorExpr.size(); ++j) {
+                for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
                     args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
                 }
                 expr* tmpE = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
@@ -9449,7 +9437,6 @@ namespace smt {
 
     std::vector<expr*> theory_str::combine_const_str(std::vector<expr*> v){
         return v;
-        ast_manager &m = get_manager();
         std::vector<expr*> result;
         for (const auto& e : v){
             ptr_vector<expr> nodes;
@@ -9457,7 +9444,7 @@ namespace smt {
             if (nodes.size() > 0) {
                 ptr_vector<expr> tmp_nodes;
                 tmp_nodes.push_back(nodes[0]);
-                for (int i = 1; i < nodes.size(); ++i) {
+                for (unsigned i = 1; i < nodes.size(); ++i) {
                     if (u.re.is_to_re(nodes[i]) && u.re.is_to_re(tmp_nodes[tmp_nodes.size() - 1])) {
 
                         // group them
@@ -9678,7 +9665,6 @@ namespace smt {
      *
      */
     std::vector<expr*> theory_str::parse_regex_components(expr* reg){
-        ast_manager &m = get_manager();
         std::vector<expr*> result;
         ensure_enode(reg);
         std::vector<expr*> components = collect_alternative_components(reg);
@@ -10158,7 +10144,6 @@ namespace smt {
             std::map<expr*, int> non_fresh_Variables,
             int p){
         /* first base case */
-        clock_t t = clock();
         ast_manager &m = get_manager();
 #if 1
         /* because arrangements are reusable, we use "general" functions */
@@ -10676,8 +10661,6 @@ namespace smt {
                     if (matchRegex(regex, regexValue)) {
                         expr_ref_vector ands(m);
                         ands.push_back(createEqualOperator(nameA, m_autil.mk_int(length)));
-                        expr* prelhs = nullptr;
-                        expr* prerhs = nullptr;
                         for (int i = 0; i < length - 1; ++i) {
                             // TODO arr vs arr
                         }
@@ -11022,7 +11005,7 @@ namespace smt {
 
         ast_manager &m = get_manager();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-        for (int i = 0; i < elementNames.size(); ++i)
+        for (unsigned i = 0; i < elementNames.size(); ++i)
             STRACE("str", tout << "  " << mk_pp(elementNames[i].first, m););
         STRACE("str", tout <<  std::endl;);
 
@@ -11503,7 +11486,7 @@ namespace smt {
 
             for (int k = 0; k < considerLength; ++k){
                 expr* atRhs = createAddOperator(m_autil.mk_int(k), prefix_rhs);
-                expr* regex = nullptr;
+//                expr* regex = nullptr;
 //                if (isInternalRegexVar(elementNames[non_fresh_VarPos].first, regex)) {
 //                    if (u.re.is_plus(regex) || u.re.is_star(regex)) {
 //                        atRhs = createModOperator(atRhs, m_autil.mk_int(
@@ -12969,7 +12952,7 @@ namespace smt {
     bool theory_str::not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames){
         zstring value;
         if (u.str.is_string(e, value)) {
-            for (int i = 0; i < elementNames.size(); ++i) {
+            for (unsigned i = 0; i < elementNames.size(); ++i) {
                 zstring subVar;
                 if  (u.str.is_string(elementNames[i].first, subVar) &&
                         ((elementNames[i].second % p_bound.get_int64() == -1 && i + 1 < elementNames.size()) ||
@@ -12982,7 +12965,7 @@ namespace smt {
             }
         }
 
-        for (int i = 0; i < elementNames.size(); ++i) {
+        for (unsigned i = 0; i < elementNames.size(); ++i) {
             zstring subVar;
             if  (u.str.is_string(elementNames[i].first, subVar) &&
                  ((elementNames[i].second % p_bound.get_int64() == -1 && i + 1 < elementNames.size()) ||
@@ -13002,7 +12985,7 @@ namespace smt {
 //        if (u.re.is_union(reg)) {
 //            std::vector<zstring> components = collect_alternative_components(reg);
 //            zstring tmp;
-//            for (int i = 0; i < elementNames.size(); ++i)
+//            for (unsigned i = 0; i < elementNames.size(); ++i)
 //                if (u.str.is_string(elementNames[i].first, tmp) &&
 //                        ((tmp.length() == 1) || (i + 1 < elementNames.size() && elementNames[i].first == elementNames[i + 1].first))) {
 //                    bool found = false;
@@ -13032,7 +13015,7 @@ namespace smt {
     bool theory_str::const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, get_manager()) << std::endl;);
         zstring tmp;
-        for (int i = 0; i < elementNames.size(); ++i)
+        for (unsigned i = 0; i < elementNames.size(); ++i)
             if (u.str.is_string(elementNames[i].first, tmp) &&
                 ((tmp.length() == 1) || (i < elementNames.size() - 1 && elementNames[i].second % p_bound.get_int64() == -1))) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, get_manager()) << " vs " << tmp << std::endl;);
@@ -13055,10 +13038,10 @@ namespace smt {
 
     bool theory_str::const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames, expr* &extra_assert){
         if (string_int_vars.contains(e)){
-            for (int i = 0; i < elementNames.size(); ++i) {
+            for (unsigned i = 0; i < elementNames.size(); ++i) {
                 zstring val;
                 if (u.str.is_string(elementNames[i].first, val)) {
-                    for (int j = 0; j < val.length(); ++j)
+                    for (unsigned j = 0; j < val.length(); ++j)
                         if ((val[j] < '0' || val[j] > '9') &&
                             (val.length() == 1 ||
                              (j == 0 && elementNames[i].second % p_bound.get_int64() == -1) ||
@@ -13602,7 +13585,7 @@ namespace smt {
             return arrMap[e];
         expr_ref_vector eqNodeSet(get_manager());
         collect_eq_nodes(e, eqNodeSet);
-        for (int i = 0; i < eqNodeSet.size(); ++i){
+        for (unsigned i = 0; i < eqNodeSet.size(); ++i){
             if (arrMap.find(eqNodeSet[i].get()) != arrMap.end()) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, get_manager()) << " == " << mk_pp(eqNodeSet[i].get(), get_manager()) << std::endl;);
                 return arrMap[eqNodeSet[i].get()];
@@ -14326,7 +14309,7 @@ namespace smt {
                 collect_eq_nodes(list[i], eqNodeSet);
                 bool found = false;
 
-                for (int j = 0; j < eqNodeSet.size(); ++j) {
+                for (unsigned j = 0; j < eqNodeSet.size(); ++j) {
                     if (isInternalRegexVar(eqNodeSet[j].get(), reg)) {
                         l.push_back(eqNodeSet[j].get());
                         found = true;
@@ -14432,7 +14415,7 @@ namespace smt {
                     collect_alternative_components(regex, tmp);
                     expr_ref_vector lenConstraints(m);
                     std::set<int> sizes;
-                    for (int i = 0; i < tmp.size(); ++i) {
+                    for (unsigned i = 0; i < tmp.size(); ++i) {
                         sizes.insert(tmp[i].length());
                     }
                     for (const auto& num : sizes)
@@ -14567,7 +14550,7 @@ namespace smt {
                     collect_alternative_components(regex, tmp_strs);
                     expr_ref_vector lenConstraints(m);
                     std::set<int> sizes;
-                    for (int i = 0; i < tmp_strs.size(); ++i) {
+                    for (unsigned i = 0; i < tmp_strs.size(); ++i) {
                         sizes.insert(tmp_strs[i].length());
                     }
 
@@ -14742,7 +14725,6 @@ namespace smt {
             expr* rhs,
             ptr_vector<expr> &new_lhs,
             ptr_vector<expr> &new_rhs){
-        ast_manager &m = get_manager();
         /* cut prefix */
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
@@ -15034,13 +15016,12 @@ namespace smt {
             ptr_vector<expr> rhs,
             ptr_vector<expr> &new_lhs,
             ptr_vector<expr> &new_rhs){
-        ast_manager &m = get_manager();
         /* cut prefix */
         ptr_vector<expr> lhsVec;
         get_nodes_in_concat(lhs, lhsVec);
 
         ptr_vector<expr> rhsVec;
-        for (int i = 0; i < rhs.size(); ++i)
+        for (unsigned i = 0; i < rhs.size(); ++i)
             rhsVec.push_back(rhs[i]);
 
         /* cut prefix */
@@ -15226,7 +15207,7 @@ namespace smt {
                 if (is_importantVar_recheck(nn.first, nn.second, eq_combination) || str_int_vars.find(nn.first) != str_int_vars.end()) {
                     expr_ref_vector eqs(m);
                     collect_eq_nodes(nn.first, eqs);
-                    for (int i = 0; i < eqs.size(); ++i) {
+                    for (unsigned i = 0; i < eqs.size(); ++i) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn.first, m) << " --> "
                                            << mk_pp(eqs[i].get(), m) << std::endl;);
                         retTmp[eqs[i].get()] = nn.second;
@@ -15239,7 +15220,7 @@ namespace smt {
             if (retTmp.find(nn.first) == retTmp.end()){
                 expr_ref_vector eqList(m);
                 collect_eq_nodes(nn.first, eqList);
-                for (int i = 0; i < eqList.size(); ++i) {
+                for (unsigned i = 0; i < eqList.size(); ++i) {
                     notImportant.insert(eqList[i].get());
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
                 }
@@ -15262,7 +15243,7 @@ namespace smt {
                                            << std::endl;);
                         expr_ref_vector eqList(m);
                         collect_eq_nodes(v.first, eqList);
-                        for (int i = 0; i < eqList.size(); ++i) {
+                        for (unsigned i = 0; i < eqList.size(); ++i) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqList[i].get(), m) << std::endl;);
                             notImportant.insert(eqList[i].get());
                         }
@@ -15282,7 +15263,7 @@ namespace smt {
             if (v.second.size() >= 6) {
                 expr_ref_vector eqList(m);
                 collect_eq_nodes(v.first, eqList);
-                for (int i = 0; i < eqList.size(); ++i)
+                for (unsigned i = 0; i < eqList.size(); ++i)
                     non_fresh_vars.insert(std::make_pair(eqList[i].get(), -1));
             }
 
@@ -15329,7 +15310,7 @@ namespace smt {
         std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             len = maxDiffStrs[0].length();
-        int maxCharAt = 0;
+//        int maxCharAt = 0;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 //        if (collect_not_charAt(nn, maxCharAt)) {
 //            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
@@ -15344,13 +15325,13 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         if (len > 0) {
             zstring constPart = "";
-            for (int i = 0; i < eqList.size(); ++i) {
+            for (unsigned i = 0; i < eqList.size(); ++i) {
                 if (u.str.is_concat(eqList[i].get())) {
                     STRACE("str", tout << __LINE__ <<  "\t " << mk_pp(nn, m) << "  " << mk_pp(eqList[i].get(), m) << std::endl;);
                     ptr_vector<expr> nodeList;
                     get_nodes_in_concat(eqList[i].get(), nodeList);
                     zstring constPartTmp = "";
-                    for (int j = 0; j < nodeList.size(); ++j) {
+                    for (unsigned j = 0; j < nodeList.size(); ++j) {
                         zstring valueStr;
                         bool has_eqc_value = false;
                         expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
@@ -15436,7 +15417,7 @@ namespace smt {
                     {
                         ptr_vector<expr> nodes;
                         get_nodes_in_concat(e, nodes);
-                        for (int i  = 0; i < nodes.size(); ++i)
+                        for (unsigned i  = 0; i < nodes.size(); ++i)
                             if (!u.str.is_string(nodes[i])){
                                 if (ret.find(nodes[i]) != ret.end()){
                                     if (occurrenceLocation.find(nodes[i]) == occurrenceLocation.end()) {
@@ -15563,7 +15544,7 @@ namespace smt {
         if (s.length() == 0)
             return true;
 
-        for (int i = 0; i < s.length(); ++i)
+        for (unsigned i = 0; i < s.length(); ++i)
             if (sigmaDomain.find(s[i]) == sigmaDomain.end())
                 return  true;
 
@@ -15672,7 +15653,6 @@ namespace smt {
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
 
-        int maxCharAt = 0;
 //        if (collect_not_charAt(nn, maxCharAt)) {
 //            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 //            if (maxCharAt == -1) {
@@ -15693,7 +15673,7 @@ namespace smt {
                     ptr_vector<expr> nodeList;
                     get_nodes_in_concat(concat, nodeList);
                     zstring constPartTmp = "";
-                    for (int j = 0; j < nodeList.size(); ++j) {
+                    for (unsigned j = 0; j < nodeList.size(); ++j) {
                         zstring valueStr;
                         bool has_eqc_value = false;
                         expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
@@ -15725,10 +15705,10 @@ namespace smt {
                                 ptr_vector<expr> childrenVector;
                                 get_nodes_in_concat(nn, childrenVector);
                                 expr_ref_vector adds(m);
-                                for (int i = 0; i < childrenVector.size(); ++i)
+                                for (unsigned i = 0; i < childrenVector.size(); ++i)
                                     adds.push_back(mk_strlen(childrenVector[i]));
                                 expr_ref tmp(createGreaterEqOperator(createAddOperator(adds), mk_int(constPartLen + 1)), m);
-                                expr* causes = create_conjuct_all_inequalities(nn);
+//                                expr* causes = create_conjuct_all_inequalities(nn);
 
 //                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
 //                                assert_axiom(tmpAssert.get());
@@ -15736,7 +15716,7 @@ namespace smt {
                             }
                             else {
                                 expr_ref tmp(createGreaterEqOperator(mk_strlen(nn), mk_int(constPartLen + 1)), m);
-                                expr* causes = create_conjuct_all_inequalities(nn);
+//                                expr* causes = create_conjuct_all_inequalities(nn);
 
 //                                expr_ref tmpAssert(createEqualOperator(causes, tmp), m);
 //                                assert_axiom(tmpAssert.get());
@@ -16230,12 +16210,12 @@ namespace smt {
         // check all pairs to see if they have the same role
 //        std::vector<expr*> v = set2vector(ret);
 //        ret.clear();
-//        for (int i = 0; i < v.size(); ++i) {
+//        for (unsigned i = 0; i < v.size(); ++i) {
 //            if (u.str.is_concat(v[i])) {
 //                ptr_vector<expr> nodes_i;
 //                get_nodes_in_concat(v[i], nodes_i);
 //                bool add = true;
-//                for (int j = i + 1; j < v.size(); ++j) {
+//                for (unsigned j = i + 1; j < v.size(); ++j) {
 //                    ptr_vector<expr> nodes_j;
 //                    get_nodes_in_concat(v[j], nodes_j);
 //                    if (nodes_i.size() == nodes_j.size())
@@ -16268,7 +16248,7 @@ namespace smt {
 //            ptr_vector<expr> nodes_j;
 //            get_nodes_in_concat(node_j, nodes_j);
 //            if (nodes_i.size() == nodes_j.size()){
-//                for (int k = 0; k < nodes_i.size(); ++k)
+//                for (unsigned k = 0; k < nodes_i.size(); ++k)
 //                    if (!same_role(nodes_i[k], nodes_j[k]))
 //                        return false;
 //            }
@@ -16296,9 +16276,9 @@ namespace smt {
         }
 
         s.clear();
-        for (int i = 0; i < v.size(); ++i) {
+        for (unsigned i = 0; i < v.size(); ++i) {
             bool eq = false;
-            for (int j = i + 1; j < v.size(); ++j)
+            for (unsigned j = i + 1; j < v.size(); ++j)
                 if (are_equal_concat(v[i], v[j])) {
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager()) << " " << mk_pp(v[j], get_manager()) << std::endl;);
                     eq = true;
@@ -16322,7 +16302,7 @@ namespace smt {
         get_nodes_in_concat(rhs, vRhs);
 
         if (vLhs.size() == vRhs.size()) {
-            for (int i = 0; i < vLhs.size(); ++i)
+            for (unsigned i = 0; i < vLhs.size(); ++i)
                 if (!are_equal_exprs(vLhs[i], vRhs[i]))
                     return false;
         }
@@ -16648,7 +16628,7 @@ namespace smt {
                        ptr_vector<expr> childrenVector;
                        get_nodes_in_concat(e, childrenVector);
                        tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
+                       for (unsigned i = 0; i < childrenVector.size(); ++i)
                            tout << mk_pp(childrenVector[i], m)  << " ";
                        tout << std::endl;
                    });
@@ -16702,7 +16682,7 @@ namespace smt {
                        ptr_vector<expr> childrenVector;
                        get_nodes_in_concat(e, childrenVector);
                        tout << "\t\t";
-                       for (int i = 0; i < childrenVector.size(); ++i)
+                       for (unsigned i = 0; i < childrenVector.size(); ++i)
                            tout << mk_pp(childrenVector[i], m)  << " ";
                        tout << std::endl;
                    });
@@ -17160,7 +17140,7 @@ namespace smt {
                 // collect all consts in concat, and check
                 ptr_vector<expr> childrenVector;
                 get_nodes_in_concat(ex->get_arg(0), childrenVector);
-                for (int i = 0; i < childrenVector.size(); ++i) {
+                for (unsigned i = 0; i < childrenVector.size(); ++i) {
                     zstring value;
                     if (u.str.is_string(childrenVector[i], value))
                         if (value.contains(needleStr)) {
@@ -17205,7 +17185,7 @@ namespace smt {
                     app* indexOfApp = nullptr;
                     int sum = 0;
                     app* arg2app = to_app(arg2);
-                    for (int i = 0; i < arg2app->get_num_args(); ++i) {
+                    for (unsigned i = 0; i < arg2app->get_num_args(); ++i) {
 
                         if (u.str.is_index(arg2app->get_arg(i))){
                             STRACE("str", tout << __LINE__ << " " << mk_pp(arg2app->get_arg(i), m) << std::endl;);
@@ -17230,7 +17210,7 @@ namespace smt {
                             else if (m_autil.is_mul(arg2app->get_arg(i))) {
                                 app* tmp = to_app(arg2app->get_arg(i));
                                 int mul = 1;
-                                for (int j = 0; j < tmp->get_num_parameters(); ++j)
+                                for (unsigned j = 0; j < tmp->get_num_parameters(); ++j)
                                     if (m_autil.is_numeral(tmp->get_arg(j), val))
                                         mul = mul * val.get_int64();
                                     else {
@@ -17710,8 +17690,6 @@ namespace smt {
         expr* base = nullptr;
         expr* pos = nullptr;
         expr* len = nullptr;
-        expr* arg0;
-        expr* arg1;
         app * expr = e->get_owner();
 
         if (axiomatized_terms.contains(expr)) {
@@ -18086,7 +18064,7 @@ namespace smt {
                 ptr_vector <expr> elements;
                 get_nodes_in_reg_concat(v, elements);
                 expr* concat = nullptr;
-                for (int i  = 0; i < elements.size(); ++i) {
+                for (unsigned i  = 0; i < elements.size(); ++i) {
                     zstring tmpStr;
                     if (u.re.is_to_re(elements[i])) {
                         zstring value;
@@ -18304,7 +18282,6 @@ namespace smt {
         // axiom 1: expr >= -1
         // axiom 2: expr = 0 <==> S = "0"
 
-        expr * S = ex->get_arg(0);
         {
             expr_ref axiom1(m_autil.mk_ge(ex, m_autil.mk_numeral(rational::minus_one(), true)), m);
             SASSERT(axiom1);
@@ -18769,7 +18746,7 @@ namespace smt {
     static zstring str2RegexStr(zstring str) {
         zstring res("");
         int len = str.length();
-        for (int i = 0; i < len; i++) {
+        for (unsigned i = 0; i < len; i++) {
             char nc = str[i];
             // 12 special chars
             if (nc == '\\' || nc == '^' || nc == '$' || nc == '.' || nc == '|' || nc == '?'
@@ -19083,7 +19060,7 @@ namespace smt {
         ptr_vector<expr> vars;
         get_nodes_in_concat(node, vars);
         rational vLen;
-        for (int i = 0; i < vars.size(); ++i){
+        for (unsigned i = 0; i < vars.size(); ++i){
             if (get_len_value(vars[i], vLen))
                 if (vLen.get_int64() == 0)
                     return true;
@@ -19424,7 +19401,7 @@ namespace smt {
                 ast_manager& m = get_manager();
                 context& ctx = get_context();
 
-                for (int i = 0; i < mful_scope_levels.size(); ++i)
+                for (unsigned i = 0; i < mful_scope_levels.size(); ++i)
                     {
 
                         literal tmp = ctx.get_literal(mful_scope_levels[i].get());
@@ -19478,7 +19455,7 @@ namespace smt {
 
                 expr_ref_vector tmpExprs(m);
                 ctx.get_relevant_literals(tmpExprs);
-                for (int i = 0; i < tmpExprs.size(); ++i) {
+                for (unsigned i = 0; i < tmpExprs.size(); ++i) {
                     literal tmp = ctx.get_literal(tmpExprs[i].get());
                     int assignLvl = ctx.get_assign_level(tmp);
                     if (ctx.get_assignment(tmpExprs[i].get()) == l_true && !m.is_or(tmpExprs[i].get()) && !m.is_and(tmpExprs[i].get()) && !m.is_ite(tmpExprs[i].get())){
@@ -19620,7 +19597,7 @@ namespace smt {
 
         guessedExprs.reset();
         guessedExprs.append(ret);
-//        for (int i = 0; i < guessedExprs.size(); ++i)
+//        for (unsigned i = 0; i < guessedExprs.size(); ++i)
 //            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
     }
 
@@ -19662,7 +19639,7 @@ namespace smt {
 
         guessedExprs.reset();
         guessedExprs.append(ret);
-        for (int i = 0; i < guessedExprs.size(); ++i)
+        for (unsigned i = 0; i < guessedExprs.size(); ++i)
             STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
     }
 
@@ -19681,7 +19658,7 @@ namespace smt {
         ptr_vector<expr> childrenVector;
         get_all_nodes_in_concat(v, childrenVector);
 
-        for (int i = 0; i < childrenVector.size(); ++i) {
+        for (unsigned i = 0; i < childrenVector.size(); ++i) {
             ret.push_back(childrenVector[i]);
             if (u.str.is_string(childrenVector[i], value))
                 if (value.contains(containKey))
@@ -19704,7 +19681,7 @@ namespace smt {
                     if (!val.contains(containKey)) {  // x = replace y val ? && val does not contain key --> y does not contain key
                         ptr_vector<expr> childrenVector;
                         get_all_nodes_in_concat(arg0, childrenVector);
-                        for (int j = 0; j < childrenVector.size(); ++j)
+                        for (unsigned j = 0; j < childrenVector.size(); ++j)
                             if (!ret.contains(childrenVector[j])) {
                                 ret.push_back(childrenVector[j]);
                                 if (u.str.is_string(childrenVector[j], value))
@@ -19717,12 +19694,12 @@ namespace smt {
 
             expr_ref_vector tmpVector(m);
             collect_eq_nodes(tmp, tmpVector); // var in class of tmp also does not contain containkey
-            for (int i = 0; i  < tmpVector.size(); ++i)
+            for (unsigned i = 0; i  < tmpVector.size(); ++i)
                 if (!ret.contains(tmpVector[i].get())){
                     STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " == " << mk_pp(tmpVector[i].get(), m) << std::endl;);
                     ptr_vector<expr> childrenVector;
                     get_all_nodes_in_concat(tmpVector[i].get(), childrenVector);
-                    for (int j = 0; j < childrenVector.size(); ++j)
+                    for (unsigned j = 0; j < childrenVector.size(); ++j)
                         if (!ret.contains(childrenVector[j])) {
                             ret.push_back(childrenVector[j]);
                             if (u.str.is_string(childrenVector[j], value))
@@ -19745,7 +19722,7 @@ namespace smt {
             for (const auto& e : eq.second) {
                 ptr_vector<expr> argVec;
                 get_nodes_in_concat(e, argVec);
-                for (int i = 0; i < argVec.size(); ++i) {
+                for (unsigned i = 0; i < argVec.size(); ++i) {
                     zstring value;
                     if (u.str.is_string(argVec[i], value) && value.length() == 0)
                         continue;
@@ -19760,7 +19737,7 @@ namespace smt {
         if (u.str.is_concat(e)) {
             ptr_vector<expr> argVec;
             get_nodes_in_concat(e, argVec);
-            for (int j = 0; j < argVec.size(); ++j)
+            for (unsigned j = 0; j < argVec.size(); ++j)
                 allvars.insert(argVec[j]);
         }
         else {
@@ -19769,7 +19746,7 @@ namespace smt {
     }
 
     bool theory_str::check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars){
-        for (int i = 0; i < v.size(); ++i)
+        for (unsigned i = 0; i < v.size(); ++i)
             if (!u.str.is_string(v[i]))
                 if (allvars.find(v[i]) != allvars.end())
                     return true;
@@ -19777,7 +19754,7 @@ namespace smt {
     }
 
     bool theory_str::check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars){
-        for (int i = 0; i < v.size(); ++i)
+        for (unsigned i = 0; i < v.size(); ++i)
             if (allvars.contains(v[i]))
                 return true;
         return false;
@@ -19791,7 +19768,7 @@ namespace smt {
     void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs) {
         ast_manager& m = get_manager();
         context& ctx = get_context();
-        for (int i = 0; i < mful_scope_levels.size(); ++i) {
+        for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
             literal tmp = ctx.get_literal(mful_scope_levels[i].get());
             int assignLvl = ctx.get_assign_level(tmp);
             if (assignLvl >= 0)
@@ -19803,7 +19780,7 @@ namespace smt {
     void theory_str::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs) {
         ast_manager& m = get_manager();
         context& ctx = get_context();
-        for (int i = 0; i < mful_scope_levels.size(); ++i) {
+        for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
             literal tmp = ctx.get_literal(mful_scope_levels[i].get());
             int assignLvl = ctx.get_assign_level(tmp);
             if (assignLvl >= 0) {
@@ -19819,7 +19796,7 @@ namespace smt {
         ast_manager& m = get_manager();
         context& ctx = get_context();
 
-        for (int i = 0; i < mful_scope_levels.size(); ++i)
+        for (int i = 0; i < (int)mful_scope_levels.size(); ++i)
             if (!m.is_not(mful_scope_levels[i].get()))
             {
                 literal tmp = ctx.get_literal(mful_scope_levels[i].get());
