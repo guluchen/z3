@@ -1,5 +1,5 @@
-#ifndef _THEORY_STR_H_
-#define _THEORY_STR_H_
+#ifndef _THEORY_TRAU_H_
+#define _THEORY_TRAU_H_
 
 #include <list>
 #include <set>
@@ -23,7 +23,6 @@
 #include "util/union_find.h"
 #include "smt/smt_arith_value.h"
 
-#define ROUNDCHECK 1
 #define LOCALSPLITMAX 20
 #define SUMFLAT 100000000
 #define EMPTYFLAT 9999999
@@ -213,7 +212,7 @@ namespace smt {
 
     class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
 
-    class theory_str : public theory {
+    class theory_trau : public theory {
         int m_scope_level;
         scoped_vector<expr_ref> mful_scope_levels;
         const theory_str_params& m_params;
@@ -222,8 +221,8 @@ namespace smt {
         scoped_vector<str::expr_pair> membership_memo;
         scoped_vector<str::expr_pair> non_membership_memo;
 
-        typedef union_find<theory_str> th_union_find;
-        typedef trail_stack<theory_str> th_trail_stack;
+        typedef union_find<theory_trau> th_union_find;
+        typedef trail_stack<theory_trau> th_trail_stack;
         struct zstring_hash_proc {
             unsigned operator()(zstring const & s) const {
                 return string_hash(s.encode().c_str(), static_cast<unsigned>(s.length()), 17);
@@ -600,7 +599,7 @@ namespace smt {
         };
 
         class string_value_proc : public model_value_proc {
-            theory_str&                     th;
+            theory_trau&                     th;
             sort*                           m_sort;
             svector<model_value_dependency> m_dependencies;
             app*                            node;
@@ -611,7 +610,7 @@ namespace smt {
             int                             len;
         public:
 
-            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, enode* arr_node, expr* regex, int len = -1):
+            string_value_proc(theory_trau& th, sort * s, app* node, bool importantVar, enode* arr_node, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
@@ -621,7 +620,7 @@ namespace smt {
                     len(len){
             }
 
-            string_value_proc(theory_str& th, sort * s, app* node, bool importantVar, expr* regex, int len = -1):
+            string_value_proc(theory_trau& th, sort * s, app* node, bool importantVar, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
@@ -1348,7 +1347,7 @@ namespace smt {
 
 
     public:
-        theory_str(ast_manager& m, const theory_str_params& params);
+        theory_trau(ast_manager& m, const theory_str_params& params);
         void display(std::ostream& os) const override;
         th_trail_stack& get_trail_stack() { return m_trail_stack; }
         void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
@@ -1360,7 +1359,7 @@ namespace smt {
         bool internalize_atom(app *atom, bool gate_ctx) override;
         bool internalize_term(app *term) override;
         theory_var mk_var(enode *n) override;
-        theory *mk_fresh(context *) override { return alloc(theory_str, get_manager(), m_params); }
+        theory *mk_fresh(context *) override { return alloc(theory_trau, get_manager(), m_params); }
 
         /*
          * Helper function for mk_value().
@@ -2619,4 +2618,4 @@ namespace smt {
 
 }
 
-#endif /* _THEORY_STR_H_ */
+#endif /* _THEORY_TRAU_H_ */

@@ -34,7 +34,7 @@ Revision History:
 #include "smt/theory_seq.h"
 #include "smt/theory_pb.h"
 #include "smt/theory_fpa.h"
-#include "smt/theory_str.h"
+#include "smt/theory_trau.h"
 
 namespace smt {
 
@@ -916,13 +916,13 @@ namespace smt {
     void setup::setup_str() {
         setup_arith();
         setup_arrays();
-        m_context.register_plugin(alloc(theory_str, m_manager, m_params));
+        m_context.register_plugin(alloc(theory_trau, m_manager, m_params));
     }
 
     void setup::setup_trau() {
         setup_arith();
         setup_arrays();
-        m_context.register_plugin(alloc(theory_str, m_manager, m_params));
+        m_context.register_plugin(alloc(theory_trau, m_manager, m_params));
     }
 
     void setup::setup_seq() {
