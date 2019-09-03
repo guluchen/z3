@@ -1,8 +1,8 @@
-# Trau
-Trau is a SMT solver focuses on string theory. It builds on top of the Z3 solver.
+# Z3-Trau
+Z3-Trau, which is a new version of [Trau](https://github.com/diepbp/Trau) is a SMT solver focuses on string theory. It builds on top of the Z3 solver.
  
-## Building Trau using Cmake
-Create a new folder and use cmake to build Trau
+## Building Z3-Trau using Cmake
+Create a new folder and use cmake to build Z3-Trau
 ```
 mkdir trau-build
 cd trau-build
@@ -10,7 +10,7 @@ cmake /path/to/trau-repo
 make
 ```
 
-## Running Trau 
+## Running Z3-Trau 
 
 Try 
 ```
