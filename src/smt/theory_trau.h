@@ -906,16 +906,19 @@ namespace smt {
                     func_interp* fi = mg.get_model().get_func_interp(fd);
 
                     unsigned num_entries = fi->num_entries();
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " num_entries: " << num_entries << std::endl;);
                     for(unsigned i = 0; i < num_entries; i++)
                     {
                         func_entry const* fe = fi->get_entry(i);
                         expr* k =  fe->get_arg(0);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " key: " << mk_pp(k, mg.get_manager()) << std::endl;);
                         rational key;
-                        if (th.m_autil.is_numeral(k, key)) {
+                        if (th.m_autil.is_numeral(k, key) && key.get_int32() >=0 ) {
                             expr* v =  fe->get_result();
 
                             rational value;
                             if (th.m_autil.is_numeral(v, value)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " key: " << key << "; value:" << value << std::endl;);
                                 if (key.get_int32() < (int)vValue.size())
                                     vValue[key.get_int32()] = value.get_int32();
                             }
