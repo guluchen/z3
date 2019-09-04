@@ -1608,6 +1608,7 @@ namespace smt {
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> non_fresh_vars,
                                            expr* premise);
+                expr* const_contains_key(zstring c, expr* pre_contain, expr* key, rational len);
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var);
                 void negate_context();

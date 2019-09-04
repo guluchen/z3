@@ -83,9 +83,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -101,7 +101,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="331">
-              <caret line="4024" column="37" selection-start-line="4024" selection-start-column="16" selection-end-line="4024" selection-end-column="37" />
+              <caret line="9219" column="41" selection-start-line="9219" selection-start-column="23" selection-end-line="9219" selection-end-column="41" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -167,7 +167,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="331">
-              <caret line="2465" column="47" selection-start-line="2465" selection-start-column="26" selection-end-line="2465" selection-end-column="47" />
+              <caret line="1610" column="21" selection-start-line="1610" selection-start-column="21" selection-end-line="1610" selection-end-column="21" />
               <folding>
                 <element signature="e#47#62#0" expanded="true" />
               </folding>
@@ -179,8 +179,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>optimizeFlatAutomaton</find>
-      <find>getLenValue</find>
       <find>getIntValue</find>
       <find>collect_all_empty_start</find>
       <find>assign_eh</find>
@@ -207,8 +205,10 @@
       <find>theory_str</find>
       <find>final_check</find>
       <find>trau</find>
-      <find>m_basicstr_axiom_todo</find>
       <find>m_basicstr_axiom_todo.pus</find>
+      <find>element</find>
+      <find>m_basicstr_axiom_todo</find>
+      <find>const_contains_key</find>
     </findStrings>
     <replaceStrings>
       <replace>get_int64</replace>
@@ -799,7 +799,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1556099000" />
+    <option name="totallyTimeSpent" value="1559462000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1194,7 +1194,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="331">
-          <caret line="2465" column="47" selection-start-line="2465" selection-start-column="26" selection-end-line="2465" selection-end-column="47" />
+          <caret line="1610" column="21" selection-start-line="1610" selection-start-column="21" selection-end-line="1610" selection-end-column="21" />
           <folding>
             <element signature="e#47#62#0" expanded="true" />
           </folding>
@@ -1204,7 +1204,7 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="331">
-          <caret line="4024" column="37" selection-start-line="4024" selection-start-column="16" selection-end-line="4024" selection-end-column="37" />
+          <caret line="9219" column="41" selection-start-line="9219" selection-start-column="23" selection-end-line="9219" selection-end-column="41" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

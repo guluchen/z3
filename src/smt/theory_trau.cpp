@@ -9103,12 +9103,23 @@ namespace smt {
                            tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << lhs_elements.size() << " vs ";
                                    tout << rhs_elements.size() << std::endl;
                     );
-                    t = clock();
-                    expr* result = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
-                    t = clock() - t;
-                    assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
-                    if (result == nullptr)
-                        return true;
+                    expr* containKey = nullptr;
+                    rational lenVal;
+                    zstring rootStr;
+                    if (u.str.is_string(root_tmp, rootStr) && is_contain_equality(element, containKey) && get_len_value(containKey, lenVal)){
+                        expr *result = const_contains_key(rootStr, getMostLeftNodeInConcat(element), containKey, lenVal);
+                        assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                        if (result == nullptr)
+                            return true;
+                    }
+                    else {
+                        t = clock();
+                        expr *result = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
+                        t = clock() - t;
+                        assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                        if (result == nullptr)
+                            return true;
+                    }
                 }
 
                 expr* regexExpr;
@@ -9204,6 +9215,35 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    expr* theory_trau::const_contains_key(zstring c, expr* pre_contain, expr* key, rational len){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << "  " << c << " contains " << mk_pp(key, get_manager()) << std::endl;);
+        zstring constKey;
+        int lenInt = len.get_int32();
+
+        if (u.str.is_string(key, constKey)){
+            if (c.contains(constKey))
+                return get_manager().mk_true();
+        }
+        else if (lenInt > 0 && lenInt <= c.length()){
+            expr_ref_vector ors(get_manager());
+            expr* arr = getExprVarFlatArray(key);
+
+            for (unsigned i = 0; i <= c.length() - len.get_int32(); ++i) {
+                expr_ref_vector ands(get_manager());
+                // | pre_contain | = i
+                ands.push_back(createEqualOperator(mk_strlen(pre_contain), mk_int(i)));
+
+                // arr = ?
+                for (unsigned j = 0; j < lenInt; ++j) {
+                    ands.push_back(createEqualOperator(createSelectOperator(arr, mk_int(j)), mk_int(c[i + j])));
+                }
+                ors.push_back(createAndOperator(ands));
+            }
+            return createOrOperator(ors);
+        }
+        return nullptr;
     }
 
     void theory_trau::assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded){
