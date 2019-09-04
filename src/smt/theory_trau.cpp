@@ -4021,7 +4021,8 @@ namespace smt {
             // set up basic string axioms
             enode *n = ctx.get_enode(ex);
             SASSERT(n);
-            m_basicstr_axiom_todo.push_back(n);
+            if (!m_basicstr_axiom_todo.contains(n))
+                m_basicstr_axiom_todo.push_back(n);
 
 
             if (is_app(ex)) {
