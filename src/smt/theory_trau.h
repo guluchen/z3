@@ -1562,6 +1562,7 @@ namespace smt {
                         expr* lower_bound_str_int(expr* num, expr* str);
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_1st_loop(expr* num, expr* str);
+                            bool is_char_at(expr* str);
                 std::map<expr*, std::vector<expr*>> mapset2mapvector(std::map<expr*, std::set<expr*>> m);
                 std::map<expr*, int> set2map(std::set<std::pair<expr*, int>> s);
                 void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination, int line = -1);

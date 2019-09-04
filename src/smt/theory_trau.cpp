@@ -2854,7 +2854,8 @@ namespace smt {
         ptr_vector<expr> childrenVector;
         get_nodes_in_concat(nn, childrenVector);
         zstring emptyConst("");
-        app *lhs = u.re.mk_to_re(u.str.mk_string(emptyConst));
+        expr* emptyReg = u.re.mk_to_re(u.str.mk_string(emptyConst));
+        app *lhs = to_app(emptyReg);
         m_trail.push_back(lhs);
 
         // list of constraints
@@ -2863,7 +2864,10 @@ namespace smt {
             zstring constStrValue;
             if (u.str.is_string(el, constStrValue)) {
                 if (constStrValue.length() > 0) {
-                    lhs = u.re.mk_concat(lhs, u.re.mk_to_re(el));
+                    if (lhs != emptyReg)
+                        lhs = u.re.mk_concat(lhs, u.re.mk_to_re(el));
+                    else
+                        lhs = u.re.mk_to_re(el);
                     ensure_enode(lhs);
                     m_trail.push_back(lhs);
                     lastIsSigmaStar = false;
@@ -2921,7 +2925,10 @@ namespace smt {
                         }
                     } else {
                         if (!lastIsSigmaStar) {
-                            lhs = u.re.mk_concat(lhs, u.re.mk_full_seq(regex_sort));
+                            if (lhs != emptyReg)
+                                lhs = u.re.mk_concat(lhs, u.re.mk_full_seq(regex_sort));
+                            else
+                                lhs = u.re.mk_full_seq(regex_sort);
                             m_trail.push_back(lhs);
                         }
                         lastIsSigmaStar = true;
@@ -7764,7 +7771,12 @@ namespace smt {
 
 
         expr_ref_vector ands_tmp(m);
-        for (rational len = one; len <= str_int_bound; len = len + one) {
+        rational consider_len = str_int_bound;
+
+        if (is_char_at(str))
+            consider_len = one;
+
+        for (rational len = one; len <= consider_len; len = len + one) {
             expr_ref_vector adds(m);
             rational pos = len - one;
             rational coeff(1);
@@ -7804,38 +7816,63 @@ namespace smt {
     }
 
     expr* theory_trau::valid_str_int(expr* str){
-        // from 0 - q_bound
-        ast_manager & m = get_manager();
-        expr_ref_vector ands(m);
-        expr* arr = getExprVarFlatArray(str);
-        expr* strLen = mk_strlen(str);
-        for (int i = 0; i < q_bound.get_int64(); ++i) {
-            expr* premise = createGreaterEqOperator(strLen, mk_int(i + 1));
+        if (is_char_at(str)){
+            ast_manager &m = get_manager();
+            expr *arr = getExprVarFlatArray(str);
             expr_ref_vector conclusions(m);
             conclusions.push_back(createGreaterEqOperator(
-                    createSelectOperator(arr, mk_int(i)),
+                    createSelectOperator(arr, mk_int(0)),
                     mk_int('0')));
             conclusions.push_back(createLessEqOperator(
-                    createSelectOperator(arr, mk_int(i)),
+                    createSelectOperator(arr, mk_int(0)),
                     mk_int('9')));
-            ands.push_back(rewrite_implication(premise, createAndOperator(conclusions)));
+            return createAndOperator(conclusions);
         }
+        else {
+            // from 0 - q_bound
+            ast_manager &m = get_manager();
+            expr_ref_vector ands(m);
+            expr *arr = getExprVarFlatArray(str);
+            expr *strLen = mk_strlen(str);
+            for (int i = 0; i < q_bound.get_int64(); ++i) {
+                expr *premise = createGreaterEqOperator(strLen, mk_int(i + 1));
+                expr_ref_vector conclusions(m);
+                conclusions.push_back(createGreaterEqOperator(
+                        createSelectOperator(arr, mk_int(i)),
+                        mk_int('0')));
+                conclusions.push_back(createLessEqOperator(
+                        createSelectOperator(arr, mk_int(i)),
+                        mk_int('9')));
+                ands.push_back(rewrite_implication(premise, createAndOperator(conclusions)));
+            }
 
-        for (int i = 0; i < str_int_bound; ++i){
-            expr* premise = createGreaterEqOperator(strLen, mk_int(q_bound.get_int64() + i));
-            rational to_minus = rational(-1) * rational(i);
-            expr* pos = createAddOperator(strLen, mk_int(to_minus));
+            for (int i = 0; i < str_int_bound; ++i) {
+                expr *premise = createGreaterEqOperator(strLen, mk_int(q_bound.get_int64() + i));
+                rational to_minus = rational(-1) * rational(i);
+                expr *pos = createAddOperator(strLen, mk_int(to_minus));
 
-            expr_ref_vector conclusions(m);
-            conclusions.push_back(createGreaterEqOperator(
-                    createSelectOperator(arr, pos),
-                    mk_int('0')));
-            conclusions.push_back(createLessEqOperator(
-                    createSelectOperator(arr, pos),
-                    mk_int('9')));
-            ands.push_back(rewrite_implication(premise, createAndOperator(conclusions)));
+                expr_ref_vector conclusions(m);
+                conclusions.push_back(createGreaterEqOperator(
+                        createSelectOperator(arr, pos),
+                        mk_int('0')));
+                conclusions.push_back(createLessEqOperator(
+                        createSelectOperator(arr, pos),
+                        mk_int('9')));
+                ands.push_back(rewrite_implication(premise, createAndOperator(conclusions)));
+            }
+            return createAndOperator(ands);
         }
-        return createAndOperator(ands);
+    }
+
+    bool theory_trau::is_char_at(expr* str){
+        if (u.str.is_at(str))
+            return true;
+        else {
+            std::string name_str = expr2str(str);
+            if (name_str.find("charAt1") == 0)
+                return true;
+        }
+        return false;
     }
 
     /*
@@ -7909,6 +7946,9 @@ namespace smt {
 
     expr* theory_trau::fill_0_1st_loop(expr* num, expr* str){
         ast_manager & m = get_manager();
+        if (is_char_at(str))
+            return m.mk_true();
+
         expr_ref_vector ands(m);
 
         rational one(1);
@@ -11023,11 +11063,15 @@ namespace smt {
     }
 
     bool theory_trau::matchRegex(expr* a, zstring b){
+        if (u.re.is_full_seq(a))
+            return true;
         expr* tmp = u.re.mk_to_re(u.str.mk_string(b));
         return matchRegex(a, tmp);
     }
 
     bool theory_trau::matchRegex(expr* a, expr* b) {
+        if (u.re.is_full_seq(a) || u.re.is_full_seq(b))
+            return true;
         expr* intersection = u.re.mk_inter(a, b);
         eautomaton *au01 = get_automaton(intersection);
         return !au01->is_empty();
