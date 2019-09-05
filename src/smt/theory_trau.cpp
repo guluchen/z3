@@ -1461,69 +1461,6 @@ namespace smt {
                 }
         }
 
-        // n1 . "const" . n2 = n3 . "const" . n4 --> guess n1 = n3
-//        for (const auto c1 : eqc_concat_lhs){
-//            expr* n1 = to_app(c1)->get_arg(0);
-//            expr_ref_vector eqn1(m);
-//            collect_eq_nodes(n1, eqn1);
-//
-//            for (const auto& nn1 : eqn1)
-//                if (u.str.is_concat(nn1)){
-//                    ptr_vector<expr> elements_nn1;
-//                    get_nodes_in_concat(nn1, elements_nn1);
-//                    if (elements_nn1.size() == 2){
-//
-//                        for (const auto c2 : eqc_concat_rhs){
-//                            expr* n2 = to_app(c2)->get_arg(0);
-//                            expr_ref_vector eqn2(m);
-//                            collect_eq_nodes(n2, eqn2);
-//                            for (const auto& nn2 : eqn2)
-//                                if (u.str.is_concat(nn2)){
-//                                    ptr_vector<expr> elements_nn2;
-//                                    get_nodes_in_concat(nn2, elements_nn2);
-//                                    if (elements_nn2.size() == 2 &&
-//                                            are_equal_exprs(elements_nn1[elements_nn1.size() - 1], elements_nn2[elements_nn2.size() - 1])){
-//                                        expr* tmp = createEqualOP(n1, n2);
-//                                        ctx.force_phase(ctx.get_literal(tmp));
-//                                        TRACE("str", tout << __LINE__ << " tryout eq " << __FUNCTION__ << ": "<< mk_pp(tmp, m) << std::endl;);
-//                                    }
-//                                }
-//                        }
-//                    }
-//                }
-//
-//
-//
-//            n1 = to_app(c1)->get_arg(1);
-//            eqn1.reset();
-//            collect_eq_nodes(n1, eqn1);
-//
-//            for (const auto& nn1 : eqn1)
-//                if (u.str.is_concat(nn1)){
-//                    ptr_vector<expr> elements_nn1;
-//                    get_nodes_in_concat(nn1, elements_nn1);
-//                    if (elements_nn1.size() == 2){
-//
-//                        for (const auto c2 : eqc_concat_rhs){
-//                            expr* n2 = to_app(c2)->get_arg(1);
-//                            expr_ref_vector eqn2(m);
-//                            collect_eq_nodes(n2, eqn2);
-//                            for (const auto& nn2 : eqn2)
-//                                if (u.str.is_concat(nn2)){
-//                                    ptr_vector<expr> elements_nn2;
-//                                    get_nodes_in_concat(nn2, elements_nn2);
-//                                    if (elements_nn2.size() == 2 &&
-//                                        are_equal_exprs(elements_nn1[0], elements_nn2[0])){
-//                                        expr* tmp = createEqualOP(n1, n2);
-//                                        ctx.force_phase(ctx.get_literal(tmp));
-//                                        TRACE("str", tout << __LINE__ << "  tryout eq " << __FUNCTION__ << ": "<< mk_pp(tmp, m) << std::endl;);
-//                                    }
-//                                }
-//                        }
-//                    }
-//                }
-//        }
-
         special_assertion_for_contain_vs_substr(lhs, rhs);
         special_assertion_for_contain_vs_substr(rhs, lhs);
     }
@@ -3247,17 +3184,6 @@ namespace smt {
                         bool subAst2HasValue = false;
                         expr * subValue1 = get_eqc_value(subAst1, subAst1HasValue);
                         expr * subValue2 = get_eqc_value(subAst2, subAst2HasValue);
-
-//                        TRACE("str",
-//                              tout << "(Contains " << mk_pp(n1, m) << " " << mk_pp(subAst1, m) << ")" << std::endl;
-//                                      tout << "(Contains " << mk_pp(n2, m) << " " << mk_pp(subAst2, m) << ")" << std::endl;
-//                                      if (subAst1 != subValue1) {
-//                                          tout << mk_pp(subAst1, m) << " = " << mk_pp(subValue1, m) << std::endl;
-//                                      }
-//                                      if (subAst2 != subValue2) {
-//                                          tout << mk_pp(subAst2, m) << " = " << mk_pp(subValue2, m) << std::endl;
-//                                      }
-//                        );
 
                         if (subAst1HasValue && subAst2HasValue) {
                             expr_ref_vector litems1(m);
@@ -8136,7 +8062,7 @@ namespace smt {
         }
     }
 
-    char theory_trau::setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars){
+    char theory_trau::setup_default_char(std::set<char> includeChars, std::set<char> excludeChars){
         char defaultChar = 'a';
 
         for (const auto& ch : includeChars)
@@ -8147,7 +8073,7 @@ namespace smt {
         return defaultChar;
     }
 
-    std::set<char> theory_trau::initExcludeCharSet(){
+    std::set<char> theory_trau::init_excluded_char_set(){
         std::set<char> excludeCharSet;
         for (const auto& s : constSet){
             for (unsigned i = 0; i < s.length(); ++i) {
@@ -8160,7 +8086,7 @@ namespace smt {
     /*
      *
      */
-    std::set<char> theory_trau::initIncludeCharSet(){
+    std::set<char> theory_trau::init_included_char_set(){
         std::set<char> includeCharSet;
         if (includeCharSet.size() == 0)
             for (unsigned i = 32; i <= 126; ++i)
@@ -8214,7 +8140,6 @@ namespace smt {
         for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
 
             std::string tmp = " ";
-            clock_t t;
 
             /* different tactic for size of it->second */
             const int maxPConsidered = 6;
@@ -8460,78 +8385,6 @@ namespace smt {
         return false;
     }
 
-    std::vector<expr*> theory_trau::createExprFromRegexVector(std::vector<zstring> v) {
-        ast_manager &m = get_manager();
-        STRACE("str", tout << __LINE__ << __FUNCTION__ << std::endl;);
-        for (const auto& s : v)
-            STRACE("str", tout << __LINE__ << __FUNCTION__ << " " << s << std::endl;);
-        std::vector<expr*> ret;
-        for (unsigned i = 0; i < v.size(); ++i){
-            if (isRegexStr(v[i])){
-                if (v[i][v[i].length() - 1] == '*'){
-                    zstring tmp = parse_regex_content(v[i]);
-
-                    if (!isUnionStr(tmp)) {
-                        ret.push_back(u.re.mk_star(u.re.mk_to_re(u.str.mk_string(tmp))));
-                    }
-                    else {
-                        std::vector<zstring> tmpVectorStr = collect_alternative_components(tmp);
-                        std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
-                        expr * args[tmpVectorExpr.size()];
-                        for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
-                            args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
-                        }
-                        expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
-                        ret.push_back(u.re.mk_star(tmp));
-                        STRACE("str", tout << __LINE__ <<  " tmp = " << mk_pp(tmp, m) << std::endl;);
-                    }
-                }
-                else if (v[i][v[i].length() - 1] == '+'){
-                    zstring tmp = parse_regex_content(v[i]);
-                    if (!isUnionStr(tmp)) {
-                        ret.push_back(u.re.mk_plus(u.re.mk_to_re(u.str.mk_string(tmp))));
-                    }
-                    else {
-                        std::vector<zstring> tmpVectorStr = collect_alternative_components(tmp);
-                        std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpVectorStr);
-                        expr * args[tmpVectorExpr.size()];
-                        for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
-                            args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
-                        }
-                        expr* tmp = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
-                        ret.push_back(u.re.mk_plus(tmp));
-                        STRACE("str", tout << __LINE__ <<  " tmp = " << mk_pp(tmp, m) << std::endl;);
-                    }
-                }
-                else {
-                    SASSERT(false);
-                }
-            }
-            else if (isUnionStr(v[i]) && v[i].contains("(") && v[i].contains(")")){
-                zstring tmp = v[i];
-                if (tmp.length() > 0 && tmp[0] == '"')
-                    tmp = tmp.extract(1, tmp.length() - 2);
-                STRACE("str", tout << __LINE__ <<  " tmp = " << tmp << std::endl;);
-                std::vector<zstring> tmpV = collect_alternative_components(tmp);
-                std::vector<expr*> tmpVectorExpr = createExprFromRegexVector(tmpV);
-                expr * args[tmpVectorExpr.size()];
-                for (unsigned j = 0; j < tmpVectorExpr.size(); ++j) {
-                    args[j] =  u.re.mk_to_re(tmpVectorExpr[j]);
-                }
-                expr* tmpE = m.mk_app(u.re.get_family_id(), OP_RE_UNION, 0, nullptr, tmpVectorExpr.size(), args);
-
-                ret.push_back(tmpE);
-            }
-            else {
-                zstring tmp = v[i];
-                if (tmp.length() > 0 && tmp[0] == '"' && tmp.length() >= 2)
-                    tmp = tmp.extract(1, tmp.length() - 2);
-                STRACE("str", tout << __LINE__ <<  " tmp = " << tmp << std::endl;);
-                ret.push_back(u.str.mk_string(tmp));
-            }
-        }
-        return ret;
-    }
 
     /*
      * (abc)* -> abc
@@ -10344,11 +10197,8 @@ namespace smt {
                         adds.push_back(tmp);
                     }
                     else {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << ", " << elementNames[i].second << std::endl;);
                         expr* flatsize = get_var_flat_size(elementNames[i]);
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(flatsize, m) << ", " << elementNames[i].second << std::endl;);
                         expr* flatiter = get_flat_iter(elementNames[i]);
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(flatiter, m) << ", " << elementNames[i].second << std::endl;);
                         expr_ref tmp(createMultiplyOP(get_var_flat_size(elementNames[i]),
                                                             get_flat_iter(elementNames[i])), m);
                         adds.push_back(tmp);
@@ -10958,7 +10808,6 @@ namespace smt {
                 }
                     /* only care about first element */
                 else if (elementNames[i].second % p_bound.get_int64() == -1)  {
-                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***"  << std::endl;);
                     zstring value;
                     u.str.is_string(elementNames[i].first, value);
                     possibleCases.push_back(
@@ -10987,7 +10836,6 @@ namespace smt {
             }
         }
 
-        STRACE("str", tout << __LINE__ << " return *** " << __FUNCTION__ << " ***" << std::endl;);
         expr_ref ret(createAndOP(possibleCases), m);
         return ret.get();
     }
@@ -11036,7 +10884,6 @@ namespace smt {
                 collect_alternative_components(elementNames[constPos].first, components);
             }
 
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
 
             bool is_str_int = false;
             if (string_int_vars.find(a.first) != string_int_vars.end()){
@@ -18473,7 +18320,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " \t" << mk_pp(ee, m) << std::endl;);
         }
 
-        defaultChar = setupDefaultChar(initIncludeCharSet(), initExcludeCharSet());
+        defaultChar = setup_default_char(init_included_char_set(), init_excluded_char_set());
     }
 
     void theory_trau::finalize_model(model_generator& mg) {

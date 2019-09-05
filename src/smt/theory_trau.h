@@ -1538,9 +1538,9 @@ namespace smt {
                     expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
-                char setupDefaultChar(std::set<char> includeChars, std::set<char> excludeChars);
-                std::set<char> initExcludeCharSet();
-                std::set<char> initIncludeCharSet();
+                char setup_default_char(std::set<char> includeChars, std::set<char> excludeChars);
+                std::set<char> init_excluded_char_set();
+                std::set<char> init_included_char_set();
                 void createAppearanceMap(
                         std::map<expr*, std::set<expr*>> eq_combination);
                 void setup_flats();
@@ -1574,7 +1574,6 @@ namespace smt {
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
                 bool is_internal_var(expr* e);
-                std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
                 bool is_internal_regex_var(expr* e, expr* &regex);
                 /*
                 * (abc)*__XXX -> abc
