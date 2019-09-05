@@ -85,6 +85,7 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,10 +100,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="423">
-              <caret line="2610" column="41" selection-start-line="2610" selection-start-column="22" selection-end-line="2610" selection-end-column="41" />
+            <state relative-caret-position="231">
+              <caret line="12597" column="5" selection-start-line="12597" selection-start-column="5" selection-end-line="12597" selection-end-column="5" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#463243#463548#0" expanded="true" />
+                <element signature="e#492148#492562#0" expanded="true" />
+                <element signature="e#503872#504196#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -166,9 +170,10 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="331">
-              <caret line="1560" column="55" selection-start-line="1560" selection-start-column="55" selection-end-line="1560" selection-end-column="55" />
+              <caret line="1951" column="37" selection-start-line="1951" selection-start-column="24" selection-end-line="1951" selection-end-column="37" />
               <folding>
                 <element signature="e#47#62#0" expanded="true" />
+                <element signature="e#13185#13197#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -178,57 +183,68 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_len_value(v, len_val) &amp;&amp; len</find>
-      <find>et_len_value(v, len_val) &amp;&amp;</find>
-      <find>get_len_value</find>
-      <find>get_len_value(</find>
-      <find>handle_str_int</find>
-      <find>rational(1</find>
-      <find>vValue</find>
-      <find>collect_im</find>
-      <find>setup_str</find>
-      <find>z3str3</find>
-      <find>(m_params.m_string_solver == &quot;z3s</find>
-      <find>refine_eq_set</find>
-      <find>propagate_equality</find>
-      <find>for (int</find>
-      <find>theory_str_contain_pair_bool_map_t</find>
-      <find>theory_str</find>
-      <find>final_check</find>
-      <find>trau</find>
-      <find>m_basicstr_axiom_todo.pus</find>
-      <find>element</find>
-      <find>const_contains_key</find>
-      <find>lhs</find>
-      <find>charAt1</find>
-      <find>name_str</find>
-      <find>charat1</find>
-      <find>valid_s2i</find>
-      <find>m_basicstr_axiom_todo</find>
-      <find>valid_str_int</find>
-      <find>unroll_str_int</find>
-      <find>propagate_non_const</find>
+      <find>formatOtherVars</find>
+      <find>formatnon_fresh_Vars</find>
+      <find>syncVarValue</find>
+      <find>sort_indexes</find>
+      <find>createSimpleEqualMap</find>
+      <find>isBlankValue</find>
+      <find>create_string</find>
+      <find>needValue</find>
+      <find>syncConst</find>
+      <find>forward_propagation</find>
+      <find>createString(</find>
+      <find>backward_propagation</find>
+      <find>flat_arr</find>
+      <find>getExprVarFlatArray(</find>
+      <find>get_var_flat_size</find>
+      <find>generateFlatArray(</find>
+      <find>getExprVarFlatSize(</find>
+      <find>ge</find>
+      <find>collectAllPossibleSplits(</find>
+      <find>collect_splits</find>
+      <find>collectCharRange(</find>
+      <find>getExprVarFlatIter(</find>
+      <find>0</find>
+      <find>generateFlatSize(</find>
+      <find>collect_char</find>
+      <find>collectAllPossibleSplits_const</find>
+      <find>collect_const_split</find>
+      <find>get_var_flat_array</find>
+      <find>generateFlatIter</find>
+      <find>gen_flat_iter</find>
     </findStrings>
     <replaceStrings>
-      <replace>get_int64</replace>
-      <replace>rewrite_implication</replace>
-      <replace>reuse_internal_int_vars</replace>
-      <replace>find_split_type</replace>
-      <replace>equality_to_arith</replace>
-      <replace>parse_regex_components</replace>
-      <replace>find_correspond_right_parentheses</replace>
-      <replace>choose_split_type</replace>
-      <replace>cached</replace>
-      <replace>arrange</replace>
-      <replace>_cached</replace>
-      <replace>setup</replace>
-      <replace>non_fresh_vars</replace>
-      <replace>non_fresh_map</replace>
-      <replace>unroll_non_fresh_variable</replace>
-      <replace>non_fresh_</replace>
-      <replace>remove_star_in_star</replace>
       <replace>collect_alternative_components</replace>
       <replace>combine_const_str</replace>
+      <replace>is_internal_var(</replace>
+      <replace>is_internal_regex_var(</replace>
+      <replace>create_arrangments_manually(</replace>
+      <replace>match_regex(</replace>
+      <replace>get_var_flat_size(</replace>
+      <replace>collect_const_splits(</replace>
+      <replace>OP(</replace>
+      <replace>gen_var_size(</replace>
+      <replace>gen_flat_iter(</replace>
+      <replace>get_var_length(</replace>
+      <replace>backward_propagation(</replace>
+      <replace>forward_propagation(</replace>
+      <replace>backward_propagation_lazy</replace>
+      <replace>backward_propagation_lazy(</replace>
+      <replace>get_var_value(</replace>
+      <replace>get_var_flat_array(</replace>
+      <replace>gen_flat_arr(</replace>
+      <replace>collect_splits(</replace>
+      <replace>collect_splits</replace>
+      <replace>collect_char_range(</replace>
+      <replace>get_flat_iter(</replace>
+      <replace>get_flat_iter(get_var_size</replace>
+      <replace>get_var_size(</replace>
+      <replace>gen_flat_size(</replace>
+      <replace>create_string(</replace>
+      <replace>collect_const_splits</replace>
+      <replace>gen_flat_iter</replace>
+      <replace>collect_const_split</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -798,7 +814,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1569009000" />
+    <option name="totallyTimeSpent" value="1574080000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1193,19 +1209,23 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="331">
-          <caret line="1560" column="55" selection-start-line="1560" selection-start-column="55" selection-end-line="1560" selection-end-column="55" />
+          <caret line="1951" column="37" selection-start-line="1951" selection-start-column="24" selection-end-line="1951" selection-end-column="37" />
           <folding>
             <element signature="e#47#62#0" expanded="true" />
+            <element signature="e#13185#13197#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="2610" column="41" selection-start-line="2610" selection-start-column="22" selection-end-line="2610" selection-end-column="41" />
+        <state relative-caret-position="231">
+          <caret line="12597" column="5" selection-start-line="12597" selection-start-column="5" selection-end-line="12597" selection-end-column="5" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#463243#463548#0" expanded="true" />
+            <element signature="e#492148#492562#0" expanded="true" />
+            <element signature="e#503872#504196#0" expanded="true" />
           </folding>
         </state>
       </provider>

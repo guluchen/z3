@@ -1419,13 +1419,12 @@ namespace smt {
             bool eval_str2int(app * a);
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
-            void refined_init_final_check(
+            void refined_init_chain_free(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
                 std::map<expr *, std::set<expr *>> &eq_combination);
-            void init_final_check(
+            void init_chain_free(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
                 std::map<expr *, std::set<expr *>> &eq_combination);
-                void analyze_bound_str_int();
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
                 rational ten_power(rational n);
@@ -1478,71 +1477,29 @@ namespace smt {
                 bool are_equal_exprs(expr* x, expr* y);
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
-            std::vector<unsigned> sort_indexes(const std::vector<std::pair<expr*, rational>> v);
-            bool assignValues(model_generator& mg, const std::vector<std::pair<expr*, rational>> freeVars, std::map<expr*, rational> varLens, std::set<std::pair<expr *, int>> non_fresh_vars);
-            void syncVarValue(std::map<expr*, std::vector<int>> &strValue);
-            void formatnon_fresh_Vars(
-                std::vector<unsigned> indexes,
-                std::map<expr*, zstring> solverValues,
-                std::vector<std::pair<expr*, rational>> lenVector,
-                std::map<expr*, rational> len,
-                std::map<expr*, int> iterInt,
-                std::map<expr*, std::vector<int>> &strValue,
-                std::map<expr *, int> non_fresh_vars,
-                bool &completion);
-            void formatOtherVars(
-                std::vector<unsigned> indexes,
-                std::map<expr*, zstring> solverValues,
-                std::vector<std::pair<expr*, rational>> lenVector,
-                std::map<expr*, rational> len,
-                std::map<expr*, int> iterInt,
-                std::map<expr*, std::vector<int>> &strValue,
-                std::map<expr *, int> non_fresh_vars,
-                bool &completion);
-                std::map<expr*, int> createSimpleEqualMap(
-                std::map<expr*, rational> len);
-                    bool isBlankValue(expr* name,
-                                      std::map<expr*, rational> len,
-                                      std::map<expr*, std::vector<int>> strValue);
-            std::vector<int> createString(
-                expr* name,
-                zstring value,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> strValue,
-                std::vector<std::pair<int, int>> iters,
-                bool &assigned,
-                bool assignAnyway = false);
-            bool needValue(expr* name,
-                                   std::map<expr*, rational> len,
-                                   std::map<expr*, std::vector<int>> strValue);
-            void syncConst(
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            rational getVarLength(
+
+            rational get_var_length(
                 expr* newlyUpdate,
                 std::map<expr*, rational> len);
-            void forwardPropagate(
+            void forward_propagation(
                 expr* newlyUpdate,
                 std::map<expr*, rational> len,
                 std::map<expr*, std::vector<int>> &strValue,
                 bool &completion);
-            void backwardPropagarate(
+            void backward_propagation(
                 expr* newlyUpdate,
                 std::map<expr*, rational> len,
                 std::map<expr*, std::vector<int>> &strValue,
                 bool &completion);
-            void backwardPropagarate_simple(
+            void backward_propagation_lazy(
                 expr* newlyUpdate,
                 std::map<expr*, rational> len,
                 std::map<expr*, std::vector<int>> &strValue,
                 bool &completion);
-            std::vector<int> getVarValue(
+            std::vector<int> get_var_value(
                 expr* newlyUpdate,
                 std::map<expr*, rational> len,
                 std::map<expr*, std::vector<int>> &strValue);
-            bool fixedValue(std::vector<std::pair<expr*, rational>> &freeVars, std::map<expr*, rational> varLens);
-            bool fixedLength(std::set<expr*> &freeVars, std::map<expr*, rational> &varLens);
             bool propagate_concat();
             bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
@@ -1590,7 +1547,7 @@ namespace smt {
                 bool should_use_flat();
             void init_underapprox_cached();
 
-            void handle_diseq(bool cached = false);
+            void handle_diseq_notcontain(bool cached = false);
                 void handle_NOTEqual();
                 void handle_NOTEqual_cached();
                     void handle_NOTEqual(expr* lhs, expr* rhs);
@@ -1616,9 +1573,9 @@ namespace smt {
                 void negate_context(expr* e);
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
-                bool isInternalVar(expr* e);
+                bool is_internal_var(expr* e);
                 std::vector<expr*> createExprFromRegexVector(std::vector<zstring> v);
-                bool isInternalRegexVar(expr* e, expr* &regex);
+                bool is_internal_regex_var(expr* e, expr* &regex);
                 /*
                 * (abc)*__XXX -> abc
                 */
@@ -1716,7 +1673,7 @@ namespace smt {
             /*
              *
              */
-            Arrangment manuallyCreate_arrangment(
+            Arrangment create_arrangments_manually(
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements);
 
@@ -1778,8 +1735,8 @@ namespace smt {
                 rational bound,
                 bool skip_init = false);
             int lcd(int x, int y);
-            bool matchRegex(expr* a, zstring b);
-            bool matchRegex(expr* a, expr* b);
+            bool match_regex(expr* a, zstring b);
+            bool match_regex(expr* a, expr* b);
             /*
              * Flat = sum (flats)
              */
@@ -1948,7 +1905,7 @@ namespace smt {
                 * Input: constA and a number of flats
                 * Output: all possible ways to split constA
                 */
-                std::vector<std::vector<int> > collectAllPossibleSplits(
+                std::vector<std::vector<int> > collect_splits(
                         std::pair<expr*, int> lhs,
                         std::vector<std::pair<expr*, int> > elementNames,
                         bool optimizing);
@@ -1964,7 +1921,7 @@ namespace smt {
                 * Pre-Condition: 1st flat and n-th flat must be greater than 0
                 * Output: of the form 1 * 1 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 0 + 1 * 3 + 2 * 3 = 10
                 */
-                void collectAllPossibleSplits_const(
+                void collect_const_splits(
                         int pos,
                         zstring str, /* const */
                         int pMax,
@@ -1976,8 +1933,8 @@ namespace smt {
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
-                std::vector<std::pair<int, int>> collectCharRange(expr* a);
-                void collectCharRange(expr* a, std::vector<bool> &chars);
+                std::vector<std::pair<int, int>> collect_char_range(expr* a);
+                void collect_char_range(expr* a, std::vector<bool> &chars);
 
                 bool feasibleSplit_const(
                         zstring str,
@@ -1988,93 +1945,92 @@ namespace smt {
              * Given a flat,
              * generate its size constraint
              */
-            std::string generateVarSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarSize(std::pair<expr*, int> a);
+            expr* get_var_size(std::pair<expr*, int> a);
             /*
              *
              */
-            std::string generateFlatIter(std::pair<expr*, int> a);
-            expr* getExprVarFlatIter(std::pair<expr*, int> a);
+            std::string gen_flat_iter(std::pair<expr*, int> a);
+            expr* get_flat_iter(std::pair<expr*, int> a);
             /*
              * Given a flat,
              * generate its size constraint
              */
-            std::string generateFlatSize(std::pair<expr*, int> a, std::string l_r_hs = "");
-            expr* getExprVarFlatSize(std::pair<expr*, int> a);
+            std::string gen_flat_size(std::pair<expr*, int> a, std::string l_r_hs = "");
+            expr* get_var_flat_size(std::pair<expr*, int> a);
 
             /*
              *
              */
-            app* createEqualOperator(expr* x, expr* y);
+            app* createEqualOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createMultiplyOperator(expr* x, expr* y);
+            app* createMultiplyOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createModOperator(expr* x, expr* y);
+            app* createModOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createMinusOperator(expr* x, expr* y);
+            app* createMinusOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createAddOperator(expr* x, expr* y);
+            app* createAddOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createAddOperator(expr_ref_vector adds);
+            app* createAddOP(expr_ref_vector adds);
             /*
              *
              */
-            app* createLessOperator(expr* x, expr* y);
+            app* createLessOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createLessEqOperator(expr* x, expr* y);
+            app* createLessEqOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createGreaterOperator(expr* x, expr* y);
+            app* createGreaterOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createGreaterEqOperator(expr* x, expr* y);
+            app* createGreaterEqOP(expr* x, expr* y);
 
             /*
              *
              */
-            app* createAndOperator(expr_ref_vector ands);
+            app* createAndOP(expr_ref_vector ands);
 
             /*
              *
              */
-            app* createOrOperator(expr_ref_vector ors);
+            app* createOrOP(expr_ref_vector ors);
 
             /*
              *
              */
-            expr* createNotOperator(const expr_ref x);
+            expr* createNotOP(const expr_ref x);
 
             /*
              *
              */
-            expr* createImpliesOperator(expr* a, expr* b);
+            expr* createImpliesOP(expr* a, expr* b);
 
             /*
              *
              */
-            app* createSelectOperator(expr* x, expr* y);
+            app* createSelectOP(expr* x, expr* y);
 
             int canBeOptimized_LHS(
                     int i, int startPos, int j,
@@ -2093,14 +2049,14 @@ namespace smt {
              * Given a flat,
              * generate its array name
              */
-            std::string generateFlatArray(std::pair<expr*, int> a);
-            expr* getExprVarFlatArray(std::pair<expr*, int> a);
-            expr* getExprVarFlatArray(expr* e);
+            std::string gen_flat_arr(std::pair<expr*, int> a);
+            expr* get_var_flat_array(std::pair<expr*, int> a);
+            expr* get_var_flat_array(expr* e);
             expr* get_bound_str_int_control_var();
             expr* get_bound_p_control_var();
             expr* get_bound_q_control_var();
 
-            app* createITEOperator(expr* c, expr* t, expr* e);
+            app* createITEOP(expr* c, expr* t, expr* e);
             /*
             * First base case
             */
