@@ -2694,42 +2694,42 @@ namespace smt {
                 }
 
                 // upward propagation
-                for (const auto & it : concat_astNode_map)
-                    if (!eqConcatList.contains(it.get_value())){ // this to break the case: "" . x = x
-                        expr *ts0 = it.get_key1();
-                        expr *ts1 = it.get_key2();
-                        expr *cc = it.get_value();
-
-                        expr *new_ts0 = ts0;
-                        expr *new_ts1 = ts1;
-                        bool updated = false;
-                        expr_ref_vector new_litems(m);
-                        new_litems.append(litems);
-
-                        // change first arg
-                        if (ts0 == *itor) {
-                            new_ts0 = new_concat;
-                            if (*itor != concat)
-                                new_litems.push_back(ctx.mk_eq_atom(concat, *itor));
-                            updated = true;
-                        }
-
-                        // change 2nd arg
-                        if (ts1 == *itor) {
-                            new_ts1 = new_concat;
-                            if (*itor != concat)
-                                new_litems.push_back(ctx.mk_eq_atom(concat, *itor));
-                            updated = true;
-                        }
-
-                        // propagate
-                        if (updated) {
-                            expr *newer_concat = u.str.mk_concat(new_ts0, new_ts1);
-                            m_trail.push_back(newer_concat);
-                            // check if it is feasible or not
-                            propagate_non_const(litems, cc, newer_concat);
-                        }
-                    }
+//                for (const auto & it : concat_astNode_map)
+//                    if (!eqConcatList.contains(it.get_value())){ // this to break the case: "" . x = x
+//                        expr *ts0 = it.get_key1();
+//                        expr *ts1 = it.get_key2();
+//                        expr *cc = it.get_value();
+//
+//                        expr *new_ts0 = ts0;
+//                        expr *new_ts1 = ts1;
+//                        bool updated = false;
+//                        expr_ref_vector new_litems(m);
+//                        new_litems.append(litems);
+//
+//                        // change first arg
+//                        if (ts0 == *itor) {
+//                            new_ts0 = new_concat;
+//                            if (*itor != concat)
+//                                new_litems.push_back(ctx.mk_eq_atom(concat, *itor));
+//                            updated = true;
+//                        }
+//
+//                        // change 2nd arg
+//                        if (ts1 == *itor) {
+//                            new_ts1 = new_concat;
+//                            if (*itor != concat)
+//                                new_litems.push_back(ctx.mk_eq_atom(concat, *itor));
+//                            updated = true;
+//                        }
+//
+//                        // propagate
+//                        if (updated) {
+//                            expr *newer_concat = u.str.mk_concat(new_ts0, new_ts1);
+//                            m_trail.push_back(newer_concat);
+//                            // check if it is feasible or not
+//                            propagate_non_const(litems, cc, newer_concat);
+//                        }
+//                    }
             }
         }
     }
@@ -17467,7 +17467,6 @@ namespace smt {
         ast_manager & m = get_manager();
 
         app * ex = e->get_owner();
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         if (axiomatized_terms.contains(ex)) {
             return;
         }
