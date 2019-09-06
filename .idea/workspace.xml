@@ -86,7 +86,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -101,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="151">
-              <caret line="6830" column="76" selection-start-line="6830" selection-start-column="76" selection-end-line="6830" selection-end-column="76" />
+            <state relative-caret-position="331">
+              <caret line="7040" column="42" selection-start-line="7040" selection-start-column="23" selection-end-line="7040" selection-end-column="42" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#454332#454637#0" expanded="true" />
@@ -183,7 +182,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collectCharRange(</find>
       <find>getExprVarFlatIter(</find>
       <find>0</find>
       <find>generateFlatSize(</find>
@@ -213,6 +211,7 @@
       <find>instantiate_ax</find>
       <find>quickpath_str2int</find>
       <find>quickpath_int2str</find>
+      <find>lower_bound_str_int</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -814,7 +813,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1587905000" />
+    <option name="totallyTimeSpent" value="1589477000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1220,8 +1219,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="151">
-          <caret line="6830" column="76" selection-start-line="6830" selection-start-column="76" selection-end-line="6830" selection-end-column="76" />
+        <state relative-caret-position="331">
+          <caret line="7040" column="42" selection-start-line="7040" selection-start-column="23" selection-end-line="7040" selection-end-column="42" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#454332#454637#0" expanded="true" />

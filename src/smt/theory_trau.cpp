@@ -6810,7 +6810,7 @@ namespace smt {
 
         expr_ref_vector conclusions(m);
 
-//        conclusions.push_back(lenConstraint);
+        conclusions.push_back(lenConstraint);
         conclusions.push_back(unrollConstraint);
         conclusions.push_back(createLessEqOP(num, mk_int(max_value)));
         conclusions.push_back(fill_0);
@@ -6828,7 +6828,7 @@ namespace smt {
      * int2str(str2int(int2str(x))) = int2str(x)
      * int2str(str2int("0" "0" ... int2str(x))) = int2str(x)
      */
-    bool theory_trau::quickpath_int2str(expr* num, expr* str, bool cached){ 
+    bool theory_trau::quickpath_int2str(expr* num, expr* str, bool cached){
         expr* arg0 = nullptr;
         if (u.str.is_stoi(num, arg0)){
             if (u.str.is_itos(arg0)) {
