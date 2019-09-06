@@ -475,7 +475,7 @@ namespace smt {
             expr_ref_vector assertingConstraints;
             rational str_int_bound;
 
-            UnderApproxState(ast_manager &m) : equalities(m), assertingConstraints(m), disequalities(m){
+            UnderApproxState(ast_manager &m) : equalities(m), disequalities(m), assertingConstraints(m){
 
             }
 
@@ -487,14 +487,16 @@ namespace smt {
                             str::state _currState,
                             rational _str_int_bound):
 
-                            eqLevel(_eqLevel),
+
                             eq_combination(_eq_combination),
-                            diseqLevel(_diseqLevel),
                             non_fresh_vars(_non_fresh_vars),
                             equalities(m),
                             disequalities(m),
-                            assertingConstraints(m),
                             currState(_currState),
+
+                            eqLevel(_eqLevel),
+                            diseqLevel(_diseqLevel),
+                            assertingConstraints(m),
                             str_int_bound(_str_int_bound){
                 assertingConstraints.reset();
                 equalities.reset();
@@ -670,8 +672,6 @@ namespace smt {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
                 }
 
-
-                sort * int_sort = m.mk_sort(th.m_autil.get_family_id(), INT_SORT);
                 sort * str_sort = th.u.str.mk_string_sort();
                 bool is_string = str_sort == m_sort;
 
@@ -848,9 +848,6 @@ namespace smt {
                             // free var
                             for (int i = 0; i < len_int; ++i)
                                 strValue = strValue + th.defaultChar;
-                            STRACE("str",
-                                   tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
-                                        << std::endl;);
                             return to_app(th.mk_string(strValue));
                         } else {
                             if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
@@ -1513,6 +1510,8 @@ namespace smt {
                 bool handle_str_int();
                     void handle_str2int(expr* num, expr* str);
                     void handle_int2str(expr* num, expr* str);
+                        bool quickpath_str2int(expr* num, expr* str, bool cached = true);
+                        bool quickpath_int2str(expr* num, expr* str, bool cached = true);
                         expr* unroll_str2int(expr* n);
                         expr* unroll_str_int(expr* num, expr* str);
                         expr* valid_str_int(expr* str);
@@ -1859,7 +1858,7 @@ namespace smt {
                 /*
                  *
                  */
-                expr* toConstraint_non_fresh_Var(
+                expr* toConstraint_non_fresh_var(
                         std::pair<expr*, int> a, /* const or regex */
                         std::vector<std::pair<expr*, int>> elementNames, /* have non_fresh_ var, do not have const */
                         std::map<expr*, int> non_fresh_Variables,
@@ -2177,12 +2176,6 @@ namespace smt {
                 */
                 bool appear_in_eqs(std::set<expr*> s, expr* var);
 
-                bool appear_in_all_eqs(std::set<expr*> s, expr* var);
-
-                /*
-                * true if it has subvars
-                */
-                bool has_sub_var(expr* var);
                 bool is_important_concat(expr* e, std::set<std::pair<expr*, int>> non_fresh_vars);
                 bool is_trivial_combination(expr* v, std::set<expr*> eq, std::set<std::pair<expr*, int>> non_fresh_vars);
                 std::set<expr*> refine_eq_set(
