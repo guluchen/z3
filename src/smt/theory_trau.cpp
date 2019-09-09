@@ -1066,11 +1066,13 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 // all all lens
+                expr_ref_vector addedNodes(m);
                 for (const auto& nn : dep)
                     if (ctx.e_internalized(nn)){
                         STRACE("str", tout << __LINE__ << " " << mk_pp(nn, m) << std::endl;);
                         if (is_important(nn) || is_regex_var(nn)) {
                             result->add_entry(ctx.get_enode(nn));
+                            addedNodes.push_back(nn);
                         }
                         // add sublen
 //                        if (ctx.e_internalized(mk_strlen(nn)))
@@ -1079,7 +1081,7 @@ namespace smt {
 
                 // add its ancestors
                 for (const auto& nn : backwardDep[owner])
-                    if (ctx.e_internalized(nn)){
+                    if (ctx.e_internalized(nn) && !addedNodes.contains(nn)){
                         result->add_entry(ctx.get_enode(nn));
                     }
 
@@ -6658,8 +6660,7 @@ namespace smt {
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    if (!m_autil.is_numeral(a->get_arg(1)))
-                        handle_str2int(a->get_arg(1), s);
+                    handle_str2int(a->get_arg(1), s);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
@@ -6668,8 +6669,8 @@ namespace smt {
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    if (!m_autil.is_numeral(a->get_arg(0)))
-                        handle_str2int(a->get_arg(0), s);
+                    handle_str2int(a->get_arg(0), s);
+
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
@@ -6683,8 +6684,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, get_manager()) << std::endl;);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    if (!m_autil.is_numeral(a->get_arg(1)))
-                        handle_str2int(a->get_arg(1), s);
+                    handle_str2int(a->get_arg(1), s);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
@@ -6693,8 +6693,7 @@ namespace smt {
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    if (!m_autil.is_numeral(a->get_arg(0)))
-                        handle_str2int(a->get_arg(0), s);
+                    handle_str2int(a->get_arg(0), s);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);

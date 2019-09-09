@@ -1077,7 +1077,7 @@ namespace smt {
                 // component var
                 for (const auto &ancestor : th.backwardDep[node]) {
                     STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
+                           tout << __LINE__ << " " << __FUNCTION__ << " "
                                 << mk_pp(ancestor, mg.get_manager())
                                 << std::endl;);
                     zstring ancestorValue;
