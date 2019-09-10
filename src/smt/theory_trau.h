@@ -1766,6 +1766,19 @@ namespace smt {
                 std::map<expr*, int> non_fresh_Variables,
                 bool optimizing);
 
+                bool generate_constraint02_const_regex(std::pair<expr*, int> a,
+                                                            std::vector<std::pair<expr*, int>> elementNames,
+                                                            int pMax,
+                                                            std::map<expr*, int> non_fresh_Variables,
+                                                            bool optimizing,
+                                                            expr_ref_vector &result);
+
+                bool generate_constraint02_var(std::pair<expr*, int> a,
+                                                    std::vector<std::pair<expr*, int>> elementNames,
+                                                    std::map<expr*, int> non_fresh_Variables,
+                                                    bool optimizing,
+                                                    expr_ref_vector &result);
+
                 bool is_reg_union(expr* n);
                 /*
                 * Input: split a string

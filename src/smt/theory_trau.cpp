@@ -10230,192 +10230,206 @@ namespace smt {
         }
 
         if (a.second < 0 && !is_reg_union(a.first)) { /* const string or regex */
-            /* check feasibility */
-            if (a.second > REGEX_CODE) {
-                zstring value;
-                u.str.is_string(a.first, value);
-                int max_lhs = value.length();
-                int min_rhs = 0;
-                for (unsigned i = 0; i < elementNames.size(); ++i) {
-                    if (elementNames[i].second % p_bound.get_int64() == -1) {
-                        u.str.is_string(elementNames[i].first, value);
-                        if (p_bound.get_int64() == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % p_bound.get_int64() == 0)
-                            min_rhs += value.length();
-                        else if (p_bound.get_int64() == 1)
-                            min_rhs += value.length();
-                    }
-                    else if (elementNames[i].second <= REGEX_CODE){
-                    }
+            if (!generate_constraint02_const_regex(a, elementNames, pMax, non_fresh_Variables, optimizing, result))
+                return nullptr;
+        }
+
+        else {
+            if (!generate_constraint02_var(a, elementNames, non_fresh_Variables, optimizing, result))
+                return nullptr;
+        }
+
+        expr_ref tmp(createAndOP(result), m);
+        return tmp.get();
+    }
+
+    bool theory_trau::generate_constraint02_const_regex(std::pair<expr*, int> a,
+                                                std::vector<std::pair<expr*, int>> elementNames,
+                                                int pMax,
+                                                std::map<expr*, int> non_fresh_Variables,
+                                                bool optimizing,
+                                                expr_ref_vector &result){
+        ast_manager &m = get_manager();
+        if (a.second > REGEX_CODE) {
+            zstring value;
+            u.str.is_string(a.first, value);
+            int max_lhs = value.length();
+            int min_rhs = 0;
+            for (unsigned i = 0; i < elementNames.size(); ++i) {
+                if (elementNames[i].second % p_bound.get_int64() == -1) {
+                    u.str.is_string(elementNames[i].first, value);
+                    if (p_bound.get_int64() == 2 && i + 1 < elementNames.size() && elementNames[i + 1].second % p_bound.get_int64() == 0)
+                        min_rhs += value.length();
+                    else if (p_bound.get_int64() == 1)
+                        min_rhs += value.length();
                 }
-                if (max_lhs < min_rhs) {
-                    return nullptr;
+                else if (elementNames[i].second <= REGEX_CODE){
                 }
+            }
+            if (max_lhs < min_rhs) {
+                return false;
+            }
+        }
+        else {
+            /* regex */
+            // TODO: to be completed
+        }
+
+        /* collect */
+        /* only handle the case of splitting const string into two parts*/
+        expr_ref_vector adds(m);
+        for (unsigned i = 0 ; i < elementNames.size(); ++i)
+            if (elementNames[i].second <= REGEX_CODE) {
+                expr_ref tmp(get_var_flat_size(elementNames[i]), m);
+                adds.push_back(tmp.get());
             }
             else {
-                /* regex */
-                // TODO: to be completed
+                zstring tmpValue;
+                if (u.str.is_string(elementNames[i].first, tmpValue) && tmpValue.length() == 1)
+                    adds.push_back(mk_int(1));
+                else
+                    adds.push_back(createMultiplyOP(get_var_flat_size(elementNames[i]),
+                                                    get_flat_iter(elementNames[i])));
             }
+        expr_ref len_lhs(m);
+        if (optimizing)
+            result.push_back(createEqualOP(get_var_size(a), createAddOP(adds)));
+        else
+            result.push_back(createEqualOP(get_var_flat_size(a), createAddOP(adds)));
 
-            /* collect */
-            /* only handle the case of splitting const string into two parts*/
-            expr_ref_vector adds(m);
-            for (unsigned i = 0 ; i < elementNames.size(); ++i)
-                if (elementNames[i].second <= REGEX_CODE) {
-                    expr_ref tmp(get_var_flat_size(elementNames[i]), m);
-                    adds.push_back(tmp.get());
-                }
-                else {
-                    zstring tmpValue;
-                    if (u.str.is_string(elementNames[i].first, tmpValue) && tmpValue.length() == 1)
-                        adds.push_back(mk_int(1));
-                    else
-                        adds.push_back(createMultiplyOP(get_var_flat_size(elementNames[i]),
-                                                             get_flat_iter(elementNames[i])));
-                }
-            expr_ref len_lhs(m);
-            if (optimizing)
-                result.push_back(createEqualOP(get_var_size(a), createAddOP(adds)));
-            else
-                result.push_back(createEqualOP(get_var_flat_size(a), createAddOP(adds)));
-
-            int splitType = choose_split_type(elementNames, non_fresh_Variables, a.first);
-            /*
-             * 0: No const, No non_fresh_ var
-             * 1: const		No non_fresh_ var
-             * 2: no const, non_fresh_ var
-             * 3: have both
-             */
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-            std::vector<std::vector<int>> allPossibleSplits;
-            expr_ref_vector strSplits(m);
-            expr* reg = nullptr;
-            switch (splitType) {
-                case SIMPLE_CASE:
-                    if (is_internal_regex_var(a.first, reg))
-                        result.push_back(toConstraint_non_fresh_var(
-                                a, elementNames,
-                                non_fresh_Variables,
-                                optimizing,
-                                pMax));
-                    break;
-                case NON_FRESH__ONLY:
-                    /* handle non_fresh_ var */
+        int splitType = choose_split_type(elementNames, non_fresh_Variables, a.first);
+        /*
+         * 0: No const, No non_fresh_ var
+         * 1: const		No non_fresh_ var
+         * 2: no const, non_fresh_ var
+         * 3: have both
+         */
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        std::vector<std::vector<int>> allPossibleSplits;
+        expr_ref_vector strSplits(m);
+        expr* reg = nullptr;
+        switch (splitType) {
+            case SIMPLE_CASE:
+                if (is_internal_regex_var(a.first, reg))
                     result.push_back(toConstraint_non_fresh_var(
                             a, elementNames,
                             non_fresh_Variables,
                             optimizing,
                             pMax));
-                    break;
-                case CONST_ONLY:
-                    /* handle const */
-                    allPossibleSplits = collect_splits(a, elementNames, optimizing);
-                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
-                        expr_ref_vector tmpp(m);
-                        tmpp.append(toConstraint_Nonon_fresh_Var(a, elementNames, allPossibleSplits[i], optimizing));
-                        strSplits.push_back(createAndOP(tmpp));
-                    }
-                    if (strSplits.size() > 0)
-                        result.push_back(createOrOP(strSplits));
-                    else
-                        return nullptr;
-                    break;
-
-                case 3:
-                    /* handle non_fresh_ var */
-                    /* handle const */
-                    allPossibleSplits = collect_splits(a, elementNames, optimizing);
-                    for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
-                        /* check feasibility */
-                        strSplits.push_back(
-                                toConstraint_havingnon_fresh_Var_andConst(
-                                        a,
-                                        elementNames,
-                                        allPossibleSplits[i],
-                                        non_fresh_Variables,
-                                        optimizing,
-                                        pMax));
-                    }
-                    if (strSplits.size() > 0)
-                        result.push_back(createOrOP(strSplits));
-                    else
-                        return nullptr;
-                    break;
-                default:
-                    SASSERT (false);
-                    break;
-            }
-        }
-
-        else {
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-
-            /* do not need AND */
-            /* result = sum (length) */
-            expr_ref_vector adds(m);
-            for (unsigned i = 0; i < elementNames.size(); ++i) {
-                bool skip = false;
-                if (i < elementNames.size() - 1) {
-                    if (elementNames[i].first == elementNames[i + 1].first &&
-                        ((elementNames[i].second >= 0 && elementNames[i].second + 1 == elementNames[i + 1].second) ||
-                         (elementNames[i].second < 0 && elementNames[i].second - 1 == elementNames[i + 1].second))) {
-
-                        if (elementNames[i].second < 0) {
-                            zstring valueStr;
-                            u.str.is_string(elementNames[i].first, valueStr);
-                            adds.push_back(mk_int(valueStr.length()));
-                        }
-                        else {
-                            adds.push_back(mk_strlen(elementNames[i].first));
-                        }
-                        ++i;
-                        skip = true;
-                    }
+                break;
+            case NON_FRESH__ONLY:
+                /* handle non_fresh_ var */
+                result.push_back(toConstraint_non_fresh_var(
+                        a, elementNames,
+                        non_fresh_Variables,
+                        optimizing,
+                        pMax));
+                break;
+            case CONST_ONLY:
+                /* handle const */
+                allPossibleSplits = collect_splits(a, elementNames, optimizing);
+                for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
+                    expr_ref_vector tmpp(m);
+                    tmpp.append(toConstraint_Nonon_fresh_Var(a, elementNames, allPossibleSplits[i], optimizing));
+                    strSplits.push_back(createAndOP(tmpp));
                 }
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                if (!skip) {
-                    if (elementNames[i].second <= REGEX_CODE) {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << std::endl;);
-                        expr_ref tmp(get_var_flat_size(elementNames[i]), m);
-                        adds.push_back(tmp);
+                if (strSplits.size() > 0)
+                    result.push_back(createOrOP(strSplits));
+                else
+                    return false;
+                break;
+
+            case 3:
+                /* handle non_fresh_ var */
+                /* handle const */
+                allPossibleSplits = collect_splits(a, elementNames, optimizing);
+                for (unsigned i = 0; i < allPossibleSplits.size(); ++i) {
+                    /* check feasibility */
+                    strSplits.push_back(
+                            toConstraint_havingnon_fresh_Var_andConst(
+                                    a,
+                                    elementNames,
+                                    allPossibleSplits[i],
+                                    non_fresh_Variables,
+                                    optimizing,
+                                    pMax));
+                }
+                if (strSplits.size() > 0)
+                    result.push_back(createOrOP(strSplits));
+                else
+                    return false;
+                break;
+            default:
+                SASSERT (false);
+                break;
+        }
+        return true;
+    }
+
+    bool theory_trau::generate_constraint02_var(std::pair<expr*, int> a,
+                                                 std::vector<std::pair<expr*, int>> elementNames,
+                                                 std::map<expr*, int> non_fresh_Variables,
+                                                 bool optimizing,
+                                                 expr_ref_vector &result){
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+
+        /* do not need AND */
+        /* result = sum (length) */
+        expr_ref_vector adds(m);
+        for (unsigned i = 0; i < elementNames.size(); ++i) {
+            bool skip = false;
+            if (i < elementNames.size() - 1) {
+                if (elementNames[i].first == elementNames[i + 1].first &&
+                    ((elementNames[i].second >= 0 && elementNames[i].second + 1 == elementNames[i + 1].second) ||
+                     (elementNames[i].second < 0 && elementNames[i].second - 1 == elementNames[i + 1].second))) {
+
+                    if (elementNames[i].second < 0) {
+                        zstring valueStr;
+                        u.str.is_string(elementNames[i].first, valueStr);
+                        adds.push_back(mk_int(valueStr.length()));
                     }
                     else {
-                        expr_ref tmp(createMultiplyOP(get_var_flat_size(elementNames[i]),
-                                                            get_flat_iter(elementNames[i])), m);
-                        adds.push_back(tmp);
+                        adds.push_back(mk_strlen(elementNames[i].first));
                     }
+                    ++i;
+                    skip = true;
                 }
-
+            }
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            if (!skip) {
+                if (elementNames[i].second <= REGEX_CODE) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(elementNames[i].first, m) << std::endl;);
+                    expr_ref tmp(get_var_flat_size(elementNames[i]), m);
+                    adds.push_back(tmp);
+                }
+                else {
+                    expr_ref tmp(createMultiplyOP(get_var_flat_size(elementNames[i]),
+                                                  get_flat_iter(elementNames[i])), m);
+                    adds.push_back(tmp);
+                }
             }
 
-            std::string tmpstr = (non_fresh_Variables.find(a.first) != non_fresh_Variables.end()) ? " non_fresh_" : " not non_fresh_";
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << tmpstr << std::endl;);
-            expr_ref addexpr(createAddOP(adds), m);
-            if (optimizing)
-                result.push_back(createEqualOP(get_var_size(a), addexpr));
-            else
-                result.push_back(createEqualOP(get_var_flat_size(a), addexpr));
-            /* DO NOT care about empty flats or not*/
-
-            /* handle const for non_fresh_ variables*/
-            if (non_fresh_Variables.find(a.first) != non_fresh_Variables.end()) {
-                expr* tmp = unroll_non_fresh_variable(
-                        a, elementNames,
-                        non_fresh_Variables, optimizing);
-                result.push_back(tmp);
-            }
-
-            /* case 2 */
-//            adds.reset();
-//            expr_ref_vector ands(m);
-//            for (const auto& s : elementNames){
-//                ands.push_back(createEqualOP(get_var_flat_size(a), get_var_flat_size(s))); /* size = size */
-//                adds.push_back(get_flat_iter(s)); /* iter = sum iter*/
-//            }
-//            ands.push_back(createEqualOP(get_flat_iter(a), createAddOP(adds)));
         }
 
-        expr_ref tmp(createAndOP(result), m);
-        return tmp.get();
+        std::string tmpstr = (non_fresh_Variables.find(a.first) != non_fresh_Variables.end()) ? " non_fresh_" : " not non_fresh_";
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << tmpstr << std::endl;);
+        expr_ref addexpr(createAddOP(adds), m);
+        if (optimizing)
+            result.push_back(createEqualOP(get_var_size(a), addexpr));
+        else
+            result.push_back(createEqualOP(get_var_flat_size(a), addexpr));
+        /* DO NOT care about empty flats or not*/
+
+        /* handle const for non_fresh_ variables*/
+        if (non_fresh_Variables.find(a.first) != non_fresh_Variables.end()) {
+            expr* tmp = unroll_non_fresh_variable(
+                    a, elementNames,
+                    non_fresh_Variables, optimizing);
+            result.push_back(tmp);
+        }
+
+        return true;
     }
 
     bool theory_trau::is_reg_union(expr* n){

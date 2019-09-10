@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="728">
-              <caret line="9404" column="31" selection-start-line="9404" selection-start-column="23" selection-end-line="9404" selection-end-column="31" />
+            <state relative-caret-position="370">
+              <caret line="10237" column="60" selection-start-line="10237" selection-start-column="60" selection-end-line="10237" selection-end-column="60" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -167,8 +167,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="327">
-              <caret line="1716" selection-start-line="1716" selection-end-line="1716" />
+            <state relative-caret-position="402">
+              <caret line="1775" column="21" selection-start-line="1775" selection-start-column="21" selection-end-line="1775" selection-end-column="21" />
             </state>
           </provider>
         </entry>
@@ -804,12 +804,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="11393000" />
+      <workItem from="1568106535994" duration="13019000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1615723000" />
+    <option name="totallyTimeSpent" value="1617349000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1204,15 +1204,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="327">
-          <caret line="1716" selection-start-line="1716" selection-end-line="1716" />
+        <state relative-caret-position="402">
+          <caret line="1775" column="21" selection-start-line="1775" selection-start-column="21" selection-end-line="1775" selection-end-column="21" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="728">
-          <caret line="9404" column="31" selection-start-line="9404" selection-start-column="23" selection-end-line="9404" selection-end-column="31" />
+        <state relative-caret-position="370">
+          <caret line="10237" column="60" selection-start-line="10237" selection-start-column="60" selection-end-line="10237" selection-end-column="60" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
