@@ -1565,6 +1565,7 @@ namespace smt {
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> non_fresh_vars,
                                            expr* premise);
+                bool is_long_equality(std::vector<expr*> eqs);
                 expr* convert_other_equalities(std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
                 expr* convert_long_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
                 expr* convert_const_nonfresh_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
@@ -1645,7 +1646,8 @@ namespace smt {
                 std::vector<std::pair<expr*, int>> rhs_elements,
                 std::map<expr*, int> non_fresh_Variables,
                 int p = PMAX);
-
+                std::string create_string_representation(std::vector<std::pair<expr*, int>> lhs_elements,
+                                                              std::vector<std::pair<expr*, int>> rhs_elements);
             /*
              * lhs: size of the lhs
              * rhs: size of the rhs
@@ -2077,16 +2079,7 @@ namespace smt {
             void setup_n_n_general(int lhs, int rhs);
             std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v);
             std::string expr2str(expr* node);
-            /*
-             * Create a general value that the component belongs to
-             */
-            std::string sumStringVector(expr* node);
-            std::string sumStringVector(ptr_vector<expr> list);
-            std::string sumStringVector(std::vector<expr*> list);
-            /*
-             * extra variables
-             */
-            std::vector<expr*> create_set_of_flat_variables(int flatP, std::map<expr*, int> &non_fresh_vars, expr* root);
+
             /*
              * Input: x . y
              * Output: flat . flat . flat . flat . flat . flat

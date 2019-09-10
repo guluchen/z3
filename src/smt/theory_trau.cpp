@@ -8227,40 +8227,34 @@ namespace smt {
 
         expr_ref_vector assertedConstraints(m);
         bool axiomAdded = false;
-        for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
-
-            /* different tactic for size of it->second */
-            const int maxPConsidered = 6;
-            unsigned maxLocal = findMaxP(it->second);
-            STRACE("str", tout << __LINE__ << " " << mk_pp(it->first, m) <<  " maxLocal:  " << maxLocal << std::endl;);
-
-            if (it->second.size() == 0)
+        for (const auto& vareq : eq_combination) {
+            if (vareq.second.size() == 0)
                 continue;
 
             expr* reg = nullptr;
-            if ((is_internal_regex_var(it->first, reg)) || is_important(it->first) || u.str.is_string(it->first)){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
-                expr *result = convert_const_nonfresh_equalities(it->first, it->second, non_fresh_vars);
+            if ((is_internal_regex_var(vareq.first, reg)) || is_important(vareq.first) || u.str.is_string(vareq.first)){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(vareq.first, m) << std::endl;);
+                expr *result = convert_const_nonfresh_equalities(vareq.first, vareq.second, non_fresh_vars);
                 assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
                 if (result == nullptr)
                     return true;
 
                 expr* regexExpr;
-                if (is_regex_var(it->first, regexExpr) && !is_internal_var(it->first)){
-                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(it->first, m) << " = " << mk_pp(regexExpr, m) << " " << getStdRegexStr(regexExpr) << std::endl;);
-                    convert_regex_equalities(regexExpr, it->first, non_fresh_vars, assertedConstraints, axiomAdded);
+                if (is_regex_var(vareq.first, regexExpr) && !is_internal_var(vareq.first)){
+                    STRACE("str", tout << __LINE__ <<  "  " << mk_pp(vareq.first, m) << " = " << mk_pp(regexExpr, m) << " " << getStdRegexStr(regexExpr) << std::endl;);
+                    convert_regex_equalities(regexExpr, vareq.first, non_fresh_vars, assertedConstraints, axiomAdded);
                 }
             }
-            else if (maxLocal > maxPConsidered) {
+            else if (is_long_equality(vareq.second)) {
                 /* add an eq = flat . flat . flat, then other equalities will compare with it */
-                expr *result = convert_long_equalities(it->first, it->second, non_fresh_vars);
+                expr *result = convert_long_equalities(vareq.first, vareq.second, non_fresh_vars);
                 assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
                 if (result == nullptr)
                     return true;
             }
             else {
                 STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
-                expr* result = convert_other_equalities(it->second, non_fresh_vars);
+                expr* result = convert_other_equalities(vareq.second, non_fresh_vars);
                 assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
                 if (result == nullptr)
                     return true;
@@ -8274,6 +8268,10 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    bool theory_trau::is_long_equality(std::vector<expr*> eqs){
+        return findMaxP(eqs) > 6;
     }
 
     expr* theory_trau::convert_other_equalities(std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars){
@@ -9253,20 +9251,16 @@ namespace smt {
             rhs_elements = tmpVector;
         }
 
-        std::string tmp01;
-        std::string tmp02;
-        for (unsigned i = 0; i < lhs_elements.size(); ++i)
-            tmp01 = tmp01 + "---" + expr2str(lhs_elements[i].first);
-        for (unsigned i = 0; i < rhs_elements.size(); ++i)
-            tmp01 = tmp01 + "+++" + expr2str(rhs_elements[i].first);
-        if (generatedEqualities.find(tmp01) == generatedEqualities.end() &&
+        std::string rep = create_string_representation(lhs_elements, rhs_elements);
+
+        if (generatedEqualities.find(rep) == generatedEqualities.end() &&
                 lhs_elements.size() != 0 && rhs_elements.size() != 0){
             expr_ref_vector cases = arrange(
                     lhs_elements,
                     rhs_elements,
                     non_fresh_Variables,
                     p);
-            generatedEqualities.emplace(tmp01);
+            generatedEqualities.emplace(rep);
             if (cases.size() > 0) {
                 expr_ref tmp(createOrOP(cases), m);
                 return tmp.get();
@@ -9277,6 +9271,16 @@ namespace smt {
         }
         else
             return m.mk_true();
+    }
+
+    std::string theory_trau::create_string_representation(std::vector<std::pair<expr*, int>> lhs_elements,
+                                                          std::vector<std::pair<expr*, int>> rhs_elements){
+        std::string ret = "";
+        for (unsigned i = 0; i < lhs_elements.size(); ++i)
+            ret = ret + "---" + expr2str(lhs_elements[i].first);
+        for (unsigned i = 0; i < rhs_elements.size(); ++i)
+            ret = ret + "+++" + expr2str(rhs_elements[i].first);
+        return ret;
     }
 
 
@@ -9296,7 +9300,7 @@ namespace smt {
             int p){
         /* first base case */
         ast_manager &m = get_manager();
-#if 1
+
         /* because arrangements are reusable, we use "general" functions */
         setup_0_0_general();
         /* second base case : first row and first column */
@@ -9308,7 +9312,6 @@ namespace smt {
         /* because of "general" functions, we need to refine arrangements */
         std::vector<Arrangment> possibleCases;
         get_arrangements(lhs_elements, rhs_elements, non_fresh_Variables, possibleCases);
-#endif
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
@@ -13307,94 +13310,6 @@ namespace smt {
         ast_manager &m = get_manager();
         ss << mk_pp(node, m);
         return ss.str();
-    }
-
-    /*
-     * Create a general value that the component belongs to
-     */
-    std::string theory_trau::sumStringVector(expr* node){
-        if (is_app(node)) {
-            app *ap = to_app(node);
-            if (u.str.is_concat(ap)){
-                ptr_vector<expr> list;
-                get_nodes_in_concat(node, list);
-                return sumStringVector(list);
-            }
-        }
-        std::vector<expr*> list;
-        list.push_back(node);
-        return sumStringVector(list);
-    }
-
-    std::string theory_trau::sumStringVector(ptr_vector<expr> list){
-        std::string value = "";
-        /* create a general value that the component belongs to */
-        for (unsigned k = 0; k < list.size(); ++k)
-            value = value + expr2str(list[k]) + " ";
-        return value;
-    }
-
-    std::string theory_trau::sumStringVector(std::vector<expr*> list){
-        std::string value = "";
-        /* create a general value that the component belongs to */
-        for (unsigned k = 0; k < list.size(); ++k)
-            value = value + expr2str(list[k]) + " ";
-        return value;
-    }
-
-    /*
-     * extra variables
-     */
-    std::vector<expr*> theory_trau::create_set_of_flat_variables(int flatP, std::map<expr*, int> &non_fresh_vars, expr* root) {
-        ast_manager &m = get_manager();
-        std::vector<expr*> result;
-        context & ctx   = get_context();
-
-        for (int i = 0 ; i < flatP; ++i) {
-            std::string varName = FLATPREFIX + std::to_string(noFlatVariables + i);
-            expr_ref newVar(m);
-            if (varMap_reverse.find(varName) == varMap_reverse.end()) {
-                newVar = mk_str_var(varName);
-                non_fresh_vars[newVar] = connectingSize;
-                varMap_reverse[varName] = newVar;
-
-                non_fresh_vars[root] = connectingSize;
-            }
-            else {
-                newVar = varMap_reverse[varName];
-                non_fresh_vars[newVar] = connectingSize;
-
-                non_fresh_vars[root] = connectingSize;
-            }
-
-            result.emplace_back(newVar);
-
-            std::string flatArr = gen_flat_arr(std::make_pair(newVar.get(), 0));
-            expr_ref v1(m);
-            if (arrMap_reverse.find(flatArr) != arrMap_reverse.end()) {
-                v1 = arrMap_reverse[flatArr];
-
-                if (!ctx.e_internalized(v1.get())) {
-                    ctx.internalize(v1, false);
-                }
-            }
-            else {
-                expr* arr_root = get_var_flat_array(root);
-                if (arr_root != nullptr) {
-                    v1 = arr_root;
-                    arrMap_reverse[flatArr] = v1;
-                }
-                else {
-                    v1 = mk_arr_var(flatArr);
-                    arrMap_reverse[flatArr] = v1;
-                }
-            }
-
-            arrMap[newVar.get()] = v1;
-
-        }
-        noFlatVariables = noFlatVariables + flatP;
-        return result;
     }
 
     std::vector<std::pair<expr*, int>> theory_trau::create_equality(expr* node, bool unfold){

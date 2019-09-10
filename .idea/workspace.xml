@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="486">
-              <caret line="8249" column="68" lean-forward="true" selection-start-line="8249" selection-start-column="68" selection-end-line="8249" selection-end-column="68" />
+            <state relative-caret-position="4054">
+              <caret line="9503" column="13" lean-forward="true" selection-start-line="9503" selection-start-column="13" selection-end-line="9503" selection-end-column="13" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -168,7 +168,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="402">
-              <caret line="1568" column="34" selection-start-line="1568" selection-start-column="34" selection-end-line="1568" selection-end-column="34" />
+              <caret line="2086" column="65" selection-start-line="2086" selection-start-column="65" selection-end-line="2086" selection-end-column="65" />
             </state>
           </provider>
         </entry>
@@ -177,12 +177,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>generateVarSize</find>
-      <find>gen_flat_iter</find>
-      <find>setupDefaultChar</find>
-      <find>initExcludeCharSet</find>
-      <find>init_exclude_char_set</find>
-      <find>initIncludeCharSet</find>
       <find>createExprFromRegexVector</find>
       <find>build_state_from_memo</find>
       <find>same_role</find>
@@ -207,6 +201,12 @@
       <find>axiomAdded</find>
       <find>convert_regex_equalities</find>
       <find>tmp</find>
+      <find>findMaxP</find>
+      <find>maxLocal</find>
+      <find>tmp02</find>
+      <find>create_set_of_flat_variables</find>
+      <find>sumStringVector</find>
+      <find>update_possible_arrangements</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -261,8 +261,8 @@
         <option value="$PROJECT_DIR$/src/smt/smt_setup.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_trau.h" />
+        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
       </list>
     </option>
   </component>
@@ -804,12 +804,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="3951000" />
+      <workItem from="1568106535994" duration="5676000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1608281000" />
+    <option name="totallyTimeSpent" value="1610006000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1205,14 +1205,14 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="402">
-          <caret line="1568" column="34" selection-start-line="1568" selection-start-column="34" selection-end-line="1568" selection-end-column="34" />
+          <caret line="2086" column="65" selection-start-line="2086" selection-start-column="65" selection-end-line="2086" selection-end-column="65" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="486">
-          <caret line="8249" column="68" lean-forward="true" selection-start-line="8249" selection-start-column="68" selection-end-line="8249" selection-end-column="68" />
+        <state relative-caret-position="4054">
+          <caret line="9503" column="13" lean-forward="true" selection-start-line="9503" selection-start-column="13" selection-end-line="9503" selection-end-column="13" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
