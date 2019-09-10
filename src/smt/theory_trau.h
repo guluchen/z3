@@ -1690,15 +1690,30 @@ namespace smt {
                                             std::vector<std::pair<expr*, int>> lhs_elements,
                                             std::vector<std::pair<expr*, int>> rhs_elements,
                                             std::map<expr*, int> non_fresh_Variables);
-
-            /*
-             *
-             * Flat = empty
-             */
-
-            expr* generate_constraint00(
-                    std::pair<expr*, int> a,
-                    std::string l_r_hs);
+                expr* to_arith_others(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                                           std::vector<int> left_arr,
+                                           std::vector<int> right_arr,
+                                           std::vector<std::pair<expr*, int>> lhs_elements,
+                                           std::vector<std::pair<expr*, int>> rhs_elements,
+                                           std::map<expr*, int> non_fresh_Variables);
+                expr* to_arith_emptyflats(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                              std::vector<int> left_arr,
+                              std::vector<int> right_arr,
+                              std::vector<std::pair<expr*, int>> lhs_elements,
+                              std::vector<std::pair<expr*, int>> rhs_elements,
+                              std::map<expr*, int> non_fresh_Variables);
+                expr* to_arith_right(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                              std::vector<int> left_arr,
+                              std::vector<int> right_arr,
+                              std::vector<std::pair<expr*, int>> lhs_elements,
+                              std::vector<std::pair<expr*, int>> rhs_elements,
+                              std::map<expr*, int> non_fresh_Variables);
+                expr* to_arith_left(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                              std::vector<int> left_arr,
+                              std::vector<int> right_arr,
+                              std::vector<std::pair<expr*, int>> lhs_elements,
+                              std::vector<std::pair<expr*, int>> rhs_elements,
+                              std::map<expr*, int> non_fresh_Variables);
 
             /*
              * Flat = Flat

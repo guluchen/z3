@@ -9410,175 +9410,120 @@ namespace smt {
                             std::map<expr*, int> non_fresh_Variables){
         ast_manager &m = get_manager();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
-        expr_ref_vector result_element(m);
+        expr_ref_vector result(m);
 
-        bool checkLeft[lhs_elements.size()];
-        bool checkRight[rhs_elements.size()];
+        bool checkLeft[10000];
+        bool checkRight[10000];
         memset(checkLeft, 0, sizeof checkLeft);
         memset(checkRight, 0, sizeof checkRight);
 
-        /* do the left */
-        for (unsigned i = 0; i < left_arr.size(); ++i)
-            if (!checkLeft[i]) {
-                if (left_arr[i] == SUMFLAT) { /* a = bx + cy */
-                    checkLeft[i] = true;
+        expr* leftConstraint = to_arith_left(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements,rhs_elements, non_fresh_Variables);
+        if (leftConstraint == nullptr)
+            return nullptr;
+        else
+            result.push_back(leftConstraint);
 
-                    std::vector<std::pair<expr*, int>> elements;
-                    unsigned j = 0;
-                    int startPos = -1;
-                    for (j = 0; j < right_arr.size(); ++j)
-                        if (right_arr[j] == (int)i) {
-                            if (startPos == -1)
-                                startPos = (int)j;
-                            elements.emplace_back(rhs_elements[j]);
-                            checkRight[j] = true;
-                        }
-                        else if (startPos >= 0)
-                            break;
-                    j--;
-                    /* select optimization mode */
-                    int optimizing = NONE;
-                    if (!flat_enabled)
-                        optimizing = canBeOptimized_LHS(i, startPos, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
+        expr* rightConstraint = to_arith_right(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements,rhs_elements, non_fresh_Variables);
+        if (rightConstraint == nullptr)
+            return nullptr;
+        else
+            result.push_back(rightConstraint);
 
-                    switch (optimizing) {
-                        case NONE:
-                            break;
-                        case LEFT_EMPTY:
-//                            if (left_arr.size() != 2)
-//                                return nullptr;
+        expr* emptyflats = to_arith_emptyflats(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements,rhs_elements, non_fresh_Variables);
+        if (emptyflats == nullptr)
+            return nullptr;
+        else
+            result.push_back(emptyflats);
 
-                            checkLeft[i - 1] = true;
-                            break;
-                        case LEFT_EQUAL:
-                            checkLeft[i - 1] = true;
-                            checkRight[startPos - 1] = true;
-                            elements.insert(elements.begin(), rhs_elements[startPos - 1]);
-                            break;
-                        case LEFT_SUM:
-                            SASSERT (false);
-                            break;
-                        case RIGHT_EMPTY:
-                            checkLeft[i + 1] = true;
-                            break;
-                        case RIGHT_EQUAL:
-                            return nullptr; // duplicate case
-                            checkLeft[i + 1] = true;
-                            checkRight[j + 1] = true;
-                            elements.emplace_back(rhs_elements[j + 1]);
-                            STRACE("str", tout << __LINE__ <<  "  RIGHT_EQUAL: elements size: " << elements.size() << std::endl;);
-                            break;
-                        case RIGHT_SUM:
-                            return nullptr; // duplicate case
-                            checkLeft[i + 1] = true;
-                            for (unsigned k = j + 1; k < right_arr.size(); ++k)
-                                if (right_arr[k] == (int)i + 1) {
-                                    elements.emplace_back(rhs_elements[k]);
-                                    checkRight[k] = true;
-                                }
-                                else
-                                    break;
-                            break;
-                        default:
-                        SASSERT (false);
-                            break;
-                    }
+        expr* others = to_arith_others(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements,rhs_elements, non_fresh_Variables);
+        if (others == nullptr)
+            return nullptr;
+        else
+            result.push_back(others);
 
-                    expr_ref tmp(generate_constraint02(
-                            lhs_elements[i],
-                            elements,
-                            p,
-                            non_fresh_Variables,
-                            optimizing != NONE), m);
-
-                    if (tmp == nullptr) { /* cannot happen due to const */
-                        STRACE("str", tout << __LINE__ <<  " 02 because of lhs@i: " << i << std::endl;);
-                        return nullptr;
-                    }
-                    else
-                        STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
-                    result_element.push_back(tmp);
-
-                }
+        for (unsigned i = 0 ; i < rhs_elements.size(); ++i)
+            if (checkRight[i] == false) {
+                STRACE("str", tout << __LINE__ <<  " error rhs@i: " << i << std::endl;);
+                SASSERT (false);
             }
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
-        /* do the right */
-        for (unsigned i = 0; i < right_arr.size(); ++i)
-            if (!checkRight[i]){
-                if (right_arr[i] == SUMFLAT) { /* a = bx + cy */
-                    checkRight[i] = true;
-
-                    std::vector<std::pair<expr*, int>> elements;
-                    unsigned j = 0;
-                    int startPos = -1;
-                    for (j = 0; j < left_arr.size(); ++j)
-                        if (left_arr[j] == (int)i) {
-                            if (startPos == -1)
-                                startPos = (int)j;
-                            elements.emplace_back(lhs_elements[j]);
-                            checkLeft[j] = true;
-                        }
-                        else if (startPos >= 0)
-                            break;
-                    j--;
-                    /* select optimization mode */
-                    int optimizing = NONE;
-                    if (!flat_enabled)
-                        canBeOptimized_RHS(j, startPos, i, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
-                    switch (optimizing) {
-                        case NONE:
-                            break;
-                        case LEFT_EMPTY:
-//                            if (right_arr.size() != 2)
-//                                return nullptr;
-                            checkRight[i - 1] = true;
-                            break;
-                        case LEFT_EQUAL:
-                            checkRight[i - 1] = true;
-                            checkLeft[startPos - 1] = true;
-                            elements.insert(elements.begin(), lhs_elements[startPos - 1]);
-                            break;
-                        case LEFT_SUM:
-                            SASSERT (false);
-                            break;
-                        case RIGHT_EMPTY:
-                            checkRight[i + 1] = true;
-                            break;
-                        case RIGHT_EQUAL:
-                            return nullptr; // duplicate case
-                            checkRight[i + 1] = true;
-                            checkLeft[j + 1] = true;
-                            elements.emplace_back(lhs_elements[j + 1]);
-                            break;
-                        case RIGHT_SUM:
-                            return nullptr; // duplicate case
-                            checkRight[i + 1] = true;
-                            for (unsigned k = j + 1; k < left_arr.size(); ++k)
-                                if (left_arr[k] == (int)i + 1) {
-                                    elements.emplace_back(lhs_elements[k]);
-                                    checkLeft[k] = true;
-                                }
-                            break;
-                        default:
-                            SASSERT (false);
-                            break;
-                    }
-                    expr_ref tmp(generate_constraint02(
-                            rhs_elements[i],
-                            elements,
-                            p,
-                            non_fresh_Variables, optimizing != NONE), m);
-                    if (tmp == nullptr) { /* cannot happen due to const */
-                        STRACE("str", tout << __LINE__ <<  " 02 because of rhs@i: " << i << std::endl;);
-                        return nullptr;
-                    }
-                    STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
-                    result_element.push_back(tmp);
-                }
+        for (unsigned i = 0 ; i < lhs_elements.size(); ++i)
+            if (checkLeft[i] == false) {
+                STRACE("str", tout << __LINE__ <<  " error lhs@i: " << i << std::endl;);
+                SASSERT (false);
             }
 
+        return createAndOP(result);
+    }
+
+    expr* theory_trau::to_arith_others(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                                           std::vector<int> left_arr,
+                                           std::vector<int> right_arr,
+                                           std::vector<std::pair<expr*, int>> lhs_elements,
+                                           std::vector<std::pair<expr*, int>> rhs_elements,
+                                           std::map<expr*, int> non_fresh_Variables){
+        ast_manager &m = get_manager();
+        expr_ref_vector result(m);
+        for (unsigned i = 0 ; i < lhs_elements.size(); ++i)
+            if (checkLeft[i] == false) {
+                checkLeft[i] = true;
+                checkRight[left_arr[i]] = true;
+
+                unsigned j = 0;
+                for (j = 0; j < right_arr.size(); ++j)
+                    if (right_arr[j] == (int)i) {
+                        checkRight[j] = true;
+                        break;
+                    }
+
+                /* select optimization mode */
+                int optimizing = canBeOptimized_LHS(i, -1, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+                switch (optimizing) {
+                    case NONE:
+                        break;
+                    case LEFT_EMPTY:
+                    SASSERT (false);
+                        break;
+                    case LEFT_EQUAL:
+                    SASSERT (false);
+                        break;
+                    case LEFT_SUM:
+                    SASSERT (false);
+                        break;
+                    case RIGHT_EMPTY:
+                    SASSERT (false);
+                        break;
+                    case RIGHT_EQUAL:
+                        checkLeft[i + 1] = true;
+                        checkRight[j + 1] = true;
+                        break;
+                    case RIGHT_SUM:
+                    SASSERT (false);
+                        break;
+                    default:
+                    SASSERT (false);
+                        break;
+                }
+                expr* tmp = generate_constraint01(
+                        lhs_elements[i],
+                        (std::pair<expr*, int>)rhs_elements[left_arr[i]],
+                        p,
+                        non_fresh_Variables,
+                        optimizing != NONE);
+                if (tmp == nullptr) { /* cannot happen due to const */
+                    return nullptr;
+                }
+                result.push_back(tmp);
+            }
+        return createAndOP(result);
+    }
+
+    expr* theory_trau::to_arith_emptyflats(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                                           std::vector<int> left_arr,
+                                           std::vector<int> right_arr,
+                                           std::vector<std::pair<expr*, int>> lhs_elements,
+                                           std::vector<std::pair<expr*, int>> rhs_elements,
+                                           std::map<expr*, int> non_fresh_Variables){
+        ast_manager &m = get_manager();
         for (unsigned i = 0; i < left_arr.size(); ++i)
             if (!checkLeft[i]) {
                 if (left_arr[i] == EMPTYFLAT) {
@@ -9629,80 +9574,187 @@ namespace smt {
                 }
             }
 
-
-        STRACE("str", tout << __LINE__ <<  " Do the rest " << std::endl;);
-        /* do the rest */
-        /* do not need AND */
-        for (unsigned int i = 0 ; i < lhs_elements.size(); ++i)
-            if (checkLeft[i] == false) {
-                checkLeft[i] = true;
-                checkRight[left_arr[i]] = true;
-
-                unsigned j = 0;
-                for (j = 0; j < right_arr.size(); ++j)
-                    if (right_arr[j] == (int)i) {
-                        checkRight[j] = true;
-                        break;
-                    }
-
-                /* select optimization mode */
-                int optimizing = canBeOptimized_LHS(i, -1, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
-                switch (optimizing) {
-                    case NONE:
-                        break;
-                    case LEFT_EMPTY:
-                    SASSERT (false);
-                        break;
-                    case LEFT_EQUAL:
-                    SASSERT (false);
-                        break;
-                    case LEFT_SUM:
-                    SASSERT (false);
-                        break;
-                    case RIGHT_EMPTY:
-                    SASSERT (false);
-                        break;
-                    case RIGHT_EQUAL:
-                        checkLeft[i + 1] = true;
-                        checkRight[j + 1] = true;
-                        break;
-                    case RIGHT_SUM:
-                        SASSERT (false);
-                        break;
-                    default:
-                    SASSERT (false);
-                        break;
-                }
-                expr* tmp = generate_constraint01(
-                        lhs_elements[i],
-                        (std::pair<expr*, int>)rhs_elements[left_arr[i]],
-                        p,
-                        non_fresh_Variables,
-                        optimizing != NONE);
-                if (tmp == nullptr) { /* cannot happen due to const */
-                    return nullptr;
-                }
-                result_element.push_back(tmp);
-            }
-
-        for (unsigned i = 0 ; i < rhs_elements.size(); ++i)
-            if (checkRight[i] == false) {
-                STRACE("str", tout << __LINE__ <<  " error rhs@i: " << i << std::endl;);
-                SASSERT (false);
-            }
-        /* sum up */
-        return createAndOP(result_element);
+        return m.mk_true();
     }
 
-    /*
-	 *
-	 * Flat = empty
-	 */
+    expr* theory_trau::to_arith_right(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                                     std::vector<int> left_arr,
+                                     std::vector<int> right_arr,
+                                     std::vector<std::pair<expr*, int>> lhs_elements,
+                                     std::vector<std::pair<expr*, int>> rhs_elements,
+                                     std::map<expr*, int> non_fresh_Variables){
+        ast_manager &m = get_manager();
+        expr_ref_vector result(m);
+        for (unsigned i = 0; i < right_arr.size(); ++i)
+            if (!checkRight[i]){
+                if (right_arr[i] == SUMFLAT) { /* a = bx + cy */
+                    checkRight[i] = true;
 
-    expr* theory_trau::generate_constraint00(
-            std::pair<expr*, int> a,
-            std::string l_r_hs){
-        return createEqualOP(m_autil.mk_int(0), get_var_flat_size(a));
+                    std::vector<std::pair<expr*, int>> elements;
+                    unsigned j = 0;
+                    int startPos = -1;
+                    for (j = 0; j < left_arr.size(); ++j)
+                        if (left_arr[j] == (int)i) {
+                            if (startPos == -1)
+                                startPos = (int)j;
+                            elements.emplace_back(lhs_elements[j]);
+                            checkLeft[j] = true;
+                        }
+                        else if (startPos >= 0)
+                            break;
+                    j--;
+                    /* select optimization mode */
+                    int optimizing = NONE;
+                    if (!flat_enabled)
+                        canBeOptimized_RHS(j, startPos, i, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
+                    switch (optimizing) {
+                        case NONE:
+                            break;
+                        case LEFT_EMPTY:
+//                            if (right_arr.size() != 2)
+//                                return nullptr;
+                            checkRight[i - 1] = true;
+                            break;
+                        case LEFT_EQUAL:
+                            checkRight[i - 1] = true;
+                            checkLeft[startPos - 1] = true;
+                            elements.insert(elements.begin(), lhs_elements[startPos - 1]);
+                            break;
+                        case LEFT_SUM:
+                        SASSERT (false);
+                            break;
+                        case RIGHT_EMPTY:
+                            checkRight[i + 1] = true;
+                            break;
+                        case RIGHT_EQUAL:
+                            return nullptr; // duplicate case
+                            checkRight[i + 1] = true;
+                            checkLeft[j + 1] = true;
+                            elements.emplace_back(lhs_elements[j + 1]);
+                            break;
+                        case RIGHT_SUM:
+                            return nullptr; // duplicate case
+                            checkRight[i + 1] = true;
+                            for (unsigned k = j + 1; k < left_arr.size(); ++k)
+                                if (left_arr[k] == (int)i + 1) {
+                                    elements.emplace_back(lhs_elements[k]);
+                                    checkLeft[k] = true;
+                                }
+                            break;
+                        default:
+                        SASSERT (false);
+                            break;
+                    }
+                    expr_ref tmp(generate_constraint02(
+                            rhs_elements[i],
+                            elements,
+                            p,
+                            non_fresh_Variables, optimizing != NONE), m);
+                    if (tmp == nullptr) { /* cannot happen due to const */
+                        STRACE("str", tout << __LINE__ <<  " 02 because of rhs@i: " << i << std::endl;);
+                        return nullptr;
+                    }
+                    STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
+                    result.push_back(tmp);
+                }
+            }
+        return createAndOP(result);
+    }
+
+    expr* theory_trau::to_arith_left(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
+                                     std::vector<int> left_arr,
+                                     std::vector<int> right_arr,
+                                     std::vector<std::pair<expr*, int>> lhs_elements,
+                                     std::vector<std::pair<expr*, int>> rhs_elements,
+                                     std::map<expr*, int> non_fresh_Variables){
+        ast_manager &m = get_manager();
+        expr_ref_vector result(m);
+        for (unsigned i = 0; i < left_arr.size(); ++i)
+            if (!checkLeft[i]) {
+                if (left_arr[i] == SUMFLAT) { /* a = bx + cy */
+                    checkLeft[i] = true;
+
+                    std::vector<std::pair<expr*, int>> elements;
+                    unsigned j = 0;
+                    int startPos = -1;
+                    for (j = 0; j < right_arr.size(); ++j)
+                        if (right_arr[j] == (int)i) {
+                            if (startPos == -1)
+                                startPos = (int)j;
+                            elements.emplace_back(rhs_elements[j]);
+                            checkRight[j] = true;
+                        }
+                        else if (startPos >= 0)
+                            break;
+                    j--;
+                    /* select optimization mode */
+                    int optimizing = NONE;
+                    if (!flat_enabled)
+                        optimizing = canBeOptimized_LHS(i, startPos, j, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements), vectorExpr2vectorStr(rhs_elements));
+                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
+
+                    switch (optimizing) {
+                        case NONE:
+                            break;
+                        case LEFT_EMPTY:
+//                            if (left_arr.size() != 2)
+//                                return nullptr;
+
+                            checkLeft[i - 1] = true;
+                            break;
+                        case LEFT_EQUAL:
+                            checkLeft[i - 1] = true;
+                            checkRight[startPos - 1] = true;
+                            elements.insert(elements.begin(), rhs_elements[startPos - 1]);
+                            break;
+                        case LEFT_SUM:
+                        SASSERT (false);
+                            break;
+                        case RIGHT_EMPTY:
+                            checkLeft[i + 1] = true;
+                            break;
+                        case RIGHT_EQUAL:
+                            return nullptr; // duplicate case
+                            checkLeft[i + 1] = true;
+                            checkRight[j + 1] = true;
+                            elements.emplace_back(rhs_elements[j + 1]);
+                            STRACE("str", tout << __LINE__ <<  "  RIGHT_EQUAL: elements size: " << elements.size() << std::endl;);
+                            break;
+                        case RIGHT_SUM:
+                            return nullptr; // duplicate case
+                            checkLeft[i + 1] = true;
+                            for (unsigned k = j + 1; k < right_arr.size(); ++k)
+                                if (right_arr[k] == (int)i + 1) {
+                                    elements.emplace_back(rhs_elements[k]);
+                                    checkRight[k] = true;
+                                }
+                                else
+                                    break;
+                            break;
+                        default:
+                        SASSERT (false);
+                            break;
+                    }
+
+                    expr_ref tmp(generate_constraint02(
+                            lhs_elements[i],
+                            elements,
+                            p,
+                            non_fresh_Variables,
+                            optimizing != NONE), m);
+
+                    if (tmp == nullptr) { /* cannot happen due to const */
+                        STRACE("str", tout << __LINE__ <<  " 02 because of lhs@i: " << i << std::endl;);
+                        return nullptr;
+                    }
+                    else
+                        STRACE("str", tout << __LINE__ <<  " done 02 " << i << std::endl;);
+                    result.push_back(tmp);
+
+                }
+            }
+        return createAndOP(result);
     }
 
     /*
