@@ -8229,8 +8229,6 @@ namespace smt {
         bool axiomAdded = false;
         for (std::map<expr*, std::vector<expr*>>::iterator it = eq_combination.begin(); it != eq_combination.end(); ++it) {
 
-            std::string tmp = " ";
-
             /* different tactic for size of it->second */
             const int maxPConsidered = 6;
             unsigned maxLocal = findMaxP(it->second);
@@ -8238,116 +8236,34 @@ namespace smt {
 
             if (it->second.size() == 0)
                 continue;
+
             expr* reg = nullptr;
             if ((is_internal_regex_var(it->first, reg)) || is_important(it->first) || u.str.is_string(it->first)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(it->first, m) << std::endl;);
-                /* compare with others */
-                expr* root_tmp = find_equivalent_variable(it->first);
-                for (const auto& element: it->second) {
-                    if (element == it->first && !u.str.is_concat(element)){
-                        continue;
-                    }
-                    ptr_vector<expr> lhs;
-                    ptr_vector<expr> rhs;
-                    optimize_equality(root_tmp, element, lhs, rhs);
-                    std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
-                    std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
-                    expr* containKey = nullptr;
-                    rational lenVal;
-                    zstring rootStr;
-                    if (u.str.is_string(root_tmp, rootStr) && is_contain_equality(element, containKey) && get_len_value(containKey, lenVal)){
-                        expr *result = const_contains_key(rootStr, getMostLeftNodeInConcat(element), containKey, lenVal);
-                        assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
-                        if (result == nullptr)
-                            return true;
-                    }
-                    else {
-                        expr *result = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
-                        assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
-                        if (result == nullptr)
-                            return true;
-                    }
-                }
+                expr *result = convert_const_nonfresh_equalities(it->first, it->second, non_fresh_vars);
+                assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                if (result == nullptr)
+                    return true;
 
                 expr* regexExpr;
                 if (is_regex_var(it->first, regexExpr) && !is_internal_var(it->first)){
                     STRACE("str", tout << __LINE__ <<  "  " << mk_pp(it->first, m) << " = " << mk_pp(regexExpr, m) << " " << getStdRegexStr(regexExpr) << std::endl;);
-                    //std::vector<std::vector<zstring>> regexElements = combine_const_str(refineVectors(parse_regex_components(remove_star_in_star(getStdRegexStr(regexExpr)))));
-                    std::vector<expr*> regexElements = combine_const_str(parse_regex_components(remove_star_in_star(regexExpr)));
-                    expr_ref_vector ors(m);
-                    for (const auto& v : regexElements){
-                        ptr_vector <expr> elements;
-                        get_nodes_in_reg_concat(v, elements);
-                        ptr_vector<expr> lhs;
-                        ptr_vector<expr> rhs;
-                        optimize_equality(it->first, elements, lhs, rhs);
-                        std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
-                        std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
-
-                        expr* result = equality_to_arith(lhs_elements,
-                                                         rhs_elements,
-                                                         non_fresh_vars);
-
-                        if (result != nullptr) {
-                            expr_ref tmp(result, m);
-                            ors.push_back(tmp);
-                        }
-                    }
-
-                    if (ors.size() > 0) {
-                        expr_ref tmp(createOrOP(ors), m);
-                        assertedConstraints.push_back(tmp);
-                        assert_axiom(tmp.get(), m.mk_true());
-                    }
+                    convert_regex_equalities(regexExpr, it->first, non_fresh_vars, assertedConstraints, axiomAdded);
                 }
             }
             else if (maxLocal > maxPConsidered) {
                 /* add an eq = flat . flat . flat, then other equalities will compare with it */
-
-                std::vector<std::pair<expr*, int>> lhs_elements = create_equality(it->first, false);
-                uState.non_fresh_vars.insert(std::make_pair(it->first, connectingSize));
-                non_fresh_vars.insert(std::make_pair(it->first, connectingSize));
-                mk_and_setup_arr(it->first, non_fresh_vars);
-
-                /* compare with others */
-                for (const auto& element: it->second) {
-                    std::vector<std::pair<expr*, int>> rhs_elements = create_equality(element);
-                    expr* result = equality_to_arith(
-                            lhs_elements,
-                            rhs_elements,
-                            non_fresh_vars
-                    );
-                    assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
-                    if (result == nullptr)
-                        return true;
-                }
+                expr *result = convert_long_equalities(it->first, it->second, non_fresh_vars);
+                assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                if (result == nullptr)
+                    return true;
             }
             else {
                 STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
-                /* work as usual */
-                for (unsigned i = 0; i < it->second.size(); ++i)
-                    for (unsigned j = i + 1; j < it->second.size(); ++j) {
-                        /* optimize: find longest common prefix and posfix */
-                        ptr_vector<expr> lhs;
-                        ptr_vector<expr> rhs;
-                        optimize_equality(it->second[i], it->second[j], lhs, rhs);
-
-                        if (lhs.size() == 0 || rhs.size() == 0){
-                            continue;
-                        }
-
-                        /* [i] = [j] */
-                        std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
-                        std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
-                        expr* result = equality_to_arith(
-                                lhs_elements,
-                                rhs_elements,
-                                non_fresh_vars
-                        );
-                        assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
-                        if (result == nullptr)
-                            return true;
-                    }
+                expr* result = convert_other_equalities(it->second, non_fresh_vars);
+                assert_breakdown_combination(result, premise, assertedConstraints, axiomAdded);
+                if (result == nullptr)
+                    return true;
             }
 
         }
@@ -8358,6 +8274,131 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
+    }
+
+    expr* theory_trau::convert_other_equalities(std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars){
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
+        expr_ref_vector ands(m);
+        /* work as usual */
+        for (unsigned i = 0; i < eqs.size(); ++i)
+            for (unsigned j = i + 1; j < eqs.size(); ++j) {
+                /* optimize: find longest common prefix and posfix */
+                ptr_vector<expr> lhs;
+                ptr_vector<expr> rhs;
+                optimize_equality(eqs[i], eqs[j], lhs, rhs);
+
+                if (lhs.size() == 0 || rhs.size() == 0){
+                    continue;
+                }
+
+                /* [i] = [j] */
+                std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
+                std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
+                expr* result = equality_to_arith(
+                        lhs_elements,
+                        rhs_elements,
+                        non_fresh_vars
+                );
+                if (result == nullptr)
+                    return nullptr;
+                else
+                    ands.push_back(result);
+            }
+        return createAndOP(ands);
+    }
+
+    expr* theory_trau::convert_long_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars){
+        /* add an eq = flat . flat . flat, then other equalities will compare with it */
+        ast_manager &m = get_manager();
+        expr_ref_vector ands(m);
+        std::vector<std::pair<expr*, int>> lhs_elements = create_equality(var, false);
+        uState.non_fresh_vars.insert(std::make_pair(var, connectingSize));
+        non_fresh_vars.insert(std::make_pair(var, connectingSize));
+        mk_and_setup_arr(var, non_fresh_vars);
+
+        /* compare with others */
+        for (const auto& element: eqs) {
+            std::vector<std::pair<expr*, int>> rhs_elements = create_equality(element);
+            expr* result = equality_to_arith(
+                    lhs_elements,
+                    rhs_elements,
+                    non_fresh_vars
+            );
+
+            if (result == nullptr)
+                return nullptr;
+            else
+                ands.push_back(result);
+        }
+        return createAndOP(ands);
+    }
+
+    expr* theory_trau::convert_const_nonfresh_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars){
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
+        expr_ref_vector ands(m);
+        expr* root_tmp = find_equivalent_variable(var);
+        for (const auto& element: eqs) {
+            if (element == var && !u.str.is_concat(element)){
+                continue;
+            }
+            ptr_vector<expr> lhs;
+            ptr_vector<expr> rhs;
+            optimize_equality(root_tmp, element, lhs, rhs);
+            std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
+            std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
+            expr* containKey = nullptr;
+            rational lenVal;
+            zstring rootStr;
+            if (u.str.is_string(root_tmp, rootStr) && is_contain_equality(element, containKey) && get_len_value(containKey, lenVal)){
+                expr* tmp = const_contains_key(rootStr, getMostLeftNodeInConcat(element), containKey, lenVal);
+                if (tmp == nullptr)
+                    return nullptr;
+                else
+                    ands.push_back(tmp);
+            }
+            else {
+                expr* tmp = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
+                if (tmp == nullptr)
+                    return nullptr;
+                else
+                    ands.push_back(tmp);
+            }
+        }
+        return createAndOP(ands);
+    }
+
+    void theory_trau::convert_regex_equalities(expr* regexExpr, expr* var, std::map<expr*, int> non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded){
+        ast_manager &m = get_manager();
+        //std::vector<std::vector<zstring>> regexElements = combine_const_str(refineVectors(parse_regex_components(remove_star_in_star(getStdRegexStr(regexExpr)))));
+        std::vector<expr*> regexElements = combine_const_str(parse_regex_components(remove_star_in_star(regexExpr)));
+        expr_ref_vector ors(m);
+        for (const auto& v : regexElements){
+            ptr_vector <expr> elements;
+            get_nodes_in_reg_concat(v, elements);
+            ptr_vector<expr> lhs;
+            ptr_vector<expr> rhs;
+            optimize_equality(var, elements, lhs, rhs);
+            std::vector<std::pair<expr*, int>> lhs_elements = create_equality(lhs);
+            std::vector<std::pair<expr*, int>> rhs_elements = create_equality(rhs);
+
+            expr* result = equality_to_arith(lhs_elements,
+                                             rhs_elements,
+                                             non_fresh_vars);
+
+            if (result != nullptr) {
+                expr_ref tmp(result, m);
+                ors.push_back(tmp);
+            }
+        }
+
+        if (ors.size() > 0) {
+            expr_ref tmp(createOrOP(ors), m);
+            assertedConstraints.push_back(tmp);
+            assert_axiom(tmp.get());
+            axiomAdded = true;
+        }
     }
 
     expr* theory_trau::const_contains_key(zstring c, expr* pre_contain, expr* key, rational len){

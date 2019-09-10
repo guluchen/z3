@@ -2,78 +2,78 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
-      <config projectName="Z3" targetName="subpaving" />
-      <config projectName="Z3" targetName="pattern" />
-      <config projectName="Z3" targetName="lp_tst" />
-      <config projectName="Z3" targetName="ast" />
-      <config projectName="Z3" targetName="util" />
-      <config projectName="Z3" targetName="fuzzing" />
-      <config projectName="Z3" targetName="ackermannization" />
-      <config projectName="Z3" targetName="test-z3" />
-      <config projectName="Z3" targetName="z3_tptp5" />
-      <config projectName="Z3" targetName="automata" />
-      <config projectName="Z3" targetName="transforms" />
-      <config projectName="Z3" targetName="c_maxsat_example" />
-      <config projectName="Z3" targetName="macros" />
-      <config projectName="Z3" targetName="sat_solver" />
+      <config projectName="Z3" targetName="euclid" />
       <config projectName="Z3" targetName="core_tactics" />
       <config projectName="Z3" targetName="hilbert" />
-      <config projectName="Z3" targetName="cmd_context" />
-      <config projectName="Z3" targetName="smt" />
-      <config projectName="Z3" targetName="opt" />
-      <config projectName="Z3" targetName="ddnf" />
-      <config projectName="Z3" targetName="bv_tactics" />
-      <config projectName="Z3" targetName="api_dll" />
-      <config projectName="Z3" targetName="sat_tactic" />
-      <config projectName="Z3" targetName="extra_cmds" />
-      <config projectName="Z3" targetName="proofs" />
-      <config projectName="Z3" targetName="shell" />
-      <config projectName="Z3" targetName="arith_tactics" />
-      <config projectName="Z3" targetName="libz3" />
-      <config projectName="Z3" targetName="fpa" />
-      <config projectName="Z3" targetName="fpa_tactics" />
-      <config projectName="Z3" targetName="lp" />
-      <config projectName="Z3" targetName="interval" />
-      <config projectName="Z3" targetName="smt_tactic" />
+      <config projectName="Z3" targetName="lp_tst" />
+      <config projectName="Z3" targetName="realclosure" />
       <config projectName="Z3" targetName="proto_model" />
+      <config projectName="Z3" targetName="model" />
+      <config projectName="Z3" targetName="cmd_context" />
+      <config projectName="Z3" targetName="sls_tactic" />
+      <config projectName="Z3" targetName="lp" />
+      <config projectName="Z3" targetName="ast" />
       <config projectName="Z3" targetName="fd_solver" />
+      <config projectName="Z3" targetName="ddnf" />
+      <config projectName="Z3" targetName="portfolio" />
+      <config projectName="Z3" targetName="grobner" />
+      <config projectName="Z3" targetName="api_dll" />
+      <config projectName="Z3" targetName="solver" />
+      <config projectName="Z3" targetName="fpa_tactics" />
+      <config projectName="Z3" targetName="qe" />
+      <config projectName="Z3" targetName="subpaving" />
+      <config projectName="Z3" targetName="z3_tptp5" />
+      <config projectName="Z3" targetName="transforms" />
+      <config projectName="Z3" targetName="tab" />
+      <config projectName="Z3" targetName="rel" />
+      <config projectName="Z3" targetName="api" />
+      <config projectName="Z3" targetName="spacer" />
+      <config projectName="Z3" targetName="macros" />
+      <config projectName="Z3" targetName="smtlogic_tactics" />
+      <config projectName="Z3" targetName="subpaving_tactic" />
+      <config projectName="Z3" targetName="test-z3" />
+      <config projectName="Z3" targetName="proofs" />
+      <config projectName="Z3" targetName="clp" />
+      <config projectName="Z3" targetName="nlsat" />
+      <config projectName="Z3" targetName="util" />
+      <config projectName="Z3" targetName="shell" />
+      <config projectName="Z3" targetName="ufbv_tactic" />
+      <config projectName="Z3" targetName="opt" />
+      <config projectName="Z3" targetName="c_example" />
+      <config projectName="Z3" targetName="substitution" />
       <config projectName="Z3" targetName="bit_blaster" />
+      <config projectName="Z3" targetName="extra_cmds" />
+      <config projectName="Z3" targetName="simplex" />
+      <config projectName="Z3" targetName="tactic" />
+      <config projectName="Z3" targetName="rewriter" />
+      <config projectName="Z3" targetName="ackermannization" />
+      <config projectName="Z3" targetName="interval" />
+      <config projectName="Z3" targetName="pattern" />
+      <config projectName="Z3" targetName="fp" />
+      <config projectName="Z3" targetName="smt_tactic" />
+      <config projectName="Z3" targetName="smt_params" />
+      <config projectName="Z3" targetName="aig_tactic" />
+      <config projectName="Z3" targetName="nlsat_tactic" />
+      <config projectName="Z3" targetName="muz" />
+      <config projectName="Z3" targetName="fpa" />
+      <config projectName="Z3" targetName="uninstall" />
+      <config projectName="Z3" targetName="libz3" />
+      <config projectName="Z3" targetName="sat_solver" />
+      <config projectName="Z3" targetName="smt" />
+      <config projectName="Z3" targetName="sat_tactic" />
+      <config projectName="Z3" targetName="normal_forms" />
+      <config projectName="Z3" targetName="c_maxsat_example" />
+      <config projectName="Z3" targetName="bv_tactics" />
+      <config projectName="Z3" targetName="cpp_example" />
+      <config projectName="Z3" targetName="fuzzing" />
       <config projectName="Z3" targetName="sat" />
       <config projectName="Z3" targetName="smt2parser" />
-      <config projectName="Z3" targetName="portfolio" />
-      <config projectName="Z3" targetName="smtlogic_tactics" />
-      <config projectName="Z3" targetName="bmc" />
-      <config projectName="Z3" targetName="qe" />
-      <config projectName="Z3" targetName="solver" />
-      <config projectName="Z3" targetName="fp" />
-      <config projectName="Z3" targetName="substitution" />
-      <config projectName="Z3" targetName="aig_tactic" />
-      <config projectName="Z3" targetName="polynomial" />
-      <config projectName="Z3" targetName="realclosure" />
-      <config projectName="Z3" targetName="nlsat" />
-      <config projectName="Z3" targetName="simplex" />
-      <config projectName="Z3" targetName="spacer" />
-      <config projectName="Z3" targetName="rel" />
-      <config projectName="Z3" targetName="tab" />
-      <config projectName="Z3" targetName="sls_tactic" />
-      <config projectName="Z3" targetName="subpaving_tactic" />
-      <config projectName="Z3" targetName="clp" />
-      <config projectName="Z3" targetName="rewriter" />
       <config projectName="Z3" targetName="dataflow" />
-      <config projectName="Z3" targetName="uninstall" />
-      <config projectName="Z3" targetName="euclid" />
-      <config projectName="Z3" targetName="nlsat_tactic" />
-      <config projectName="Z3" targetName="api" />
+      <config projectName="Z3" targetName="arith_tactics" />
+      <config projectName="Z3" targetName="automata" />
       <config projectName="Z3" targetName="parser_util" />
-      <config projectName="Z3" targetName="cpp_example" />
-      <config projectName="Z3" targetName="tactic" />
-      <config projectName="Z3" targetName="grobner" />
-      <config projectName="Z3" targetName="c_example" />
-      <config projectName="Z3" targetName="model" />
-      <config projectName="Z3" targetName="muz" />
-      <config projectName="Z3" targetName="normal_forms" />
-      <config projectName="Z3" targetName="ufbv_tactic" />
-      <config projectName="Z3" targetName="smt_params" />
+      <config projectName="Z3" targetName="bmc" />
+      <config projectName="Z3" targetName="polynomial" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
@@ -100,12 +101,10 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="860">
-              <caret line="6695" column="53" selection-start-line="6695" selection-start-column="53" selection-end-line="6695" selection-end-column="53" />
+            <state relative-caret-position="486">
+              <caret line="8249" column="68" lean-forward="true" selection-start-line="8249" selection-start-column="68" selection-end-line="8249" selection-end-column="68" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
-                <element signature="e#454332#454637#0" expanded="true" />
-                <element signature="e#482916#483330#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -114,7 +113,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="315">
+            <state relative-caret-position="13785">
               <caret line="919" column="5" selection-start-line="919" selection-start-column="5" selection-end-line="919" selection-end-column="5" />
             </state>
           </provider>
@@ -123,7 +122,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="399">
+            <state relative-caret-position="2745">
               <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
             </state>
           </provider>
@@ -132,7 +131,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="314">
+            <state relative-caret-position="53280">
               <caret line="3552" selection-start-line="3552" selection-end-line="3552" />
             </state>
           </provider>
@@ -141,7 +140,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="340">
+            <state relative-caret-position="4635">
               <caret line="309" column="22" selection-start-line="309" selection-start-column="22" selection-end-line="309" selection-end-column="22" />
             </state>
           </provider>
@@ -159,7 +158,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="150">
+            <state relative-caret-position="11610">
               <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
             </state>
           </provider>
@@ -168,12 +167,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="905">
-              <caret line="2574" selection-start-line="2574" selection-end-line="2574" />
-              <folding>
-                <element signature="e#47#62#0" expanded="true" />
-                <element signature="e#13185#13197#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="402">
+              <caret line="1568" column="34" selection-start-line="1568" selection-start-column="34" selection-end-line="1568" selection-end-column="34" />
             </state>
           </provider>
         </entry>
@@ -182,11 +177,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>collect_char</find>
-      <find>collectAllPossibleSplits_const</find>
-      <find>collect_const_split</find>
-      <find>get_var_flat_array</find>
-      <find>generateFlatIter</find>
       <find>generateVarSize</find>
       <find>gen_flat_iter</find>
       <find>setupDefaultChar</find>
@@ -212,6 +202,11 @@
       <find>non_fresh_vars</find>
       <find>getStrValue</find>
       <find>leafNodes</find>
+      <find>assertedConstraints</find>
+      <find>premise</find>
+      <find>axiomAdded</find>
+      <find>convert_regex_equalities</find>
+      <find>tmp</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -266,22 +261,23 @@
         <option value="$PROJECT_DIR$/src/smt/smt_setup.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_str.h" />
-        <option value="$PROJECT_DIR$/src/smt/theory_trau.h" />
         <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
+        <option value="$PROJECT_DIR$/src/smt/theory_trau.h" />
       </list>
     </option>
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="2560" />
-    <option name="height" value="877" />
+    <option name="height" value="1417" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -310,7 +306,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -809,20 +804,20 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
+      <workItem from="1568106535994" duration="3951000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1603856000" />
+    <option name="totallyTimeSpent" value="1608281000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="2" y="24" width="2560" height="1417" extended-state="6" />
+    <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49630997" visible="true" weight="0.17275615" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49630997" visible="true" weight="0.17394757" />
       <window_info id="Structure" order="1" sideWeight="0.5032258" side_tool="true" weight="0.17275615" />
       <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" visible="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.18188679" />
       <window_info anchor="bottom" id="Run" order="2" />
@@ -834,7 +829,8 @@
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50080776" side_tool="true" weight="0.10231023" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32981133" />
-      <window_info anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" weight="0.053503186" />
+      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.05283019" />
+      <window_info anchor="bottom" id="Messages" order="12" visible="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.2466243" />
@@ -1000,13 +996,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="399">
-          <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/lbool.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="283">
@@ -1126,13 +1115,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="11445">
-          <caret line="763" selection-start-line="763" selection-end-line="763" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3315">
@@ -1171,13 +1153,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_case_split_queue.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="597">
@@ -1185,46 +1160,61 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="314">
-          <caret line="3552" selection-start-line="3552" selection-end-line="3552" />
+        <state relative-caret-position="13785">
+          <caret line="919" column="5" selection-start-line="919" selection-start-column="5" selection-end-line="919" selection-end-column="5" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_setup.cpp">
+    <entry file="file://$PROJECT_DIR$/src/ast/ast_util.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="315">
-          <caret line="919" column="5" selection-start-line="919" selection-start-column="5" selection-end-line="919" selection-end-column="5" />
+        <state relative-caret-position="2745">
+          <caret line="183" column="7" selection-start-line="183" selection-start-column="7" selection-end-line="183" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="53280">
+          <caret line="3552" selection-start-line="3552" selection-end-line="3552" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
+        <state relative-caret-position="4635">
           <caret line="309" column="22" selection-start-line="309" selection-start-column="22" selection-end-line="309" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="11445">
+          <caret line="763" selection-start-line="763" selection-end-line="763" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="11610">
+          <caret line="774" column="18" selection-start-line="774" selection-start-column="18" selection-end-line="774" selection-end-column="18" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="905">
-          <caret line="2574" selection-start-line="2574" selection-end-line="2574" />
-          <folding>
-            <element signature="e#47#62#0" expanded="true" />
-            <element signature="e#13185#13197#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="402">
+          <caret line="1568" column="34" selection-start-line="1568" selection-start-column="34" selection-end-line="1568" selection-end-column="34" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="860">
-          <caret line="6695" column="53" selection-start-line="6695" selection-start-column="53" selection-end-line="6695" selection-end-column="53" />
+        <state relative-caret-position="486">
+          <caret line="8249" column="68" lean-forward="true" selection-start-line="8249" selection-start-column="68" selection-end-line="8249" selection-end-column="68" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
-            <element signature="e#454332#454637#0" expanded="true" />
-            <element signature="e#482916#483330#0" expanded="true" />
           </folding>
         </state>
       </provider>

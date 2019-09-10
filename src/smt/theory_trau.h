@@ -1565,6 +1565,10 @@ namespace smt {
             bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
                                            std::map<expr*, int> non_fresh_vars,
                                            expr* premise);
+                expr* convert_other_equalities(std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
+                expr* convert_long_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
+                expr* convert_const_nonfresh_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
+                void convert_regex_equalities(expr* regexExpr, expr* var, std::map<expr*, int> non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 expr* const_contains_key(zstring c, expr* pre_contain, expr* key, rational len);
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var);
