@@ -16865,7 +16865,7 @@ namespace smt {
 
             expr_ref case1_rw(case1, m);
             rw(case1_rw);
-            assert_axiom(case1_rw);
+            m_delayed_assertions_todo.push_back(case1_rw);
 
             expr_ref case2_rw(case2, m);
             rw(case2_rw);

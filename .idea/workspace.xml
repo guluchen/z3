@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
     </list>
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="453">
-              <caret line="8405" column="44" lean-forward="true" selection-start-line="8405" selection-start-column="44" selection-end-line="8405" selection-end-column="44" />
+            <state relative-caret-position="363">
+              <caret line="16866" column="26" selection-start-line="16866" selection-start-column="26" selection-end-line="16866" selection-end-column="26" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -176,7 +175,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>mk_value</find>
       <find>handle_int2str</find>
       <find>instantiate_ax</find>
       <find>quickpath_str2int</find>
@@ -199,13 +197,14 @@
       <find>result_element</find>
       <find>indexof</find>
       <find>mk_ge</find>
-      <find>m_delayed_assertions_todo</find>
       <find>conclusion</find>
       <find>underapproximation</find>
       <find>print_eq_combination</find>
       <find>get_eqc_value</find>
       <find>constValue</find>
       <find>convert_const_nonfresh_equalities</find>
+      <find>sync_index_head</find>
+      <find>m_delayed_assertions_todo</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -810,12 +809,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="20061000" />
+      <workItem from="1568106535994" duration="20949000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1624391000" />
+    <option name="totallyTimeSpent" value="1625279000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1217,8 +1216,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="453">
-          <caret line="8405" column="44" lean-forward="true" selection-start-line="8405" selection-start-column="44" selection-end-line="8405" selection-end-column="44" />
+        <state relative-caret-position="363">
+          <caret line="16866" column="26" selection-start-line="16866" selection-start-column="26" selection-end-line="16866" selection-end-column="26" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
