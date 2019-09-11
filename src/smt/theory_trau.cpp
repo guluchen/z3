@@ -8404,8 +8404,10 @@ namespace smt {
         int lenInt = len.get_int32();
 
         if (u.str.is_string(key, constKey)){
-            if (c.contains(constKey))
-                return get_manager().mk_true();
+            if (c.contains(constKey)) {
+                int index = c.indexof(constKey, 0);
+                return m_autil.mk_eq(mk_strlen(pre_contain), mk_int(index));
+            }
         }
         else if (lenInt > 0 && lenInt <= c.length()){
             expr_ref_vector ors(get_manager());
@@ -15526,6 +15528,7 @@ namespace smt {
                 expr_ref tmp(ctx.mk_eq_atom(object, constValue), m);
                 ctx.internalize(tmp, false);
                 causes[object].insert(tmp);
+                object = constValue;
             }
         }
 
@@ -15954,25 +15957,30 @@ namespace smt {
                     break;
                 }
             }
+
+            STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << std::endl;);
             m_library_aware_axiom_todo.reset();
 
             for (auto el : m_delayed_axiom_setup_terms) {
                 ctx.internalize(el, false);
                 set_up_axioms(el);
             }
+            STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << std::endl;);
             m_delayed_axiom_setup_terms.reset();
 
             for (expr * a : m_persisted_axiom_todo) {
                 assert_axiom(a);
             }
             m_persisted_axiom_todo.reset();
-
+            STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << std::endl;);
             if (search_started) {
                 for (auto const& el : m_delayed_assertions_todo) {
+                    STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << " " << mk_pp(el, get_manager()) << std::endl;);
                     assert_axiom(el);
                 }
                 m_delayed_assertions_todo.reset();
             }
+            STRACE("str", tout << __LINE__ << "  " << __FUNCTION__ << std::endl;);
         }
     }
 
@@ -16691,7 +16699,7 @@ namespace smt {
         //          indexOf = tlindex + |hd|,
         //      else indexOf = -1
         {
-            expr_ref premise1(m_autil.mk_gt(startIndex, zero), m);
+            expr_ref premise1(m_autil.mk_ge(startIndex, zero), m);
             expr_ref premise2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
             expr_ref _premise(m.mk_and(premise1, premise2), m);
             expr_ref premise(_premise);
@@ -16726,8 +16734,12 @@ namespace smt {
 
             expr_ref premise(u.str.mk_contains(arg0, arg1), m);
             ctx.internalize(premise, false);
-            expr_ref conclusion(m_autil.mk_ge(e, startIndex), m);
-            expr_ref containsAxiom(ctx.mk_eq_atom(premise, conclusion), m);
+            expr_ref_vector conclusion(m);
+            if (m_autil.is_numeral(startIndex))
+                conclusion.push_back(m_autil.mk_ge(e, startIndex));
+            else
+                return;
+            expr_ref containsAxiom(ctx.mk_eq_atom(premise, createAddOP(conclusion)), m);
             expr_ref finalAxiom(rewrite_implication(precondition, containsAxiom), m);
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
             m_delayed_assertions_todo.push_back(finalAxiom);
