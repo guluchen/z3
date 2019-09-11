@@ -4433,6 +4433,7 @@ namespace smt {
             if (val == -1) {
                 expr_ref premise(ctx.mk_eq_atom(S, eq_node), m);
                 expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(conclusion.get(), m) << std::endl;);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
@@ -4450,6 +4451,7 @@ namespace smt {
         ast_manager & m = get_manager();
         expr_ref_vector eqs(m);
         collect_eq_nodes(e, eqs);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         for (const auto& n : eqs){
             if (u.str.is_concat(n)) {
                 ptr_vector<expr> nodes;
@@ -4526,7 +4528,7 @@ namespace smt {
             int val = eval_invalid_str2int(a, eq_node);
             if (val == -1) {
                 expr_ref premise(ctx.mk_eq_atom(a, eq_node), m);
-                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                expr_ref conclusion(ctx.mk_eq_atom(N, m_autil.mk_numeral(rational::minus_one(), true)), m);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
