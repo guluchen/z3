@@ -1700,8 +1700,7 @@ namespace smt {
                               std::vector<int> left_arr,
                               std::vector<int> right_arr,
                               std::vector<std::pair<expr*, int>> lhs_elements,
-                              std::vector<std::pair<expr*, int>> rhs_elements,
-                              std::map<expr*, int> non_fresh_Variables);
+                              std::vector<std::pair<expr*, int>> rhs_elements);
                 expr* to_arith_right(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
                               std::vector<int> left_arr,
                               std::vector<int> right_arr,
@@ -1725,6 +1724,43 @@ namespace smt {
                     int pMax,
                     std::map<expr*, int> non_fresh_Variables,
                     bool optimizing);
+
+                void generate_constraint01_const_var(
+                        std::pair<expr*, int> a, std::pair<expr*, int> b,
+                        int pMax,
+                        std::map<expr*, int> non_fresh_Variables,
+                        bool optimizing,
+                        expr_ref_vector &result);
+
+                void generate_constraint01_const_const(
+                        std::pair<expr*, int> a, std::pair<expr*, int> b,
+                        bool optimizing,
+                        expr* nameA,
+                        expr_ref_vector &result);
+
+                expr* generate_constraint01_regex_head(
+                        std::pair<expr*, int> a, std::pair<expr*, int> b,
+                        expr* nameA);
+
+                expr* generate_constraint01_regex_tail(
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    expr* nameA);
+
+                expr* generate_constraint01_regex_regex(
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    expr* nameA);
+
+                expr* generate_constraint01_const_const(
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    expr* nameA);
+
+                void generate_constraint01_var_var(
+                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                    int pMax,
+                    std::map<expr*, int> non_fresh_Variables,
+                    bool optimizing,
+                    expr* nameA,
+                    expr_ref_vector &result);
 
             expr* generate_constraint_var_var(
                 std::pair<expr*, int> a,

@@ -9433,7 +9433,7 @@ namespace smt {
         else
             result.push_back(rightConstraint);
 
-        expr* emptyflats = to_arith_emptyflats(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements,rhs_elements, non_fresh_Variables);
+        expr* emptyflats = to_arith_emptyflats(checkLeft, checkRight, p, left_arr, right_arr, lhs_elements, rhs_elements);
         if (emptyflats == nullptr)
             return nullptr;
         else
@@ -9525,8 +9525,7 @@ namespace smt {
                                            std::vector<int> left_arr,
                                            std::vector<int> right_arr,
                                            std::vector<std::pair<expr*, int>> lhs_elements,
-                                           std::vector<std::pair<expr*, int>> rhs_elements,
-                                           std::map<expr*, int> non_fresh_Variables){
+                                           std::vector<std::pair<expr*, int>> rhs_elements){
         ast_manager &m = get_manager();
         for (unsigned i = 0; i < left_arr.size(); ++i)
             if (!checkLeft[i]) {
@@ -9814,245 +9813,276 @@ namespace smt {
 
         if (!isConstA && !isConstB) {
             /* size = size && it = it */
-
-            if (non_fresh_Variables.find(b.first) != non_fresh_Variables.end() &&
-                non_fresh_Variables.find(a.first) != non_fresh_Variables.end()){
-
-                if (!optimizing) {
-                    STRACE("str", tout << __LINE__ <<  " generateConstraint01: non_fresh_Var " << mk_pp(a.first, m) << " == non_fresh_Var " << mk_pp(b.first, m) << std::endl;);
-                    if (!flat_enabled)
-                        result.push_back(unroll_non_fresh_variable(b, {a}, non_fresh_Variables, optimizing, pMax));
-                    else {
-                        if ((string_int_vars.find(a.first) != string_int_vars.end() && a.second % p_bound.get_int64() == 1) ||
-                                (string_int_vars.find(b.first) != string_int_vars.end() && b.second % p_bound.get_int64() == 1))
-                            result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, str_int_bound));
-                        else
-                            result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, p_bound));
-                    }
-                }
-                else {
-                    if (!flat_enabled) {
-                        expr *arrA = get_var_flat_array(a);
-                        expr *arrB = get_var_flat_array(b);
-                        for (int i = 0; i < std::max(non_fresh_Variables[b.first], non_fresh_Variables[a.first]); ++i) {
-                            expr_ref_vector ors(m);
-                            ors.push_back(createEqualOP(createSelectOP(arrA, m_autil.mk_int(i)),
-                                                              createSelectOP(arrB, m_autil.mk_int(i))));
-                            ors.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
-                            result.push_back(createOrOP(ors));
-                        }
-                    }
-                    else {
-                        result.push_back(generate_constraint_var_var(a, b, pMax, p_bound));
-                    }
-                }
-            }
+            generate_constraint01_var_var(a, b, pMax, non_fresh_Variables, optimizing, nameA, result);
         }
         else if (isConstA && isConstB) {
-            zstring valA;
-            zstring valB;
-            u.str.is_string(a.first, valA);
-            u.str.is_string(b.first, valB);
-            if ((p_bound.get_int64() == 1 || optimizing) && valA != valB) /* const = const */
-                return nullptr;
-            expr_ref_vector possibleCases(m);
-
-            if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == -1){
-                expr* regex = reg;
-                unsigned length = 0;
-                if (u.re.is_plus(regex))
-                    length = 1;
-                while (length <= valB.length()) {
-                    zstring regexValue = valB.extract(0, length);
-                    if (match_regex(regex, regexValue)) {
-                        expr_ref_vector ands(m);
-                        ands.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                        for (int i = 0; i < length - 1; ++i) {
-                            // TODO arr vs arr
-                        }
-                        possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                    }
-                    length++;
-                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-                }
-            }
-            else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == 0){
-                expr* regex = reg;
-                unsigned length = 0;
-                if (u.re.is_plus(regex))
-                    length = 1;
-                while (length <= valB.length()) {
-                    zstring regexValue = valB.extract(valB.length() - length, length);
-                    if (match_regex(regex, regexValue)) {
-                        // TODO arr vs arr
-                        possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                    }
-                    length++;
-                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-                }
-            }
-            else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == -1){
-                expr* regex = reg;
-                unsigned length = 0;
-                if (u.re.is_plus(regex))
-                    length = 1;
-                while (length <= valA.length()) {
-                    zstring regexValue = valA.extract(0, length);
-                    if (match_regex(regex, regexValue)) {
-                        // TODO arr vs arr
-                        possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                    }
-                    length++;
-                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-                }
-            }
-            else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == 0){
-                expr* regex = reg;
-                unsigned length = 0;
-                if (u.re.is_plus(regex))
-                    length = 1;
-                while (length <= valA.length()) {
-                    zstring regexValue = valA.extract(valA.length() - length, length);
-                    if (match_regex(regex, regexValue)) {
-                        // TODO arr vs arr
-                        possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                    }
-                    length++;
-                    STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
-                }
-            }
-            else if (a.second <= REGEX_CODE && b.second <= REGEX_CODE) {
-                NOT_IMPLEMENTED_YET();
-                expr* regexA = nullptr;
-                is_internal_regex_var(a.first, regexA);
-                unsigned length = 0;
-                if (u.re.is_plus(regexA))
-                    length = 1;
-
-                expr* regexB = nullptr;
-                is_internal_regex_var(b.first, regexB);
-                if (u.re.is_plus(regexB))
-                    length = 1;
-
-                if (match_regex(regexA, regexB)) {
-                    std::vector<zstring> aComp;
-                    collect_alternative_components(regexA, aComp);
-                    std::vector<zstring> bComp;
-                    collect_alternative_components(regexB, bComp);
-
-                    int minA = 10000, minB = 10000, maxA = 0, maxB = 0;
-                    for (const auto& s : aComp) {
-                        minA = std::min(minA, (int)s.length());
-                        maxA = std::max(maxA, (int)s.length());
-                    }
-
-                    for (const auto& s : bComp) {
-                        minB = std::min(minB, (int)s.length());
-                        maxB = std::max(maxB, (int)s.length());
-                    }
-
-                    if (minA == maxA && minB == maxB) {
-                        unsigned lcdLength = lcd(minA, minB);
-                        possibleCases.push_back(createEqualOP(m_autil.mk_int(0), createModOP(nameA,
-                                                                                                         m_autil.mk_int(
-                                                                                                                 lcdLength))));
-                    }
-                }
-                else {
-                    possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(0)));
-                }
-            }
-            else if (!optimizing) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* head vs head */ {
-                    expr* realHaystack = nullptr;
-                    if (not_contain(a.first, b.first, realHaystack) || not_contain(b.first, a.first, realHaystack))
-                        return nullptr;
-
-
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                    for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
-                        if (valA.extract(0, i) == valB.extract(0, i)) {
-                            /* size can be from 0..i */
-                            possibleCases.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
-                        }
-                    }
-                }
-                else if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && b.second % p_bound.get_int64() == 0) /* head vs tail */ {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                    for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
-                        if (valA.extract(0, i) == valB.extract(valB.length() - i, i)) {
-                            /* size can be i */
-                            possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(i)));
-                        }
-                    }
-                }
-                else if (a.second % p_bound.get_int64() == 0 && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* tail vs head */ {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                    for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
-                        if (valB.extract(0, i) == valA.extract(valA.length() - i, i)) {
-                            /* size can be i */
-                            possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(i)));
-                        }
-                    }
-                }
-                else if (a.second % p_bound.get_int64() == 0 && b.second % p_bound.get_int64() == 0) /* tail vs tail */ {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-                    for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
-                        if (valA.extract(valA.length() - i, i) == valB.extract(valB.length() - i, i)) {
-                            /* size can be i */
-                            possibleCases.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
-                        }
-                    }
-                }
-            }
-            else {
-                SASSERT (optimizing);
-            }
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << possibleCases.size() << std::endl;);
-            /* create or constraint */
-            if ((int)possibleCases.size() == 0)
-                return nullptr;
-            else {
-                expr* tmpE = createOrOP(possibleCases);
-                if (tmpE != m.mk_false())
-                    result.push_back(createOrOP(possibleCases));
-                else
-                    return nullptr;
-            }
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << possibleCases.size() << std::endl;);
-            return createAndOP(result);
+            generate_constraint01_const_const(a, b, optimizing, nameA, result);
         }
 
         else if (isConstA) {
-            /* record characters for some special variables */
-            if (non_fresh_Variables.find(b.first) != non_fresh_Variables.end()){
-                std::vector<std::pair<expr*, int>> elements;
-                if (optimizing) {
-                    elements.emplace_back(std::make_pair(a.first, -1));
-                    elements.emplace_back(std::make_pair(a.first, -2));
-                }
-                else
-                    elements.emplace_back(a);
-                result.push_back(unroll_non_fresh_variable(b, elements, non_fresh_Variables, optimizing));
-            }
+            generate_constraint01_const_var(a, b, pMax, non_fresh_Variables, optimizing, result);
         }
 
         else { /* isConstB */
-            /* size = size && it = 1*/
-            if (non_fresh_Variables.find(a.first) != non_fresh_Variables.end()){
-                std::vector<std::pair<expr*, int>> elements;
-                if (optimizing) {
-                    elements.emplace_back(std::make_pair(b.first, -1));
-                    elements.emplace_back(std::make_pair(b.first, -2));
-                }
-                else
-                    elements.emplace_back(b);
-                result.push_back(unroll_non_fresh_variable(a, elements, non_fresh_Variables, optimizing));
-            }
+            generate_constraint01_const_var(b, a, pMax, non_fresh_Variables, optimizing, result);
         }
 
         return createAndOP(result);
+    }
+
+    void theory_trau::generate_constraint01_const_var(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            int pMax,
+            std::map<expr*, int> non_fresh_Variables,
+            bool optimizing,
+            expr_ref_vector &result){
+        if (non_fresh_Variables.find(b.first) != non_fresh_Variables.end()){
+            std::vector<std::pair<expr*, int>> elements;
+            if (optimizing) {
+                elements.emplace_back(std::make_pair(a.first, -1));
+                elements.emplace_back(std::make_pair(a.first, -2));
+            }
+            else
+                elements.emplace_back(a);
+            result.push_back(unroll_non_fresh_variable(b, elements, non_fresh_Variables, optimizing));
+        }
+    }
+
+    void theory_trau::generate_constraint01_const_const(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            bool optimizing,
+            expr* nameA,
+            expr_ref_vector &result){
+
+        ast_manager &m = get_manager();
+        if ((p_bound.get_int64() == 1 || optimizing) && a.first != b.first) /* const = const */ {
+            result.push_back(m.mk_false());
+            return;
+        }
+
+        expr* tmp = nullptr;
+        if (a.second <= REGEX_CODE && b.second <= REGEX_CODE) {
+            tmp = generate_constraint01_regex_regex(a, b, nameA);
+        }
+        else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == -1){
+            tmp = generate_constraint01_regex_head(a, b, nameA);
+        }
+        else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == 0){
+            tmp = generate_constraint01_regex_tail(a, b, nameA);
+        }
+        else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == -1){
+            tmp = generate_constraint01_regex_head(b, a, nameA);
+        }
+        else if (b.second <= REGEX_CODE && a.second % p_bound.get_int64() == 0){
+            tmp = generate_constraint01_regex_tail(b, a, nameA);
+        }
+        else if (!optimizing) {
+            tmp = generate_constraint01_const_const(a, b, nameA);
+        }
+        if (tmp == nullptr || tmp == m.mk_false())
+            result.push_back(m.mk_false());
+        else
+            result.push_back(tmp);
+
+    }
+
+    expr* theory_trau::generate_constraint01_regex_head(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            expr* nameA){
+        ast_manager &m = get_manager();
+        expr_ref_vector possibleCases(m);
+        zstring valB;
+        u.str.is_string(b.first, valB);
+        expr* regex = nullptr;
+        is_internal_regex_var(a.first, regex);
+        unsigned length = 0;
+        if (u.re.is_plus(regex))
+            length = 1;
+        while (length <= valB.length()) {
+            zstring regexValue = valB.extract(0, length);
+            if (match_regex(regex, regexValue)) {
+                expr_ref_vector ands(m);
+                ands.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
+                for (int i = 0; i < length - 1; ++i) {
+                    // TODO arr vs arr
+                }
+                possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
+            }
+            length++;
+            STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+        }
+        return createOrOP(possibleCases);
+    }
+
+    expr* theory_trau::generate_constraint01_regex_tail(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            expr* nameA){
+        ast_manager &m = get_manager();
+        expr_ref_vector possibleCases(m);
+        zstring valB;
+        u.str.is_string(b.first, valB);
+        expr* regex = nullptr;
+        is_internal_regex_var(a.first, regex);
+
+        unsigned length = 0;
+        if (u.re.is_plus(regex))
+            length = 1;
+        while (length <= valB.length()) {
+            zstring regexValue = valB.extract(valB.length() - length, length);
+            if (match_regex(regex, regexValue)) {
+                // TODO arr vs arr
+                possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
+            }
+            length++;
+            STRACE("str", tout << __LINE__ <<  "  accept: " << regexValue << std::endl;);
+        }
+        return createOrOP(possibleCases);
+    }
+
+    expr* theory_trau::generate_constraint01_regex_regex(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            expr* nameA){
+        NOT_IMPLEMENTED_YET();
+        ast_manager &m = get_manager();
+        expr_ref_vector possibleCases(m);
+        expr* regexA = nullptr;
+        is_internal_regex_var(a.first, regexA);
+        unsigned length = 0;
+        if (u.re.is_plus(regexA))
+            length = 1;
+
+        expr* regexB = nullptr;
+        is_internal_regex_var(b.first, regexB);
+        if (u.re.is_plus(regexB))
+            length = 1;
+
+        if (match_regex(regexA, regexB)) {
+            std::vector<zstring> aComp;
+            collect_alternative_components(regexA, aComp);
+            std::vector<zstring> bComp;
+            collect_alternative_components(regexB, bComp);
+
+            int minA = 10000, minB = 10000, maxA = 0, maxB = 0;
+            for (const auto& s : aComp) {
+                minA = std::min(minA, (int)s.length());
+                maxA = std::max(maxA, (int)s.length());
+            }
+
+            for (const auto& s : bComp) {
+                minB = std::min(minB, (int)s.length());
+                maxB = std::max(maxB, (int)s.length());
+            }
+
+            if (minA == maxA && minB == maxB) {
+                unsigned lcdLength = lcd(minA, minB);
+                possibleCases.push_back(createEqualOP(m_autil.mk_int(0), createModOP(nameA,
+                                                                                     m_autil.mk_int(
+                                                                                             lcdLength))));
+            }
+        }
+        else {
+            possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(0)));
+        }
+
+        return createOrOP(possibleCases);
+    }
+
+    expr* theory_trau::generate_constraint01_const_const(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            expr* nameA){
+        ast_manager &m = get_manager();
+        zstring valA;
+        zstring valB;
+        u.str.is_string(a.first, valA);
+        u.str.is_string(b.first, valB);
+        expr_ref_vector possibleCases(m);
+
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* head vs head */ {
+            expr* realHaystack = nullptr;
+            if (not_contain(a.first, b.first, realHaystack) || not_contain(b.first, a.first, realHaystack))
+                return nullptr;
+
+
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
+                if (valA.extract(0, i) == valB.extract(0, i)) {
+                    /* size can be from 0..i */
+                    possibleCases.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
+                }
+            }
+        }
+        else if ((a.second % p_bound.get_int64() == -1 || valA.length() == 1) && b.second % p_bound.get_int64() == 0) /* head vs tail */ {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
+                if (valA.extract(0, i) == valB.extract(valB.length() - i, i)) {
+                    /* size can be i */
+                    possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(i)));
+                }
+            }
+        }
+        else if (a.second % p_bound.get_int64() == 0 && (b.second % p_bound.get_int64()  == -1 || valB.length() == 1)) /* tail vs head */ {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
+                if (valB.extract(0, i) == valA.extract(valA.length() - i, i)) {
+                    /* size can be i */
+                    possibleCases.push_back(createEqualOP(nameA, m_autil.mk_int(i)));
+                }
+            }
+        }
+        else if (a.second % p_bound.get_int64() == 0 && b.second % p_bound.get_int64() == 0) /* tail vs tail */ {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+            for (int i = std::min(valA.length(), valB.length()); i >= 0; --i) {
+                if (valA.extract(valA.length() - i, i) == valB.extract(valB.length() - i, i)) {
+                    /* size can be i */
+                    possibleCases.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
+                }
+            }
+        }
+        return createOrOP(possibleCases);
+    }
+
+    void theory_trau::generate_constraint01_var_var(
+            std::pair<expr*, int> a, std::pair<expr*, int> b,
+            int pMax,
+            std::map<expr*, int> non_fresh_Variables,
+            bool optimizing,
+            expr* nameA,
+            expr_ref_vector &result){
+        ast_manager &m = get_manager();
+
+        if (non_fresh_Variables.find(b.first) != non_fresh_Variables.end() &&
+            non_fresh_Variables.find(a.first) != non_fresh_Variables.end()){
+
+            if (!optimizing) {
+                STRACE("str", tout << __LINE__ <<  " generateConstraint01: non_fresh_Var " << mk_pp(a.first, m) << " == non_fresh_Var " << mk_pp(b.first, m) << std::endl;);
+                if (!flat_enabled)
+                    result.push_back(unroll_non_fresh_variable(b, {a}, non_fresh_Variables, optimizing, pMax));
+                else {
+                    if ((string_int_vars.find(a.first) != string_int_vars.end() && a.second % p_bound.get_int64() == 1) ||
+                        (string_int_vars.find(b.first) != string_int_vars.end() && b.second % p_bound.get_int64() == 1))
+                        result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, str_int_bound));
+                    else
+                        result.push_back(generate_constraint_flat_flat(a, {b}, 0, pMax, p_bound));
+                }
+            }
+            else {
+                if (!flat_enabled) {
+                    expr *arrA = get_var_flat_array(a);
+                    expr *arrB = get_var_flat_array(b);
+                    for (int i = 0; i < std::max(non_fresh_Variables[b.first], non_fresh_Variables[a.first]); ++i) {
+                        expr_ref_vector ors(m);
+                        ors.push_back(createEqualOP(createSelectOP(arrA, m_autil.mk_int(i)),
+                                                    createSelectOP(arrB, m_autil.mk_int(i))));
+                        ors.push_back(createLessEqOP(nameA, m_autil.mk_int(i)));
+                        result.push_back(createOrOP(ors));
+                    }
+                }
+                else {
+                    result.push_back(generate_constraint_var_var(a, b, pMax, p_bound));
+                }
+            }
+        }
     }
 
     expr* theory_trau::generate_constraint_var_var(
