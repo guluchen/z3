@@ -2199,6 +2199,7 @@ namespace smt {
                     std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 std::vector<zstring> collect_all_inequalities(expr* nn);
+                    bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(expr* n, zstring s);
                 bool collect_not_contains(expr* nn);
@@ -2380,6 +2381,7 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
+        void instantiate_axiom_indexof_basecase(enode * _e);
         expr* is_regex_plus_breakdown(expr* e);
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);

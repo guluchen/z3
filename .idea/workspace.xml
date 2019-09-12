@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="231">
-              <caret line="9767" column="44" selection-start-line="9767" selection-start-column="23" selection-end-line="9767" selection-end-column="44" />
+            <state relative-caret-position="409">
+              <caret line="16710" lean-forward="true" selection-start-line="16710" selection-end-line="16710" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -168,7 +168,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="402">
-              <caret line="1698" column="22" selection-start-line="1698" selection-start-column="22" selection-end-line="1698" selection-end-column="22" />
+              <caret line="2375" column="13" selection-start-line="2375" selection-start-column="13" selection-end-line="2375" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -177,12 +177,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>getStrValue</find>
-      <find>leafNodes</find>
-      <find>assertedConstraints</find>
-      <find>premise</find>
-      <find>axiomAdded</find>
-      <find>convert_regex_equalities</find>
       <find>tmp</find>
       <find>findMaxP</find>
       <find>maxLocal</find>
@@ -207,6 +201,12 @@
       <find>generate_constraint01_const_const</find>
       <find>generate_constraint01_var_var</find>
       <find>to_arith_emptyflats</find>
+      <find>splitPos</find>
+      <find>r</find>
+      <find>collect_all_inequalities</find>
+      <find>indexAst</find>
+      <find>instantiate_axiom_indexof_basecase</find>
+      <find>m_delayed_axiom_setup_terms</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -811,12 +811,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="29834000" />
+      <workItem from="1568106535994" duration="38528000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1634164000" />
+    <option name="totallyTimeSpent" value="1642858000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1212,14 +1212,14 @@
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="402">
-          <caret line="1698" column="22" selection-start-line="1698" selection-start-column="22" selection-end-line="1698" selection-end-column="22" />
+          <caret line="2375" column="13" selection-start-line="2375" selection-start-column="13" selection-end-line="2375" selection-end-column="13" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="231">
-          <caret line="9767" column="44" selection-start-line="9767" selection-start-column="23" selection-end-line="9767" selection-end-column="44" />
+        <state relative-caret-position="409">
+          <caret line="16710" lean-forward="true" selection-start-line="16710" selection-end-line="16710" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

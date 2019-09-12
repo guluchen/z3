@@ -14440,6 +14440,12 @@ namespace smt {
         std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             len = maxDiffStrs[0].length();
+
+        if (len > 0 && maxDiffStrs[0] == "__var__"){
+            len = -1;
+            return true;
+        }
+
 //        int maxCharAt = 0;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
 //        if (collect_not_charAt(nn, maxCharAt)) {
@@ -14492,8 +14498,8 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         len = -1;
-        for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it)
-            if (u.str.is_concat(*it))
+        for (const auto& eq : eqList)
+            if (u.str.is_concat(eq))
                 return false;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         // now we know it is a leaf node
@@ -14615,21 +14621,28 @@ namespace smt {
         for (const auto& we : m_wi_expr_memo){
             if (eqNodeSet.contains(we.first.get())){
                 zstring value;
-                if (u.str.is_string(we.second.get(), value))
-                    if (!is_trivial_inequality(we.first.get(), value)){
-                        if (diffLen < (int)value.length()) {
+                if (u.str.is_string(we.second.get(), value)) {
+                    if (!is_trivial_inequality(we.first.get(), value)) {
+                        if (diffLen < (int) value.length()) {
                             diffLen = (int) value.length();
                             maxDiffStrs.clear();
                             maxDiffStrs.push_back(value);
-                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
-                                               << std::endl;);
-                        }
-                        else if (diffLen == (int)value.length()) {
-                            STRACE("str", tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
-                                               << std::endl;);
+                            STRACE("str",
+                                   tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                        << std::endl;);
+                        } else if (diffLen == (int) value.length()) {
+                            STRACE("str",
+                                   tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\""
+                                        << std::endl;);
                             maxDiffStrs.push_back(value);
                         }
                     }
+                }
+                else if (is_var_var_inequality(we.first.get(), we.second.get())){
+                    maxDiffStrs.clear();
+                    maxDiffStrs.push_back("__var__");
+                    return maxDiffStrs;
+                }
             }
             else if (eqNodeSet.contains(we.second.get())){
                 zstring value;
@@ -14652,9 +14665,59 @@ namespace smt {
                         }
                     }
                 }
+                else if (is_var_var_inequality(we.first.get(), we.second.get())){
+                    maxDiffStrs.clear();
+                    maxDiffStrs.push_back("__var__");
+                    return maxDiffStrs;
+                }
             }
         }
         return maxDiffStrs;
+    }
+
+    bool theory_trau::is_var_var_inequality(expr* x, expr* y){
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(x, m) << " != " << mk_pp(y, m)<< std::endl;);
+        expr_ref_vector eqx(m);
+        expr* const_x = collect_eq_nodes(x, eqx);
+
+        expr_ref_vector eqy(m);
+        expr* const_y = collect_eq_nodes(y, eqy);
+
+        if (const_x != nullptr || const_y != nullptr)
+            return false;
+
+        bool is_var_x = false;
+        bool is_var_y = false;
+        for (const auto& xx : eqx) {
+            is_var_x = (!is_internal_var(xx)) || u.str.is_at(xx) || u.str.is_extract(xx) || u.str.is_replace(xx);
+            if (!is_var_x) {
+                std::string tmp = expr2str(xx);
+                is_var_x == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos);
+            }
+
+            if (is_var_x)
+                break;
+        }
+
+        if (is_var_x) {
+            for (const auto& yy : eqy) {
+                is_var_y = (!is_internal_var(yy)) || u.str.is_at(yy) || u.str.is_extract(yy) || u.str.is_replace(yy);
+                if (!is_var_y) {
+                    std::string tmp = expr2str(yy);
+                    is_var_y == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos);
+                }
+                if (is_var_y)
+                    break;
+            }
+        }
+
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << is_var_x  << " vs " << is_var_y << std::endl;);
+
+        if (is_var_y)
+            return true;
+        else
+            return false;
     }
 
     expr* theory_trau::create_conjuct_all_inequalities(expr* nn){
@@ -16472,6 +16535,7 @@ namespace smt {
     }
 
     /*
+     * arg1 == 0 && 0 <= arg2 <= len arg0 --> return arg2
      * arg2 = 0,
      *      arg0 contains arg1
      *      then    arg0 = indexOf1 . arg1 . indexOf2
@@ -16495,7 +16559,11 @@ namespace smt {
         if (axiomatized_terms.contains(ex)) {
             return;
         }
+
         SASSERT(ex->get_num_args() == 3);
+
+        instantiate_axiom_indexof_basecase(e);
+
         // if the third argument is exactly the integer 0, we can use this "simple" indexof;
         // otherwise, we call the "extended" version
         expr * startingPosition = ex->get_arg(2);
@@ -16608,13 +16676,17 @@ namespace smt {
             //     args[0]  = x3 . x4
             //  /\ |x3| = |x1| + |args[1]| - 1
             //  /\ ! contains(x3, args[1])
+            expr_ref curr_premise(m_autil.mk_ge(mk_strlen(ex->get_arg(1)), mk_int(1)), m);
             expr_ref x3(mk_str_var("x3"), m);
             expr_ref x4(mk_str_var("x4"), m);
             expr_ref tmpLen(m_autil.mk_add(indexAst, mk_strlen(ex->get_arg(1)), mk_int(-1)), m);
             SASSERT(tmpLen);
-            thenItems.push_back(ctx.mk_eq_atom(ex->get_arg(0), mk_concat(x3, x4)));
-            thenItems.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
-            thenItems.push_back(mk_not(m, mk_contains(x3, ex->get_arg(1))));
+            expr_ref_vector curr_conclusion(m);
+
+            curr_conclusion.push_back(ctx.mk_eq_atom(ex->get_arg(0), mk_concat(x3, x4)));
+            curr_conclusion.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
+            curr_conclusion.push_back(mk_not(m, mk_contains(x3, ex->get_arg(1))));
+            thenItems.push_back(rewrite_implication(curr_premise, createAndOP(curr_conclusion)));
         }
         expr_ref thenBranch(m.mk_and(thenItems.size(), thenItems.c_ptr()), m);
         SASSERT(thenBranch);
@@ -16634,6 +16706,9 @@ namespace smt {
         SASSERT(finalAxiom);
         assert_axiom(finalAxiom);
 
+        // | arg1 | = 0 --> indexOf = hd
+        assert_implication(ctx.mk_eq_atom(mk_strlen(ex->get_arg(1)), mk_int(0)), ctx.mk_eq_atom(indexAst, mk_int(0)));
+
         {
             // heuristic: integrate with str.contains information
             // (but don't introduce it if it isn't already in the instance)
@@ -16649,6 +16724,22 @@ namespace smt {
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
             m_delayed_axiom_setup_terms.push_back(containsAxiom);
         }
+    }
+
+    void theory_trau::instantiate_axiom_indexof_basecase(enode * _e){
+        // arg1.len == 0 && 0 <= arg2 <= len arg0 --> return arg2
+//        ast_manager & m = get_manager();
+//
+//        app * e = _e->get_owner();
+//        expr* len_arg0 = mk_strlen(e->get_arg(0));
+//        expr* len_arg1 = mk_strlen(e->get_arg(1));
+//        expr_ref_vector premise(m);
+//        premise.push_back(m_autil.mk_eq(len_arg1, mk_int(0)));
+//        premise.push_back(m_autil.mk_le(mk_int(0), m_autil.mk_add(len_arg0, m_autil.mk_mul(mk_int(-1), e->get_arg(2)))));
+//        premise.push_back(m_autil.mk_le(mk_int(0), e->get_arg(2)));
+//        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "  " << mk_pp(createAndOP(premise), m) << std::endl;);
+//        m_delayed_axiom_setup_terms.push_back(rewrite_implication(createAndOP(premise), createEqualOP(_e->get_owner(), mk_int(0))));
+
     }
 
     /*
@@ -16712,18 +16803,18 @@ namespace smt {
         expr_ref tl(mk_str_var("tl"), m);
 
 
-        // case 3: startIndex >= len(H), return -1
+        // case 3: startIndex > len(H), return -1
         {
             //th_rewriter rw(m);
             //rw(premise);
-            expr_ref premise(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero), m);
+            expr_ref premise(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), mk_int(1)), m);
             if (premise != m.mk_false()) {
                 expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
                 assert_implication(premise, conclusion);
             }
         }
 
-        // case 4: 0 < i < len(H),
+        // case 4: 0 <= i < len(H),
         //      arg0 = hd . tl
         //      hd.len = startIndex
         //      tlindex = indexOf(tl, arg1, 0)
@@ -16732,7 +16823,7 @@ namespace smt {
         //      else indexOf = -1
         {
             expr_ref premise1(m_autil.mk_ge(startIndex, zero), m);
-            expr_ref premise2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
+            expr_ref premise2(m.mk_not(m_autil.mk_gt(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
             expr_ref _premise(m.mk_and(premise1, premise2), m);
             expr_ref premise(_premise);
             th_rewriter rw(m);
@@ -16751,6 +16842,9 @@ namespace smt {
 
             expr_ref conclusion(mk_and(conclusion_terms), m);
             assert_implication(premise, conclusion);
+
+            // | arg1 | = 0 --> indexOf = hd
+            assert_implication(premise, rewrite_implication(ctx.mk_eq_atom(mk_strlen(arg1), mk_int(0)), ctx.mk_eq_atom(e, mk_strlen(hd))));
         }
 
         {
