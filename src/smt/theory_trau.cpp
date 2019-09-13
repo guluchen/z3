@@ -4228,7 +4228,8 @@ namespace smt {
 
 
         bool addAxiom;
-        if (is_completed_branch(addAxiom)){
+        expr_ref_vector diff(get_manager());
+        if (is_completed_branch(addAxiom, diff)){
             if (addAxiom)
                 return FC_CONTINUE;
             else
@@ -4293,7 +4294,7 @@ namespace smt {
 
         refined_init_chain_free(non_fresh_vars, eq_combination);
 
-        if (underapproximation(eq_combination, non_fresh_vars)) {
+        if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
             return FC_CONTINUE;
         }
@@ -4807,7 +4808,7 @@ namespace smt {
     /*
      * two branches are equal if SAT core of a branch is TRUE in the other branch
      */
-    bool theory_trau::is_completed_branch(bool &addAxiom){
+    bool theory_trau::is_completed_branch(bool &addAxiom, expr_ref_vector &diff){
         ast_manager & m = get_manager();
         addAxiom = false;
         expr_ref_vector guessedEqs(m), guessedDisEqs(m);
@@ -4815,7 +4816,7 @@ namespace smt {
 
         const str::state &root = build_state_from_memo();
 
-        if (at_same_eq_state(uState) && at_same_diseq_state(root, uState.currState)) {
+        if (at_same_eq_state(uState, diff) && at_same_diseq_state(root, uState.currState)) {
             if (uState.reassertDisEQ && uState.reassertEQ) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " DONE eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
                 return true;
@@ -4845,7 +4846,7 @@ namespace smt {
             // check all completed state, skip the last one
             for (int i = 0; i < (int)completedStates.size() - 1; ++i){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
-                if (at_same_eq_state(completedStates[i]) && at_same_diseq_state(root, completedStates[i].currState)){
+                if (at_same_eq_state(completedStates[i], diff) && at_same_diseq_state(root, completedStates[i].currState)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
                     return true;
                 }
@@ -5551,7 +5552,7 @@ namespace smt {
      * Note 2: some new equalties because of length information, e.g. x . y = "abc" && y.len = 2 implies y = "bc"
      * In such cases, we are still the same "core" branch.
      */
-    bool theory_trau::at_same_eq_state(UnderApproxState state) {
+    bool theory_trau::at_same_eq_state(UnderApproxState state, expr_ref_vector &diff) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
         expr_ref_vector guessedExprs(m),  guessedDisEqExprs(m);
@@ -5581,6 +5582,9 @@ namespace smt {
                 expr_ref_vector eqs(m);
                 collect_eq_nodes(lhs, eqs);
                 if (eq != m.mk_true() && !eqs.contains(rhs)) {
+                    expr* not_e = mk_not(m, e);
+                    if (guessedDisEqExprs.contains(not_e))
+                        diff.push_back(not_e);
                     STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
                     for (const auto& s: eqs)
                         STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(lhs, m) << " " << mk_pp(s, m) << std::endl;);
@@ -6585,7 +6589,8 @@ namespace smt {
 
     bool theory_trau::underapproximation(
             std::map<expr*, std::set<expr*>> eq_combination,
-            std::set<std::pair<expr*, int>> non_fresh_vars) {
+            std::set<std::pair<expr*, int>> non_fresh_vars,
+            expr_ref_vector diff) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
         ast_manager & m = get_manager();
         print_eq_combination(eq_combination, __LINE__);
@@ -6613,6 +6618,7 @@ namespace smt {
         handle_diseq_notcontain();
 
         bool axiomAdded = handle_str_int();
+        guessedEqs.append(diff);
         axiomAdded = convert_equalities(mapset2mapvector(eq_combination), non_fresh_map, createAndOP(guessedEqs)) || axiomAdded;
 
         return axiomAdded;
@@ -7385,7 +7391,6 @@ namespace smt {
 
     void theory_trau::handle_NOTEqual_var(expr* lhs, expr* rhs){
         return;
-
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
 
@@ -7396,37 +7401,37 @@ namespace smt {
         cases.push_back(mk_not(m, eqref));
 
         int len1, len2;
-        if (is_important(lhs, len1) && is_important(rhs, len2)) {
+        if (is_important(lhs, len1) && is_important(rhs, len2) && is_var_var_inequality(lhs, rhs)) {
+            rational len_lhs;
+            rational len_rhs;
+            int bound = std::min(len1, len2);
+            if (get_len_value(lhs, len_lhs) && get_len_value(rhs, len_rhs)) {
+                if (len_lhs != len_rhs)
+                    return;
+                else {
+                    bound = len_lhs.get_int64();
+                }
+            }
             expr* arrLhs = get_var_flat_array(lhs);
             expr* arrRhs = get_var_flat_array(rhs);
-            STRACE("str", tout << __LINE__ <<  " min len: " << std::min(len1, len2) << "\n";);
-            for (int i = 0; i < std::min(len1, len2); ++i) {
-                expr_ref_vector subcases(m);
-                subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
-                STRACE("str", tout << __LINE__ <<  "  " << mk_pp(subcases[0].get(), m)  << ")\n";);
-                subcases.push_back(createGreaterEqOP(lenRhs.get(), m_autil.mk_int(i + 1)));
-                STRACE("str", tout << __LINE__ <<  "  " << mk_pp(arrLhs, m) <<  "  " << mk_pp(arrRhs, m) << ")\n";);
-                expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)), createSelectOP(arrRhs, m_autil.mk_int(i))), m);
-                STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp.get(), m)  << ")\n";);
-                subcases.push_back(mk_not(m, tmp.get()));
-                cases.push_back(createAndOP(subcases));
+            if (arrLhs != nullptr && arrRhs != nullptr) {
+                STRACE("str", tout << __LINE__ << " min len: " << bound << "\n";);
+                for (int i = 0; i < bound; ++i) {
+                    expr_ref_vector subcases(m);
+                    subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
+                    STRACE("str", tout << __LINE__ << "  " << mk_pp(subcases[0].get(), m) << ")\n";);
+                    subcases.push_back(createGreaterEqOP(lenRhs.get(), m_autil.mk_int(i + 1)));
+                    STRACE("str", tout << __LINE__ << "  " << mk_pp(arrLhs, m) << "  " << mk_pp(arrRhs, m) << ")\n";);
+                    expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)),
+                                               createSelectOP(arrRhs, m_autil.mk_int(i))), m);
+                    STRACE("str", tout << __LINE__ << "  " << mk_pp(tmp.get(), m) << ")\n";);
+                    subcases.push_back(mk_not(m, tmp.get()));
+                    cases.push_back(createAndOP(subcases));
+                }
+
+                expr *assertExpr = createOrOP(cases);
+                assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), assertExpr));
             }
-
-            expr_ref notcause(createEqualOP(lhs, rhs), m);
-            expr_ref cause(mk_not(notcause), m);
-            ensure_enode(cause.get());
-            expr* assertExpr = createOrOP(cases);
-
-            assert_axiom(assertExpr, cause.get());
-            expr_ref tmpAxiom(createEqualOP(cause.get(), assertExpr), m);
-//            uState.addAssertingConstraints(tmpAxiom);
-
-//            ctx.assign(assertLiteral, b_justification(causeLiteral), false);
-
-//            expr_ref axiom(m.mk_or(notcause, createOrOP(cases)), m);
-//            assert_axiom(axiom);
-
-//
         }
 
 
@@ -8212,9 +8217,15 @@ namespace smt {
         if (!prep){
             connectingSize = std::max(CONNECTINGSIZE, connectingSize);
         }
-        for (auto &v : non_fresh_vars)
-            if (v.second == -1 || v.second == oldConnectingSize)
-                v.second = connectingSize;
+        for (auto &v : non_fresh_vars) {
+            rational len;
+            if (v.second == -1 || v.second == oldConnectingSize) {
+                if (get_len_value(v.first, len))
+                    v.second = len.get_int64();
+                else
+                    v.second = connectingSize;
+            }
+        }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
@@ -14375,7 +14386,8 @@ namespace smt {
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
                         eq_combination[rootTmp].size() <= 20 &&
                         !is_contain_equality(v.first) &&
-                            str_int_vars.find(v.first) == str_int_vars.end()) {
+                            str_int_vars.find(v.first) == str_int_vars.end() &&
+                            !belong_to_var_var_inequality(v.first)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
                                            << std::endl;);
                         expr_ref_vector eqList(m);
@@ -14618,6 +14630,26 @@ namespace smt {
         return false;
     }
 
+    bool theory_trau::belong_to_var_var_inequality(expr* nn){
+        ast_manager &m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
+        expr_ref_vector eqNodeSet(m);
+        collect_eq_nodes(nn, eqNodeSet);
+        for (const auto& we : m_wi_expr_memo){
+            if (eqNodeSet.contains(we.first.get())){
+                if (is_var_var_inequality(we.first.get(), we.second.get())){
+                    return true;
+                }
+            }
+            else if (eqNodeSet.contains(we.second.get())){
+                if (is_var_var_inequality(we.first.get(), we.second.get())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     std::vector<zstring> theory_trau::collect_all_inequalities(expr* nn){
         ast_manager &m = get_manager();
         int diffLen = 0;
@@ -14853,17 +14885,10 @@ namespace smt {
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
 
-//        if (collect_not_charAt(nn, maxCharAt)) {
-//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
-//            if (maxCharAt == -1) {
-//                return true;
-//            }
-//            else if (maxCharAt == len){
-//                return true;
-//            }
-//            else
-//                diffLen = maxCharAt;
-//        }
+        if (diffLen > 0 && maxDiffStrs[0] == "__var__"){
+            diffLen = -1;
+        }
+
         if (diffLen > 0) {
             context& ctx = get_context();
             std::vector<zstring> constParts;
@@ -16683,7 +16708,12 @@ namespace smt {
             //     args[0]  = x3 . x4
             //  /\ |x3| = |x1| + |args[1]| - 1
             //  /\ ! contains(x3, args[1])
-            expr_ref curr_premise(m_autil.mk_ge(mk_strlen(ex->get_arg(1)), mk_int(1)), m);
+            expr_ref curr_premise01(m_autil.mk_ge(mk_strlen(ex->get_arg(1)), mk_int(1)), m);
+            expr_ref curr_premise02(m_autil.mk_ge(indexAst, mk_int(1)), m);
+            expr_ref_vector curr_ands(m);
+            curr_ands.push_back(curr_premise01);
+            curr_ands.push_back(curr_premise02);
+
             expr_ref x3(mk_str_var("x3"), m);
             expr_ref x4(mk_str_var("x4"), m);
             expr_ref tmpLen(m_autil.mk_add(indexAst, mk_strlen(ex->get_arg(1)), mk_int(-1)), m);
@@ -16693,7 +16723,7 @@ namespace smt {
             curr_conclusion.push_back(ctx.mk_eq_atom(ex->get_arg(0), mk_concat(x3, x4)));
             curr_conclusion.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
             curr_conclusion.push_back(mk_not(m, mk_contains(x3, ex->get_arg(1))));
-            thenItems.push_back(rewrite_implication(curr_premise, createAndOP(curr_conclusion)));
+            thenItems.push_back(rewrite_implication(createAndOP(curr_ands), createAndOP(curr_conclusion)));
         }
         expr_ref thenBranch(m.mk_and(thenItems.size(), thenItems.c_ptr()), m);
         SASSERT(thenBranch);
@@ -18753,6 +18783,10 @@ namespace smt {
                 for (const auto& eq : eqs)
                     if (u.str.is_concat(eq)) {
                         ret.push_back(createEqualOP(v, eq));
+                    }
+                    else if (allvars.find(eq) != allvars.end() && eq != v){
+                        if (!ret.contains(createEqualOP(v, eq)))
+                            ret.push_back(createEqualOP(v, eq));
                     }
             }
         }

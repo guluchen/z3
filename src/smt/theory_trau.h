@@ -1434,7 +1434,7 @@ namespace smt {
                 bool eq_in_list(expr* n, ptr_vector<expr> nodes);
             bool can_omit(expr* lhs, expr* rhs, zstring needle);
             bool appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
-            bool is_completed_branch(bool &addAxiom);
+            bool is_completed_branch(bool &addAxiom, expr_ref_vector &diff);
             void update_state();
             bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1460,7 +1460,7 @@ namespace smt {
                 bool get_image_in_expr(expr* n, expr_ref_vector &constList);
 
             int get_actual_trau_lvl();
-                bool at_same_eq_state(UnderApproxState state);
+                bool at_same_eq_state(UnderApproxState state, expr_ref_vector &diff);
                 bool at_same_diseq_state(str::state curr, str::state prev);
 
         bool review_starting_ending_combination(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1475,28 +1475,7 @@ namespace smt {
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
 
-            rational get_var_length(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len);
-            void forward_propagation(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            void backward_propagation(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            void backward_propagation_lazy(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue,
-                bool &completion);
-            std::vector<int> get_var_value(
-                expr* newlyUpdate,
-                std::map<expr*, rational> len,
-                std::map<expr*, std::vector<int>> &strValue);
+
             bool propagate_concat();
             bool propagate_value(std::set<expr*> & concatSet);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
@@ -1505,7 +1484,8 @@ namespace smt {
                 bool propagate_length_within_eqc(expr * var);
             bool underapproximation(
                 std::map<expr*, std::set<expr*>> eq_combination,
-                std::set<std::pair<expr*, int>> non_fresh_vars);
+                std::set<std::pair<expr*, int>> non_fresh_vars,
+                expr_ref_vector diff);
                 bool assert_state(expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs, str::state root);
                 bool handle_str_int();
                     void handle_str2int(expr* num, expr* str);
@@ -2198,6 +2178,7 @@ namespace smt {
                     std::set<expr*> &notImportant,
                     std::map<expr *, std::set<expr *>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
+                bool belong_to_var_var_inequality(expr* nn);
                 std::vector<zstring> collect_all_inequalities(expr* nn);
                     bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
