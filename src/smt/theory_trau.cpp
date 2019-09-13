@@ -9860,8 +9860,15 @@ namespace smt {
             return;
         }
 
+        expr* reg_a = nullptr;
+        if (a.second <= REGEX_CODE)
+            is_internal_regex_var(a.first, reg_a);
+
+        expr* reg_b = nullptr;
+        if (b.second <= REGEX_CODE)
+            is_internal_regex_var(b.first, reg_b);
         expr* tmp = nullptr;
-        if (a.second <= REGEX_CODE && b.second <= REGEX_CODE) {
+        if (a.second <= REGEX_CODE && b.second <= REGEX_CODE && reg_a != reg_b) {
             tmp = generate_constraint01_regex_regex(a, b, nameA);
         }
         else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == -1){
