@@ -16917,6 +16917,12 @@ namespace smt {
         expr_ref zero(m_autil.mk_numeral(rational::zero(), true), m);
         expr_ref minusOne(m_autil.mk_numeral(rational::minus_one(), true), m);
 
+        // quick path
+        if (pos == mk_strlen(base)) {
+            m_delayed_assertions_todo.push_back(createEqualOP(expr, mk_string("")));
+            return;
+        }
+
         expr_ref_vector argumentsValid_terms(m);
         // pos >= 0
         argumentsValid_terms.push_back(m_autil.mk_ge(pos, zero));
@@ -16976,14 +16982,21 @@ namespace smt {
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
+
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref_vector premises(m);
         premises.push_back(argumentsValid);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
         premises.push_back(lenOutOfBounds);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
         expr_ref premise_expr(m);
         premise_expr = createAndOP(premises);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
         expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
 
@@ -17101,6 +17114,8 @@ namespace smt {
                 }
             }
         }
+        STRACE("str",
+               tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(pos, m) << " = " << mk_pp(first_part, m) << std::endl;);
     }
     /*
      * Similar to IndexOf

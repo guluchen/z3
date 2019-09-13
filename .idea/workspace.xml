@@ -100,11 +100,20 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="648">
-              <caret line="9867" column="13" selection-start-line="9867" selection-start-column="13" selection-end-line="9867" selection-end-column="13" />
+            <state relative-caret-position="376">
+              <caret line="16921" column="83" selection-start-line="16921" selection-start-column="83" selection-end-line="16921" selection-end-column="83" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_inv.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="853">
+              <caret line="92" column="19" selection-start-line="92" selection-start-column="19" selection-end-line="92" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -176,8 +185,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>maxLocal</find>
-      <find>tmp02</find>
       <find>create_set_of_flat_variables</find>
       <find>sumStringVector</find>
       <find>update_possible_arrangements</find>
@@ -190,7 +197,6 @@
       <find>get_eqc_value</find>
       <find>constValue</find>
       <find>convert_const_nonfresh_equalities</find>
-      <find>sync_index_head</find>
       <find>m_delayed_assertions_todo</find>
       <find>eval_invalid_str2int</find>
       <find>generate_con</find>
@@ -206,6 +212,9 @@
       <find>m_delayed_axiom_setup_terms</find>
       <find>generate_constraint01_regex_regex</find>
       <find>const_vs_regex</find>
+      <find>sync_index_head</find>
+      <find>lenOutOfBounds</find>
+      <find>argumentsValid</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -810,12 +819,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="39974000" />
+      <workItem from="1568106535994" duration="41306000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1644304000" />
+    <option name="totallyTimeSpent" value="1645636000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -868,13 +877,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/api/api_seq.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="398">
-          <caret line="40" column="21" selection-start-line="40" selection-start-column="21" selection-end-line="40" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_finder.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1002">
@@ -1215,10 +1217,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_inv.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="853">
+          <caret line="92" column="19" selection-start-line="92" selection-start-column="19" selection-end-line="92" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="648">
-          <caret line="9867" column="13" selection-start-line="9867" selection-start-column="13" selection-end-line="9867" selection-end-column="13" />
+        <state relative-caret-position="376">
+          <caret line="16921" column="83" selection-start-line="16921" selection-start-column="83" selection-end-line="16921" selection-end-column="83" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
