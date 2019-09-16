@@ -101,11 +101,20 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="423">
-              <caret line="7393" column="15" lean-forward="true" selection-start-line="7393" selection-start-column="15" selection-end-line="7393" selection-end-column="15" />
+            <state relative-caret-position="588">
+              <caret line="14654" column="100" lean-forward="true" selection-start-line="14654" selection-start-column="100" selection-end-line="14654" selection-end-column="100" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="402">
+              <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -176,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="693">
-              <caret line="2060" column="17" selection-start-line="2060" selection-start-column="17" selection-end-line="2060" selection-end-column="17" />
+            <state relative-caret-position="393">
+              <caret line="2201" column="61" selection-start-line="2201" selection-start-column="61" selection-end-line="2201" selection-end-column="61" />
             </state>
           </provider>
         </entry>
@@ -186,15 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>convert_const_nonfresh_equalities</find>
-      <find>m_delayed_assertions_todo</find>
-      <find>eval_invalid_str2int</find>
-      <find>generate_con</find>
-      <find>generate_constraint01_regex_head</find>
-      <find>generate_constraint01_const_const</find>
-      <find>generate_constraint01_var_var</find>
-      <find>to_arith_emptyflats</find>
-      <find>splitPos</find>
       <find>r</find>
       <find>indexAst</find>
       <find>instantiate_axiom_indexof_basecase</find>
@@ -215,6 +215,15 @@
       <find>refined_init_chain_free</find>
       <find>connectingSize</find>
       <find>index</find>
+      <find>is_var_var_inequality</find>
+      <find>handle_not</find>
+      <find>mk_contain</find>
+      <find>instantiate_ax</find>
+      <find>create_concat_from_vector</find>
+      <find>handle_NOTEqual_var</find>
+      <find>string_to_int</find>
+      <find>eval_str_int</find>
+      <find>countOccurrences_from_root</find>
       <find>underappf</find>
     </findStrings>
     <replaceStrings>
@@ -330,6 +339,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="nodejs_package_manager_path" value="npm" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -821,12 +831,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="52749000" />
+      <workItem from="1568106535994" duration="70117000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1657079000" />
+    <option name="totallyTimeSpent" value="1674447000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1118,13 +1128,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5025">
-          <caret line="335" column="13" selection-start-line="335" selection-start-column="13" selection-end-line="335" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_model_generator.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3315">
@@ -1219,17 +1222,24 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="402">
+          <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="693">
-          <caret line="2060" column="17" selection-start-line="2060" selection-start-column="17" selection-end-line="2060" selection-end-column="17" />
+        <state relative-caret-position="393">
+          <caret line="2201" column="61" selection-start-line="2201" selection-start-column="61" selection-end-line="2201" selection-end-column="61" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="7393" column="15" lean-forward="true" selection-start-line="7393" selection-start-column="15" selection-end-line="7393" selection-end-column="15" />
+        <state relative-caret-position="588">
+          <caret line="14654" column="100" lean-forward="true" selection-start-line="14654" selection-start-column="100" selection-end-line="14654" selection-end-column="100" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

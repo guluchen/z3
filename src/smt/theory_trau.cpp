@@ -4226,6 +4226,11 @@ namespace smt {
         else
             newConstraintTriggered = false;
 
+        if (eval_str_int() || eval_disequal_str_int()) {
+            TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
+            newConstraintTriggered = true;
+            return FC_CONTINUE;
+        }
 
         bool addAxiom;
         expr_ref_vector diff(get_manager());
@@ -4237,12 +4242,6 @@ namespace smt {
         }
 
         dump_assignments();
-
-        if (eval_str_int()) {
-            TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
-            newConstraintTriggered = true;
-            return FC_CONTINUE;
-        }
 
         std::set<std::pair<expr *, int>> non_fresh_vars;
         std::map<expr *, std::set<expr *>> eq_combination;
@@ -4342,6 +4341,92 @@ namespace smt {
         return addedAxioms;
     }
 
+    bool theory_trau::eval_disequal_str_int(){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
+        bool addedAxioms = false;
+        for (const auto &wi : m_wi_expr_memo) {
+            if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
+                expr* lhs = wi.first.get();
+                expr* rhs = wi.second.get();
+                expr* contain = nullptr;
+                if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+
+                    // lhs
+                    bool is_const;
+                    expr* const_val = get_eqc_value(lhs, is_const);
+                    expr* i2s = nullptr;
+                    if (is_const && eq_to_i2s(rhs, i2s)){
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(const_val, m) << " != " << mk_pp(i2s, m) << std::endl;);
+                        zstring str_val;
+                        u.str.is_string(const_val, str_val);
+                        bool valid = false;
+                        rational rational_val = string_to_int(str_val, valid);
+
+                        rational val;
+                        if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
+
+                            expr_ref_vector premise(m);
+                            premise.push_back(createEqualOP(lhs, const_val));
+                            premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
+
+                            assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
+                            addedAxioms = true;
+                        }
+                        else {
+                            STRACE("str",
+                                   tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(i2s, m) << " = " << val
+                                        << std::endl;);
+                            if (rational_val == val) {
+                                negate_context();
+                                addedAxioms = true;
+                            }
+                        }
+                    }
+
+                    // rhs
+                    const_val = get_eqc_value(rhs, is_const);
+                    if (is_const && eq_to_i2s(lhs, i2s)){
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(const_val, m) << " != " << mk_pp(i2s, m) << std::endl;);
+                        zstring str_val;
+                        u.str.is_string(const_val, str_val);
+                        bool valid = false;
+                        rational rational_val = string_to_int(str_val, valid);
+
+                        rational val;
+                        if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
+
+                            expr_ref_vector premise(m);
+                            premise.push_back(createEqualOP(rhs, const_val));
+                            premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
+
+                            assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
+                            addedAxioms = true;
+                        }
+                        else {
+                            if (rational_val == val) {
+                                negate_context();
+                                addedAxioms = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return addedAxioms;
+    }
+
+    bool theory_trau::eq_to_i2s(expr* n, expr* &i2s){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(n, eqs);
+        for (const auto& nn : eqs)
+            if (u.str.is_itos(nn)) {
+                i2s = nn;
+                return true;
+            }
+        return false;
+    }
+
     /*
      * Check agreement between integer and string theories for the term a = (str.to-int S).
      * Returns true if axioms were added, and false otherwise.
@@ -4383,24 +4468,8 @@ namespace smt {
             zstring str;
             u.str.is_string(S_str, str);
             bool valid = true;
-            rational convertedRepresentation(0);
-            rational ten(10);
-            if (str.length() == 0) {
-                valid = false;
-            } else {
-                for (unsigned i = 0; i < str.length(); ++i) {
-                    if (!('0' <= str[i] && str[i] <= '9')) {
-                        valid = false;
-                        break;
-                    } else {
-                        // accumulate
-                        char digit = (int)str[i];
-                        std::string sDigit(1, digit);
-                        int val = atoi(sDigit.c_str());
-                        convertedRepresentation = (ten * convertedRepresentation) + rational(val);
-                    }
-                }
-            }
+
+            rational convertedRepresentation = string_to_int(str, valid);
 
             // TODO this duplicates code a bit, we can simplify the branch on "conclusion" only
             if (valid) {
@@ -4446,6 +4515,28 @@ namespace smt {
         }
 
         return axiomAdd;
+    }
+
+    rational theory_trau::string_to_int(zstring str, bool &valid){
+        rational convertedRepresentation(0);
+        rational ten(10);
+        if (str.length() == 0) {
+            valid = false;
+        } else {
+            for (unsigned i = 0; i < str.length(); ++i) {
+                if (!('0' <= str[i] && str[i] <= '9')) {
+                    valid = false;
+                    return rational(-1);
+                } else {
+                    // accumulate
+                    char digit = (int)str[i];
+                    std::string sDigit(1, digit);
+                    int val = atoi(sDigit.c_str());
+                    convertedRepresentation = (ten * convertedRepresentation) + rational(val);
+                }
+            }
+        }
+        return convertedRepresentation;
     }
 
     int theory_trau::eval_invalid_str2int(expr* e, expr* &eq_node){
@@ -7275,27 +7366,6 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::is_weaker_expr_sets(expr_ref_vector curr, expr_ref_vector prev){
-        ast_manager & m = get_manager();
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << curr.size() << " vs " << curr.size() << std::endl;);
-        // check if prev is WEAKER than curr, means all exprs in prev are in curr
-        for (const auto& e : prev) {
-            STRACE("str",
-                   tout << __LINE__ << " prev eq " << mk_pp(e, m) << std::endl;);
-
-            if (!curr.contains(e)) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** return false" << std::endl;);
-                return false;
-            }
-        }
-
-        for (const auto& e : curr)
-            STRACE("str",
-               tout << __LINE__ << " curr eq " << mk_pp(e, m) << std::endl;);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** return true" << std::endl;);
-        return true;
-    }
-
     bool theory_trau::underapproximation_cached(){
         ast_manager & m = get_manager();
 
@@ -7380,17 +7450,55 @@ namespace smt {
             }
             zstring value;
 
-            if (constLhs != nullptr && u.str.is_string(constLhs, value))
-                handle_NOTEqual_const(rhs, value);
-            else if (constRhs != nullptr && u.str.is_string(constRhs, value))
-                handle_NOTEqual_const(lhs, value);
-            else
-                handle_NOTEqual_var(lhs, rhs);
+            if (review_disequality(lhs, rhs)) {
+                if (constLhs != nullptr && u.str.is_string(constLhs, value))
+                    handle_NOTEqual_const(rhs, value);
+                else if (constRhs != nullptr && u.str.is_string(constRhs, value))
+                    handle_NOTEqual_const(lhs, value);
+                else
+                    handle_NOTEqual_var(lhs, rhs);
+            }
+            else {
+                negate_context();
+            }
         }
     }
 
+    bool theory_trau::review_disequality(expr* lhs, expr* rhs){
+        ptr_vector <expr> lhs_nodes;
+        get_nodes_in_concat(lhs, lhs_nodes);
+        ptr_vector <expr> rhs_nodes;
+        get_nodes_in_concat(rhs, rhs_nodes);
+
+        unsigned counter_l = 0;
+        unsigned counter_r = 0;
+        while (counter_l < lhs_nodes.size() || counter_r < rhs_nodes.size()){
+            rational len;
+            if (counter_l < lhs_nodes.size() && get_len_value(lhs_nodes[counter_l], len) && len.get_int64() == 0) {
+                ++counter_l;
+                continue;
+            }
+
+            if (counter_r < rhs_nodes.size() && get_len_value(rhs_nodes[counter_r], len) && len.get_int64() == 0) {
+                ++counter_r;
+                continue;
+            }
+
+            if (counter_l < lhs_nodes.size() && counter_r < rhs_nodes.size()){
+                if (in_same_eqc(rhs_nodes[counter_r], lhs_nodes[counter_l])) {
+                    ++counter_r;
+                    ++counter_l;
+                }
+                else
+                    return true;
+            }
+            else
+                return true;
+        }
+        return false;
+    }
+
     void theory_trau::handle_NOTEqual_var(expr* lhs, expr* rhs){
-        return;
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
 
@@ -14201,7 +14309,7 @@ namespace smt {
         ast_manager &m = get_manager();
         std::set<expr*> eqc_roots = get_eqc_roots();
         std::map<expr*, int> tmpResult;
-        std::map<expr*, int> occurrences = countOccurrences_from_root(eqc_roots);
+        std::map<expr*, int> occurrences = countOccurrences_from_root();
         for (const auto& nn : eqc_roots) {
             expr_ref_vector eqList(m);
             expr *value = collect_eq_nodes(nn, eqList);
@@ -14531,7 +14639,7 @@ namespace smt {
         return false;
     }
 
-    std::map<expr*, int> theory_trau::countOccurrences_from_root(std::set<expr*> eqc_roots){
+    std::map<expr*, int> theory_trau::countOccurrences_from_root(){
         std::map<expr*, int> ret;
         for (const auto& n : concat_astNode_map){
             expr* arg0 = n.get_key1();
@@ -14539,11 +14647,12 @@ namespace smt {
             if (arg0 == arg1)
                 ret[arg0] = 2;
             else {
-                if (ret.find(arg0) != ret.end() && !is_internal_var(arg0))
+                if (ret.find(arg0) != ret.end() && (!is_internal_var(arg0) || is_replace_var(arg0)))
                     ret[arg0]++;
                 else
                     ret[arg0] = 1;
-                if (ret.find(arg1) != ret.end() && !is_internal_var(arg0))
+
+                if (ret.find(arg1) != ret.end() && (!is_internal_var(arg1) || is_replace_var(arg1)))
                     ret[arg1]++;
                 else
                     ret[arg1] = 1;
@@ -14555,6 +14664,14 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(p.first, get_manager()) << std::endl;);
 
         return ret;
+    }
+
+    bool theory_trau::is_replace_var(expr* x){
+        std::string s = expr2str(x);
+        if (s.find("replace1!") == 0 || s.find("replace2!") == 0)
+            return true;
+        else
+            return false;
     }
 
     std::map<expr*, int> theory_trau::countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination) {
@@ -14659,8 +14776,13 @@ namespace smt {
         collect_eq_nodes(nn, eqNodeSet);
         for (const auto& we : m_wi_expr_memo){
             if (eqNodeSet.contains(we.first.get())){
-                zstring value;
-                if (u.str.is_string(we.second.get(), value)) {
+                bool eq_const;
+                expr* const_value = get_eqc_value(we.second.get(), eq_const);
+                if (eq_const) {
+                    zstring value;
+                    u.str.is_string(const_value, value);
+                    STRACE("str",
+                           tout << __LINE__ << "\t " << mk_pp(we.first.get(), m) << " != \"" << value << "\"" << std::endl;);
                     if (!is_trivial_inequality(we.first.get(), value)) {
                         if (diffLen < (int) value.length()) {
                             diffLen = (int) value.length();
@@ -14684,8 +14806,12 @@ namespace smt {
                 }
             }
             else if (eqNodeSet.contains(we.second.get())){
-                zstring value;
-                if (u.str.is_string(we.first.get(), value)) {
+                bool eq_const;
+                expr* const_value = get_eqc_value(we.first.get(), eq_const);
+
+                if (eq_const) {
+                    zstring value;
+                    u.str.is_string(const_value, value);
                     STRACE("str",
                            tout << __LINE__ << "\t " << mk_pp(we.second.get(), m) << " != \"" << value << "\"" << std::endl;);
                     if (!is_trivial_inequality(we.second.get(), value)) {
@@ -14729,7 +14855,7 @@ namespace smt {
         bool is_var_x = false;
         bool is_var_y = false;
         for (const auto& xx : eqx) {
-            is_var_x = (!is_internal_var(xx)) || u.str.is_at(xx) || u.str.is_extract(xx) || u.str.is_replace(xx);
+            is_var_x = (!is_internal_var(xx)) || u.str.is_at(xx) || u.str.is_extract(xx) || u.str.is_replace(xx) || u.str.is_itos(xx);
             if (!is_var_x) {
                 std::string tmp = expr2str(xx);
                 is_var_x == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos);
@@ -14744,7 +14870,7 @@ namespace smt {
                 is_var_y = (!is_internal_var(yy)) || u.str.is_at(yy) || u.str.is_extract(yy) || u.str.is_replace(yy);
                 if (!is_var_y) {
                     std::string tmp = expr2str(yy);
-                    is_var_y == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos);
+                    is_var_y == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos) || u.str.is_itos(yy);
                 }
                 if (is_var_y)
                     break;
@@ -16328,6 +16454,9 @@ namespace smt {
         }
         axiomatized_terms.insert(ex);
 
+        if (can_solve_contain_family(e))
+            return;
+
         // quick path, because this is necessary due to rewriter behaviour
         // at minimum it should fix z3str/concat-006.smt2
         zstring haystackStr, needleStr;
@@ -16594,7 +16723,8 @@ namespace smt {
 
         SASSERT(ex->get_num_args() == 3);
 
-        instantiate_axiom_indexof_basecase(e);
+        if (can_solve_contain_family(e))
+            return;
 
         // if the third argument is exactly the integer 0, we can use this "simple" indexof;
         // otherwise, we call the "extended" version
@@ -16693,6 +16823,12 @@ namespace smt {
         //  indexAst = |x1|
         thenItems.push_back(ctx.mk_eq_atom(indexAst, mk_strlen(x1)));
 
+        // expr->get_arg(1) == 0 --> x1 = ""
+        if (!u.str.is_string(ex->get_arg(1))){
+            thenItems.push_back(rewrite_implication(createEqualOP(mk_strlen(ex->get_arg(1)), mk_int(0)),
+                                                    createEqualOP(mk_strlen(x1), mk_int(0))));
+        }
+
         bool oneCharCase = false;
         zstring needleStr;
         if (u.str.is_string(ex->get_arg(1), needleStr)) {
@@ -16761,22 +16897,6 @@ namespace smt {
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
             m_delayed_axiom_setup_terms.push_back(containsAxiom);
         }
-    }
-
-    void theory_trau::instantiate_axiom_indexof_basecase(enode * _e){
-        // arg1.len == 0 && 0 <= arg2 <= len arg0 --> return arg2
-//        ast_manager & m = get_manager();
-//
-//        app * e = _e->get_owner();
-//        expr* len_arg0 = mk_strlen(e->get_arg(0));
-//        expr* len_arg1 = mk_strlen(e->get_arg(1));
-//        expr_ref_vector premise(m);
-//        premise.push_back(m_autil.mk_eq(len_arg1, mk_int(0)));
-//        premise.push_back(m_autil.mk_le(mk_int(0), m_autil.mk_add(len_arg0, m_autil.mk_mul(mk_int(-1), e->get_arg(2)))));
-//        premise.push_back(m_autil.mk_le(mk_int(0), e->get_arg(2)));
-//        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "  " << mk_pp(createAndOP(premise), m) << std::endl;);
-//        m_delayed_axiom_setup_terms.push_back(rewrite_implication(createAndOP(premise), createEqualOP(_e->get_owner(), mk_int(0))));
-
     }
 
     /*
@@ -17174,8 +17294,14 @@ namespace smt {
         axiomatized_terms.insert(expr);
 
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
+        if (can_solve_contain_family(e)){
+            return;
+        }
         std::pair<app*, app*> value;
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
+
+
+
         app* a = u.str.mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
         if (contain_split_map.contains(key)) {
@@ -17230,6 +17356,12 @@ namespace smt {
         //  args[0] = x1 . args[1] . x2
         thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x1, mk_concat(expr->get_arg(1), x2))));
 
+        // expr->get_arg(1) == 0 --> x1 = ""
+        if (!u.str.is_string(expr->get_arg(1))){
+            thenItems.push_back(rewrite_implication(createEqualOP(mk_strlen(expr->get_arg(1)), mk_int(0)),
+                                                    createEqualOP(mk_strlen(x1), mk_int(0))));
+        }
+
         bool singleCharCase = false;
         zstring needleStr;
         if (u.str.is_string(expr->get_arg(1), needleStr)) {
@@ -17269,6 +17401,91 @@ namespace smt {
         expr_ref reduceToResult_rw(reduceToResult, m);
         rw(reduceToResult_rw);
         assert_axiom(reduceToResult_rw);
+    }
+
+    bool theory_trau::can_solve_contain_family(enode * e){
+        context &ctx = get_context();
+        ast_manager &m = get_manager();
+
+        app *ex = e->get_owner();
+        expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
+        if (haystack == needle) {
+            if (u.str.is_replace(ex))
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, ex->get_arg(2)));
+            else if (u.str.is_contains(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
+            }
+            else if (u.str.is_index(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_int(0)));
+            }
+            return true;
+        }
+        else if (needle == mk_string("")){
+            if (u.str.is_replace(ex))
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(ex->get_arg(2), haystack)));
+            else if (u.str.is_contains(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
+            }
+            else if (u.str.is_index(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_int(0)));
+            }
+            return true;
+        }
+        else if (u.str.is_concat(haystack)){
+            ptr_vector <expr> nodes;
+            get_nodes_in_concat(haystack, nodes);
+
+            unsigned pos = 0;
+            for (pos = 0; pos < nodes.size(); ++pos)
+                if (nodes[pos] != mk_string(""))
+                    break;
+
+            if (pos != nodes.size()) {
+                zstring needle_str;
+                zstring haystack_0_str;
+                if (u.str.is_string(needle, needle_str) && u.str.is_string(nodes[pos], haystack_0_str) && haystack_0_str.contains(needle_str)) {
+                    int at = haystack_0_str.indexof(needle_str, 0);
+                    if (u.str.is_replace(ex)) {
+                        zstring replacement;
+                        expr* new_haystack_0_str = nullptr;
+                        if (u.str.is_string(ex->get_arg(2), replacement)){
+                            new_haystack_0_str = u.str.mk_string(haystack_0_str.replace(needle_str, replacement));
+                            m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(new_haystack_0_str, create_concat_from_vector(nodes, pos))));
+                        }
+                        else {
+                            zstring pre = haystack_0_str.extract(0, at);
+                            zstring post = haystack_0_str.extract(at + needle_str.length() + 1, haystack_0_str.length() - at - needle_str.length() - 1);
+
+                            expr* tmp0 = u.str.mk_concat(mk_string(post), create_concat_from_vector(nodes, pos));
+                            expr* tmp1 = u.str.mk_concat(ex->get_arg(2), tmp0);
+                            expr* tmp2 = u.str.mk_concat(mk_string(pre), tmp1);
+                            m_delayed_assertions_todo.push_back(createEqualOP(ex, tmp2));
+                        }
+
+                    }
+                    else if (u.str.is_contains(ex)){
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
+                    }
+                    else if (u.str.is_index(ex)){
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_int(at)));
+                    }
+                    return true;
+                }
+                else if (needle == nodes[pos]){
+                    if (u.str.is_replace(ex)) {
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(ex->get_arg(2), create_concat_from_vector(nodes, pos))));
+                    }
+                    else if (u.str.is_contains(ex)){
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
+                    }
+                    else if (u.str.is_index(ex)){
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_int(0)));
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     void theory_trau::instantiate_axiom_regexIn(enode * e) {
@@ -17745,11 +17962,19 @@ namespace smt {
     }
 
     app * theory_trau::mk_contains(expr * haystack, expr * needle) {
+        rational len;
+
+        if (haystack == needle || (get_len_value(needle, len) && len.get_int64() == 0))
+            return get_manager().mk_true();
+
         app * contains = u.str.mk_contains(haystack, needle); // TODO double-check semantics/argument order
         m_trail.push_back(contains);
         // immediately force internalization so that axiom setup does not fail
         get_context().internalize(contains, false);
         set_up_axioms(contains);
+        if (!u.str.is_string(needle)) {
+            assert_axiom(rewrite_implication(createEqualOP(mk_strlen(needle), mk_int(0)), createEqualOP(contains, get_manager().mk_true())));
+        }
         return contains;
     }
 

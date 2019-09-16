@@ -1409,11 +1409,16 @@ namespace smt {
         void reset_eh() override;
         final_check_status final_check_eh() override;
             bool eval_str_int();
+
+            bool eval_disequal_str_int();
+                bool eq_to_i2s(expr* n, expr* &i2s);
+
             /*
              * Check agreement between integer and string theories for the term a = (str.to-int S).
              * Returns true if axioms were added, and false otherwise.
              */
             bool eval_str2int(app * a);
+                rational string_to_int(zstring str, bool &valid);
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
             void refined_init_chain_free(
@@ -1505,7 +1510,6 @@ namespace smt {
                 bool is_equal(UnderApproxState preState, UnderApproxState currState);
                     bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
-                bool is_weaker_expr_sets(expr_ref_vector a, expr_ref_vector b);
             bool underapproximation_cached();
             void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &non_fresh_vars);
                 void mk_and_setup_arr(
@@ -1529,6 +1533,7 @@ namespace smt {
             void handle_diseq_notcontain(bool cached = false);
                 void handle_NOTEqual();
                 void handle_NOTEqual_cached();
+                    bool review_disequality(expr* lhs, expr* rhs);
                     void handle_NOTEqual(expr* lhs, expr* rhs);
                     void handle_NOTEqual_const(expr* lhs, zstring rhs);
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
@@ -2194,7 +2199,8 @@ namespace smt {
                     expr* nn,
                     int len,
                     std::map<expr *, std::set<expr *>> combinations);
-                    std::map<expr*, int> countOccurrences_from_root(std::set<expr*> eqc_roots);
+                    std::map<expr*, int> countOccurrences_from_root();
+                        bool is_replace_var(expr* x);
                     std::map<expr*, int> countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination);
             void print_all_assignments();
             void print_guessed_literals();
@@ -2362,7 +2368,8 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
-        void instantiate_axiom_indexof_basecase(enode * _e);
+        bool can_solve_contain_family(enode * e);
+
         expr* is_regex_plus_breakdown(expr* e);
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);
