@@ -1469,7 +1469,6 @@ namespace smt {
                 bool at_same_diseq_state(str::state curr, str::state prev);
 
         bool review_starting_ending_combination(std::map<expr *, std::set<expr *>> eq_combination);
-            bool all_length_solved();
             std::set<char> collect_char_domain_from_concat();
             std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
             bool handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
@@ -1533,7 +1532,12 @@ namespace smt {
             void handle_diseq_notcontain(bool cached = false);
                 void handle_NOTEqual();
                 void handle_NOTEqual_cached();
-                    bool review_disequality(expr* lhs, expr* rhs);
+
+            bool review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination);
+                bool review_notcontain_trivial(expr* lhs, expr* needle);
+            bool review_disequality_not_contain(std::map<expr*, std::set<expr*>> eq_combination);
+                bool review_disequality(expr* lhs, expr* rhs, std::map<expr*, std::set<expr*>> eq_combination);
+                bool review_disequality_trivial(expr* lhs, expr* rhs);
                     void handle_NOTEqual(expr* lhs, expr* rhs);
                     void handle_NOTEqual_const(expr* lhs, zstring rhs);
                     void handle_NOTEqual_var(expr* lhs, expr* rhs);
@@ -2369,7 +2373,8 @@ namespace smt {
         void instantiate_axiom_str_to_int(enode * e);
 
         bool can_solve_contain_family(enode * e);
-
+        bool can_reduce_contain_family(expr* ex);
+        app* mk_replace(expr* a, expr* b, expr* c) const;
         expr* is_regex_plus_breakdown(expr* e);
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);

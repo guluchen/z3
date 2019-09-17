@@ -4252,6 +4252,12 @@ namespace smt {
             return FC_CONTINUE;
         }
 
+        if (!review_disequality_not_contain(eq_combination)){
+            print_eq_combination(eq_combination);
+            negate_context();
+            return FC_CONTINUE;
+        }
+
         if (!is_notContain_consistent(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by is_notContain_consistent check." << std::endl;);
             update_state();
@@ -5804,22 +5810,6 @@ namespace smt {
                     }
         }
         return true;
-    }
-
-    bool theory_trau::all_length_solved(){
-        ast_manager &m = get_manager();
-        bool notSolved = false;
-        for (const auto& n : variable_set){
-            rational vLen;
-            if (get_len_value(n, vLen)) {
-                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = " << vLen << std::endl;);
-            }
-            else {
-                STRACE("str", tout << __LINE__ << " var " << mk_pp(n, m) << " len = not solved" << std::endl;);
-                notSolved = true;
-            }
-        }
-        return !notSolved;
     }
 
     /*
@@ -7392,7 +7382,6 @@ namespace smt {
     }
 
     void theory_trau::handle_diseq_notcontain(bool cached){
-//        return;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_NOTEqual();
@@ -7450,21 +7439,120 @@ namespace smt {
             }
             zstring value;
 
-            if (review_disequality(lhs, rhs)) {
-                if (constLhs != nullptr && u.str.is_string(constLhs, value))
-                    handle_NOTEqual_const(rhs, value);
-                else if (constRhs != nullptr && u.str.is_string(constRhs, value))
-                    handle_NOTEqual_const(lhs, value);
-                else
-                    handle_NOTEqual_var(lhs, rhs);
-            }
-            else {
-                negate_context();
-            }
+            if (constLhs != nullptr && u.str.is_string(constLhs, value))
+                handle_NOTEqual_const(rhs, value);
+            else if (constRhs != nullptr && u.str.is_string(constRhs, value))
+                handle_NOTEqual_const(lhs, value);
+            else
+                handle_NOTEqual_var(lhs, rhs);
+
         }
     }
 
-    bool theory_trau::review_disequality(expr* lhs, expr* rhs){
+    bool theory_trau::review_disequality_not_contain(std::map<expr*, std::set<expr*>> eq_combination){
+        for (const auto &wi : m_wi_expr_memo) {
+            if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
+                expr* lhs = wi.first.get();
+                expr* rhs = wi.second.get();
+                expr* contain = nullptr;
+                if (is_contain_equality(lhs, contain)){
+                    if (!review_not_contain(rhs, contain, eq_combination)){
+                        ast_manager & m = get_manager();
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                        return false;
+                    }
+                }
+                else if (is_contain_equality(rhs, contain)){
+                    if (!review_not_contain(lhs, contain, eq_combination)){
+                        ast_manager & m = get_manager();
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                        return false;
+                    }
+                }
+                else {
+                    if (!review_disequality(lhs, rhs, eq_combination)) {
+                        ast_manager & m = get_manager();
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    bool theory_trau::review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination){
+        ast_manager & m = get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+        if (!review_notcontain_trivial(lhs, needle)){
+            return false;
+        }
+        context & ctx = get_context();
+        expr* root_lhs = ctx.get_enode(lhs)->get_root()->get_owner();
+        if (u.str.is_string(lhs))
+            root_lhs = lhs;
+
+        if (eq_combination.find(root_lhs) != eq_combination.end()){
+            for (const auto& s : eq_combination[root_lhs]){
+                ptr_vector <expr> nodes;
+                get_nodes_in_concat(s, nodes);
+                for (const auto& nn : nodes)
+                    if (in_same_eqc(nn, needle)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+                        return false;
+                    }
+            }
+        }
+
+        return true;
+    }
+
+    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle){
+
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(lhs, eqs);
+        for (const auto& eq: eqs) {
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(eq, nodes);
+            for (const auto &nn : nodes)
+                if (in_same_eqc(nn, needle)) {
+                    ast_manager &m = get_manager();
+                    STRACE("str",
+                           tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain "
+                                << mk_pp(needle, m) << ")\n";);
+                    return false;
+                }
+        }
+        return true;
+    }
+
+    bool theory_trau::review_disequality(expr* lhs, expr* rhs, std::map<expr*, std::set<expr*>> eq_combination){
+
+        if (!review_disequality_trivial(lhs, rhs)){
+            return false;
+        }
+        context & ctx = get_context();
+        expr* root_lhs = ctx.get_enode(lhs)->get_root()->get_owner();
+        expr* root_rhs = ctx.get_enode(rhs)->get_root()->get_owner();
+        if (u.str.is_string(lhs))
+            root_lhs = lhs;
+
+        if (u.str.is_string(root_rhs))
+            root_rhs = rhs;
+
+        if (eq_combination.find(root_lhs) != eq_combination.end() && eq_combination.find(root_rhs) != eq_combination.end()){
+            for (const auto& s : eq_combination[root_lhs])
+                for (const auto& ss: eq_combination[root_rhs]){
+                    if (are_equal_concat(s, ss))
+                        return false;
+                }
+        }
+
+        return true;
+    }
+
+    bool theory_trau::review_disequality_trivial(expr* lhs, expr* rhs){
+
         ptr_vector <expr> lhs_nodes;
         get_nodes_in_concat(lhs, lhs_nodes);
         ptr_vector <expr> rhs_nodes;
@@ -14243,6 +14331,11 @@ namespace smt {
 
 
     expr* theory_trau::create_concat_from_vector(ptr_vector<expr> v, int from_pos){
+        if (v.size() == 0)
+            return mk_string("");
+        else if (v.size() == 1)
+            return v[0];
+
         expr* ret = v[v.size() - 1];
         for (int i = v.size() - 2; i > from_pos; --i) {
             ret = u.str.mk_concat(v[i], ret);
@@ -14492,6 +14585,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(v.first, m) << " eq_combination size: " << eq_combination[rootTmp].size()
                                        << std::endl;);
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
+                            !more_than_two_occurrences(v.first, occurrences) &&
                         eq_combination[rootTmp].size() <= 20 &&
                         !is_contain_equality(v.first) &&
                             str_int_vars.find(v.first) == str_int_vars.end() &&
@@ -17300,8 +17394,6 @@ namespace smt {
         std::pair<app*, app*> value;
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
 
-
-
         app* a = u.str.mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
         if (contain_split_map.contains(key)) {
@@ -17408,6 +17500,7 @@ namespace smt {
         ast_manager &m = get_manager();
 
         app *ex = e->get_owner();
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
         if (haystack == needle) {
             if (u.str.is_replace(ex))
@@ -17432,6 +17525,7 @@ namespace smt {
             return true;
         }
         else if (u.str.is_concat(haystack)){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
             ptr_vector <expr> nodes;
             get_nodes_in_concat(haystack, nodes);
 
@@ -17439,29 +17533,32 @@ namespace smt {
             for (pos = 0; pos < nodes.size(); ++pos)
                 if (nodes[pos] != mk_string(""))
                     break;
-
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
             if (pos != nodes.size()) {
                 zstring needle_str;
                 zstring haystack_0_str;
                 if (u.str.is_string(needle, needle_str) && u.str.is_string(nodes[pos], haystack_0_str) && haystack_0_str.contains(needle_str)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << " " << haystack_0_str << " " << needle_str  << std::endl;);
                     int at = haystack_0_str.indexof(needle_str, 0);
                     if (u.str.is_replace(ex)) {
                         zstring replacement;
                         expr* new_haystack_0_str = nullptr;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
                         if (u.str.is_string(ex->get_arg(2), replacement)){
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
                             new_haystack_0_str = u.str.mk_string(haystack_0_str.replace(needle_str, replacement));
                             m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(new_haystack_0_str, create_concat_from_vector(nodes, pos))));
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
                         }
                         else {
                             zstring pre = haystack_0_str.extract(0, at);
-                            zstring post = haystack_0_str.extract(at + needle_str.length() + 1, haystack_0_str.length() - at - needle_str.length() - 1);
+                            zstring post = haystack_0_str.extract(at + needle_str.length(), haystack_0_str.length() - at - needle_str.length());
 
                             expr* tmp0 = u.str.mk_concat(mk_string(post), create_concat_from_vector(nodes, pos));
                             expr* tmp1 = u.str.mk_concat(ex->get_arg(2), tmp0);
                             expr* tmp2 = u.str.mk_concat(mk_string(pre), tmp1);
                             m_delayed_assertions_todo.push_back(createEqualOP(ex, tmp2));
                         }
-
                     }
                     else if (u.str.is_contains(ex)){
                         m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
@@ -17472,6 +17569,7 @@ namespace smt {
                     return true;
                 }
                 else if (needle == nodes[pos]){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
                     if (u.str.is_replace(ex)) {
                         m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(ex->get_arg(2), create_concat_from_vector(nodes, pos))));
                     }
@@ -17484,6 +17582,69 @@ namespace smt {
                     return true;
                 }
             }
+
+            // reduce the contain family
+            if (can_reduce_contain_family(e->get_owner()))
+                return true;
+        }
+
+
+        return false;
+    }
+
+    app* theory_trau::mk_replace(expr* a, expr* b, expr* c) const { expr* es[3] = { a, b , c}; return get_manager().mk_app(u.get_family_id(), OP_SEQ_REPLACE, 3, es); }
+
+    bool theory_trau::can_reduce_contain_family(expr* ex){
+        app* a = to_app(ex);
+        ast_manager &m = get_manager();
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
+        expr_ref haystack(a->get_arg(0), m), needle(a->get_arg(1), m);
+        ptr_vector <expr> nodes;
+        get_nodes_in_concat(haystack, nodes);
+
+        unsigned pos = 0;
+        for (pos = 0; pos < nodes.size(); ++pos)
+            if (nodes[pos] != mk_string(""))
+                break;
+
+        zstring needle_str;
+        zstring haystack_0_str;
+        if (u.str.is_string(needle, needle_str) && u.str.is_string(nodes[pos], haystack_0_str) && !haystack_0_str.contains(needle_str)) {
+            expr* tmp = create_concat_from_vector(nodes, pos);
+            if (u.str.is_replace(ex)) {
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(nodes[pos], mk_replace(tmp, needle.get(), a->get_arg(2)))));
+            }
+            else if (u.str.is_contains(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+            }
+            else if (u.str.is_index(ex)){
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
+            }
+            return true;
+        }
+        else {
+            while (nodes.size() > 0 && nodes[nodes.size() - 1] == mk_string(""))
+                nodes.pop_back();
+            if (nodes.size() > 0) {
+                expr *last = nodes[nodes.size() - 1];
+                nodes.pop_back();
+
+                if (u.str.is_string(needle, needle_str) && u.str.is_string(last, haystack_0_str) &&
+                    !haystack_0_str.contains(needle_str)) {
+                    expr *tmp = create_concat_from_vector(nodes, 0);
+                    if (u.str.is_replace(ex)) {
+                        m_delayed_assertions_todo.push_back(
+                                createEqualOP(ex, u.str.mk_concat(mk_replace(tmp, needle.get(), a->get_arg(2)), last)));
+                    } else if (u.str.is_contains(ex)) {
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+                    } else if (u.str.is_index(ex)) {
+                        m_delayed_assertions_todo.push_back(
+                                createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
+                    }
+                    return true;
+                }
+            }
+
         }
         return false;
     }

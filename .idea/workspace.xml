@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="588">
-              <caret line="14654" column="100" lean-forward="true" selection-start-line="14654" selection-start-column="100" selection-end-line="14654" selection-end-column="100" />
+            <state relative-caret-position="183">
+              <caret line="7451" column="52" selection-start-line="7451" selection-start-column="22" selection-end-line="7451" selection-end-column="52" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -113,8 +113,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="402">
-              <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
+            <state relative-caret-position="368">
+              <caret line="239" selection-start-line="239" selection-end-line="239" />
             </state>
           </provider>
         </entry>
@@ -186,7 +186,7 @@
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="393">
-              <caret line="2201" column="61" selection-start-line="2201" selection-start-column="61" selection-end-line="2201" selection-end-column="61" />
+              <caret line="1537" column="47" selection-start-line="1537" selection-start-column="17" selection-end-line="1537" selection-end-column="47" />
             </state>
           </provider>
         </entry>
@@ -195,17 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>r</find>
-      <find>indexAst</find>
-      <find>instantiate_axiom_indexof_basecase</find>
-      <find>m_delayed_axiom_setup_terms</find>
-      <find>generate_constraint01_regex_regex</find>
-      <find>const_vs_regex</find>
-      <find>sync_index_head</find>
-      <find>lenOutOfBounds</find>
-      <find>argumentsValid</find>
-      <find>at_same_eq_state</find>
-      <find>is_completed_branch</find>
       <find>underapproximation</find>
       <find>collect_all_inequalities</find>
       <find>is_importantVar_recheck</find>
@@ -225,6 +214,17 @@
       <find>eval_str_int</find>
       <find>countOccurrences_from_root</find>
       <find>underappf</find>
+      <find>ctx</find>
+      <find>parikh_image_check</find>
+      <find>handle_NOTEqual</find>
+      <find>handle_diseq_notcontain</find>
+      <find>pos</find>
+      <find>breakdown_cached_diseq</find>
+      <find>review_dis</find>
+      <find>review_disequality</find>
+      <find>final_check</find>
+      <find>review_notcontain_trivial</find>
+      <find>review_not_contain</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -831,12 +831,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="70117000" />
+      <workItem from="1568106535994" duration="86336000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1674447000" />
+    <option name="totallyTimeSpent" value="1690666000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1224,22 +1224,22 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/ast/seq_decl_plugin.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="402">
-          <caret line="249" column="13" selection-start-line="249" selection-start-column="13" selection-end-line="249" selection-end-column="13" />
+        <state relative-caret-position="368">
+          <caret line="239" selection-start-line="239" selection-end-line="239" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="393">
-          <caret line="2201" column="61" selection-start-line="2201" selection-start-column="61" selection-end-line="2201" selection-end-column="61" />
+          <caret line="1537" column="47" selection-start-line="1537" selection-start-column="17" selection-end-line="1537" selection-end-column="47" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="588">
-          <caret line="14654" column="100" lean-forward="true" selection-start-line="14654" selection-start-column="100" selection-end-line="14654" selection-end-column="100" />
+        <state relative-caret-position="183">
+          <caret line="7451" column="52" selection-start-line="7451" selection-start-column="22" selection-end-line="7451" selection-end-column="52" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
