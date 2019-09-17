@@ -1534,6 +1534,7 @@ namespace smt {
                 void handle_NOTEqual_cached();
 
             bool review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination);
+                expr* remove_empty_in_concat(expr* s);
                 bool review_notcontain_trivial(expr* lhs, expr* needle);
             bool review_disequality_not_contain(std::map<expr*, std::set<expr*>> eq_combination);
                 bool review_disequality(expr* lhs, expr* rhs, std::map<expr*, std::set<expr*>> eq_combination);

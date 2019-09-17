@@ -7484,7 +7484,8 @@ namespace smt {
     bool theory_trau::review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination){
         ast_manager & m = get_manager();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
-        if (!review_notcontain_trivial(lhs, needle)){
+        expr* new_needle = remove_empty_in_concat(needle);
+        if (!review_notcontain_trivial(lhs, new_needle)){
             return false;
         }
         context & ctx = get_context();
@@ -7497,7 +7498,7 @@ namespace smt {
                 ptr_vector <expr> nodes;
                 get_nodes_in_concat(s, nodes);
                 for (const auto& nn : nodes)
-                    if (in_same_eqc(nn, needle)) {
+                    if (in_same_eqc(nn, new_needle)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
                         return false;
                     }
@@ -7505,6 +7506,22 @@ namespace smt {
         }
 
         return true;
+    }
+
+    expr* theory_trau::remove_empty_in_concat(expr* s){
+        ptr_vector <expr> nodes;
+        get_nodes_in_concat(s, nodes);
+
+        ptr_vector <expr> new_nodes;
+        rational ra;
+        for (const auto& ss : nodes)
+            if (get_len_value(ss, ra) && ra.get_int64() == 0){
+
+            }
+            else {
+                new_nodes.push_back(ss);
+            }
+        return create_concat_from_vector(new_nodes, 0);
     }
 
     bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle){
@@ -7786,10 +7803,10 @@ namespace smt {
             if (u.str.is_concat(nn)) {
                 ptr_vector<expr> exprVector;
                 get_nodes_in_concat(nn, exprVector);
-                if (exprVector.size() == 3) {
+                if (exprVector.size() >= 3) {
                     // check var name
                     std::string n1 = expr2str(exprVector[0]);
-                    std::string n3 = expr2str(exprVector[2]);
+                    std::string n3 = expr2str(exprVector[exprVector.size() - 1]);
                     if ((n1.find("pre_contain!tmp") != std::string::npos &&
                          n3.find("post_contain!tmp") != std::string::npos) ||
                         (n1.find("indexOf1!tmp") != std::string::npos &&
@@ -7814,10 +7831,10 @@ namespace smt {
         if (u.str.is_concat(n)){
             ptr_vector<expr> exprVector;
             get_nodes_in_concat(n, exprVector);
-            if (exprVector.size() == 3) {
+            if (exprVector.size() >= 3) {
                 // check var name
                 std::string n1 = expr2str(exprVector[0]);
-                std::string n3 = expr2str(exprVector[2]);
+                std::string n3 = expr2str(exprVector[exprVector.size() - 1]);
                 if ((n1.find("pre_contain!tmp") != std::string::npos &&
                      n3.find("post_contain!tmp") != std::string::npos) ||
                     (n1.find("indexOf1!tmp") != std::string::npos &&
@@ -16698,7 +16715,8 @@ namespace smt {
 
         std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("pre_contain"), mk_str_var("post_contain"));
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
-        app* a = u.str.mk_contains(haystack, needle);
+
+        app* a = mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];
@@ -16834,7 +16852,7 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         std::pair<app*, app*> value;
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
-        app* a = u.str.mk_contains(haystack, needle);
+        app* a = mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
 
         if (contain_split_map.contains(key)) {
@@ -17394,7 +17412,7 @@ namespace smt {
         std::pair<app*, app*> value;
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
 
-        app* a = u.str.mk_contains(haystack, needle);
+        app* a = mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];

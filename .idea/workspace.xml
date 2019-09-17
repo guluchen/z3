@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="183">
-              <caret line="7451" column="52" selection-start-line="7451" selection-start-column="22" selection-end-line="7451" selection-end-column="52" />
+            <state relative-caret-position="393">
+              <caret line="17414" column="17" lean-forward="true" selection-start-line="17414" selection-start-column="17" selection-end-line="17414" selection-end-column="17" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -185,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="393">
-              <caret line="1537" column="47" selection-start-line="1537" selection-start-column="17" selection-end-line="1537" selection-end-column="47" />
+            <state relative-caret-position="408">
+              <caret line="1536" column="54" selection-start-line="1536" selection-start-column="54" selection-end-line="1536" selection-end-column="54" />
             </state>
           </provider>
         </entry>
@@ -195,9 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>underapproximation</find>
-      <find>collect_all_inequalities</find>
-      <find>is_importantVar_recheck</find>
       <find>if (maxDiffStrs.size() &gt; 0)</find>
       <find>maxDiffStrs</find>
       <find>refine_important_vars</find>
@@ -221,10 +218,13 @@
       <find>pos</find>
       <find>breakdown_cached_diseq</find>
       <find>review_dis</find>
-      <find>review_disequality</find>
       <find>final_check</find>
       <find>review_notcontain_trivial</find>
       <find>review_not_contain</find>
+      <find>simplify_concat</find>
+      <find>review_disequality</find>
+      <find>instantiate_a</find>
+      <find>mk_contains</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -831,12 +831,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="86336000" />
+      <workItem from="1568106535994" duration="87247000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1690666000" />
+    <option name="totallyTimeSpent" value="1691577000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1231,15 +1231,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="393">
-          <caret line="1537" column="47" selection-start-line="1537" selection-start-column="17" selection-end-line="1537" selection-end-column="47" />
+        <state relative-caret-position="408">
+          <caret line="1536" column="54" selection-start-line="1536" selection-start-column="54" selection-end-line="1536" selection-end-column="54" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="183">
-          <caret line="7451" column="52" selection-start-line="7451" selection-start-column="22" selection-end-line="7451" selection-end-column="52" />
+        <state relative-caret-position="393">
+          <caret line="17414" column="17" lean-forward="true" selection-start-line="17414" selection-start-column="17" selection-end-line="17414" selection-end-column="17" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
