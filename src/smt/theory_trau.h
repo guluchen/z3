@@ -1434,8 +1434,8 @@ namespace smt {
             void refine_not_contain_vars(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
                 std::map<expr *, std::set<expr *>> eq_combination);
-            bool is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
-                bool appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s);
+            bool is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination, std::set<std::pair<expr *, int>> non_fresh_vars);
+                bool appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s, std::set<std::pair<expr *, int>> non_fresh_vars);
                 bool eq_in_list(expr* n, ptr_vector<expr> nodes);
             bool can_omit(expr* lhs, expr* rhs, zstring needle);
             bool appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
@@ -2206,7 +2206,9 @@ namespace smt {
                     std::map<expr *, std::set<expr *>> combinations);
                     std::map<expr*, int> countOccurrences_from_root();
                         bool is_replace_var(expr* x);
-                    std::map<expr*, int> countOccurrences_from_combination(std::map<expr *, std::set<expr *>> eq_combination);
+                    std::map<expr*, int> countOccurrences_from_combination(
+                            std::map<expr *, std::set<expr *>> eq_combination,
+                            std::set<std::pair<expr *, int>> non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
             std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
