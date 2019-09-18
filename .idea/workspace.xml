@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="393">
-              <caret line="14611" column="76" selection-start-line="14611" selection-start-column="43" selection-end-line="14611" selection-end-column="76" />
+            <state relative-caret-position="573">
+              <caret line="12559" column="43" lean-forward="true" selection-start-line="12559" selection-start-column="43" selection-end-line="12559" selection-end-column="43" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -185,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="423">
-              <caret line="2210" column="75" selection-start-line="2210" selection-start-column="75" selection-end-line="2210" selection-end-column="75" />
+            <state relative-caret-position="408">
+              <caret line="1972" column="30" selection-start-line="1972" selection-start-column="30" selection-end-line="1972" selection-end-column="30" />
             </state>
           </provider>
         </entry>
@@ -195,11 +195,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>connectingSize</find>
-      <find>index</find>
-      <find>is_var_var_inequality</find>
-      <find>handle_not</find>
-      <find>mk_contain</find>
       <find>instantiate_ax</find>
       <find>create_concat_from_vector</find>
       <find>handle_NOTEqual_var</find>
@@ -216,7 +211,6 @@
       <find>review_dis</find>
       <find>final_check</find>
       <find>review_notcontain_trivial</find>
-      <find>review_not_contain</find>
       <find>simplify_concat</find>
       <find>instantiate_a</find>
       <find>mk_contains</find>
@@ -224,7 +218,13 @@
       <find>instantiate_axiom_indexof</find>
       <find>review_disequality</find>
       <find>is_not_important</find>
+      <find>pre_prefix</find>
+      <find>15011</find>
+      <find>review_not_contain</find>
+      <find>const_vs_str_int</find>
+      <find>u.str.mk_stoi(e), mk_int(-1</find>
       <find>countOccurrences_from_combination</find>
+      <find>mk_stoi(</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -831,12 +831,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="97188000" />
+      <workItem from="1568106535994" duration="102201000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1701518000" />
+    <option name="totallyTimeSpent" value="1706531000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1231,15 +1231,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="2210" column="75" selection-start-line="2210" selection-start-column="75" selection-end-line="2210" selection-end-column="75" />
+        <state relative-caret-position="408">
+          <caret line="1972" column="30" selection-start-line="1972" selection-start-column="30" selection-end-line="1972" selection-end-column="30" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="393">
-          <caret line="14611" column="76" selection-start-line="14611" selection-start-column="43" selection-end-line="14611" selection-end-column="76" />
+        <state relative-caret-position="573">
+          <caret line="12559" column="43" lean-forward="true" selection-start-line="12559" selection-start-column="43" selection-end-line="12559" selection-end-column="43" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

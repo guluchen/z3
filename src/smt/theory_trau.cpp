@@ -967,7 +967,6 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
-            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -7858,7 +7857,8 @@ namespace smt {
                      n3.find("indexOf2!tmp") != std::string::npos) ||
                         (n1.find("replace1!tmp") != std::string::npos &&
                          n3.find("replace2!tmp") != std::string::npos)) {
-                    contain = exprVector[1];
+                    exprVector.pop_back();
+                    contain = create_concat_from_vector(exprVector, 1);
                     return true;
                 }
             }
@@ -12533,16 +12533,38 @@ namespace smt {
                             (val.length() == 1 ||
                              (j == 0 && elementNames[i].second % p_bound.get_int64() == -1) ||
                              (j == val.length() - 1 && elementNames[i].second % p_bound.get_int64() == 0))) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())
-                                               << " cannot contain because of str-int" << mk_pp(elementNames[i].first, get_manager())
+
+                            expr* i2s = find_i2s(e);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(i2s, get_manager())
                                                << std::endl;);
-                            extra_assert = createEqualOP(u.str.mk_stoi(e), mk_int(-1));
+                            if (i2s != nullptr) {
+                                extra_assert = createEqualOP(i2s, mk_int(-1));
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, get_manager())
+                                                   << " cannot contain because of str-int" << mk_pp(elementNames[i].first, get_manager())
+                                                   << " " << mk_pp(extra_assert, get_manager())
+                                                   << std::endl;);
+                            }
+                            else {
+                                extra_assert = createEqualOP(u.str.mk_stoi(e), mk_int(-1));
+                            }
+
                             return false;
                         }
                 }
             }
         }
         return true;
+    }
+
+    expr* theory_trau::find_i2s(expr* e){
+        expr_ref_vector eqs(get_manager());
+        collect_eq_nodes(e, eqs);
+        for (const auto& s : eqs)
+            if (u.str.is_itos(s)) {
+                return to_app(s)->get_arg(0);
+            }
+
+        return nullptr;
     }
 
     /*
@@ -13086,7 +13108,7 @@ namespace smt {
      *
      */
     app* theory_trau::createEqualOP(expr* x, expr* y){
-        context & ctx   = get_context();
+        context & ctx = get_context();
         if (x == y)
             return get_manager().mk_true();
         app* tmp = ctx.mk_eq_atom(x, y);
@@ -14988,7 +15010,10 @@ namespace smt {
             is_var_x = (!is_internal_var(xx)) || u.str.is_at(xx) || u.str.is_extract(xx) || u.str.is_replace(xx) || u.str.is_itos(xx);
             if (!is_var_x) {
                 std::string tmp = expr2str(xx);
-                is_var_x == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos);
+                is_var_x = (tmp.find("charAt1!") != std::string::npos) ||
+                            (tmp.find("substr3!") != std::string::npos) ||
+                            (tmp.find("pre_prefix") != std::string::npos) ||
+                            (tmp.find("post_suffix") != std::string::npos);
             }
 
             if (is_var_x)
@@ -14997,10 +15022,13 @@ namespace smt {
 
         if (is_var_x) {
             for (const auto& yy : eqy) {
-                is_var_y = (!is_internal_var(yy)) || u.str.is_at(yy) || u.str.is_extract(yy) || u.str.is_replace(yy);
+                is_var_y = (!is_internal_var(yy)) || u.str.is_at(yy) || u.str.is_extract(yy) || u.str.is_replace(yy) || u.str.is_itos(yy);
                 if (!is_var_y) {
                     std::string tmp = expr2str(yy);
-                    is_var_y == (tmp.find("charAt1!") != std::string::npos) || (tmp.find("substr3!") != std::string::npos) || u.str.is_itos(yy);
+                    is_var_y = (tmp.find("charAt1!") != std::string::npos) ||
+                                (tmp.find("substr3!") != std::string::npos) ||
+                                (tmp.find("pre_prefix!") != std::string::npos) ||
+                                (tmp.find("post_suffix!") != std::string::npos);
                 }
                 if (is_var_y)
                     break;

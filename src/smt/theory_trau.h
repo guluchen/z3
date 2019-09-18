@@ -1970,6 +1970,7 @@ namespace smt {
                     bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames);
                     bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames);
                     bool const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames, expr* &extra_assert);
+                        expr* find_i2s(expr* e);
                     bool length_base_split(expr* e, std::vector<std::pair<expr*, int> > elementNames);
                 /*
                 * textLeft: length of string
