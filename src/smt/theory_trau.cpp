@@ -15355,6 +15355,11 @@ namespace smt {
             }
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+
+        if (!review_disequality_not_contain(combinations)){
+            print_eq_combination(combinations);
+            negate_context();
+        }
         return refine_eq_combination(non_fresh_vars, combinations, subNodes);
     }
 
