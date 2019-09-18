@@ -2379,6 +2379,7 @@ namespace smt {
         bool can_solve_contain_family(enode * e);
         bool can_reduce_contain_family(expr* ex);
         app* mk_replace(expr* a, expr* b, expr* c) const;
+        app* mk_at(expr* a, expr* b) const;
         expr* is_regex_plus_breakdown(expr* e);
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);

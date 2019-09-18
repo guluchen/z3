@@ -17239,6 +17239,13 @@ namespace smt {
             m_delayed_assertions_todo.push_back(createEqualOP(expr, mk_string("")));
             return;
         }
+        else {
+            rational len_ral;
+            if (get_arith_value(len, len_ral) && len_ral.get_int64() == 1) {
+                m_delayed_assertions_todo.push_back(createEqualOP(expr, mk_at(base, pos)));
+                return;
+            }
+        }
 
         expr_ref_vector argumentsValid_terms(m);
         // pos >= 0
@@ -17666,6 +17673,7 @@ namespace smt {
     }
 
     app* theory_trau::mk_replace(expr* a, expr* b, expr* c) const { expr* es[3] = { a, b , c}; return get_manager().mk_app(u.get_family_id(), OP_SEQ_REPLACE, 3, es); }
+    app* theory_trau::mk_at(expr* a, expr* b) const { expr* es[2] = { a, b}; return get_manager().mk_app(u.get_family_id(), OP_SEQ_AT, 2, es); }
 
     bool theory_trau::can_reduce_contain_family(expr* ex){
         app* a = to_app(ex);
