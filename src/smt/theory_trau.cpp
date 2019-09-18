@@ -16835,9 +16835,6 @@ namespace smt {
 
         SASSERT(ex->get_num_args() == 3);
 
-        if (can_solve_contain_family(e))
-            return;
-
         // if the third argument is exactly the integer 0, we can use this "simple" indexof;
         // otherwise, we call the "extended" version
         expr * startingPosition = ex->get_arg(2);
@@ -16847,7 +16844,11 @@ namespace smt {
             instantiate_axiom_indexof_extended(e);
             return;
         }
+
         axiomatized_terms.insert(ex);
+
+        if (can_solve_contain_family(e))
+            return;
 
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         std::pair<app*, app*> value;
@@ -17057,6 +17058,13 @@ namespace smt {
         expr_ref minus_one(m_autil.mk_numeral(rational::minus_one(), true), m);
         expr_ref zero(m_autil.mk_numeral(rational::zero(), true), m);
 
+        {
+            // arg1 == arg0 && arg2 == 0 --> e = 0
+            expr_ref_vector ands(m);
+            ands.push_back(createEqualOP(arg0, arg1));
+            ands.push_back(createEqualOP(startIndex, mk_int(0)));
+            assert_axiom(rewrite_implication(createAndOP(ands), createEqualOP(e, mk_int(0))));
+        }
         // case split
 
         // case 1: startIndex < 0
