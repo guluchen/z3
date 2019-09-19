@@ -4837,15 +4837,16 @@ namespace smt {
                                 return false;
                             }
                         }
-                    // check if other eq do not contain non_fresh vars
+
+                    // check if other eq do not contain non_fresh vars && const
                     for (const auto& ex : s)
                         if (n != ex) {
-                            if (is_important(ex, non_fresh_vars))
+                            if (is_important(ex, non_fresh_vars) || u.str.is_string(ex))
                                 return false;
                             ptr_vector<expr> ex_nodes;
                             get_nodes_in_concat(ex, ex_nodes);
                             for  (const auto& ex_node: ex_nodes)
-                                if (is_important(ex_node, non_fresh_vars))
+                                if (is_important(ex_node, non_fresh_vars) ||  u.str.is_string(ex_node))
                                     return false;
                         }
 
@@ -6005,21 +6006,40 @@ namespace smt {
         else {
             std::string name_x = expr2str(nodes_x[pos]);
             std::string name_y = expr2str(nodes_y[pos]);
-            if (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 )
-                if (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 ||
-                        name_y.find("pre_contain") == 0) {
-                    if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1])) {
-                        return createEqualOP(nodes_x[pos], nodes_y[pos]);
-                    }
-                    else {
-                        zstring tmp00;
-                        zstring tmp01;
-                        if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
-                            if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00))
-                                return createEqualOP(nodes_x[pos], nodes_y[pos]);
-                        }
+            bool is_pre_contain_x = (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 );
+            bool is_pre_contain_y = (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 || name_y.find("pre_contain") == 0 );
+
+            zstring tmp01;
+            zstring tmp02;
+            if (is_pre_contain_x && is_pre_contain_y) {
+                if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1])) {
+                    return createEqualOP(nodes_x[pos], nodes_y[pos]);
+                }
+                else {
+                    zstring tmp00;
+                    zstring tmp01;
+                    if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
+                        if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00))
+                            return createEqualOP(nodes_x[pos], nodes_y[pos]);
                     }
                 }
+            }
+            else if (is_pre_contain_x && pos + 1 < nodes_x.size() && are_equal_exprs(nodes_x[pos + 1], nodes_y[pos])){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, get_manager()) << " " << mk_pp(y, get_manager()) << std::endl;);
+                return createEqualOP(nodes_x[pos], mk_string(""));
+            }
+            else if (is_pre_contain_y && pos + 1 < nodes_y.size() && are_equal_exprs(nodes_y[pos + 1], nodes_x[pos])){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, get_manager()) << " " << mk_pp(y, get_manager()) << std::endl;);
+                return createEqualOP(nodes_y[pos], mk_string(""));
+            }
+            else if (is_pre_contain_x && pos + 1 < nodes_x.size() && u.str.is_string(nodes_x[pos + 1], tmp01) && u.str.is_string(nodes_y[pos], tmp02) && tmp01.prefixof(tmp02)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, get_manager()) << " " << mk_pp(y, get_manager()) << std::endl;);
+                return createEqualOP(nodes_x[pos], mk_string(""));
+            }
+            else if (is_pre_contain_y && pos + 1 < nodes_y.size() && u.str.is_string(nodes_y[pos + 1], tmp01) && u.str.is_string(nodes_x[pos], tmp02) && tmp01.prefixof(tmp02)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, get_manager()) << " " << mk_pp(y, get_manager()) << std::endl;);
+                return createEqualOP(nodes_y[pos], mk_string(""));
+            }
         }
         return nullptr;
     }
@@ -7537,7 +7557,7 @@ namespace smt {
             else {
                 new_nodes.push_back(ss);
             }
-        return create_concat_from_vector(new_nodes, 0);
+        return create_concat_from_vector(new_nodes);
     }
 
     bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle){
@@ -7858,7 +7878,7 @@ namespace smt {
                         (n1.find("replace1!tmp") != std::string::npos &&
                          n3.find("replace2!tmp") != std::string::npos)) {
                     exprVector.pop_back();
-                    contain = create_concat_from_vector(exprVector, 1);
+                    contain = create_concat_from_vector(exprVector, 0);
                     return true;
                 }
             }
@@ -14385,6 +14405,18 @@ namespace smt {
         return true;
     }
 
+    expr* theory_trau::create_concat_from_vector(ptr_vector<expr> v){
+        if (v.size() == 0)
+            return mk_string("");
+        else if (v.size() == 1)
+            return v[0];
+
+        expr* ret = v[v.size() - 1];
+        for (int i = v.size() - 2; i >= 0; --i) {
+            ret = u.str.mk_concat(v[i], ret);
+        }
+        return ret;
+    }
 
     expr* theory_trau::create_concat_from_vector(ptr_vector<expr> v, int from_pos){
         if (v.size() == 0)
@@ -15789,22 +15821,43 @@ namespace smt {
             v.push_back(n);
         }
 
+        std::set<int> to_remove;
         s.clear();
-        for (unsigned i = 0; i < v.size(); ++i) {
-            bool eq = false;
-            for (unsigned j = i + 1; j < v.size(); ++j)
-                if (are_equal_concat(v[i], v[j])) {
-                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager()) << " " << mk_pp(v[j], get_manager()) << std::endl;);
-                    eq = true;
-                    break;
-                }
+        for (unsigned i = 0; i < v.size(); ++i)
+            if (to_remove.find(i) == to_remove.end()) {
+                bool eq = false;
+                unsigned j = i + 1;
+                for (j = i + 1; j < v.size(); ++j)
+                    if (are_equal_concat(v[i], v[j])) {
+                        STRACE("str",
+                               tout << __LINE__ << " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager())
+                                    << " " << mk_pp(v[j], get_manager()) << std::endl;);
+                        eq = true;
+                        break;
+                    }
 
-            if (!eq)
-                s.insert(v[i]);
-            else {
-                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager()) << std::endl;);
+                if (!eq)
+                    s.insert(v[i]);
+                else {
+                    // add either i or j
+
+                    ptr_vector <expr> nodes;
+                    get_nodes_in_concat(v[i], nodes);
+                    ptr_vector <expr> new_nodes;
+                    for (const auto& n : nodes) {
+                        bool has_value;
+                        new_nodes.push_back(get_eqc_value(n, has_value));
+                    }
+
+                    s.insert(create_concat_from_vector(new_nodes));
+                    to_remove.insert(j);
+
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager())
+                                       << std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(create_concat_from_vector(new_nodes), get_manager())
+                                       << std::endl;);
+                }
             }
-        }
         return s;
     }
 
@@ -16552,12 +16605,9 @@ namespace smt {
         SASSERT(then1);
 
         // the top-level condition is Length(arg0) >= Length(arg1)
-        expr_ref topLevelCond(
-                m_autil.mk_ge(
-                        m_autil.mk_add(
-                                mk_strlen(expr->get_arg(1)), m_autil.mk_mul(mk_int(-1), mk_strlen(expr->get_arg(0)))),
-                        mk_int(0))
-                , m);
+        expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
+        m_rewrite(sub);
+        expr_ref topLevelCond(m_autil.mk_ge(sub, mk_int(0)), m);
 
         expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
         assert_axiom(finalAxiom);
@@ -16585,12 +16635,9 @@ namespace smt {
         expr_ref then1(m.mk_and(innerItems.size(), innerItems.c_ptr()), m);
 
         // the top-level condition is Length(arg0) >= Length(arg1)
-        expr_ref topLevelCond(
-                m_autil.mk_ge(
-                        m_autil.mk_add(
-                                mk_strlen(expr->get_arg(1)), m_autil.mk_mul(mk_int(-1), mk_strlen(expr->get_arg(0)))),
-                        mk_int(0))
-                , m);
+        expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
+        m_rewrite(sub);
+        expr_ref topLevelCond(m_autil.mk_ge(sub, mk_int(0)), m);
 
         expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
         assert_axiom(finalAxiom);
@@ -17247,7 +17294,9 @@ namespace smt {
         else {
             rational len_ral;
             if (get_arith_value(len, len_ral) && len_ral.get_int64() == 1) {
-                m_delayed_assertions_todo.push_back(createEqualOP(expr, mk_at(base, pos)));
+                expr_ref at(mk_at(base, pos), m);
+                assert_axiom(createEqualOP(expr, at));
+                instantiate_axiom_charAt(ctx.get_enode(at.get()));
                 return;
             }
         }
@@ -17266,9 +17315,10 @@ namespace smt {
 
         // (pos+len) >= strlen(base)
         // --> pos + len + -1*strlen(base) >= 0
-        expr_ref lenOutOfBounds(m_autil.mk_ge(
-                m_autil.mk_add(pos, len, m_autil.mk_mul(minusOne, mk_strlen(base))),
-                zero), m);
+        expr_ref sub(m_autil.mk_sub(m_autil.mk_add(pos, len), mk_strlen(base)), m);
+        m_rewrite(sub);
+
+        expr_ref lenOutOfBounds(m_autil.mk_ge(sub, zero), m);
         expr_ref argumentsValid = mk_and(argumentsValid_terms);
 
         // Case 1: pos < 0 or pos >= strlen(base) or len < 0
@@ -17317,12 +17367,12 @@ namespace smt {
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref_vector premises(m);
         premises.push_back(argumentsValid);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(argumentsValid, m) << std::endl;);
         premises.push_back(lenOutOfBounds);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
         expr_ref premise_expr(m);
         premise_expr = createAndOP(premises);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(lenOutOfBounds, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(premise_expr, m) << std::endl;);
         expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
@@ -17698,13 +17748,13 @@ namespace smt {
         if (u.str.is_string(needle, needle_str) && u.str.is_string(nodes[pos], haystack_0_str) && !haystack_0_str.contains(needle_str)) {
             expr* tmp = create_concat_from_vector(nodes, pos);
             if (u.str.is_replace(ex)) {
-                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(nodes[pos], mk_replace(tmp, needle.get(), a->get_arg(2)))));
+                assert_axiom(createEqualOP(ex, u.str.mk_concat(nodes[pos], mk_replace(tmp, needle.get(), a->get_arg(2)))));
             }
             else if (u.str.is_contains(ex)){
-                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+                assert_axiom(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
             }
             else if (u.str.is_index(ex)){
-                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
+                assert_axiom(createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
             }
             return true;
         }
@@ -17717,14 +17767,14 @@ namespace smt {
 
                 if (u.str.is_string(needle, needle_str) && u.str.is_string(last, haystack_0_str) &&
                     !haystack_0_str.contains(needle_str)) {
-                    expr *tmp = create_concat_from_vector(nodes, 0);
+                    expr *tmp = create_concat_from_vector(nodes);
                     if (u.str.is_replace(ex)) {
-                        m_delayed_assertions_todo.push_back(
+                        assert_axiom(
                                 createEqualOP(ex, u.str.mk_concat(mk_replace(tmp, needle.get(), a->get_arg(2)), last)));
                     } else if (u.str.is_contains(ex)) {
-                        m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+                        assert_axiom(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
                     } else if (u.str.is_index(ex)) {
-                        m_delayed_assertions_todo.push_back(
+                        assert_axiom(
                                 createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
                     }
                     return true;
