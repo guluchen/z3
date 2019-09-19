@@ -6731,6 +6731,8 @@ namespace smt {
         std::map<expr*, int> non_fresh_map = set2map(non_fresh_vars);
 
         init_underapprox(eq_combination, non_fresh_map);
+        for (const auto& n : non_fresh_map)
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.first, m) << " " << n.second << std::endl;);
 
         handle_diseq_notcontain();
 
@@ -8464,14 +8466,20 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         int oldConnectingSize = connectingSize;
         static_analysis(eq_combination);
+        context & ctx = get_context();
         if (!prep){
             connectingSize = std::max(CONNECTINGSIZE, connectingSize);
         }
         for (auto &v : non_fresh_vars) {
             rational len;
             if (v.second == -1 || v.second == oldConnectingSize) {
-                if (get_len_value(v.first, len))
-                    v.second = len.get_int64();
+                if (get_len_value(v.first, len)) {
+                    expr* tmp = createEqualOP(mk_strlen(v.first), mk_int(len));
+                    if (ctx.get_assign_level(ctx.get_literal(tmp)) == 0)
+                        v.second = len.get_int64();
+                    else
+                        v.second = connectingSize;
+                }
                 else
                     v.second = connectingSize;
             }
@@ -8487,6 +8495,9 @@ namespace smt {
         clock_t t = clock();
         currVarPieces.clear();
         generatedEqualities.clear();
+
+        for (const auto& n : non_fresh_vars)
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.first, m) << " " << n.second << std::endl;);
 
         expr_ref_vector assertedConstraints(m);
         bool axiomAdded = false;
