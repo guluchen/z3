@@ -967,6 +967,7 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
+            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -14426,6 +14427,8 @@ namespace smt {
         for (int i = v.size() - 2; i >= 0; --i) {
             ret = u.str.mk_concat(v[i], ret);
         }
+
+        ensure_enode(ret);
         return ret;
     }
 
@@ -14439,6 +14442,7 @@ namespace smt {
         for (int i = v.size() - 2; i > from_pos; --i) {
             ret = u.str.mk_concat(v[i], ret);
         }
+        ensure_enode(ret);
         return ret;
     }
 
@@ -18992,6 +18996,7 @@ namespace smt {
 
 
     void theory_trau::init_model(model_generator& mg) {
+        return;
         ast_manager& m = get_manager();
         context& ctx = get_context();
         STRACE("str", tout << "initializing model..." << std::endl;);

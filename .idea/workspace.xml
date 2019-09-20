@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="720">
-              <caret line="8483" column="46" selection-start-line="8483" selection-start-column="46" selection-end-line="8483" selection-end-column="46" />
+            <state relative-caret-position="763">
+              <caret line="14444" column="26" selection-start-line="14444" selection-start-column="26" selection-end-line="14444" selection-end-column="26" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -830,12 +830,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="115001000" />
+      <workItem from="1568106535994" duration="116751000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1719331000" />
+    <option name="totallyTimeSpent" value="1721081000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1237,8 +1237,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="720">
-          <caret line="8483" column="46" selection-start-line="8483" selection-start-column="46" selection-end-line="8483" selection-end-column="46" />
+        <state relative-caret-position="763">
+          <caret line="14444" column="26" selection-start-line="14444" selection-start-column="26" selection-end-line="14444" selection-end-column="26" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
