@@ -17326,7 +17326,7 @@ namespace smt {
             rational len_ral;
             if (get_arith_value(len, len_ral) && len_ral.get_int64() == 1) {
                 expr_ref at(mk_at(base, pos), m);
-                assert_axiom(createEqualOP(expr, at));
+                m_delayed_assertions_todo.push_back(createEqualOP(expr, at));
                 instantiate_axiom_charAt(ctx.get_enode(at.get()));
                 return;
             }
@@ -17779,13 +17779,19 @@ namespace smt {
         if (u.str.is_string(needle, needle_str) && u.str.is_string(nodes[pos], haystack_0_str) && !haystack_0_str.contains(needle_str)) {
             expr* tmp = create_concat_from_vector(nodes, pos);
             if (u.str.is_replace(ex)) {
-                assert_axiom(createEqualOP(ex, u.str.mk_concat(nodes[pos], mk_replace(tmp, needle.get(), a->get_arg(2)))));
+                expr_ref replace(mk_replace(tmp, needle.get(), a->get_arg(2)), m);
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(nodes[pos], replace)));
+                instantiate_axiom_replace(get_context().get_enode(replace));
             }
             else if (u.str.is_contains(ex)){
-                assert_axiom(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+                expr_ref contains(u.str.mk_contains(tmp, needle.get()), m);
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, contains));
+                instantiate_axiom_contains(get_context().get_enode(contains));
             }
             else if (u.str.is_index(ex)){
-                assert_axiom(createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
+                expr_ref index(u.str.mk_index(tmp, needle.get(), mk_int(0)), m);
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, index));
+                instantiate_axiom_indexof(get_context().get_enode(index));
             }
             return true;
         }
@@ -17800,13 +17806,19 @@ namespace smt {
                     !haystack_0_str.contains(needle_str)) {
                     expr *tmp = create_concat_from_vector(nodes);
                     if (u.str.is_replace(ex)) {
-                        assert_axiom(
-                                createEqualOP(ex, u.str.mk_concat(mk_replace(tmp, needle.get(), a->get_arg(2)), last)));
+                        expr_ref replace(mk_replace(tmp, needle.get(), a->get_arg(2)), m);
+                        m_delayed_assertions_todo.push_back(
+                                createEqualOP(ex, u.str.mk_concat(replace, last)));
+                        instantiate_axiom_replace(get_context().get_enode(replace));
                     } else if (u.str.is_contains(ex)) {
-                        assert_axiom(createEqualOP(ex, u.str.mk_contains(tmp, needle.get())));
+                        expr_ref contains(u.str.mk_contains(tmp, needle.get()), m);
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, contains));
+                        instantiate_axiom_contains(get_context().get_enode(contains));
                     } else if (u.str.is_index(ex)) {
-                        assert_axiom(
-                                createEqualOP(ex, u.str.mk_index(tmp, needle.get(), mk_int(0))));
+                        expr_ref index(u.str.mk_index(tmp, needle.get(), mk_int(0)), m);
+                        m_delayed_assertions_todo.push_back(
+                                createEqualOP(ex, index));
+                        instantiate_axiom_indexof(get_context().get_enode(index));
                     }
                     return true;
                 }
