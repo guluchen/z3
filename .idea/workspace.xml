@@ -83,8 +83,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="740">
-              <caret line="968" column="17" selection-start-line="968" selection-start-column="17" selection-end-line="968" selection-end-column="17" />
+            <state relative-caret-position="792">
+              <caret line="8188" column="19" lean-forward="true" selection-start-line="8188" selection-start-column="19" selection-end-line="8188" selection-end-column="19" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -120,8 +122,17 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="373" column="5" selection-start-line="373" selection-start-column="5" selection-end-line="373" selection-end-column="5" />
+            <state relative-caret-position="393">
+              <caret line="395" column="14" selection-start-line="395" selection-start-column="14" selection-end-line="395" selection-end-column="14" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="410">
+              <caret line="1028" column="23" selection-start-line="1028" selection-start-column="23" selection-end-line="1028" selection-end-column="23" />
             </state>
           </provider>
         </entry>
@@ -163,15 +174,6 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/smt_theory.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="594">
-              <caret line="511" column="21" selection-start-line="511" selection-start-column="21" selection-end-line="511" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_arith_core.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="393">
@@ -183,8 +185,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1076">
-              <caret line="2636" selection-start-line="2636" selection-end-line="2636" />
+            <state relative-caret-position="388">
+              <caret line="1555" column="38" selection-start-line="1555" selection-start-column="38" selection-end-line="1555" selection-end-column="49" />
             </state>
           </provider>
         </entry>
@@ -193,23 +195,15 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>instantiate_axiom_</find>
-      <find>normalize_eq</find>
-      <find>refined_init_chain_free</find>
-      <find>at_same_eq_state</find>
-      <find>is_completed_branch</find>
-      <find>final_check</find>
       <find>create_concat_from_vector</find>
       <find>wf_row</find>
       <find>OP_SEQ_AT</find>
       <find>lenOutOfBounds</find>
-      <find>wf_rows</find>
       <find>coeff</find>
       <find>m_rewrite</find>
       <find>mk_ge</find>
       <find>mk_mul</find>
       <find>argumentsValid_terms</find>
-      <find>countOccurrences_from_combination</find>
       <find>mk_replace</find>
       <find>handle_non_fresh__non_fresh__array</find>
       <find>unroll_non_fresh_variable</find>
@@ -223,6 +217,14 @@
       <find>get_assign_level</find>
       <find>get_context</find>
       <find>init_mode</find>
+      <find>collect_char_range</find>
+      <find>setup_char_range_arr</find>
+      <find>collect_alternative_components</find>
+      <find>countOccurrences_from_combination</find>
+      <find>is_regex_plus_breakdown</find>
+      <find>wf_rows</find>
+      <find>val</find>
+      <find>setup_regex_var</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -829,12 +831,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="117389000" />
+      <workItem from="1568106535994" duration="123506000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1721719000" />
+    <option name="totallyTimeSpent" value="1727836000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1028,13 +1030,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="574">
-          <caret line="3641" column="17" selection-start-line="3641" selection-start-column="17" selection-end-line="3641" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/debug.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1350">
@@ -1199,13 +1194,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="373" column="5" selection-start-line="373" selection-start-column="5" selection-end-line="373" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="402">
@@ -1227,17 +1215,31 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_lra.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="410">
+          <caret line="1028" column="23" selection-start-line="1028" selection-start-column="23" selection-end-line="1028" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/ast/arith_decl_plugin.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="393">
+          <caret line="395" column="14" selection-start-line="395" selection-start-column="14" selection-end-line="395" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1076">
-          <caret line="2636" selection-start-line="2636" selection-end-line="2636" />
+        <state relative-caret-position="388">
+          <caret line="1555" column="38" selection-start-line="1555" selection-start-column="38" selection-end-line="1555" selection-end-column="49" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="740">
-          <caret line="968" column="17" selection-start-line="968" selection-start-column="17" selection-end-line="968" selection-end-column="17" />
+        <state relative-caret-position="792">
+          <caret line="8188" column="19" lean-forward="true" selection-start-line="8188" selection-start-column="19" selection-end-line="8188" selection-end-column="19" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

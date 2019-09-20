@@ -832,8 +832,37 @@ namespace smt {
                         ret.push_back(tmp);
                     }
                 }
-                else
+                else if (th.u.re.is_concat(v)) {
+                    expr* tmp = is_regex_plus_breakdown(v);
+                    if (tmp != nullptr){
+                        return collect_alternative_components(tmp, ret);
+                    }
+                    else
+                        NOT_IMPLEMENTED_YET();
+                }
+                else {
                     NOT_IMPLEMENTED_YET();
+                }
+            }
+
+            expr* is_regex_plus_breakdown(expr* e){
+                if (th.u.re.is_concat(e)){
+                    expr* arg0 = to_app(e)->get_arg(0);
+                    expr* arg1 = to_app(e)->get_arg(1);
+
+                    if (th.u.re.is_star(arg1)){
+                        expr* arg10 = to_app(arg1)->get_arg(0);
+                        if (arg10 == arg0)
+                            return arg1;
+                    }
+
+                    if (th.u.re.is_star(arg0)){
+                        expr* arg00 = to_app(arg0)->get_arg(0);
+                        if (arg00 == arg1)
+                            return arg0;
+                    }
+                }
+                return nullptr;
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
@@ -955,15 +984,23 @@ namespace smt {
 
                                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
                                                            << mk_pp(node, th.get_manager()) << " " << value
+                                                           << " " << i
                                                            << std::endl;);
-                                        zstring working_str = val.extract(0, i - 1);
-                                        zstring new_str("");
+                                        zstring working_str("");
+                                        if (i > 0)
+                                            working_str = val.extract(0, i - 1);
 
+                                        zstring new_str("");
+                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                                           << mk_pp(node, th.get_manager()) << " " << working_str
+                                                           << std::endl;);
                                         if (createStringWithLength(elements, new_str, err_pos - i)) {
-                                            val = working_str + new_str + val.extract(i + new_str.length() - 1,
+                                            val = working_str + new_str + val.extract(i + new_str.length(),
                                                                                       val.length() -
-                                                                                      (i + new_str.length() - 1));
-                                        } else NOT_IMPLEMENTED_YET();
+                                                                                      (i + new_str.length()));
+                                        }
+                                        else
+                                            NOT_IMPLEMENTED_YET();
                                         i = i + new_str.length() - 1;
                                     }
                                 }
@@ -1516,7 +1553,7 @@ namespace smt {
                     std::map<expr*, int> &non_fresh_vars);
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr, expr* premise = nullptr);
-                expr* setup_regex_var(expr* rexpr, expr* arr, rational bound, expr* prefix);
+                expr* setup_regex_var(expr* var, expr* rexpr, expr* arr, rational bound, expr* prefix);
                     expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();

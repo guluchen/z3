@@ -966,7 +966,7 @@ namespace smt {
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
-        } else { 
+        } else {
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -8098,7 +8098,7 @@ namespace smt {
                 setup_str_const(val, v1);
             }
             else if (is_internal_regex_var(v, rexpr)) {
-                expr *to_assert = setup_regex_var(rexpr, v1, rational(non_fresh_vars[v]), mk_int(0));
+                expr *to_assert = setup_regex_var(v, rexpr, v1, rational(non_fresh_vars[v]), mk_int(0));
                 assert_axiom(to_assert);
             }
             else if (is_str_int_var(v)){
@@ -8159,7 +8159,7 @@ namespace smt {
         }
     }
 
-    expr* theory_trau::setup_regex_var(expr* rexpr, expr* arr, rational bound, expr* prefix){
+    expr* theory_trau::setup_regex_var(expr* var, expr* rexpr, expr* arr, rational bound, expr* prefix){
         ast_manager & m = get_manager();
         expr* ret = setup_char_range_arr(rexpr, arr, bound, prefix);
         if (ret != nullptr) {
@@ -8169,11 +8169,18 @@ namespace smt {
             expr_ref_vector ors(m);
             collect_alternative_components(rexpr, elements);
             for (unsigned i = 0; i < elements.size(); ++i) {
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(rexpr, m) << " " << elements[i] << " " << bound << std::endl;);
                 expr_ref_vector ands(m);
                 for (int j = 0; j < bound.get_int64(); ++j) {
                     int pos = j % elements[i].length();
                     ands.push_back(createEqualOP(createSelectOP(arr, createAddOP(prefix, mk_int(j))), mk_int(elements[i][pos])));
                 }
+
+                expr_ref tmp01(m_autil.mk_mod(mk_strlen(var), mk_int(elements[i].length())), m);
+                m_rewrite(tmp01);
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(tmp01, m) << " " << elements[i] << " " << bound << std::endl;);
+
+                ands.push_back(createEqualOP(tmp01, mk_int(0)));
                 ors.push_back(createAndOP(ands));
             }
             ret = createOrOP(ors);
@@ -9265,7 +9272,12 @@ namespace smt {
             return collect_alternative_components(arg0, ret);
         }
         else if (u.re.is_concat(v)){
-            return false;
+            expr* tmp = is_regex_plus_breakdown(v);
+            if (tmp != nullptr){
+                return collect_alternative_components(tmp, ret);
+            }
+            else
+                return false;
         }
         else if (u.re.is_range(v)){
             expr* arg0 = to_app(v)->get_arg(0);
@@ -10467,12 +10479,12 @@ namespace smt {
         if (!skip_init) {
             expr *reg = nullptr;
             if (is_internal_regex_var(a.first, reg)) {
-                expr *to_assert = setup_regex_var(reg, arrA, bound, pre_lhs);
+                expr *to_assert = setup_regex_var(a.first, reg, arrA, bound, pre_lhs);
                 ands.push_back(to_assert);
             }
 
             if (is_internal_regex_var(elementNames[pos].first, reg)) {
-                expr *to_assert = setup_regex_var(reg, arrB, bound, pre_rhs);
+                expr *to_assert = setup_regex_var(a.first, reg, arrB, bound, pre_rhs);
                 ands.push_back(to_assert);
             }
         }
@@ -12853,9 +12865,14 @@ namespace smt {
                 collect_char_range(reg, chars);
             }
             else {
+
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a, get_manager())
                                    << std::endl;);
-                NOT_IMPLEMENTED_YET();
+                expr* tmp = is_regex_plus_breakdown(a);
+                if (tmp != nullptr)
+                    collect_char_range(tmp, chars);
+                else
+                    NOT_IMPLEMENTED_YET();
             }
         }
     }
