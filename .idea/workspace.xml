@@ -83,7 +83,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
     </list>
@@ -100,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="763">
-              <caret line="14444" column="26" selection-start-line="14444" selection-start-column="26" selection-end-line="14444" selection-end-column="26" />
+            <state relative-caret-position="740">
+              <caret line="968" column="17" selection-start-line="968" selection-start-column="17" selection-end-line="968" selection-end-column="17" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -194,7 +193,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>mk_stoi(</find>
       <find>instantiate_axiom_</find>
       <find>normalize_eq</find>
       <find>refined_init_chain_free</find>
@@ -224,6 +222,7 @@
       <find>convert_regex_equalities</find>
       <find>get_assign_level</find>
       <find>get_context</find>
+      <find>init_mode</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -830,12 +829,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="116751000" />
+      <workItem from="1568106535994" duration="117389000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1721081000" />
+    <option name="totallyTimeSpent" value="1721719000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1237,8 +1236,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="763">
-          <caret line="14444" column="26" selection-start-line="14444" selection-start-column="26" selection-end-line="14444" selection-end-column="26" />
+        <state relative-caret-position="740">
+          <caret line="968" column="17" selection-start-line="968" selection-start-column="17" selection-end-line="968" selection-end-column="17" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

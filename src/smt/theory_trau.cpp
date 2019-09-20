@@ -966,8 +966,7 @@ namespace smt {
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
-        } else {
-            return alloc(expr_wrapper_proc, owner);
+        } else { 
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -18996,7 +18995,6 @@ namespace smt {
 
 
     void theory_trau::init_model(model_generator& mg) {
-        return;
         ast_manager& m = get_manager();
         context& ctx = get_context();
         STRACE("str", tout << "initializing model..." << std::endl;);
