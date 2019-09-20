@@ -1239,6 +1239,14 @@ namespace smt {
     }
 
     void theory_trau::assert_cached_eq_state(){
+        if (impliedFacts.size() > 0 && m_scope_level == 0){
+            for (const auto& e : impliedFacts) {
+                assert_axiom(e);
+            }
+            impliedFacts.reset();
+        }
+
+
         if (uState.reassertEQ) {
             return;
         }
@@ -4248,7 +4256,7 @@ namespace smt {
         init_chain_free(non_fresh_vars, eq_combination);
 
         if (!review_starting_ending_combination(eq_combination)){
-            negate_context();
+            negate_equalities();
             return FC_CONTINUE;
         }
 
@@ -5298,7 +5306,9 @@ namespace smt {
                 if (u.str.is_string(e, value)){
                     for (const auto& nn : v.second){
                         if (!can_match(value, nn)) {
-                            assert_axiom(mk_not(m, createEqualOP(e, nn)));
+                            expr_ref tmp(mk_not(m, createEqualOP(e, nn)), m);
+                            impliedFacts.push_back(tmp.get());
+                            assert_axiom(tmp);
                             return false;
                         }
                     }
@@ -8733,6 +8743,17 @@ namespace smt {
     void theory_trau::assert_breakdown_combination(expr* e, expr* premise){
         ensure_enode(e);
         assert_axiom(e, premise);
+    }
+
+    void theory_trau::negate_equalities(){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+        ast_manager &m = get_manager();
+        expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+        fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
+
+        expr_ref tmp(mk_not(m, createAndOP(guessedEqs)), m);
+        assert_axiom(tmp.get());
+        impliedFacts.push_back(tmp.get());
     }
 
     void theory_trau::negate_context(){

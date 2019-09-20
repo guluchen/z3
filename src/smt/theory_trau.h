@@ -1601,6 +1601,7 @@ namespace smt {
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 void assert_breakdown_combination(expr* e, expr* var);
                 void negate_context();
+                void negate_equalities();
                 void negate_context(expr* e);
                 void negate_context(expr_ref_vector v);
                 expr* find_equivalent_variable(expr* e);
