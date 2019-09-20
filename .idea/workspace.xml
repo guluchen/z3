@@ -99,8 +99,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="968">
-              <caret line="17820" column="82" selection-start-line="17820" selection-start-column="82" selection-end-line="17820" selection-end-column="82" />
+            <state relative-caret-position="144">
+              <caret line="15432" column="71" selection-start-line="15432" selection-start-column="50" selection-end-line="15432" selection-end-column="71" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -193,7 +193,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>create_concat_from_vector</find>
       <find>wf_row</find>
       <find>OP_SEQ_AT</find>
       <find>lenOutOfBounds</find>
@@ -223,6 +222,7 @@
       <find>wf_rows</find>
       <find>val</find>
       <find>setup_regex_var</find>
+      <find>underapproximation(</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -829,12 +829,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="124978000" />
+      <workItem from="1568106535994" duration="128696000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1729308000" />
+    <option name="totallyTimeSpent" value="1733026000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1236,8 +1236,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="968">
-          <caret line="17820" column="82" selection-start-line="17820" selection-start-column="82" selection-end-line="17820" selection-end-column="82" />
+        <state relative-caret-position="144">
+          <caret line="15432" column="71" selection-start-line="15432" selection-start-column="50" selection-end-line="15432" selection-end-column="71" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

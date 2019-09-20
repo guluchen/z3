@@ -8257,6 +8257,7 @@ namespace smt {
         noFlatVariables = 0;
         for (const auto& v : uState.eq_combination){
             ensure_enode(v.first);
+
             if (is_app(v.first)) {
                 app *ap = to_app(v.first);
                 if (!u.str.is_concat(ap))
@@ -8279,6 +8280,7 @@ namespace smt {
             }
             for (const auto& eq : v.second){
                 ensure_enode(eq);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(eq, m) << std::endl;);
                 if (is_app(eq)){
                     ptr_vector<expr> exprVector;
                     get_nodes_in_concat(eq, exprVector);
@@ -8286,8 +8288,9 @@ namespace smt {
                         allStrExprs.insert(exprVector[i]);
                 }
             }
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         }
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         for (const auto& we: non_membership_memo) {
             allStrExprs.insert(we.first);
         }
@@ -8295,7 +8298,7 @@ namespace smt {
         for (const auto& we: membership_memo) {
             allStrExprs.insert(we.first);
         }
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         std::map<expr*, int> str_int_vars;
         collect_important_vars_str_int(str_int_vars);
         for (const auto& we: str_int_vars) {
@@ -8341,10 +8344,11 @@ namespace smt {
                 m_trail.push_back(arrVar);
             }
         }
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         for  (const auto& arr : arrMap_reverse) {
             ensure_enode(arr.second);
         }
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
     void theory_trau::create_notcontain_map(){
@@ -15436,6 +15440,8 @@ namespace smt {
         expr* reg = nullptr;
         for (const auto& c : combinations){
             std::set<expr*> c_second = refine_eq_set(c.first, c.second, non_fresh_vars);
+            if (c_second.size() == 0 && !u.str.is_string(c.first))
+                continue;
             bool important = is_important(c.first, non_fresh_vars);
             if (!important) {
                 // the var is too complicated
@@ -15457,8 +15463,9 @@ namespace smt {
                                 break;
                             }
 
-                        if (importantConcat)
+                        if (importantConcat) {
                             ret[c.first] = c_second;
+                        }
                         else {
                             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
                             // remove c.first from the list
