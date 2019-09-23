@@ -5302,6 +5302,8 @@ namespace smt {
                         }
                 }
 
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, m) << std::endl;);
+
                 zstring value;
                 if (u.str.is_string(e, value)){
                     for (const auto& nn : v.second){
@@ -5314,17 +5316,22 @@ namespace smt {
                     }
                 }
 
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, m) << std::endl;);
+
                 for (const auto& ee : v.second)
                     if (e != ee){
                         if (!equal_parikh(e, ee))
                             return false;
                     }
 
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, m) << std::endl;);
+
                 for (const auto& ee : v.second)
                     if (e != ee){
                         if (!same_prefix_same_parikh(e, ee))
                             return false;
                     }
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, m) << std::endl;);
             }
         }
         return true;
@@ -5343,7 +5350,7 @@ namespace smt {
         std::map<char, int> img_lhs;
         std::map<char, int> img_rhs;
         int diff_len = 0;
-        for (int i = 0; i < std::max(nodes.size(), nnodes.size()); ++i){
+        for (unsigned i = 0; i < std::max(nodes.size(), nnodes.size()); ++i){
             zstring val;
             bool remove_lhs = false;
             bool remove_rhs = false;
@@ -5538,6 +5545,7 @@ namespace smt {
     }
 
     int theory_trau::get_lower_bound_image_in_expr(expr* n, expr* str){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(str, get_manager()) << " " << mk_pp(n, get_manager()) << std::endl;);
         ptr_vector<expr> nodes;
         get_nodes_in_concat(n, nodes);
         int cnt = 0;
