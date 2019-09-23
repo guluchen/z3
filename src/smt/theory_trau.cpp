@@ -5331,6 +5331,7 @@ namespace smt {
     }
 
     bool theory_trau::same_prefix_same_parikh(expr* nn, expr* n){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, get_manager()) << " " << mk_pp(n, get_manager()) << std::endl;);
         ptr_vector<expr> nodes;
         get_nodes_in_concat(n, nodes);
 
@@ -5349,7 +5350,7 @@ namespace smt {
             if (i < nodes.size()) {
                 if (u.str.is_string(nodes[i], val)) {
                     get_parikh_from_strs(val, img_lhs);
-                    diff_len += val.length();
+                    diff_len += (int)val.length();
                     remove_lhs = true;
                 } else {
                     // try to remove
@@ -5364,7 +5365,7 @@ namespace smt {
             if (i < nnodes.size()) {
                 if (u.str.is_string(nnodes[i], val)) {
                     get_parikh_from_strs(val, img_rhs);
-                    diff_len -= val.length();
+                    diff_len -= (int)val.length();
                     remove_rhs = true;
                 } else {
                     // try to remove
@@ -5388,6 +5389,7 @@ namespace smt {
                 lhs.push_back(nodes[i]);
             if (i < nnodes.size() && !remove_rhs)
                 rhs.push_back(nnodes[i]);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, get_manager()) << " " << mk_pp(n, get_manager()) << std::endl;);
         }
 
         return true;
