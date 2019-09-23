@@ -8266,6 +8266,8 @@ namespace smt {
         std::set<expr*> allStrExprs;
         noFlatVariables = 0;
         for (const auto& v : uState.eq_combination){
+            if (v.second.size() == 0)
+                continue;
             ensure_enode(v.first);
 
             if (is_app(v.first)) {
@@ -8297,9 +8299,11 @@ namespace smt {
                     for (unsigned i = 0; i < exprVector.size(); ++i)
                         allStrExprs.insert(exprVector[i]);
                 }
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(eq, m) << std::endl;);
             }
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         }
+
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         for (const auto& we: non_membership_memo) {
             allStrExprs.insert(we.first);
@@ -8308,6 +8312,7 @@ namespace smt {
         for (const auto& we: membership_memo) {
             allStrExprs.insert(we.first);
         }
+
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         std::map<expr*, int> str_int_vars;
         collect_important_vars_str_int(str_int_vars);
@@ -14466,7 +14471,7 @@ namespace smt {
 
         expr* ret = v[v.size() - 1];
         for (int i = v.size() - 2; i >= 0; --i) {
-            ret = u.str.mk_concat(v[i], ret);
+            ret = mk_concat(v[i], ret);
         }
 
         ensure_enode(ret);
