@@ -1092,7 +1092,6 @@ namespace smt {
                             }
                             else {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
-                                SASSERT(false);
                             }
                         }
                         else {
