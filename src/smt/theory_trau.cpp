@@ -5334,6 +5334,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.first, m) << std::endl;);
             }
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " end" << std::endl;);
         return true;
     }
 
@@ -5356,6 +5357,7 @@ namespace smt {
             bool remove_rhs = false;
             if (i < nodes.size()) {
                 if (u.str.is_string(nodes[i], val)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << val << std::endl;);
                     get_parikh_from_strs(val, img_lhs);
                     diff_len += (int)val.length();
                     remove_lhs = true;
@@ -5371,6 +5373,7 @@ namespace smt {
 
             if (i < nnodes.size()) {
                 if (u.str.is_string(nnodes[i], val)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << val << std::endl;);
                     get_parikh_from_strs(val, img_rhs);
                     diff_len -= (int)val.length();
                     remove_rhs = true;
@@ -5392,6 +5395,9 @@ namespace smt {
                 if (!eq_parikh(img_lhs, img_rhs))
                     return false;
             }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << i << " " << lhs.size() << " " << rhs.size()<< " " << diff_len << std::endl;);
+
             if (i < nodes.size() && !remove_lhs)
                 lhs.push_back(nodes[i]);
             if (i < nnodes.size() && !remove_rhs)
@@ -5399,6 +5405,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, get_manager()) << " " << mk_pp(n, get_manager()) << std::endl;);
         }
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, get_manager()) << " " << mk_pp(n, get_manager()) << std::endl;);
         return true;
     }
 
@@ -5466,7 +5473,11 @@ namespace smt {
 
     void theory_trau::get_parikh_from_strs(zstring s, std::map<char, int> &img){
         for (unsigned i = 0; i < s.length(); ++i)
-            img[s[i]]++;
+            if (img.find(s[i]) == img.end()) {
+                img[s[i]] = 1;
+            }
+            else
+                img[s[i]] = img[s[i]] + 1;
     }
 
     bool theory_trau::eq_parikh(std::map<char, int> lhs, std::map<char, int> rhs){
@@ -5975,6 +5986,7 @@ namespace smt {
      * --> indexOf1 = replace1
      */
     bool theory_trau::handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination) {
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         ast_manager & m = get_manager();
         expr_ref_vector ands(m);
         for (const auto &v : eq_combination)
@@ -5989,6 +6001,7 @@ namespace smt {
                     }
             }
 
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         if (ands.size() > 0) {
             expr_ref_vector eqcores(m), diseqcores(m);
             fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
@@ -6008,6 +6021,7 @@ namespace smt {
      * --> indexOf1 = replace1
      */
     expr* theory_trau::create_equations_over_contain_vars(expr* x, expr* y){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         ptr_vector<expr> nodes_x;
         get_nodes_in_concat(x, nodes_x);
 
@@ -6015,13 +6029,13 @@ namespace smt {
         get_nodes_in_concat(y, nodes_y);
 
         // remove all prefixes
-        int pos = 0;
+        unsigned pos = 0;
         for (pos = 0; pos < std::min(nodes_x.size(), nodes_y.size()); ++pos) {
             if (!are_equal_exprs(nodes_x[pos], nodes_y[pos]))
                 break;
         }
 
-        if (pos >= std::min(nodes_x.size(), nodes_y.size() - 1))
+        if (pos >= std::min(nodes_x.size(), nodes_y.size()) - 1)
             return nullptr;
         else {
             std::string name_x = expr2str(nodes_x[pos]);

@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
     </list>
@@ -99,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="331">
-              <caret line="5339" column="22" selection-start-line="5339" selection-start-column="22" selection-end-line="5339" selection-end-column="22" />
+            <state relative-caret-position="433">
+              <caret line="6037" column="64" lean-forward="true" selection-start-line="6037" selection-start-column="64" selection-end-line="6037" selection-end-column="64" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -196,7 +197,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>unroll_non_fresh_variable</find>
       <find>generate_constraint02_var</find>
       <find>generate_constraint02</find>
       <find>to_arith_left</find>
@@ -215,7 +215,6 @@
       <find>wf_rows</find>
       <find>setup_regex_var</find>
       <find>underapproximation(</find>
-      <find>parikh_image_check</find>
       <find>val</find>
       <find>review_starting_ending_combination</find>
       <find>reassertEQ = fa</find>
@@ -226,6 +225,8 @@
       <find>scope</find>
       <find>same_prefix_same_parikh</find>
       <find>diff_len</find>
+      <find>get_parikh_from_strs</find>
+      <find>parikh_image_check</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -832,12 +833,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="142675000" />
+      <workItem from="1568106535994" duration="144905000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1747005000" />
+    <option name="totallyTimeSpent" value="1749235000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1239,8 +1240,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="331">
-          <caret line="5339" column="22" selection-start-line="5339" selection-start-column="22" selection-end-line="5339" selection-end-column="22" />
+        <state relative-caret-position="433">
+          <caret line="6037" column="64" lean-forward="true" selection-start-line="6037" selection-start-column="64" selection-end-line="6037" selection-end-column="64" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
