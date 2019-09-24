@@ -100,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="433">
-              <caret line="6037" column="64" lean-forward="true" selection-start-line="6037" selection-start-column="64" selection-end-line="6037" selection-end-column="64" />
+            <state relative-caret-position="346">
+              <caret line="4216" column="167" selection-start-line="4216" selection-start-column="167" selection-end-line="4216" selection-end-column="167" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -186,19 +186,13 @@
       </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="905">
-              <caret line="2673" selection-start-line="2673" selection-end-line="2673" />
-            </state>
-          </provider>
+          <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
     </leaf>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>generate_constraint02_var</find>
-      <find>generate_constraint02</find>
       <find>to_arith_left</find>
       <find>to_arith</find>
       <find>arrange</find>
@@ -211,7 +205,6 @@
       <find>setup_char_range_arr</find>
       <find>collect_alternative_components</find>
       <find>countOccurrences_from_combination</find>
-      <find>is_regex_plus_breakdown</find>
       <find>wf_rows</find>
       <find>setup_regex_var</find>
       <find>underapproximation(</find>
@@ -219,14 +212,17 @@
       <find>review_starting_ending_combination</find>
       <find>reassertEQ = fa</find>
       <find>reassertEQ</find>
-      <find>mk_concat</find>
       <find>create_con</find>
       <find>owner</find>
-      <find>scope</find>
       <find>same_prefix_same_parikh</find>
       <find>diff_len</find>
       <find>get_parikh_from_strs</find>
       <find>parikh_image_check</find>
+      <find>is_regex_plus_breakdown</find>
+      <find>scope</find>
+      <find>collect_cha</find>
+      <find>remove_star_in_star</find>
+      <find>mk_concat</find>
     </findStrings>
     <replaceStrings>
       <replace>get_var_flat_size(</replace>
@@ -833,12 +829,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="144905000" />
+      <workItem from="1568106535994" duration="148247000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1749235000" />
+    <option name="totallyTimeSpent" value="1752577000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1232,16 +1228,12 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="905">
-          <caret line="2673" selection-start-line="2673" selection-end-line="2673" />
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="433">
-          <caret line="6037" column="64" lean-forward="true" selection-start-line="6037" selection-start-column="64" selection-end-line="6037" selection-end-column="64" />
+        <state relative-caret-position="346">
+          <caret line="4216" column="167" selection-start-line="4216" selection-start-column="167" selection-end-line="4216" selection-end-column="167" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

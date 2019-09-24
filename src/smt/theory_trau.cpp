@@ -4215,7 +4215,6 @@ namespace smt {
 
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
@@ -9467,29 +9466,68 @@ namespace smt {
     }
 
     expr* theory_trau::remove_star_in_star(expr* reg){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(reg, get_manager()) << std::endl;);
         if (u.re.is_star(reg)){
             if (contain_star(to_app(reg)->get_arg(0))) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(reg, get_manager()) << std::endl;);
                 return remove_star_in_star(to_app(reg)->get_arg(0));
             }
             else
                 return u.re.mk_star(remove_star_in_star(to_app(reg)->get_arg(0)));
         }
-        if (u.re.is_plus(reg)){
+        else if (u.re.is_plus(reg)){
             if (contain_star(to_app(reg)->get_arg(0)))
                 return remove_star_in_star(to_app(reg)->get_arg(0));
-            else
+            else {
                 return u.re.mk_plus(remove_star_in_star(to_app(reg)->get_arg(0)));
+            }
         }
         else if (u.re.is_concat(reg)) {
             expr* arg0 = to_app(reg)->get_arg(0);
             expr* arg1 = to_app(reg)->get_arg(1);
-            return u.re.mk_concat(remove_star_in_star(arg0), remove_star_in_star(arg1));
+            if (u.re.is_star(arg0) && arg0 == arg1)
+                return arg0;
+            if (u.re.is_plus(arg0) && arg0 == arg1)
+                return arg0;
+            else if (u.re.is_star(arg0) && u.re.is_plus(arg1) && to_app(arg0)->get_arg(0) == to_app(arg1)->get_arg(0))
+                return arg1;
+            else if (u.re.is_star(arg1) && u.re.is_plus(arg0) && to_app(arg0)->get_arg(0) == to_app(arg1)->get_arg(0))
+                return arg0;
+            else {
+                expr* tmp0 = is_regex_plus_breakdown(arg0);
+                expr* tmp1 = is_regex_plus_breakdown(arg1);
+                if (tmp0 != nullptr && tmp1 != nullptr && tmp0 == tmp1){
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(reg, get_manager()) << std::endl;);
+                    return arg0;
+                }
+                else {
+                    expr* tmp2 = remove_star_in_star(arg0);
+                    expr* tmp3 = remove_star_in_star(arg1);
+                    expr* tmp4 = u.re.mk_concat(tmp2, tmp3);
+                    m_trail.push_back(tmp4);
+                    if (tmp2 == tmp3) {
+                        return remove_star_in_star(tmp4);
+                    }
+                    else
+                        return tmp4;
+                }
+            }
         }
         else if (u.re.is_union(reg)) {
             expr* arg0 = to_app(reg)->get_arg(0);
             expr* arg1 = to_app(reg)->get_arg(1);
-            return u.re.mk_union(remove_star_in_star(arg0), remove_star_in_star(arg1));
+            if (arg0 == arg1)
+                return arg0;
+            else {
+                expr* tmp2 = remove_star_in_star(arg0);
+                expr* tmp3 = remove_star_in_star(arg1);
+                expr* tmp4 = u.re.mk_union(tmp2, tmp3);
+                m_trail.push_back(tmp4);
+                if (tmp2 == tmp3) {
+                    return remove_star_in_star(tmp4);
+                }
+                else
+                    return tmp4;
+            }
         }
         else
             return reg;
@@ -12925,8 +12963,15 @@ namespace smt {
                 expr* tmp = is_regex_plus_breakdown(a);
                 if (tmp != nullptr)
                     collect_char_range(tmp, chars);
-                else
+                else {
                     NOT_IMPLEMENTED_YET();
+                    if (u.re.is_concat(a)) {
+                        std::vector<bool> char_lhs;
+                        std::vector<bool> char_rhs;
+                        collect_char_range(to_app(a)->get_arg(0), char_lhs);
+                        collect_char_range(to_app(a)->get_arg(1), char_rhs);
+                    }
+                }
             }
         }
     }
