@@ -967,6 +967,7 @@ namespace smt {
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
         } else {
+            return alloc(expr_wrapper_proc, owner);
             theory_var v       = n->get_th_var(get_id());
             SASSERT(v != null_theory_var);
             sort * s           = get_manager().get_sort(n->get_owner());
@@ -4306,6 +4307,12 @@ namespace smt {
 
         refined_init_chain_free(non_fresh_vars, eq_combination);
 
+        if (can_merge_combination(eq_combination)){
+            TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
+            update_state();
+            return FC_CONTINUE;
+        }
+
         if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
             return FC_CONTINUE;
@@ -6895,7 +6902,7 @@ namespace smt {
         expr* lenConstraint = lower_bound_str_int(num, str);
         expr* boundConstraint = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
-        rational max_value = ten_power(str_int_bound) - rational(1);
+        rational max_value = get_max_s2i(str);
         expr_ref_vector conclusions(m);
 
 //        conclusions.push_back(lenConstraint);
@@ -6910,6 +6917,18 @@ namespace smt {
         expr* to_assert = rewrite_implication(createAndOP(premises), createAndOP(conclusions));
         assert_axiom(to_assert);
         impliedFacts.push_back(to_assert);
+    }
+
+    rational theory_trau::get_max_s2i(expr* n){
+        rational len;
+        if (get_len_value(n, len)) {
+            context & ctx = get_context();
+            expr* tmp = createEqualOP(mk_strlen(n), mk_int(len));
+            if (ctx.get_assign_level(ctx.get_literal(tmp)) == 0)
+                return ten_power(len) - rational(1);
+        }
+
+        return ten_power(str_int_bound) - rational(1);
     }
 
     /*
@@ -6965,7 +6984,7 @@ namespace smt {
         expr* boundConstraint = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
 
-        rational max_value = ten_power(str_int_bound) - rational(1);
+        rational max_value = get_max_s2i(str);
 
         expr_ref_vector conclusions(m);
 
@@ -13373,10 +13392,20 @@ namespace smt {
      *
      */
     app* theory_trau::createLessEqOP(expr* x, expr* y){
-        if (!m_autil.is_numeral(y))
+        rational val_y;
+        if (!m_autil.is_numeral(y, val_y))
             return m_autil.mk_ge(y, x);
-        else
-            return m_autil.mk_le(x, y);
+        else {
+            rational val_x;
+            if (m_autil.is_numeral(x, val_x)){
+                if (val_x <= val_y)
+                    return get_manager().mk_true();
+                else
+                    return get_manager().mk_false();
+            }
+            else
+                return m_autil.mk_le(x, y);
+        }
     }
 
     /*
@@ -15593,111 +15622,54 @@ namespace smt {
         return ret;
     }
 
-    std::map<expr*, std::set<expr*>> theory_trau::refine_eq_combination(
-            std::set<std::pair<expr*, int>> &non_fresh_vars,
-            std::map<expr*, std::set<expr*>> combinations,
-            std::set<expr*> subNodes,
-            std::set<expr*> notnon_fresh_vars
-    ){
+    bool theory_trau::can_merge_combination(std::map<expr*, std::set<expr*>> combinations){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         ast_manager &m = get_manager();
-
-        std::set<expr*> notnon_fresh_vars_filtered;
-        for (const auto& n : notnon_fresh_vars) {
-            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": notnon_fresh_vars  " << mk_pp(n, m) << std::endl;);
-            if (u.str.is_concat(n)){
-                ptr_vector<expr> childrenVector;
-                get_all_nodes_in_concat(n, childrenVector);
-
-                bool shouldSkip = false;
-                // if none of child nodes are not important
-                for (const auto& nn : childrenVector)
-                    if (is_important(nn, non_fresh_vars)){
-                        shouldSkip = true;
-                        break;
-                    }
-                if (!shouldSkip)
-                    notnon_fresh_vars_filtered.insert(n);
-            }
-            else
-                notnon_fresh_vars_filtered.insert(n);
-        }
-
-        std::set<expr*> toRemove;
-
+        expr_ref_vector implies(m);
         std::map<expr*, std::set<expr*>> ret;
         for (const auto& c : combinations){
-            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
-            if (is_trivial_combination(c.first, c.second, non_fresh_vars))
-                continue;
-            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
-            std::set<expr*> tmpSet = refine_eq_set(c.first, c.second, non_fresh_vars, notnon_fresh_vars_filtered);
-            // remove some imp vars
-            if (c.second.size() > 20 && tmpSet.size() <= 20) {
-                expr_ref_vector eqs(m);
-                collect_eq_nodes(c.first, eqs);
-                for (const auto& v : eqs)
-                    toRemove.insert(v);
-            }
-            bool important = is_important(c.first, non_fresh_vars);
-            if (!important) {
-
-                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " handling " << mk_pp(c.first, get_manager()) << std::endl;);
-                if (tmpSet.size() > 20) {
-                    non_fresh_vars.insert(std::make_pair(c.first, -1));
-                    ret[c.first] = tmpSet;
-                }
-                else if (subNodes.find(c.first) == subNodes.end()) {
-                    if (u.str.is_concat(c.first)) {
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root node  " << mk_pp(c.first, get_manager()) << std::endl;);
-                        // check if it is an important concat
-                        ptr_vector<expr> childrenVector;
-                        get_all_nodes_in_concat(c.first, childrenVector);
-                        for (const auto& v : non_fresh_vars)
-                            if (childrenVector.contains(v.first)) {
-                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.first, get_manager()) << std::endl;);
+            bool found = false;
+            if (c.second.size() >= 2) {
+                for (const auto &cc : ret) {
+                    if (cc.second.size() >= 2) {
+                        // check if they are the same
+                        for (const auto &n : c.second)
+                            if (!are_equal_exprs(c.first, cc.first) && concat_in_set(n, cc.second)) {
+                                implies.push_back(createEqualOP(c.first, cc.first));
+                                found = true;
                                 break;
                             }
-
-                        if (is_important_concat(c.first, non_fresh_vars))
-                            ret[c.first] = tmpSet;
-                        else {
-                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << " " << mk_pp(c.first, get_manager()) << std::endl;);
-                            // remove c.first from the list
-                            std::set<expr*> tmp;
-                            for (const auto& cc : tmpSet)
-                                if (cc != c.first){
-                                    tmp.insert(cc);
-                                }
-                            ret[c.first] = tmp;
-                        }
+                        if (found)
+                            break;
                     }
-                    else
-                        ret[c.first] = tmpSet;
                 }
-                else
-                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": remove " << mk_pp(c.first, get_manager()) << std::endl;);
+                if (!found){
+                    ret[c.first] = c.second;
+                }
             }
-            else {
-                ret[c.first] = tmpSet;
+        }
+        if (implies.size() > 0){
+//            expr_ref_vector guessedEqs(m), guessedDisEqs(m);
+//            fetch_guessed_exprs_with_scopes(guessedEqs, guessedDisEqs);
+//            assert_axiom(rewrite_implication(createAndOP(guessedEqs), createAndOP(implies)));
+            assert_axiom(createAndOP(implies));
+            impliedFacts.push_back(createAndOP(implies));
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool theory_trau::concat_in_set(expr* n, std::set<expr*> s){
+        if (s.find(n) != s.end())
+            return true;
+        for (const auto& nn : s){
+            if (are_equal_concat(n, nn)){
+                return true;
             }
         }
 
-        //update non_fresh_vars
-        std::set<std::pair<expr*, int>> tmp;
-        for (const auto& v : non_fresh_vars)
-            if (toRemove.find(v.first) != toRemove.end() && v.second == -1) {
-
-            }
-            else
-                tmp.insert(std::make_pair(v.first, v.second));
-
-        non_fresh_vars.clear();
-        non_fresh_vars = tmp;
-        TRACE("str", tout << __FUNCTION__ << std::endl;);
-        for (const auto& nn : non_fresh_vars)
-            STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
-        return ret;
+        return false;
     }
 
     bool theory_trau::is_important_concat(expr* e, std::set<std::pair<expr*, int>> non_fresh_vars){
@@ -15913,39 +15885,6 @@ namespace smt {
         return ret;
     }
 
-    /*
-     * 2 nodes have same role or not
-     * if they are both concat funcs
-     *      all elements have the same role
-     * if they are both variables
-     *      vars have the same bound, same eq, same diseq, same contains
-     */
-//    bool theory_trau::same_role(expr* node_i, expr* node_j){
-//        if (u.str.is_concat(node_i) && u.str.is_concat(node_j)){
-//            ptr_vector<expr> nodes_i;
-//            get_nodes_in_concat(node_i, nodes_i);
-//            ptr_vector<expr> nodes_j;
-//            get_nodes_in_concat(node_j, nodes_j);
-//            if (nodes_i.size() == nodes_j.size()){
-//                for (unsigned k = 0; k < nodes_i.size(); ++k)
-//                    if (!same_role(nodes_i[k], nodes_j[k]))
-//                        return false;
-//            }
-//            else
-//                return false;
-//        }
-//        else if (u.str.is_concat(node_i) || u.str.is_concat(node_j)){
-//            return false;
-//        }
-//        else if (!is_internal_var(node_i) && !is_internal_var(node_j)){
-//            //
-//            rational lb_i, lb_j;
-//            lower_bound(node_i, lb_i);
-//            lower_bound(node_i, lb_i);
-//
-//        }
-//    }
-
     std::set<expr*> theory_trau::refine_all_duplications(std::set<expr*> s) {
         if (s.size() == 1)
             return s;
@@ -15965,15 +15904,13 @@ namespace smt {
                         STRACE("str",
                                tout << __LINE__ << " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager())
                                     << " " << mk_pp(v[j], get_manager()) << std::endl;);
+                        to_remove.insert(j);
                         eq = true;
-                        break;
                     }
 
                 if (!eq)
                     s.insert(v[i]);
                 else {
-                    // add either i or j
-
                     ptr_vector <expr> nodes;
                     get_nodes_in_concat(v[i], nodes);
                     ptr_vector <expr> new_nodes;
@@ -15983,7 +15920,6 @@ namespace smt {
                     }
 
                     s.insert(create_concat_from_vector(new_nodes));
-                    to_remove.insert(j);
 
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": remove " << mk_pp(v[i], get_manager())
                                        << std::endl;);
@@ -16322,11 +16258,11 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << mk_pp(object, m) << " = " << mk_pp(nn, m) << std::endl;);
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
-                if (tmp.size() != 0)
+                if (tmp.size() != 0 && !concat_in_set(nn, result))
                     result.insert(nn);
                 else {
                     get_important_asts_in_node(nn, non_fresh_vars, tmp, true);
-                    if (tmp.size() != 0)
+                    if (tmp.size() != 0 && !concat_in_set(nn, result))
                         result.insert(nn);
                 }
             }

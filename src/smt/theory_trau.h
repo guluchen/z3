@@ -1530,6 +1530,7 @@ namespace smt {
                 bool handle_str_int();
                     void handle_str2int(expr* num, expr* str);
                     void handle_int2str(expr* num, expr* str);
+                        rational get_max_s2i(expr* n);
                         bool quickpath_str2int(expr* num, expr* str, bool cached = true);
                         bool quickpath_int2str(expr* num, expr* str, bool cached = true);
                         expr* unroll_str2int(expr* n);
@@ -2260,12 +2261,16 @@ namespace smt {
                         std::map<expr*, std::set<expr*>> combinations,
                         std::set<expr*> subNodes
                 );
+
                 std::map<expr*, std::set<expr*>> refine_eq_combination(
                         std::set<std::pair<expr*, int>> &non_fresh_vars,
                         std::map<expr*, std::set<expr*>> combinations,
                         std::set<expr*> subNodes,
                         std::set<expr*> notnon_fresh_vars
                 );
+
+                bool can_merge_combination(std::map<expr*, std::set<expr*>> combinations);
+                    bool concat_in_set(expr* n, std::set<expr*> s);
                 /*
                 * true if var does not appear in eqs
                 */
