@@ -1359,7 +1359,6 @@ namespace smt {
             bool is_inconsistent_inequality(expr* lhs, expr* rhs);
             bool is_not_added_diseq(expr_ref n1, expr_ref n2);
             void assert_cached_diseq_state();
-            void breakdown_cached_diseq(expr* n1, expr* n2);
             /*
              * Add an axiom of the form:
              * len lhs != len rhs -> lhs != rhs
@@ -1603,7 +1602,7 @@ namespace smt {
             expr* equality_to_arith(
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
-                std::map<expr*, int> non_fresh_Variables,
+                std::map<expr*, int> non_fresh_variables,
                 int p = PMAX);
                 std::string create_string_representation(std::vector<std::pair<expr*, int>> lhs_elements,
                                                               std::vector<std::pair<expr*, int>> rhs_elements);
@@ -1619,12 +1618,12 @@ namespace smt {
             expr_ref_vector arrange(
                 std::vector<std::pair<expr*, int>> lhs_elements,
                 std::vector<std::pair<expr*, int>> rhs_elements,
-                std::map<expr*, int> non_fresh_Variables,
+                std::map<expr*, int> non_fresh_variables,
                 int p = PMAX);
 
             void get_arrangements(std::vector<std::pair<expr*, int>> lhs_elements,
                                           std::vector<std::pair<expr*, int>> rhs_elements,
-                                          std::map<expr*, int> non_fresh_Variables,
+                                          std::map<expr*, int> non_fresh_variables,
                                           std::vector<Arrangment> &possibleCases);
 
             void update_possible_arrangements(
@@ -1648,13 +1647,13 @@ namespace smt {
                                             std::vector<int> right_arr,
                                             std::vector<std::pair<expr*, int>> lhs_elements,
                                             std::vector<std::pair<expr*, int>> rhs_elements,
-                                            std::map<expr*, int> non_fresh_Variables);
+                                            std::map<expr*, int> non_fresh_variables);
                 expr* to_arith_others(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
                                            std::vector<int> left_arr,
                                            std::vector<int> right_arr,
                                            std::vector<std::pair<expr*, int>> lhs_elements,
                                            std::vector<std::pair<expr*, int>> rhs_elements,
-                                           std::map<expr*, int> non_fresh_Variables);
+                                           std::map<expr*, int> non_fresh_variables);
                 expr* to_arith_emptyflats(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
                               std::vector<int> left_arr,
                               std::vector<int> right_arr,
@@ -1665,67 +1664,67 @@ namespace smt {
                               std::vector<int> right_arr,
                               std::vector<std::pair<expr*, int>> lhs_elements,
                               std::vector<std::pair<expr*, int>> rhs_elements,
-                              std::map<expr*, int> non_fresh_Variables);
+                              std::map<expr*, int> non_fresh_variables);
                 expr* to_arith_left(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
                               std::vector<int> left_arr,
                               std::vector<int> right_arr,
                               std::vector<std::pair<expr*, int>> lhs_elements,
                               std::vector<std::pair<expr*, int>> rhs_elements,
-                              std::map<expr*, int> non_fresh_Variables);
+                              std::map<expr*, int> non_fresh_variables);
 
             /*
              * Flat = Flat
              * size = size && it = it  ||
              * size = size && it = 1
              */
-            expr* generate_constraint01(
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+            expr* gen_constraint01(
+                    std::pair<expr *, int> a, std::pair<expr *, int> b,
                     int pMax,
-                    std::map<expr*, int> non_fresh_Variables,
+                    std::map<expr *, int> non_fresh_variables,
                     bool optimizing);
 
-                void generate_constraint01_const_var(
-                        std::pair<expr*, int> a, std::pair<expr*, int> b,
+                void gen_constraint01_const_var(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
                         int pMax,
-                        std::map<expr*, int> non_fresh_Variables,
+                        std::map<expr *, int> non_fresh_variables,
                         bool optimizing,
                         expr_ref_vector &result);
 
-                void generate_constraint01_const_const(
-                        std::pair<expr*, int> a, std::pair<expr*, int> b,
+                void gen_constraint01_const_const(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
                         bool optimizing,
-                        expr* nameA,
+                        expr *nameA,
                         expr_ref_vector &result);
 
-                expr* generate_constraint01_regex_head(
-                        std::pair<expr*, int> a, std::pair<expr*, int> b,
-                        expr* nameA);
+                expr* gen_constraint01_regex_head(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
+                        expr *nameA);
 
-                expr* generate_constraint01_regex_tail(
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
-                    expr* nameA);
+                expr* gen_constraint01_regex_tail(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
+                        expr *nameA);
 
-                expr* generate_constraint01_regex_regex(
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
-                    expr* nameA);
+                expr* gen_constraint01_regex_regex(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
+                        expr *nameA);
 
-                expr* generate_constraint01_const_const(
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
-                    expr* nameA);
+                expr* gen_constraint01_const_const(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
+                        expr *nameA);
 
-                void generate_constraint01_var_var(
-                    std::pair<expr*, int> a, std::pair<expr*, int> b,
+                void gen_constraint01_var_var(
+                        std::pair<expr *, int> a, std::pair<expr *, int> b,
+                        int pMax,
+                        std::map<expr *, int> non_fresh_variables,
+                        bool optimizing,
+                        expr *nameA,
+                        expr_ref_vector &result);
+
+            expr* gen_constraint_var_var(
+                    std::pair<expr *, int> a,
+                    std::pair<expr *, int> b,
                     int pMax,
-                    std::map<expr*, int> non_fresh_Variables,
-                    bool optimizing,
-                    expr* nameA,
-                    expr_ref_vector &result);
-
-            expr* generate_constraint_var_var(
-                std::pair<expr*, int> a,
-                std::pair<expr*, int> b,
-                int pMax,
-                rational bound);
+                    rational bound);
 
             expr* generate_constraint_var_var(
                 std::pair<expr*, int> a,
@@ -1734,43 +1733,43 @@ namespace smt {
                 int pMax,
                 rational bound);
 
-            expr* generate_constraint_flat_var(
-                std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elementNames,
-                int pos,
-                int pMax,
-                rational bound);
+            expr* gen_constraint_flat_var(
+                    std::pair<expr *, int> a,
+                    std::vector<std::pair<expr *, int>> elements,
+                    int pos,
+                    int pMax,
+                    rational bound);
 
-            expr* generate_constraint_flat_flat(
-                std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elementNames,
-                int pos,
-                int pMax,
-                rational bound,
-                bool skip_init = false);
+            expr* gen_constraint_flat_flat(
+                    std::pair<expr *, int> a,
+                    std::vector<std::pair<expr *, int>> elementNames,
+                    int pos,
+                    int pMax,
+                    rational bound,
+                    bool skip_init = false);
             int lcd(int x, int y);
             bool match_regex(expr* a, zstring b);
             bool match_regex(expr* a, expr* b);
             /*
              * Flat = sum (flats)
              */
-            expr* generate_constraint02(
-                std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elements,
-                int pMax,
-                std::map<expr*, int> non_fresh_Variables,
-                bool optimizing);
+            expr* gen_constraint02(
+                    std::pair<expr *, int> a,
+                    std::vector<std::pair<expr *, int>> elements,
+                    int pMax,
+                    std::map<expr *, int> non_fresh_variables,
+                    bool optimizing);
 
-                bool generate_constraint02_const_regex(std::pair<expr*, int> a,
-                                                            std::vector<std::pair<expr*, int>> elementNames,
-                                                            int pMax,
-                                                            std::map<expr*, int> non_fresh_Variables,
-                                                            bool optimizing,
-                                                            expr_ref_vector &result);
+                bool gen_constraint02_const_regex(std::pair<expr *, int> a,
+                                                  std::vector<std::pair<expr *, int>> elementNames,
+                                                  int pMax,
+                                                  std::map<expr *, int> non_fresh_variables,
+                                                  bool optimizing,
+                                                  expr_ref_vector &result);
 
                 bool generate_constraint02_var(std::pair<expr*, int> a,
                                                     std::vector<std::pair<expr*, int>> elementNames,
-                                                    std::map<expr*, int> non_fresh_Variables,
+                                                    std::map<expr*, int> non_fresh_variables,
                                                     bool optimizing,
                                                     expr_ref_vector &result);
 
@@ -1783,7 +1782,7 @@ namespace smt {
                         std::pair<expr*, int> a, /* const || regex */
                         std::vector<std::pair<expr*, int> > elementNames, /* const + non_fresh_ var */
                         std::vector<int> split,
-                        std::map<expr*, int> non_fresh_Variables,
+                        std::map<expr*, int> non_fresh_variables,
                         bool optimizing,
                         int pMax);
 
@@ -1796,28 +1795,28 @@ namespace smt {
                             expr_ref_vector subElements,
                             int currentPos,
                             int subLength,
-                            std::map<expr*, int> non_fresh_Variables,
+                            std::map<expr*, int> non_fresh_variables,
                             bool optimizing,
                             int pMax);
 
                         /*
                         *
                         */
-                        expr_ref non_fresh_Var_atSpecificLocation(
-                                std::pair<expr*, int> a, /* const or regex */
-                                std::vector<std::pair<expr*, int>> elementNames, /* have non_fresh_ var */
-                                int non_fresh_VarPos,
-                                int non_fresh_VarLength,
-                                std::map<expr*, int> non_fresh_Variables,
+                        expr_ref positional_non_fresh_var_in_array(
+                                std::pair<expr *, int> a, /* const or regex */
+                                std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var */
+                                int var_pos,
+                                int var_length,
+                                std::map<expr *, int> non_fresh_variables,
                                 bool optimizing,
                                 int pMax);
                 /*
                  * Input: split a string
                  * Output: SMT
                  */
-                expr_ref_vector toConstraint_Nonon_fresh_Var(
-                        std::pair<expr*, int> a, /* const || regex */
-                        std::vector<std::pair<expr*, int> > elementNames, /* no non_fresh_ var */
+                expr_ref_vector gen_constraint_without_non_fresh_vars(
+                        std::pair<expr *, int> a, /* const || regex */
+                        std::vector<std::pair<expr *, int> > elements, /* no non_fresh_ var */
                         std::vector<int> split,
                         bool optimizing);
                 /*
@@ -1826,7 +1825,7 @@ namespace smt {
                 expr* unroll_non_fresh_variable(
                         std::pair<expr*, int> a, /* non_fresh_ variable */
                         std::vector<std::pair<expr*, int> > elementNames, /* contain const */
-                        std::map<expr*, int> non_fresh_Variables,
+                        std::map<expr*, int> non_fresh_variables,
                         bool optimizing,
                         int pMax = PMAX);
                     /*
@@ -1835,9 +1834,9 @@ namespace smt {
                      * constPos: position of const element
                      * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                      */
-                    expr_ref handle_SubConst_WithPosition_array(
-                            std::pair<expr*, int> a, // non_fresh_ var
-                            std::vector<std::pair<expr*, int>> elementNames,
+                    expr_ref handle_positional_subconst_in_array(
+                            std::pair<expr *, int> a, // non_fresh_ var
+                            std::vector<std::pair<expr *, int>> elements,
                             int constPos,
                             bool optimizing,
                             int pMax = PMAX);
@@ -1848,13 +1847,13 @@ namespace smt {
                         * regexPos: position of regex element
                         * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
                         */
-                        expr_ref handle_Regex_WithPosition_array(
-                                std::pair<expr*, int> a, // non_fresh_ var
-                                std::vector<std::pair<expr*, int>> elementNames,
+                        expr_ref handle_positional_regex_in_array(
+                                std::pair<expr *, int> a, // non_fresh_ var
+                                std::vector<std::pair<expr *, int>> elements,
                                 int regexPos,
                                 bool optimizing,
                                 int pMax = PMAX,
-                                expr* extraConstraint = NULL/* length = ? */
+                                expr *extraConstraint = NULL/* length = ? */
                         );
 
                         /*
@@ -1863,22 +1862,22 @@ namespace smt {
                         * constPos: position of const element
                         * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                         */
-                        expr_ref handle_Const_WithPosition_array(
-                                std::pair<expr*, int> a,
-                                std::vector<std::pair<expr*, int>> elementNames,
+                        expr_ref handle_positional_const_in_array(
+                                std::pair<expr *, int> a,
+                                std::vector<std::pair<expr *, int>> elements,
                                 int constPos,
                                 zstring value, /* value of regex */
                                 int start, int finish,
                                 bool optimizing,
                                 int pMax = PMAX,
-                                expr* extraConstraint = NULL /* length = ? */);
+                                expr *extraConstraint = NULL /* length = ? */);
 
                     /*
                     * non_fresh_ = a + non_fresh_ + b
                     */
-                    expr* handle_non_fresh__non_fresh__array(
-                            std::pair<expr*, int> a,
-                            std::vector<std::pair<expr*, int>> elementNames,
+                    expr* handle_non_fresh_non_fresh_array(
+                            std::pair<expr *, int> a,
+                            std::vector<std::pair<expr *, int>> elementNames,
                             int pos,
                             int bound,
                             bool optimizing,
@@ -1890,14 +1889,14 @@ namespace smt {
                 expr* toConstraint_non_fresh_var(
                         std::pair<expr*, int> a, /* const or regex */
                         std::vector<std::pair<expr*, int>> elementNames, /* have non_fresh_ var, do not have const */
-                        std::map<expr*, int> non_fresh_Variables,
+                        std::map<expr*, int> non_fresh_variables,
                         bool optimizing,
                         int pMax);
                 /*
                  * elementNames[pos] is a non_fresh_.
                  * how many parts of that non_fresh_ variable are in the const | regex
                  */
-                expr* find_partsOfnon_fresh_VariablesInAVector(
+                expr* find_partsOfnon_fresh_variablesInAVector(
                         int pos,
                         std::vector<std::pair<expr*, int>> elementNames,
                         int &partCnt);
@@ -1925,7 +1924,7 @@ namespace smt {
                 */
                 int choose_split_type(
                         std::vector<std::pair<expr*, int>> elementNames,
-                        std::map<expr*, int> non_fresh_Variables,
+                        std::map<expr*, int> non_fresh_variables,
                         expr* lhs);
 
                 /*

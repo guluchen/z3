@@ -101,12 +101,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="184">
-              <caret line="8816" lean-forward="true" selection-start-line="8816" selection-end-line="8816" />
+            <state relative-caret-position="301">
+              <caret line="3788" column="6" selection-start-line="3788" selection-start-column="6" selection-end-line="3788" selection-end-column="6" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
-                <element signature="e#481603#481908#0" expanded="true" />
-                <element signature="e#510187#510601#0" expanded="true" />
+                <element signature="e#481610#481915#0" expanded="true" />
+                <element signature="e#510194#510608#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -181,8 +181,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2392">
-              <caret line="2453" column="55" selection-start-line="2453" selection-start-column="26" selection-end-line="2453" selection-end-column="55" />
+            <state relative-caret-position="325">
+              <caret line="1360" column="45" selection-start-line="1360" selection-start-column="45" selection-end-line="1360" selection-end-column="45" />
             </state>
           </provider>
         </entry>
@@ -191,9 +191,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>review_starting_ending_combination</find>
-      <find>reassertEQ = fa</find>
-      <find>reassertEQ</find>
       <find>create_con</find>
       <find>owner</find>
       <find>same_prefix_same_parikh</find>
@@ -221,10 +218,11 @@
       <find>getSelectValue</find>
       <find>one_const_in_expr</find>
       <find>guessedDisEqs</find>
+      <find>non_fresh_Variables</find>
+      <find>elementNames</find>
+      <find>breakdown_cached_diseq</find>
     </findStrings>
     <replaceStrings>
-      <replace>collect_const_splits(</replace>
-      <replace>OP(</replace>
       <replace>gen_var_size(</replace>
       <replace>gen_flat_iter(</replace>
       <replace>get_var_length(</replace>
@@ -253,6 +251,8 @@
       <replace>init_excluded_char_set</replace>
       <replace>toConstraint_non_fresh_var</replace>
       <replace>guessed_diseqs</replace>
+      <replace>non_fresh_variables</replace>
+      <replace>elements</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -827,12 +827,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="165041000" />
+      <workItem from="1568106535994" duration="166293000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1769371000" />
+    <option name="totallyTimeSpent" value="1770623000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -842,7 +842,7 @@
       <window_info id="Structure" order="1" sideWeight="0.5032258" side_tool="true" weight="0.17275615" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.18188679" />
+      <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.18188679" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
@@ -856,7 +856,7 @@
       <window_info anchor="bottom" id="Messages" order="12" visible="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info active="true" anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.2466243" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" visible="true" weight="0.2466243" />
       <window_info anchor="right" id="Database" order="3" />
     </layout>
     <layout-to-restore>
@@ -1227,19 +1227,19 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2392">
-          <caret line="2453" column="55" selection-start-line="2453" selection-start-column="26" selection-end-line="2453" selection-end-column="55" />
+        <state relative-caret-position="325">
+          <caret line="1360" column="45" selection-start-line="1360" selection-start-column="45" selection-end-line="1360" selection-end-column="45" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="184">
-          <caret line="8816" lean-forward="true" selection-start-line="8816" selection-end-line="8816" />
+        <state relative-caret-position="301">
+          <caret line="3788" column="6" selection-start-line="3788" selection-start-column="6" selection-end-line="3788" selection-end-column="6" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
-            <element signature="e#481603#481908#0" expanded="true" />
-            <element signature="e#510187#510601#0" expanded="true" />
+            <element signature="e#481610#481915#0" expanded="true" />
+            <element signature="e#510194#510608#0" expanded="true" />
           </folding>
         </state>
       </provider>
