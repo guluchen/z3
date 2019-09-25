@@ -662,11 +662,11 @@ namespace smt {
                 ast_manager & m = mg.get_manager();
                 obj_map<enode, app *> m_root2value = mg.get_root2value();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
-
+                clock_t t = clock();
                 for (int i = 0; i < (int)m_dependencies.size(); ++i){
                     app* val = nullptr;
                     if (m_root2value.find(m_dependencies[i].get_enode(), val)) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " " << mk_pp(val, m) << std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << std::endl;);
                     }
                     else
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
@@ -689,27 +689,34 @@ namespace smt {
                                 }
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
                                                    << std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                         }
-
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         if (regex != nullptr) {
                             zstring strValue;
-                            if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue))
+                            if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
-
-                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
+                            }
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
-
+                            }
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                             if (constructFromRegex(mg, len_int, m_root2value, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
                                                    << std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                         }
-
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         zstring strValue;
                         constructAsNormal(mg, len_int, m_root2value, strValue);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     else {
@@ -724,7 +731,7 @@ namespace smt {
                 else {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": not string: "  << mk_pp(node, m) << std::endl;);
                 }
-
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                 return node;
             }
 
@@ -866,9 +873,11 @@ namespace smt {
             }
 
             bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+                ast_manager & m = mg.get_manager();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
                 if (len_int != -1) {
                     // non root var
+                    clock_t t = clock();
                     bool constraint01 = th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
                     bool constraint02 = th.backwardDep[node].size() > 0;
                     if (constraint01 || constraint02) {
@@ -883,7 +892,7 @@ namespace smt {
                                 return to_app(th.mk_string(strValue));
                         }
                     }
-
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
                     // root var
                     std::vector<int> val;
@@ -892,18 +901,20 @@ namespace smt {
 
                     if (th.u.str.is_concat(node))
                         constructStr(mg, node, m_root2value, val);
-
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     for (const auto &eq : th.uState.eq_combination[node]) {
                         constructStr(mg, eq, m_root2value, val);
                     }
-
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+                    std::string ret = "";
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
-                            strValue = strValue + th.defaultChar;
+                            ret = ret + th.defaultChar;
                         } else
-                            strValue = strValue + val[i];
-
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << strValue
+                            ret = ret + (char)val[i];
+                    strValue = zstring(ret.c_str());
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret
                                        << std::endl;);
                     return to_app(th.mk_string(strValue));
 
@@ -1040,8 +1051,9 @@ namespace smt {
             }
 
             zstring fill_chars(std::vector<int> vValue, std::set<char> char_set, bool &completed){
-                zstring value("");
-                for (int i = 0; i < (int)vValue.size(); ++i) {
+                std::string value;
+
+                for (unsigned i = 0; i < vValue.size(); ++i) {
                     if (char_set.size() > 0){
                         char tmp = (char)vValue[i];
                         if (char_set.find(tmp) == char_set.end())
@@ -1057,7 +1069,7 @@ namespace smt {
                             value = value + (char) vValue[i];
                     }
                 }
-                return value;
+                return zstring(value.c_str());
             }
 
             void constructStr(model_generator & mg, expr* eq, obj_map<enode, app *> m_root2value, std::vector<int> &val){
@@ -1245,39 +1257,18 @@ namespace smt {
             }
 
             bool getIntValue(model_generator & mg, enode* n, obj_map<enode, app *> m_root2value, int &value){
-                STRACE("str",
-                       tout << __LINE__ << " " << __FUNCTION__
-                            << mk_pp(n->get_owner(), th.get_manager())
-                            << std::endl;);
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
-                    STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
-                                << mk_pp(n->get_owner(), th.get_manager())
-                                << std::endl;);
                     rational valInt;
                     if (th.m_autil.is_numeral(val, valInt)) {
                         value = valInt.get_int32();
-                        STRACE("str",
-                               tout << __LINE__ << " " << __FUNCTION__ << " "
-                                    << mk_pp(n->get_owner(), th.get_manager()) << " " << value
-                                    << std::endl;);
                         return true;
                     }
                     else {
-                        STRACE("str",
-                               tout << __LINE__ << " " << __FUNCTION__
-                                       << mk_pp(val, th.get_manager())
-                                    << std::endl;);
                         return false;
                     }
                 }
                 else {
-                    STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
-                                << mk_pp(n->get_owner(), th.get_manager())
-                                << std::endl;);
-
                     // query int theory
                     expr *value_ral = th.query_theory_arith_core(n->get_owner(), mg);
                     if (value_ral != nullptr) {
@@ -1285,20 +1276,11 @@ namespace smt {
                         rational tmp;
                         if (th.m_autil.is_numeral(value_ral, tmp)) {
                             value = tmp.get_int32();
-                            STRACE("str",
-                                   tout << __LINE__ << " " << __FUNCTION__ << " "
-                                        << mk_pp(n->get_owner(), th.get_manager()) << " " << value
-                                        << std::endl;);
                             return true;
                         }
                         else
                             SASSERT(false);
                     }
-
-
-                    STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
-                                << std::endl;);
                     return false;
                 }
             }
