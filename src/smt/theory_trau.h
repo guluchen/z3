@@ -1892,6 +1892,67 @@ namespace smt {
                         std::map<expr *, int> non_fresh_variables,
                         bool optimizing,
                         int pMax);
+
+                expr* unroll_regex_non_fresh_variable(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::pair<expr *, int> b,
+                        int pMax,
+                        int part_cnt,
+                        int max_len,
+                        expr* sub_len,
+                        expr* prefix_lhs,
+                        expr* prefix_rhs);
+
+                expr* unroll_var_non_fresh_variable(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
+                        int pMax,
+                        int pos,
+                        int part_cnt);
+
+                expr* unroll_const_variable(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::pair<expr *, int> b,
+                        int pMax,
+                        int max_len,
+                        expr* sub_len,
+                        expr* prefix_lhs,
+                        expr* prefix_rhs);
+
+                expr* unroll_const_non_fresh_variable_str2int(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::pair<expr *, int> b,
+                        int pMax,
+                        int max_len,
+                        expr* sub_len,
+                        expr* prefix_lhs,
+                        expr* prefix_rhs);
+
+                expr* unroll_const_non_fresh_variable(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::pair<expr *, int> b,
+                        int pMax,
+                        int max_len,
+                        expr* sub_len,
+                        expr* prefix_lhs,
+                        expr* prefix_rhs);
+
+                expr* gen_regex_non_fresh_variable(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
+                        std::map<expr *, int> non_fresh_variables,
+                        int pMax,
+                        int pos,
+                        int part_cnt,
+                        expr* sub_len,
+                        expr* prefix_rhs);
+                expr* gen_regex_regex(
+                    std::pair<expr *, int> a, /* const or regex */
+                    std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
+                    std::map<expr *, int> non_fresh_variables,
+                    int pMax,
+                    int pos);
+
                 /*
                  * elements[pos] is a non_fresh_.
                  * how many parts of that non_fresh_ variable are in the const | regex
@@ -2555,9 +2616,10 @@ namespace smt {
         void dump_literals();
         void fetch_guessed_core_exprs(
                 std::map<expr*, std::set<expr*>> eq_combination,
-                expr_ref_vector &guessedExprs,
-                expr_ref_vector diseqExprs,
+                expr_ref_vector &guessed_exprs,
+                expr_ref_vector diseq_exprs,
                 rational bound = rational(0));
+        unsigned get_assign_lvl(expr* a, expr* b);
         void fetch_related_exprs(
                 expr_ref_vector allvars,
                 expr_ref_vector &guessedExprs);
@@ -2568,7 +2630,7 @@ namespace smt {
         void update_all_vars(std::set<expr*> &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
         bool check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars);
-        void fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessedExprs);
+        void fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessed_exprs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);

@@ -86,6 +86,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="629">
-              <caret line="9547" column="40" selection-start-line="9547" selection-start-column="40" selection-end-line="9547" selection-end-column="40" />
+            <state relative-caret-position="331">
+              <caret line="7501" column="52" lean-forward="true" selection-start-line="7501" selection-start-column="52" selection-end-line="7501" selection-end-column="52" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#481610#481915#0" expanded="true" />
@@ -114,8 +115,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="348">
-              <caret line="695" column="13" selection-start-line="695" selection-start-column="13" selection-end-line="695" selection-end-column="13" />
+            <state relative-caret-position="340">
+              <caret line="458" column="17" selection-start-line="458" selection-start-column="17" selection-end-line="458" selection-end-column="17" />
               <folding>
                 <element signature="e#30447#30471#0" expanded="true" />
               </folding>
@@ -180,8 +181,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-201">
-              <caret line="381" column="40" selection-start-line="381" selection-start-column="17" selection-end-line="381" selection-end-column="40" />
+            <state relative-caret-position="340">
+              <caret line="2605" column="30" selection-start-line="2605" selection-start-column="30" selection-end-line="2605" selection-end-column="30" />
             </state>
           </provider>
         </entry>
@@ -190,25 +191,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>same_prefix_same_parikh</find>
-      <find>diff_len</find>
-      <find>get_parikh_from_strs</find>
-      <find>parikh_image_check</find>
-      <find>is_regex_plus_breakdown</find>
-      <find>scope</find>
-      <find>collect_cha</find>
-      <find>remove_star_in_star</find>
-      <find>mk_concat</find>
-      <find>normalize_eq</find>
-      <find>refined_init_chain_free</find>
-      <find>can_merge_combination</find>
-      <find>refine_all_duplications</find>
-      <find>lower_bound_str_int</find>
-      <find>ctx</find>
-      <find>max_value</find>
-      <find>mk_value_he</find>
-      <find>refine_eq_combination</find>
-      <find>strValue</find>
       <find>construct_string</find>
       <find>getLenValue</find>
       <find>time</find>
@@ -220,6 +202,25 @@
       <find>elementNames</find>
       <find>collect_all_empty_end</find>
       <find>is_possible_arrangement</find>
+      <find>remove_parentheses</find>
+      <find>not_contain_check</find>
+      <find>resultParts</find>
+      <find>possibleCases</find>
+      <find>ors</find>
+      <find>max_len</find>
+      <find>unroll_const_non_fresh_variable</find>
+      <find>non_fresh_variables</find>
+      <find>unroll_const_non_fresh_variable_str2int</find>
+      <find>unroll_regex_non_fresh_variable</find>
+      <find>gen_regex_non_fresh_variable</find>
+      <find>subpossibleCases</find>
+      <find>unroll_const_variable</find>
+      <find>unroll_var_non_fresh_variable</find>
+      <find>ctx</find>
+      <find>get_assign_level</find>
+      <find>completed_branches</find>
+      <find>underapproximation_cached</find>
+      <find>assert_cached_eq_state</find>
     </findStrings>
     <replaceStrings>
       <replace>gen_var_size(</replace>
@@ -826,12 +827,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="169531000" />
+      <workItem from="1568106535994" duration="181177000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1773861000" />
+    <option name="totallyTimeSpent" value="1785507000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1200,16 +1201,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="348">
-          <caret line="695" column="13" selection-start-line="695" selection-start-column="13" selection-end-line="695" selection-end-column="13" />
-          <folding>
-            <element signature="e#30447#30471#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_internalizer.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="345">
@@ -1224,17 +1215,27 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/smt_context.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="458" column="17" selection-start-line="458" selection-start-column="17" selection-end-line="458" selection-end-column="17" />
+          <folding>
+            <element signature="e#30447#30471#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-201">
-          <caret line="381" column="40" selection-start-line="381" selection-start-column="17" selection-end-line="381" selection-end-column="40" />
+        <state relative-caret-position="340">
+          <caret line="2605" column="30" selection-start-line="2605" selection-start-column="30" selection-end-line="2605" selection-end-column="30" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="629">
-          <caret line="9547" column="40" selection-start-line="9547" selection-start-column="40" selection-end-line="9547" selection-end-column="40" />
+        <state relative-caret-position="331">
+          <caret line="7501" column="52" lean-forward="true" selection-start-line="7501" selection-start-column="52" selection-end-line="7501" selection-end-column="52" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#481610#481915#0" expanded="true" />
