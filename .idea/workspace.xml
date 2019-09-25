@@ -101,8 +101,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="301">
-              <caret line="3788" column="6" selection-start-line="3788" selection-start-column="6" selection-end-line="3788" selection-end-column="6" />
+            <state relative-caret-position="331">
+              <caret line="7884" column="45" selection-start-line="7884" selection-start-column="45" selection-end-line="7884" selection-end-column="45" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#481610#481915#0" expanded="true" />
@@ -181,8 +181,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="325">
-              <caret line="1360" column="45" selection-start-line="1360" selection-start-column="45" selection-end-line="1360" selection-end-column="45" />
+            <state relative-caret-position="-201">
+              <caret line="381" column="40" selection-start-line="381" selection-start-column="17" selection-end-line="381" selection-end-column="40" />
             </state>
           </provider>
         </entry>
@@ -191,8 +191,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>create_con</find>
-      <find>owner</find>
       <find>same_prefix_same_parikh</find>
       <find>diff_len</find>
       <find>get_parikh_from_strs</find>
@@ -219,8 +217,10 @@
       <find>one_const_in_expr</find>
       <find>guessedDisEqs</find>
       <find>non_fresh_Variables</find>
-      <find>elementNames</find>
       <find>breakdown_cached_diseq</find>
+      <find>elementNames</find>
+      <find>collect_all_empty_end</find>
+      <find>is_possible_arrangement</find>
     </findStrings>
     <replaceStrings>
       <replace>gen_var_size(</replace>
@@ -827,12 +827,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="166293000" />
+      <workItem from="1568106535994" duration="167524000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1770623000" />
+    <option name="totallyTimeSpent" value="1771854000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1227,15 +1227,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="325">
-          <caret line="1360" column="45" selection-start-line="1360" selection-start-column="45" selection-end-line="1360" selection-end-column="45" />
+        <state relative-caret-position="-201">
+          <caret line="381" column="40" selection-start-line="381" selection-start-column="17" selection-end-line="381" selection-end-column="40" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="301">
-          <caret line="3788" column="6" selection-start-line="3788" selection-start-column="6" selection-end-line="3788" selection-end-column="6" />
+        <state relative-caret-position="331">
+          <caret line="7884" column="45" selection-start-line="7884" selection-start-column="45" selection-end-line="7884" selection-end-column="45" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#481610#481915#0" expanded="true" />

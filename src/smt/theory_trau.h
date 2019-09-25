@@ -249,15 +249,15 @@ namespace smt {
                 right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
             }
 
-            void addLeft(int number) {
+            void add_left(int number) {
                 left_arr.emplace_back(number);
             }
 
-            void addRight(int number) {
+            void add_right(int number) {
                 right_arr.emplace_back(number);
             }
 
-            bool canSplit(int boundedFlat, int boundSize, int pos, std::string frame, std::vector<std::string> &flats) {
+            bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, std::vector<std::string> &flats) {
                 if ((int)flats.size() == boundedFlat)
                     return false;
 
@@ -277,7 +277,7 @@ namespace smt {
                             break;
                     }
                     if (tmpPos < (int)frame.length()){
-                        if (canSplit(boundedFlat, boundSize, tmpPos, frame, flats))
+                        if (can_split(boundedFlat, boundSize, tmpPos, frame, flats))
                             return true;
                         else {
                             /* de-stack */
@@ -298,7 +298,7 @@ namespace smt {
             int splitWithMinFlats(int boundedFlat, int boundSize, std::string frame){
                 for (int i = 1; i <= boundedFlat; ++i) { /* number of flats */
                     std::vector<std::string> flats;
-                    if (canSplit(i, PMAX, 0, frame, flats)){
+                    if (can_split(i, PMAX, 0, frame, flats)){
                         return i;
                     }
                     flats.clear();
@@ -330,39 +330,39 @@ namespace smt {
                 return str.find("|") != std::string::npos;
             }
 
-            bool feasibleSplit_const(
+            bool feasible_split_const(
                     std::string str,
-                    std::vector<std::pair<std::string, int> > elementNames,
+                    std::vector<std::pair<std::string, int> > elements,
                     std::vector<int> currentSplit,
                     int bound){
                 /* check feasible const split */
                 int pos = 0;
                 for (unsigned i = 0; i < currentSplit.size(); ++i) {
-                    if (elementNames[i].second == REGEX_CODE || isUnionStr(elementNames[i].first)) {
+                    if (elements[i].second == REGEX_CODE || isUnionStr(elements[i].first)) {
                     }
 
                         /* TODO: bound P */
-                    else if (elementNames[i].second < 0) { /* const */
-                        if (currentSplit[i] > (int)elementNames[i].first.length()) {
+                    else if (elements[i].second < 0) { /* const */
+                        if (currentSplit[i] > (int)elements[i].first.length()) {
                         }
-                        SASSERT ((int)elementNames[i].first.length() >= currentSplit[i]);
+                        SASSERT ((int)elements[i].first.length() >= currentSplit[i]);
 
                         std::string lhs = str.substr(pos, currentSplit[i]);
                         std::string rhs = "";
-                        if (elementNames[i].second % bound == -1) /* head */ {
-                            rhs = elementNames[i].first.substr(0, currentSplit[i]);
+                        if (elements[i].second % bound == -1) /* head */ {
+                            rhs = elements[i].first.substr(0, currentSplit[i]);
 
-                            if (i + 1 < elementNames.size()) {
-                                if (bound == 1 || elementNames[i].first.length() == 1) {
-                                    SASSERT (currentSplit[i] == (int)elementNames[i].first.length()); /* const length must be equal to length of const */
+                            if (i + 1 < elements.size()) {
+                                if (bound == 1 || elements[i].first.length() == 1) {
+                                    SASSERT (currentSplit[i] == (int)elements[i].first.length()); /* const length must be equal to length of const */
                                 }
                                 else {
-                                    SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)elementNames[i].first.length())); /* sum of all const parts must be equal to length of const */
+                                    SASSERT ((currentSplit[i] + currentSplit[i + 1] == (int)elements[i].first.length())); /* sum of all const parts must be equal to length of const */
                                 }
                             }
                         }
                         else { /* tail */
-                            rhs = elementNames[i].first.substr(elementNames[i].first.length() - currentSplit[i], currentSplit[i]);
+                            rhs = elements[i].first.substr(elements[i].first.length() - currentSplit[i], currentSplit[i]);
                         }
 
                         if (lhs.compare(rhs) != 0){
@@ -379,7 +379,7 @@ namespace smt {
             /*
              * we do not allow empty flats in the middle
              */
-            bool isPossibleArrangement(){
+            bool is_possible_arrangement(){
                 if (left_arr[left_arr.size() -1] == EMPTYFLAT &&
                     right_arr[right_arr.size() -1] == EMPTYFLAT)
                     return false;
@@ -467,15 +467,15 @@ namespace smt {
             std::set<std::pair<expr*, int>> non_fresh_vars;
             expr_ref_vector equalities;
             expr_ref_vector disequalities;
-            str::state currState;
+            str::state curr_state;
             bool reassertEQ = false;
             bool reassertDisEQ = false;
             int eqLevel = -1;
             int diseqLevel = -1;
-            expr_ref_vector assertingConstraints;
+            expr_ref_vector asserting_constraints;
             rational str_int_bound;
 
-            UnderApproxState(ast_manager &m) : equalities(m), disequalities(m), assertingConstraints(m){
+            UnderApproxState(ast_manager &m) : equalities(m), disequalities(m), asserting_constraints(m){
 
             }
 
@@ -492,13 +492,13 @@ namespace smt {
                             non_fresh_vars(_non_fresh_vars),
                             equalities(m),
                             disequalities(m),
-                            currState(_currState),
+                            curr_state(_currState),
 
                             eqLevel(_eqLevel),
                             diseqLevel(_diseqLevel),
-                            assertingConstraints(m),
+                            asserting_constraints(m),
                             str_int_bound(_str_int_bound){
-                assertingConstraints.reset();
+                asserting_constraints.reset();
                 equalities.reset();
                 equalities.append(_equalities);
                 disequalities.reset();
@@ -508,8 +508,8 @@ namespace smt {
             }
 
             UnderApproxState clone(ast_manager &m){
-                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, non_fresh_vars, equalities, disequalities, currState, str_int_bound);
-                tmp.addAssertingConstraints(assertingConstraints);
+                UnderApproxState tmp(m, eqLevel, diseqLevel, eq_combination, non_fresh_vars, equalities, disequalities, curr_state, str_int_bound);
+                tmp.add_asserting_constraints(asserting_constraints);
                 reassertEQ = true;
                 reassertDisEQ = true;
                 return tmp;
@@ -539,24 +539,24 @@ namespace smt {
                 disequalities.reset();
                 disequalities.append(other.disequalities);
 
-                currState = other.currState;
-                assertingConstraints.reset();
+                curr_state = other.curr_state;
+                asserting_constraints.reset();
                 reassertEQ = true;
                 reassertDisEQ = true;
-                for (int i = 0; i < other.assertingConstraints.size(); ++i)
-                    assertingConstraints.push_back(other.assertingConstraints[i]);
+                for (int i = 0; i < other.asserting_constraints.size(); ++i)
+                    asserting_constraints.push_back(other.asserting_constraints[i]);
 
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ":  eq_combination: " << other.eq_combination.size() << " --> " << eq_combination.size() << std::endl;);
                 return *this;
             }
 
-            void addAssertingConstraints(expr_ref_vector _assertingConstraints){
-                for (int i = 0; i < (int)_assertingConstraints.size(); ++i)
-                    assertingConstraints.push_back(_assertingConstraints.get(i));
+            void add_asserting_constraints(expr_ref_vector _assertingConstraints){
+                for (unsigned i = 0; i < _assertingConstraints.size(); ++i)
+                    asserting_constraints.push_back(_assertingConstraints.get(i));
             }
 
-            void addAssertingConstraints(expr_ref assertingConstraint){
-                assertingConstraints.push_back(assertingConstraint);
+            void add_asserting_constraints(expr_ref assertingConstraint){
+                asserting_constraints.push_back(assertingConstraint);
             }
 
             bool operator==(const UnderApproxState state){
@@ -1728,7 +1728,7 @@ namespace smt {
 
             expr* generate_constraint_var_var(
                 std::pair<expr*, int> a,
-                std::vector<std::pair<expr*, int>> elementNames,
+                std::vector<std::pair<expr*, int>> elements,
                 int pos,
                 int pMax,
                 rational bound);
@@ -1742,7 +1742,7 @@ namespace smt {
 
             expr* gen_constraint_flat_flat(
                     std::pair<expr *, int> a,
-                    std::vector<std::pair<expr *, int>> elementNames,
+                    std::vector<std::pair<expr *, int>> elements,
                     int pos,
                     int pMax,
                     rational bound,
@@ -1761,14 +1761,14 @@ namespace smt {
                     bool optimizing);
 
                 bool gen_constraint02_const_regex(std::pair<expr *, int> a,
-                                                  std::vector<std::pair<expr *, int>> elementNames,
+                                                  std::vector<std::pair<expr *, int>> elements,
                                                   int pMax,
                                                   std::map<expr *, int> non_fresh_variables,
                                                   bool optimizing,
                                                   expr_ref_vector &result);
 
                 bool generate_constraint02_var(std::pair<expr*, int> a,
-                                                    std::vector<std::pair<expr*, int>> elementNames,
+                                                    std::vector<std::pair<expr*, int>> elements,
                                                     std::map<expr*, int> non_fresh_variables,
                                                     bool optimizing,
                                                     expr_ref_vector &result);
@@ -1778,11 +1778,11 @@ namespace smt {
                 * Input: split a string
                 * Output: SMT
                 */
-                expr* toConstraint_havingnon_fresh_Var_andConst(
-                        std::pair<expr*, int> a, /* const || regex */
-                        std::vector<std::pair<expr*, int> > elementNames, /* const + non_fresh_ var */
+                expr* gen_constraint_non_fresh_var_const(
+                        std::pair<expr *, int> a, /* const || regex */
+                        std::vector<std::pair<expr *, int> > elements, /* const + non_fresh_ var */
                         std::vector<int> split,
-                        std::map<expr*, int> non_fresh_variables,
+                        std::map<expr *, int> non_fresh_variables,
                         bool optimizing,
                         int pMax);
 
@@ -1791,7 +1791,7 @@ namespace smt {
                     */
                     expr* lengthConstraint_tonon_fresh_VarConstraint(
                             std::pair<expr*, int> a, /* const || regex */
-                            std::vector<std::pair<expr*, int> > elementNames,
+                            std::vector<std::pair<expr*, int> > elements,
                             expr_ref_vector subElements,
                             int currentPos,
                             int subLength,
@@ -1824,7 +1824,7 @@ namespace smt {
                  */
                 expr* unroll_non_fresh_variable(
                         std::pair<expr*, int> a, /* non_fresh_ variable */
-                        std::vector<std::pair<expr*, int> > elementNames, /* contain const */
+                        std::vector<std::pair<expr*, int> > elements, /* contain const */
                         std::map<expr*, int> non_fresh_variables,
                         bool optimizing,
                         int pMax = PMAX);
@@ -1877,7 +1877,7 @@ namespace smt {
                     */
                     expr* handle_non_fresh_non_fresh_array(
                             std::pair<expr *, int> a,
-                            std::vector<std::pair<expr *, int>> elementNames,
+                            std::vector<std::pair<expr *, int>> elements,
                             int pos,
                             int bound,
                             bool optimizing,
@@ -1886,25 +1886,25 @@ namespace smt {
                 /*
                  *
                  */
-                expr* toConstraint_non_fresh_var(
-                        std::pair<expr*, int> a, /* const or regex */
-                        std::vector<std::pair<expr*, int>> elementNames, /* have non_fresh_ var, do not have const */
-                        std::map<expr*, int> non_fresh_variables,
+                expr* gen_constraint_non_fresh_var(
+                        std::pair<expr *, int> a, /* const or regex */
+                        std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
+                        std::map<expr *, int> non_fresh_variables,
                         bool optimizing,
                         int pMax);
                 /*
-                 * elementNames[pos] is a non_fresh_.
+                 * elements[pos] is a non_fresh_.
                  * how many parts of that non_fresh_ variable are in the const | regex
                  */
                 expr* find_partsOfnon_fresh_variablesInAVector(
                         int pos,
-                        std::vector<std::pair<expr*, int>> elementNames,
+                        std::vector<std::pair<expr*, int>> elements,
                         int &partCnt);
                 /*
                 * pre elements + pre fix of itself
                 */
                 expr* leng_prefix_lhs(std::pair<expr*, int> a,
-                                          std::vector<std::pair<expr*, int>> elementNames,
+                                          std::vector<std::pair<expr*, int>> elements,
                                           int pos,
                                           bool optimizing,
                                           bool unrollMode);
@@ -1923,7 +1923,7 @@ namespace smt {
                 * 3: have both
                 */
                 int choose_split_type(
-                        std::vector<std::pair<expr*, int>> elementNames,
+                        std::vector<std::pair<expr*, int>> elements,
                         std::map<expr*, int> non_fresh_variables,
                         expr* lhs);
 
@@ -1933,13 +1933,13 @@ namespace smt {
                 */
                 std::vector<std::vector<int> > collect_splits(
                         std::pair<expr*, int> lhs,
-                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<std::pair<expr*, int> > elements,
                         bool optimizing);
-                    bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elementNames);
-                    bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elementNames);
-                    bool const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elementNames, expr* &extra_assert);
+                    bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elements);
+                    bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elements);
+                    bool const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elements, expr* &extra_assert);
                         expr* find_i2s(expr* e);
-                    bool length_base_split(expr* e, std::vector<std::pair<expr*, int> > elementNames);
+                    bool length_base_split(expr* e, std::vector<std::pair<expr*, int> > elements);
                 /*
                 * textLeft: length of string
                 * nMax: number of flats
@@ -1952,7 +1952,7 @@ namespace smt {
                         int pos,
                         zstring str, /* const */
                         int pMax,
-                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<std::pair<expr*, int> > elements,
                         std::vector<int> currentSplit,
                         std::vector<std::vector<int> > &allPossibleSplits
                 );
@@ -1965,7 +1965,7 @@ namespace smt {
 
                 bool feasibleSplit_const(
                         zstring str,
-                        std::vector<std::pair<expr*, int> > elementNames,
+                        std::vector<std::pair<expr*, int> > elements,
                         std::vector<int> currentSplit,
                         int bound);
             /*
@@ -2059,14 +2059,14 @@ namespace smt {
              */
             app* createSelectOP(expr* x, expr* y);
 
-            int canBeOptimized_LHS(
+            int optimized_lhs(
                     int i, int startPos, int j,
                     std::vector<int> left_arr,
                     std::vector<int> right_arr,
                     std::vector<std::pair<std::string, int>> lhs_elements,
                     std::vector<std::pair<std::string, int>> rhs_elements);
 
-            int canBeOptimized_RHS(
+            int optimized_rhs(
                     int i, int startPos, int j,
                     std::vector<int> left_arr,
                     std::vector<int> right_arr,
