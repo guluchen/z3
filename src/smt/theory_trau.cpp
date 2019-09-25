@@ -9506,8 +9506,13 @@ namespace smt {
                     return arg0;
                 }
                 else {
-                    expr* tmp2 = remove_star_in_star(arg0);
-                    expr* tmp3 = remove_star_in_star(arg1);
+                    if (tmp0 == nullptr)
+                        tmp0 = arg0;
+                    if (tmp1 == nullptr)
+                        tmp1 = arg1;
+
+                    expr* tmp2 = remove_star_in_star(tmp0);
+                    expr* tmp3 = remove_star_in_star(tmp1);
                     expr* tmp4 = u.re.mk_concat(tmp2, tmp3);
                     m_trail.push_back(tmp4);
                     if (tmp2 == tmp3) {
@@ -9524,15 +9529,28 @@ namespace smt {
             if (arg0 == arg1)
                 return arg0;
             else {
-                expr* tmp2 = remove_star_in_star(arg0);
-                expr* tmp3 = remove_star_in_star(arg1);
-                expr* tmp4 = u.re.mk_union(tmp2, tmp3);
-                m_trail.push_back(tmp4);
-                if (tmp2 == tmp3) {
-                    return remove_star_in_star(tmp4);
+                expr* tmp0 = is_regex_plus_breakdown(arg0);
+                expr* tmp1 = is_regex_plus_breakdown(arg1);
+
+                if (tmp0 != nullptr && tmp1 != nullptr && tmp0 == tmp1){
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(reg, get_manager()) << std::endl;);
+                    return arg0;
                 }
-                else
-                    return tmp4;
+                else {
+                    if (tmp0 == nullptr)
+                        tmp0 = arg0;
+                    if (tmp1 == nullptr)
+                        tmp1 = arg1;
+                    expr *tmp2 = remove_star_in_star(tmp0);
+                    expr *tmp3 = remove_star_in_star(tmp1);
+                    expr *tmp4 = u.re.mk_union(tmp2, tmp3);
+                    m_trail.push_back(tmp4);
+                    if (tmp2 == tmp3) {
+                        return remove_star_in_star(tmp4);
+                    } else {
+                        return tmp4;
+                    }
+                }
             }
         }
         else
