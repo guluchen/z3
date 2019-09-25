@@ -685,7 +685,7 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": important" << std::endl;);
                             if (len_int != -1) {
                                 zstring strValue;
-                                if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
+                                if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
                                 }
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
                                                    << std::endl;);
@@ -696,17 +696,17 @@ namespace smt {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         if (regex != nullptr) {
                             zstring strValue;
-                            if (constructStrFromArray(mg, m_root2value, arr_node, len_int, strValue)) {
+                            if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
-                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue)) {
+                            if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
-                            if (constructFromRegex(mg, len_int, m_root2value, strValue)) {
+                            if (construct_string_from_regex(mg, len_int, m_root2value, strValue)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
                                                    << std::endl;);
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
@@ -715,7 +715,7 @@ namespace smt {
                         }
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         zstring strValue;
-                        constructAsNormal(mg, len_int, m_root2value, strValue);
+                        construct_normally(mg, len_int, m_root2value, strValue);
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
@@ -735,7 +735,8 @@ namespace smt {
                 return node;
             }
 
-            bool constructFromRegex(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+            bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> m_root2value,
+                                             zstring &strValue){
                 std::vector<zstring> elements = collect_alternative_components(regex);
                 if (th.u.re.is_union(regex)) {
                     SASSERT(elements.size() > 0);
@@ -759,7 +760,7 @@ namespace smt {
                     for (int i = 0; i < (int)elements.size(); ++i) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << elements[i] << std::endl;);
                     }
-                    if (createStringWithLength(elements, valueStr, len_int)) {
+                    if (create_string_with_length(elements, valueStr, len_int)) {
                         strValue = valueStr;
                         return true;
                     }
@@ -769,7 +770,7 @@ namespace smt {
                 return false;
             }
 
-            bool createStringWithLength(std::vector<zstring> elements, zstring &currentStr, int remainLength){
+            bool create_string_with_length(std::vector<zstring> elements, zstring &currentStr, int remainLength){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": currentStr: "  << currentStr << std::endl;);
                 if (remainLength == 0)
                     return true;
@@ -787,7 +788,7 @@ namespace smt {
                         else {
                             int tmpRemainLength = remainLength % s.length();
                             while ((int)currentStr.length() > bak_len) {
-                                if (createStringWithLength(elements, currentStr, tmpRemainLength)) {
+                                if (create_string_with_length(elements, currentStr, tmpRemainLength)) {
                                     return true;
                                 } else {
                                     currentStr = currentStr.extract(0, currentStr.length() - s.length());
@@ -872,23 +873,23 @@ namespace smt {
                 return nullptr;
             }
 
-            bool constructAsNormal(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+            bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
                 ast_manager & m = mg.get_manager();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
                 if (len_int != -1) {
                     // non root var
                     clock_t t = clock();
                     bool constraint01 = th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
-                    bool constraint02 = th.backwardDep[node].size() > 0;
+                    bool constraint02 = th.dependency_graph[node].size() > 0;
                     if (constraint01 || constraint02) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.backwardDep[node].size()<< std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                         if (!constraint02) {
                             // free var
                             for (int i = 0; i < len_int; ++i)
-                                strValue = strValue + th.defaultChar;
+                                strValue = strValue + th.default_char;
                             return to_app(th.mk_string(strValue));
                         } else {
-                            if (fetchValueFromDepGraph(mg, m_root2value, len_int, strValue))
+                            if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue))
                                 return to_app(th.mk_string(strValue));
                         }
                     }
@@ -900,16 +901,16 @@ namespace smt {
                         val.push_back(-1);
 
                     if (th.u.str.is_concat(node))
-                        constructStr(mg, node, m_root2value, val);
+                        construct_string(mg, node, m_root2value, val);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     for (const auto &eq : th.uState.eq_combination[node]) {
-                        constructStr(mg, eq, m_root2value, val);
+                        construct_string(mg, eq, m_root2value, val);
                     }
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     std::string ret = "";
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
-                            ret = ret + th.defaultChar;
+                            ret = ret + th.default_char;
                         } else
                             ret = ret + (char)val[i];
                     strValue = zstring(ret.c_str());
@@ -930,7 +931,8 @@ namespace smt {
                 return false;
             }
 
-            bool constructStrFromArray(model_generator mg, obj_map<enode, app *> m_root2value, enode* arr, int len_int, zstring &val){
+            bool construct_string_from_array(model_generator mg, obj_map<enode, app *> m_root2value, enode *arr,
+                                             int len_int, zstring &val){
                 SASSERT(arr->get_owner() != nullptr);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
 
@@ -980,13 +982,13 @@ namespace smt {
                         if (regex != nullptr) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
                                                << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
-                            if (!matchRegex(regex, val)) {
+                            if (!match_regex(regex, val)) {
                                 std::vector<zstring> elements = collect_alternative_components(regex);
                                 for (int i = 0; i < (int)value.length(); ++i) {
                                     zstring tmp = val.extract(0, i);
                                     STRACE("str",
                                            tout << __LINE__ << " " << __FUNCTION__ << " tmp: " << tmp << std::endl;);
-                                    if (!matchRegex(regex, tmp)) {
+                                    if (!match_regex(regex, tmp)) {
                                         int err_pos = i;
                                         for (err_pos = i + 1; err_pos < (int)value.length(); ++err_pos)
                                             if (value[err_pos] != value[i]) {
@@ -1005,7 +1007,7 @@ namespace smt {
                                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
                                                            << mk_pp(node, th.get_manager()) << " " << working_str
                                                            << std::endl;);
-                                        if (createStringWithLength(elements, new_str, err_pos - i)) {
+                                        if (create_string_with_length(elements, new_str, err_pos - i)) {
                                             val = working_str + new_str + val.extract(i + new_str.length(),
                                                                                       val.length() -
                                                                                       (i + new_str.length()));
@@ -1063,7 +1065,7 @@ namespace smt {
                     }
                     else {
                         if (vValue[i] <= 0 || vValue[i] >= 128) {
-                            value = value + th.defaultChar;
+                            value = value + th.default_char;
                             completed = false;
                         } else
                             value = value + (char) vValue[i];
@@ -1072,7 +1074,8 @@ namespace smt {
                 return zstring(value.c_str());
             }
 
-            void constructStr(model_generator & mg, expr* eq, obj_map<enode, app *> m_root2value, std::vector<int> &val){
+            void construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> m_root2value,
+                                  std::vector<int> &val){
                 if (th.u.str.is_concat(eq)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << mk_pp(eq, th.get_manager()) << std::endl;);
                     ptr_vector<expr> leafNodes;
@@ -1083,7 +1086,7 @@ namespace smt {
                         if (th.is_important(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
                             zstring leafVal;
 
-                            if (getStrValue(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
+                            if (get_str_value(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
                                 int len_int = leafVal.length();
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: "  << mk_pp(leafNodes[i], th.get_manager())  << " = " << leafVal << std::endl;);
                                 for (int j = sum; j < sum + len_int; ++j) {
@@ -1108,7 +1111,8 @@ namespace smt {
                         }
                         else {
                             int len_int = -1;
-                            if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, len_int)){
+                            if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value,
+                                              len_int)){
                                 sum += len_int;
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sum = "  << sum << std::endl;);
                             }
@@ -1121,19 +1125,20 @@ namespace smt {
                 }
             }
 
-            bool fetchValueFromDepGraph(model_generator & mg, obj_map<enode, app *> m_root2value, int len, zstring& value){
+            bool fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> m_root2value, int len,
+                                            zstring &value){
                 // component var
-                for (const auto &ancestor : th.backwardDep[node]) {
+                for (const auto &ancestor : th.dependency_graph[node]) {
                     STRACE("str",
                            tout << __LINE__ << " " << __FUNCTION__ << " "
                                 << mk_pp(ancestor, mg.get_manager())
                                 << std::endl;);
                     zstring ancestorValue;
-                    if (getStrValue(th.get_context().get_enode(ancestor), m_root2value,
-                                    ancestorValue)) {
+                    if (get_str_value(th.get_context().get_enode(ancestor), m_root2value,
+                                      ancestorValue)) {
                         if (th.u.str.is_concat(ancestor)) {
-                            if (fetchValueBelongToConcat(mg, ancestor, ancestorValue, m_root2value,
-                                                         len, value)) {
+                            if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value,
+                                                             len, value)) {
                                 return true;
                             }
                         }
@@ -1145,9 +1150,9 @@ namespace smt {
                             th.uState.eq_combination.end()) {
                             for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
                                 if (th.u.str.is_concat(ancestor_i)) {
-                                    if (fetchValueBelongToConcat(mg, ancestor_i, ancestorValue,
-                                                                 m_root2value, len,
-                                                                 value)) {
+                                    if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue,
+                                                                     m_root2value, len,
+                                                                     value)) {
                                         STRACE("str",
                                                tout << __LINE__ << " " << __FUNCTION__
                                                     << ": value = " << value
@@ -1163,7 +1168,8 @@ namespace smt {
                 return false;
             }
 
-            bool fetchValueBelongToConcat(model_generator & mg, expr* concat, zstring concatValue,obj_map<enode, app *> m_root2value, int len, zstring& value){
+            bool fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue,
+                                              obj_map<enode, app *> m_root2value, int len, zstring &value){
                 if (th.u.str.is_concat(concat)){
 
                     ptr_vector<expr> leafNodes;
@@ -1176,7 +1182,7 @@ namespace smt {
                             tmp = node;
                         else
                             tmp = linker;
-                        int prefix = findPrefixLen(mg, concat, tmp, m_root2value);
+                        int prefix = find_prefix_len(mg, concat, tmp, m_root2value);
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                         value = concatValue.extract(prefix, len);
                         return true;
@@ -1186,11 +1192,11 @@ namespace smt {
                 return false;
             }
 
-            int findPrefixLen(model_generator & mg, expr* concat, expr* subNode, obj_map<enode, app *> m_root2value){
+            int find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> m_root2value){
 
                 if (th.u.str.is_concat(concat)){
                     int prefix = 0;
-                    findPrefixLen(mg, concat, subNode, m_root2value, prefix);
+                    find_prefix_len(mg, concat, subNode, m_root2value, prefix);
                     return prefix;
                 }
                 else
@@ -1199,12 +1205,13 @@ namespace smt {
                 return -1;
             }
 
-            bool findPrefixLen(model_generator & mg, expr* concat, expr* subNode, obj_map<enode, app *> m_root2value, int &prefix){
+            bool find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> m_root2value,
+                                 int &prefix){
                 if (concat == subNode)
                     return true;
                 if (th.u.str.is_concat(concat)){
-                    if (!findPrefixLen(mg, to_app(concat)->get_arg(0), subNode, m_root2value, prefix)) {
-                        if (!findPrefixLen(mg, to_app(concat)->get_arg(1), subNode, m_root2value, prefix))
+                    if (!find_prefix_len(mg, to_app(concat)->get_arg(0), subNode, m_root2value, prefix)) {
+                        if (!find_prefix_len(mg, to_app(concat)->get_arg(1), subNode, m_root2value, prefix))
                             return false;
                         else
                             return true;
@@ -1218,7 +1225,7 @@ namespace smt {
                     if (th.u.str.is_string(concat, val_str)){
                         prefix += val_str.length();
                     }
-                    else if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
+                    else if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
                         prefix += subLen;
                     }
                     else {
@@ -1228,35 +1235,7 @@ namespace smt {
                 return false;
             }
 
-            bool getLenValue(model_generator & mg, app* n, obj_map<enode, app *> m_root2value, int &value){
-                app* len_node = nullptr;
-                if (th.u.str.is_concat(n)){
-                    ptr_vector<expr> leafNodes;
-                    th.get_nodes_in_concat(n, leafNodes);
-                    int sum = 0;
-                    for (int i = 0; i < (int)leafNodes.size(); ++i) {
-                        int val = -1;
-                        if (getIntValue(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value, val)){
-                            STRACE("str",
-                                   tout << __LINE__ << " " << __FUNCTION__ << " "
-                                        << val
-                                        << std::endl;);
-                            sum += val;
-                        }
-                        else
-                            return false;
-                        value = sum;
-                    }
-                    return true;
-                }
-
-                else {
-                    len_node = th.mk_strlen(n);
-                    return getIntValue(mg, th.get_context().get_enode(len_node), m_root2value, value);
-                }
-            }
-
-            bool getIntValue(model_generator & mg, enode* n, obj_map<enode, app *> m_root2value, int &value){
+            bool get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> m_root2value, int &value){
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
                     rational valInt;
@@ -1285,36 +1264,7 @@ namespace smt {
                 }
             }
 
-            bool getSelectValue(model_generator & mg, enode* n, obj_map<enode, app *> m_root2value, int &value){
-                STRACE("str",
-                       tout << __LINE__ << " " << __FUNCTION__
-                            << mk_pp(n->get_owner(), th.get_manager())
-                            << std::endl;);
-                app* val = nullptr;
-                if (m_root2value.find(n->get_root(), val)) {
-                    rational valInt;
-                    if (th.m_autil.is_numeral(val, valInt)) {
-                        value = valInt.get_int32();
-                        return true;
-                    }
-                    else {
-                        STRACE("str",
-                               tout << __LINE__ << " " << __FUNCTION__
-                                    << mk_pp(val, th.get_manager())
-                                    << std::endl;);
-                        return false;
-                    }
-                }
-                else {
-                    STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
-                                << std::endl;);
-                    return false;
-                }
-            }
-
-
-            bool getStrValue(enode* n, obj_map<enode, app *> m_root2value, zstring &value){
+            bool get_str_value(enode *n, obj_map<enode, app *> m_root2value, zstring &value){
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
                     zstring valStr;
@@ -1338,12 +1288,12 @@ namespace smt {
                 }
             }
 
-            bool matchRegex(expr* a, zstring b){
+            bool match_regex(expr *a, zstring b){
                 expr* tmp = th.u.re.mk_to_re(th.u.str.mk_string(b));
-                return matchRegex(a, tmp);
+                return match_regex(a, tmp);
             }
 
-            bool matchRegex(expr* a, expr* b) {
+            bool match_regex(expr *a, expr *b) {
                 expr* intersection = th.u.re.mk_inter(a, b);
                 eautomaton *au01 = get_automaton(intersection);
                 return !au01->is_empty();
@@ -1396,7 +1346,7 @@ namespace smt {
         bool is_regex_var(expr* n, expr* &regexExpr);
         bool is_regex_var(expr* n);
         bool is_regex_concat(expr* n);
-        std::set<expr*> getDependency(expr* n);
+        std::set<expr*> get_dependencies(expr *n);
 
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
@@ -1463,7 +1413,6 @@ namespace smt {
             bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
-                    bool one_const_in_expr(expr* v, expr_ref_vector constList);
 
             bool implies_empty_str_from_notContain(std::map<expr *, std::set<expr *>> eq_combination);
                 expr_ref_vector implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs);
@@ -1542,30 +1491,30 @@ namespace smt {
                 char setup_default_char(std::set<char> includeChars, std::set<char> excludeChars);
                 std::set<char> init_excluded_char_set();
                 std::set<char> init_included_char_set();
-                void createAppearanceMap(
-                        std::map<expr*, std::set<expr*>> eq_combination);
+                void create_appearance_map(
+                        std::map<expr *, std::set<expr *>> eq_combination);
                 void setup_flats();
                 bool should_use_flat();
             void init_underapprox_cached();
 
             void handle_diseq_notcontain(bool cached = false);
-                void handle_NOTEqual();
-                void handle_NOTEqual_cached();
+                void handle_disequalities();
+                void handle_disequalities_cached();
 
             bool review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination);
                 expr* remove_empty_in_concat(expr* s);
                 bool review_notcontain_trivial(expr* lhs, expr* needle);
-            bool review_disequality_not_contain(std::map<expr*, std::set<expr*>> eq_combination);
+            bool review_disequalities_not_contain(std::map<expr *, std::set<expr *>> eq_combination);
                 bool review_disequality(expr* lhs, expr* rhs, std::map<expr*, std::set<expr*>> eq_combination);
                 bool review_disequality_trivial(expr* lhs, expr* rhs);
-                    void handle_NOTEqual(expr* lhs, expr* rhs);
-                    void handle_NOTEqual_const(expr* lhs, zstring rhs);
-                    void handle_NOTEqual_var(expr* lhs, expr* rhs);
-                void handle_NOTContain();
-                void handle_NOTContain_cached();
-                    void handle_NOTContain(expr* lhs, expr* rhs, bool cached = false);
-                    void handle_NOTContain_var(expr* lhs, expr* rhs, expr* premise, bool cached = false);
-                    void handle_NOTContain_const(expr* lhs, zstring rhs, expr* premise, bool cached = false);
+                    void handle_disequality(expr *lhs, expr *rhs);
+                    void handle_disequality_const(expr *lhs, zstring rhs);
+                    void handle_disequality_var(expr *lhs, expr *rhs);
+                void handle_not_contain();
+                void handle_not_contain_cached();
+                    void handle_not_contain(expr *lhs, expr *rhs, bool cached = false);
+                    void handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached = false);
+                    void handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached = false);
                     bool is_contain_equality(expr* n);
                     bool is_contain_equality(expr* n, expr* &contain);
                     bool is_trivial_contain(zstring s);
@@ -1604,11 +1553,11 @@ namespace smt {
                 /*
                  * remove duplication
                  */
-                std::vector<std::vector<zstring>> refineVectors(std::vector<std::vector<zstring>> list);
+                std::vector<std::vector<zstring>> refine_vector(std::vector<std::vector<zstring>> list);
                     /*
                     *
                     */
-                    bool equalStrVector(std::vector<zstring> a, std::vector<zstring> b);
+                    bool compare_string_vectors(std::vector<zstring> a, std::vector<zstring> b);
 
                 std::vector<expr*> parse_regex_components(expr* reg);
                 /*
@@ -1618,12 +1567,12 @@ namespace smt {
                     /**
                      * (abc|cde|ghi)*
                      */
-                    void optimizeFlatAutomaton(zstring &s);
+                    void optimize_flat_automaton(zstring &s);
 
                     /*
                     * (a)|(b | c) --> {a, b, c}
                     */
-                    std::set<zstring> extendComponent(zstring s);
+                    std::set<zstring> get_regex_components(zstring s);
 
                     /*
                     * (a) | (b) --> {a, b}
@@ -1641,7 +1590,7 @@ namespace smt {
                     /*
                     * (a) --> a
                     */
-                    void removeExtraParentheses(zstring &s);
+                    void remove_parentheses(zstring &s);
 
                 std::set<zstring> collect_strs_in_membership(expr* v);
                 void collect_strs_in_membership(expr* v, std::set<zstring> &ret);
@@ -2570,34 +2519,34 @@ namespace smt {
         const int CONNECTINGSIZE = 300;
         static const int PMAX = 2;
         const std::string FLATPREFIX = "__flat_";
-        int noFlatVariables = 0;
+        int flat_var_counter = 0;
 
 
-        std::map<expr*, int> varPieces;
-        std::map<expr*, int> currVarPieces;
-        std::set<std::string> generatedEqualities;
+        std::map<expr*, int> var_pieces_counter;
+        std::map<expr*, int> curr_var_pieces_counter;
+        std::set<std::string> generated_equalities;
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
-        std::set<zstring> constSet;
-        std::set<char> sigmaDomain;
-        std::map<expr*, std::vector<expr*>> lenMap;
-        std::map<expr*, std::vector<expr*>> iterMap;
-        std::map<expr*, std::set<expr*>> appearanceMap;
-        std::map<expr*, std::set<expr*>> notContainMap;
+        std::set<zstring> const_set;
+        std::set<char> sigma_domain;
+        std::map<expr*, std::vector<expr*>> length_map;
+        std::map<expr*, std::vector<expr*>> iter_map;
+        std::map<expr*, std::set<expr*>> appearance_map;
+        std::map<expr*, std::set<expr*>> not_contain_map;
 
-        std::map<expr*, std::set<expr*>> backwardDep;
-        std::map<expr*, expr*> linkers;
-        std::map<expr*, expr*> arrMap;
-        std::map<std::string, expr*> arrMap_reverse;
+        std::map<expr*, std::set<expr*>> dependency_graph;
+        std::map<expr*, expr*> expr_array_linkers;
+        std::map<expr*, expr*> array_map;
+        std::map<std::string, expr*> array_map_reverse;
         std::map<std::string, expr*> varMap_reverse;
         std::map<expr*, expr*> arr_linker;
         int connectingSize;
-        char defaultChar = 'a';
+        char default_char = 'a';
         UnderApproxState uState;
-        std::vector<UnderApproxState> completedStates;
+        std::vector<UnderApproxState> completed_branches;
 
 
-        expr_ref_vector impliedFacts;
+        expr_ref_vector implied_facts;
     private:
         clock_t startClock;
         bool newConstraintTriggered = false;
