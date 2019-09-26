@@ -101,10 +101,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="331">
-              <caret line="7501" column="52" lean-forward="true" selection-start-line="7501" selection-start-column="52" selection-end-line="7501" selection-end-column="52" />
+            <state relative-caret-position="3650">
+              <caret line="14462" column="56" selection-start-line="14462" selection-start-column="56" selection-end-line="14462" selection-end-column="56" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#306100#306501#0" />
                 <element signature="e#481610#481915#0" expanded="true" />
                 <element signature="e#510194#510608#0" expanded="true" />
               </folding>
@@ -181,8 +182,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="340">
-              <caret line="2605" column="30" selection-start-line="2605" selection-start-column="30" selection-end-line="2605" selection-end-column="30" />
+            <state relative-caret-position="271">
+              <caret line="2155" column="27" selection-start-line="2155" selection-start-column="27" selection-end-line="2155" selection-end-column="27" />
             </state>
           </provider>
         </entry>
@@ -191,36 +192,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>construct_string</find>
-      <find>getLenValue</find>
-      <find>time</find>
-      <find>getSelectValue</find>
-      <find>one_const_in_expr</find>
-      <find>guessedDisEqs</find>
-      <find>non_fresh_Variables</find>
-      <find>breakdown_cached_diseq</find>
-      <find>elementNames</find>
-      <find>collect_all_empty_end</find>
-      <find>is_possible_arrangement</find>
-      <find>remove_parentheses</find>
-      <find>not_contain_check</find>
-      <find>resultParts</find>
-      <find>possibleCases</find>
-      <find>ors</find>
-      <find>max_len</find>
-      <find>unroll_const_non_fresh_variable</find>
-      <find>non_fresh_variables</find>
-      <find>unroll_const_non_fresh_variable_str2int</find>
-      <find>unroll_regex_non_fresh_variable</find>
-      <find>gen_regex_non_fresh_variable</find>
-      <find>subpossibleCases</find>
-      <find>unroll_const_variable</find>
-      <find>unroll_var_non_fresh_variable</find>
-      <find>ctx</find>
-      <find>get_assign_level</find>
-      <find>completed_branches</find>
       <find>underapproximation_cached</find>
       <find>assert_cached_eq_state</find>
+      <find>unroll_cón</find>
+      <find>gen_constraint_non_fresh_var</find>
+      <find>strAnd</find>
+      <find>_ref_vector and</find>
+      <find>possibleCases</find>
+      <find>gen_constraint_non_fresh_var_const</find>
+      <find>importantVar</find>
+      <find>diseq_exprs</find>
+      <find>org_exprs</find>
+      <find>guessed_exprs</find>
+      <find>propagate_concat</find>
+      <find>init_underapprox</find>
+      <find>refine_vector</find>
+      <find>remove_star_in_star</find>
+      <find>combine_const_str</find>
+      <find>parse_regex_content</find>
+      <find>parse_regex_components</find>
+      <find>get_regex_components</find>
+      <find>createImpliesOP</find>
+      <find>propagate_equality</find>
+      <find>propagate_eq_combination</find>
+      <find>andLhs</find>
+      <find>lValue</find>
+      <find>fetch_guessed_core_exprs</find>
+      <find>and_rhs</find>
+      <find>rhs_nodes[rhs_nodes.size() - at]</find>
+      <find>createEqualOP(mk_strlen(rhs_nodes[rhs_nodes.size() - at]), mk_int(len_tmp))</find>
+      <find>createEqualOP(mk_strlen(rhs_nodes[i]), mk_int(len_tmp))</find>
     </findStrings>
     <replaceStrings>
       <replace>gen_var_size(</replace>
@@ -827,12 +828,12 @@
       <workItem from="1564621943816" duration="45177000" />
       <workItem from="1566827563876" duration="39000" />
       <workItem from="1566917158043" duration="2434000" />
-      <workItem from="1568106535994" duration="181177000" />
+      <workItem from="1568106535994" duration="188413000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1785507000" />
+    <option name="totallyTimeSpent" value="1792743000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-1" y="23" width="2560" height="1417" extended-state="6" />
@@ -1227,17 +1228,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="2605" column="30" selection-start-line="2605" selection-start-column="30" selection-end-line="2605" selection-end-column="30" />
+        <state relative-caret-position="271">
+          <caret line="2155" column="27" selection-start-line="2155" selection-start-column="27" selection-end-line="2155" selection-end-column="27" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="331">
-          <caret line="7501" column="52" lean-forward="true" selection-start-line="7501" selection-start-column="52" selection-end-line="7501" selection-end-column="52" />
+        <state relative-caret-position="3650">
+          <caret line="14462" column="56" selection-start-line="14462" selection-start-column="56" selection-end-line="14462" selection-end-column="56" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#306100#306501#0" />
             <element signature="e#481610#481915#0" expanded="true" />
             <element signature="e#510194#510608#0" expanded="true" />
           </folding>

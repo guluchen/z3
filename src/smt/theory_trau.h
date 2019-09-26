@@ -606,27 +606,27 @@ namespace smt {
             svector<model_value_dependency> m_dependencies;
             app*                            node;
             enode*                          arr_node;
-            bool                            importantVar;
+            bool                            non_fresh_var;
             expr*                           regex;
             expr*                           linker;
             int                             len;
         public:
 
-            string_value_proc(theory_trau& th, sort * s, app* node, bool importantVar, enode* arr_node, expr* regex, int len = -1):
+            string_value_proc(theory_trau& th, sort * s, app* node, bool _non_fresh_var, enode* arr_node, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
                     arr_node(arr_node),
-                    importantVar(importantVar),
+                    non_fresh_var(_non_fresh_var),
                     regex(regex),
                     len(len){
             }
 
-            string_value_proc(theory_trau& th, sort * s, app* node, bool importantVar, expr* regex, int len = -1):
+            string_value_proc(theory_trau& th, sort * s, app* node, bool _non_fresh_var, expr* regex, int len = -1):
                     th(th),
                     m_sort(s),
                     node(node),
-                    importantVar(importantVar),
+                    non_fresh_var(_non_fresh_var),
                     regex(regex),
                     len(len){
             }
@@ -650,7 +650,6 @@ namespace smt {
             }
 
             void get_dependencies(buffer<model_value_dependency> & result) override {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__  << " " << mk_pp(node, th.get_manager()) << std::endl;);
                 result.append(m_dependencies.size(), m_dependencies.c_ptr());
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__  << " " << mk_pp(node, th.get_manager()) << std::endl;);
             }
@@ -675,48 +674,35 @@ namespace smt {
                 sort * str_sort = th.u.str.mk_string_sort();
                 bool is_string = str_sort == m_sort;
 
-
-
                 if (is_string) {
                     int len_int = len;
                     if (len_int != -1) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": len : " << len_int << std::endl;);
-                        if (importantVar) {
+                        if (non_fresh_var) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": important" << std::endl;);
                             if (len_int != -1) {
                                 zstring strValue;
                                 if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
                                 }
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\""
-                                                   << std::endl;);
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                         }
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         if (regex != nullptr) {
                             zstring strValue;
                             if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                             if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                             if (construct_string_from_regex(mg, len_int, m_root2value, strValue)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\""
-                                                   << std::endl;);
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\"" << std::endl;);
                                 return to_app(th.mk_string(strValue));
                             }
                         }
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         zstring strValue;
                         construct_normally(mg, len_int, m_root2value, strValue);
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     else {
@@ -893,7 +879,6 @@ namespace smt {
                                 return to_app(th.mk_string(strValue));
                         }
                     }
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
                     // root var
                     std::vector<int> val;
@@ -902,11 +887,9 @@ namespace smt {
 
                     if (th.u.str.is_concat(node))
                         construct_string(mg, node, m_root2value, val);
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     for (const auto &eq : th.uState.eq_combination[node]) {
                         construct_string(mg, eq, m_root2value, val);
                     }
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
                     std::string ret = "";
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
@@ -914,17 +897,11 @@ namespace smt {
                         } else
                             ret = ret + (char)val[i];
                     strValue = zstring(ret.c_str());
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret
-                                       << std::endl;);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
                     return to_app(th.mk_string(strValue));
 
                 }
                 else {
-                    STRACE("str",
-                           tout << __LINE__ << " " << __FUNCTION__
-                                << mk_pp(node, mg.get_manager())
-                                << std::endl;);
                     SASSERT(false);
                 }
 
@@ -1447,7 +1424,7 @@ namespace smt {
 
 
             bool propagate_concat();
-            bool propagate_value(std::set<expr*> & concatSet);
+            bool propagate_value(std::set<expr*> & concat_set);
             bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
                 void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
                 void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
@@ -1542,31 +1519,11 @@ namespace smt {
                 */
                 zstring parse_regex_content(zstring str);
                 zstring parse_regex_content(expr* str);
-                /*
-                 * a b c (abc)* --> abc (abc)*
-                 */
-                std::vector<std::vector<zstring>> combine_const_str(std::vector<std::vector<zstring>> regexElements);
                 std::vector<expr*> combine_const_str(std::vector<expr*> v);
                     bool isRegexStr(zstring str);
                     bool isUnionStr(zstring str);
-                /*
-                 * remove duplication
-                 */
-                std::vector<std::vector<zstring>> refine_vector(std::vector<std::vector<zstring>> list);
-                    /*
-                    *
-                    */
-                    bool compare_string_vectors(std::vector<zstring> a, std::vector<zstring> b);
 
                 std::vector<expr*> parse_regex_components(expr* reg);
-                /*
-                *
-                */
-                std::vector<std::vector<zstring>> parse_regex_components(zstring str);
-                    /**
-                     * (abc|cde|ghi)*
-                     */
-                    void optimize_flat_automaton(zstring &s);
 
                     /*
                     * (a)|(b | c) --> {a, b, c}
@@ -2054,7 +2011,7 @@ namespace smt {
             /*
              *
              */
-            app* createMultiplyOP(expr* x, expr* y);
+            app* createMulOP(expr *x, expr *y);
 
             /*
              *
@@ -2104,16 +2061,6 @@ namespace smt {
              *
              */
             app* createOrOP(expr_ref_vector ors);
-
-            /*
-             *
-             */
-            expr* createNotOP(const expr_ref x);
-
-            /*
-             *
-             */
-            expr* createImpliesOP(expr* a, expr* b);
 
             /*
              *
@@ -2209,7 +2156,22 @@ namespace smt {
             bool propagate_equality(
                         expr* lhs,
                         expr* rhs,
-                        expr_ref_vector &imppliedEqualities);
+                        expr_ref_vector &to_assert);
+
+                bool propagate_equality_right_2_left(
+                        expr* lhs,
+                        expr* rhs,
+                        int &suffix,
+                        expr_ref_vector &and_rhs,
+                        expr_ref_vector &to_assert);
+
+                bool propagate_equality_left_2_right(
+                        expr* lhs,
+                        expr* rhs,
+                        int &prefix,
+                        expr_ref_vector &and_lhs,
+                        expr_ref_vector &to_assert);
+
             std::set<std::pair<expr*, int>> collect_important_vars();
             void collect_important_vars_str_int(std::map<expr*, int> &vars);
             void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
@@ -2619,6 +2581,9 @@ namespace smt {
                 expr_ref_vector &guessed_exprs,
                 expr_ref_vector diseq_exprs,
                 rational bound = rational(0));
+        void add_equalities_to_core(expr_ref_vector guessed_exprs, std::set<expr*> &all_vars, expr_ref_vector &core);
+        void add_disequalities_to_core(expr_ref_vector diseq_exprs, expr_ref_vector &core);
+        void add_assignments_to_core(std::set<expr*> all_vars, expr_ref_vector &core);
         unsigned get_assign_lvl(expr* a, expr* b);
         void fetch_related_exprs(
                 expr_ref_vector allvars,
