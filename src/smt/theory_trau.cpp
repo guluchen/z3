@@ -19086,12 +19086,7 @@ namespace smt {
                 }
             }
             STRACE("str", tout << std::endl;);
-        }
-
-//        std::vector<std::pair<expr*, rational>> freeValueVars;
-//        if (!fixedValue(freeValueVars, varLen)) {
-//            assignValues(mg, freeValueVars, varLen, uState.non_fresh_vars);
-//        }
+        } 
     }
 
     void theory_trau::assert_axiom(expr *const e) {
