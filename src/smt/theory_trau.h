@@ -213,16 +213,17 @@ namespace smt {
     class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
 
     class theory_trau : public theory {
-        int m_scope_level;
-        scoped_vector<expr_ref> mful_scope_levels;
-        const theory_str_params& m_params;
-        scoped_vector<str::expr_pair> m_we_expr_memo;
-        scoped_vector<str::expr_pair> m_wi_expr_memo;
-        scoped_vector<str::expr_pair> membership_memo;
-        scoped_vector<str::expr_pair> non_membership_memo;
+        ast_manager&                    m;
+        int                             m_scope_level;
+        scoped_vector<expr_ref>         mful_scope_levels;
+        const theory_str_params&        m_params;
+        scoped_vector<str::expr_pair>   m_we_expr_memo;
+        scoped_vector<str::expr_pair>   m_wi_expr_memo;
+        scoped_vector<str::expr_pair>   membership_memo;
+        scoped_vector<str::expr_pair>   non_membership_memo;
 
-        typedef union_find<theory_trau> th_union_find;
-        typedef trail_stack<theory_trau> th_trail_stack;
+        typedef union_find<theory_trau>     th_union_find;
+        typedef trail_stack<theory_trau>    th_trail_stack;
         struct zstring_hash_proc {
             unsigned operator()(zstring const & s) const {
                 return string_hash(s.encode().c_str(), static_cast<unsigned>(s.length()), 17);
@@ -460,10 +461,9 @@ namespace smt {
                 STRACE("str", tout <<  std::endl;);
             }
         };
-
         class UnderApproxState{
         public:
-            std::map<expr*, std::set<expr*>> eq_combination;
+            obj_map<expr, ptr_vector<expr>> eq_combination;
             std::set<std::pair<expr*, int>> non_fresh_vars;
             expr_ref_vector equalities;
             expr_ref_vector disequalities;
@@ -476,11 +476,11 @@ namespace smt {
             rational str_int_bound;
 
             UnderApproxState(ast_manager &m) : equalities(m), disequalities(m), asserting_constraints(m){
-
+                eq_combination.reset();
             }
 
             UnderApproxState(ast_manager &m, int _eqLevel, int _diseqLevel,
-                            std::map<expr*, std::set<expr*>> _eq_combination,
+                             obj_map<expr, ptr_vector<expr>> _eq_combination,
                             std::set<std::pair<expr*, int>> _non_fresh_vars,
                             expr_ref_vector _equalities,
                             expr_ref_vector _disequalities,
@@ -560,17 +560,12 @@ namespace smt {
             }
 
             bool operator==(const UnderApproxState state){
-                std::map<expr*, std::set<expr*>> _eq_combination = state.eq_combination;
+                obj_map<expr, ptr_vector<expr>> _eq_combination = state.eq_combination;
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
                 if (_eq_combination.size() != eq_combination.size()) {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << _eq_combination.size() << " vs " << eq_combination.size() <<  std::endl;);
                     return false;
                 }
-
-//                if (state.non_fresh_vars.size() != non_fresh_vars.size()) {
-//                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << ": " << state.non_fresh_vars.size() << " vs " << non_fresh_vars.size() <<  std::endl;);
-//                    return false;
-//                }
 
                 for (const auto& v : non_fresh_vars)
                     if (state.non_fresh_vars.find(v) == state.non_fresh_vars.end()) {
@@ -579,14 +574,14 @@ namespace smt {
                     }
 
                 for (const auto& n : eq_combination) {
-                    if (_eq_combination.find(n.first) == _eq_combination.end()) {
+                    if (_eq_combination.contains(n.m_key)) {
                         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
                         return false;
                     }
-                    std::set<expr*> tmp = _eq_combination[n.first];
-                    for (const auto &e : n.second) {
+                    ptr_vector<expr> tmp = _eq_combination[n.m_key];
+                    for (const auto &e : n.get_value()) {
 
-                        if (tmp.find(e) == tmp.end()) {
+                        if (!tmp.contains(e)) {
                             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << std::endl;);
                             return false;
                         }
@@ -865,7 +860,7 @@ namespace smt {
                 if (len_int != -1) {
                     // non root var
                     clock_t t = clock();
-                    bool constraint01 = th.uState.eq_combination.find(node) == th.uState.eq_combination.end();
+                    bool constraint01 = !th.uState.eq_combination.contains(node);
                     bool constraint02 = th.dependency_graph[node].size() > 0;
                     if (constraint01 || constraint02) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
@@ -885,11 +880,14 @@ namespace smt {
                     for (int i = 0; i < len_int; ++i)
                         val.push_back(-1);
 
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
                     if (th.u.str.is_concat(node))
                         construct_string(mg, node, m_root2value, val);
-                    for (const auto &eq : th.uState.eq_combination[node]) {
-                        construct_string(mg, eq, m_root2value, val);
-                    }
+                    if (th.uState.eq_combination.contains(node))
+                        for (const auto &eq : th.uState.eq_combination[node]) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(eq, m) << std::endl;);
+                            construct_string(mg, eq, m_root2value, val);
+                        }
                     std::string ret = "";
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
@@ -1123,8 +1121,7 @@ namespace smt {
 
 
                         // find in its eq
-                        if (th.uState.eq_combination.find(ancestor) !=
-                            th.uState.eq_combination.end()) {
+                        if (th.uState.eq_combination.contains(ancestor)) {
                             for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
                                 if (th.u.str.is_concat(ancestor_i)) {
                                     if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue,
@@ -1293,6 +1290,7 @@ namespace smt {
 
     public:
         theory_trau(ast_manager& m, const theory_str_params& params);
+        ~theory_trau() override;
         void display(std::ostream& os) const override;
         th_trail_stack& get_trail_stack() { return m_trail_stack; }
         void merge_eh(theory_var, theory_var, theory_var v1, theory_var v2) {}
@@ -1323,7 +1321,7 @@ namespace smt {
         bool is_regex_var(expr* n, expr* &regexExpr);
         bool is_regex_var(expr* n);
         bool is_regex_concat(expr* n);
-        std::set<expr*> get_dependencies(expr *n);
+        expr_ref_vector get_dependencies(expr *n);
 
         void add_theory_assumptions(expr_ref_vector& assumptions) override;
         lbool validate_unsat_core(expr_ref_vector& unsat_core) override;
@@ -1367,36 +1365,33 @@ namespace smt {
             bool eval_int2str(app * a);
             void refined_init_chain_free(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
-                std::map<expr *, std::set<expr *>> &eq_combination);
+                obj_map<expr, ptr_vector<expr>> &eq_combination);
             void init_chain_free(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
-                std::map<expr *, std::set<expr *>> &eq_combination);
+                obj_map<expr, ptr_vector<expr>> &eq_combination);
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
                 rational ten_power(rational n);
 
             void refine_not_contain_vars(
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
-                std::map<expr *, std::set<expr *>> eq_combination);
-            bool is_not_important(expr* haystack, zstring needle, std::map<expr *, std::set<expr *>> eq_combination, std::set<std::pair<expr *, int>> non_fresh_vars);
-                bool appear_in_eq(expr* haystack, zstring needle, std::set<expr *> s, std::set<std::pair<expr *, int>> non_fresh_vars);
+                obj_map<expr, ptr_vector<expr>> eq_combination);
+            bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> eq_combination, std::set<std::pair<expr *, int>> non_fresh_vars);
+                bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> s, std::set<std::pair<expr *, int>> non_fresh_vars);
                 bool eq_in_list(expr* n, ptr_vector<expr> nodes);
             bool can_omit(expr* lhs, expr* rhs, zstring needle);
-            bool appear_in_other_eq(expr* root, zstring needle, std::map<expr *, std::set<expr *>> eq_combination);
+            bool appear_in_other_eq(expr* root, zstring needle, obj_map<expr, ptr_vector<expr>> eq_combination);
             bool is_completed_branch(bool &addAxiom, expr_ref_vector &diff);
             void update_state();
-            bool propagate_eq_combination(std::map<expr *, std::set<expr *>> eq_combination);
-            bool is_notContain_consistent(std::map<expr *, std::set<expr *>> eq_combination);
+            bool propagate_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination);
+            bool is_notContain_consistent(obj_map<expr, ptr_vector<expr>> eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref premise);
 
-            bool implies_empty_str_from_notContain(std::map<expr *, std::set<expr *>> eq_combination);
-                expr_ref_vector implies_empty_tail_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs);
-                expr_ref_vector implies_empty_start_str_from_notContain(std::set<expr *> v, expr* key, expr* lhs);
-                    bool not_contain(expr* haystack, expr* needle, expr* &realHaystack);
-                    bool does_contain(expr* haystack, expr* needle, expr* &realHaystack);
+            bool not_contain(expr* haystack, expr* needle, expr* &realHaystack);
+            bool does_contain(expr* haystack, expr* needle, expr* &realHaystack);
 
-            bool parikh_image_check(std::map<expr *, std::set<expr *>> eq_combination);
+            bool parikh_image_check(obj_map<expr, ptr_vector<expr>> eq_combination);
                 bool equal_parikh(expr* nn, expr* n);
                     void get_parikh_from_strs(zstring s, std::map<char, int> &img);
                     bool eq_parikh(std::map<char, int> lhs, std::map<char, int> rhs);
@@ -1411,28 +1406,28 @@ namespace smt {
                 bool at_same_eq_state(UnderApproxState state, expr_ref_vector &diff);
                 bool at_same_diseq_state(str::state curr, str::state prev);
 
-        bool review_starting_ending_combination(std::map<expr *, std::set<expr *>> eq_combination);
+        bool review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> eq_combination);
             std::set<char> collect_char_domain_from_concat();
-            std::set<char> collect_char_domain_from_eqmap(std::map<expr *, std::set<expr *>> eq_combination);
-            bool handle_contain_family(std::map<expr *, std::set<expr *>> eq_combination);
+            std::set<char> collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> eq_combination);
+            bool handle_contain_family(obj_map<expr, ptr_vector<expr>> eq_combination);
                 expr* create_equations_over_contain_vars(expr* x, expr* y);
             bool handle_charAt_family(
-                std::map<expr *, std::set<expr *>> eq_combination);
+                obj_map<expr, ptr_vector<expr>> eq_combination);
                 bool are_equal_exprs(expr* x, expr* y);
             std::set<expr*> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
 
 
             bool propagate_concat();
-            bool propagate_value(std::set<expr*> & concat_set);
-            bool propagate_length(std::set<expr*> & varSet, std::set<expr*> & concatSet, std::map<expr*, int> & exprLenMap);
-                void collect_var_concat(expr * node, std::set<expr*> & varSet, std::set<expr*> & concatSet);
-                void get_unique_non_concat_nodes(expr * node, std::set<expr*> & argSet);
+            bool propagate_value(expr_ref_vector & concat_set);
+            bool propagate_length(expr_ref_vector & varSet, expr_ref_vector & concatSet, std::map<expr*, int> & exprLenMap);
+                void collect_var_concat(expr * node, expr_ref_vector & vars, expr_ref_vector & concats);
+                void get_unique_non_concat_nodes(expr * node, expr_ref_vector & argSet);
                 bool propagate_length_within_eqc(expr * var);
             bool underapproximation(
-                std::map<expr*, std::set<expr*>> eq_combination,
-                std::set<std::pair<expr*, int>> non_fresh_vars,
-                expr_ref_vector diff);
+                    obj_map<expr, ptr_vector<expr>> eq_combination,
+                    std::set<std::pair<expr*, int>> non_fresh_vars,
+                    expr_ref_vector diff);
                 bool assert_state(expr_ref_vector guessedEqs, expr_ref_vector guessedDisEqs, str::state root);
                 bool handle_str_int();
                     void handle_str2int(expr* num, expr* str);
@@ -1447,14 +1442,13 @@ namespace smt {
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_1st_loop(expr* num, expr* str);
                             bool is_char_at(expr* str);
-                std::map<expr*, std::vector<expr*>> mapset2mapvector(std::map<expr*, std::set<expr*>> m);
                 std::map<expr*, int> set2map(std::set<std::pair<expr*, int>> s);
-                void print_eq_combination(std::map<expr*, std::set<expr*>> eq_combination, int line = -1);
+                void print_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination, int line = -1);
                 bool is_equal(UnderApproxState preState, UnderApproxState currState);
-                    bool are_some_empty_vars_omitted(expr* n, std::set<expr*> v);
+                    bool are_some_empty_vars_omitted(expr* n, ptr_vector<expr> v);
                 bool is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr);
             bool underapproximation_cached();
-            void init_underapprox(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &non_fresh_vars);
+            void init_underapprox(obj_map<expr, ptr_vector<expr>> eq_combination, std::map<expr*, int> &non_fresh_vars);
                 void mk_and_setup_arr(
                     expr* v,
                     std::map<expr*, int> &non_fresh_vars);
@@ -1468,7 +1462,7 @@ namespace smt {
                 std::set<char> init_excluded_char_set();
                 std::set<char> init_included_char_set();
                 void create_appearance_map(
-                        std::map<expr *, std::set<expr *>> eq_combination);
+                        obj_map<expr, ptr_vector<expr>> eq_combination);
                 void setup_flats();
                 bool should_use_flat();
             void init_underapprox_cached();
@@ -1477,11 +1471,11 @@ namespace smt {
                 void handle_disequalities();
                 void handle_disequalities_cached();
 
-            bool review_not_contain(expr* lhs, expr* needle, std::map<expr*, std::set<expr*>> eq_combination);
+            bool review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> eq_combination);
                 expr* remove_empty_in_concat(expr* s);
                 bool review_notcontain_trivial(expr* lhs, expr* needle);
-            bool review_disequalities_not_contain(std::map<expr *, std::set<expr *>> eq_combination);
-                bool review_disequality(expr* lhs, expr* rhs, std::map<expr*, std::set<expr*>> eq_combination);
+            bool review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> eq_combination);
+                bool review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> eq_combination);
                 bool review_disequality_trivial(expr* lhs, expr* rhs);
                     void handle_disequality(expr *lhs, expr *rhs);
                     void handle_disequality_const(expr *lhs, zstring rhs);
@@ -1494,15 +1488,15 @@ namespace smt {
                     bool is_contain_equality(expr* n);
                     bool is_contain_equality(expr* n, expr* &contain);
                     bool is_trivial_contain(zstring s);
-                void  init_connecting_size(std::map<expr*, std::set<expr*>> eq_combination, std::map<expr*, int> &non_fresh_vars, bool prep = true);
-                    void static_analysis(std::map<expr*, std::set<expr*>> eq_combination);
-            bool convert_equalities(std::map<expr*, std::vector<expr*>> eq_combination,
+                void  init_connecting_size(obj_map<expr, ptr_vector<expr>> eq_combination, std::map<expr*, int> &non_fresh_vars, bool prep = true);
+                    void static_analysis(obj_map<expr, ptr_vector<expr>> eq_combination);
+            bool convert_equalities(obj_map<expr, ptr_vector<expr>> eq_combination,
                                            std::map<expr*, int> non_fresh_vars,
                                            expr* premise);
-                bool is_long_equality(std::vector<expr*> eqs);
-                expr* convert_other_equalities(std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
-                expr* convert_long_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
-                expr* convert_const_nonfresh_equalities(expr* var, std::vector<expr*> eqs, std::map<expr*, int> non_fresh_vars);
+                bool is_long_equality(ptr_vector<expr> eqs);
+                expr* convert_other_equalities(ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars);
+                expr* convert_long_equalities(expr* var, ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars);
+                expr* convert_const_nonfresh_equalities(expr* var, ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars);
                 void convert_regex_equalities(expr* regexExpr, expr* var, std::map<expr*, int> non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 expr* const_contains_key(zstring c, expr* pre_contain, expr* key, rational len);
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);
@@ -1519,34 +1513,20 @@ namespace smt {
                 */
                 zstring parse_regex_content(zstring str);
                 zstring parse_regex_content(expr* str);
-                std::vector<expr*> combine_const_str(std::vector<expr*> v);
+                expr_ref_vector combine_const_str(expr_ref_vector v);
                     bool isRegexStr(zstring str);
                     bool isUnionStr(zstring str);
 
-                std::vector<expr*> parse_regex_components(expr* reg);
-
-                    /*
-                    * (a)|(b | c) --> {a, b, c}
-                    */
-                    std::set<zstring> get_regex_components(zstring s);
+                expr_ref_vector parse_regex_components(expr* reg);
 
                     /*
                     * (a) | (b) --> {a, b}
                     */
                     std::vector<zstring> collect_alternative_components(zstring str);
-                    std::vector<expr*> collect_alternative_components(expr* v);
+                    expr_ref_vector collect_alternative_components(expr* v);
+                    bool collect_alternative_components(expr* v, expr_ref_vector& ret);
                     bool collect_alternative_components(expr* v, std::vector<zstring>& ret);
-                    bool collect_alternative_components(expr* v, std::vector<expr*>& ret);
-
-                    /*
-                    *
-                    */
                     int find_correspond_right_parentheses(int leftParentheses, zstring str);
-
-                    /*
-                    * (a) --> a
-                    */
-                    void remove_parentheses(zstring &s);
 
                 std::set<zstring> collect_strs_in_membership(expr* v);
                 void collect_strs_in_membership(expr* v, std::set<zstring> &ret);
@@ -1974,7 +1954,14 @@ namespace smt {
                         std::vector<int> currentSplit,
                         std::vector<std::vector<int> > &allPossibleSplits
                 );
-
+                    /*
+                     * (a)|(b | c) --> {a, b, c}
+                     */
+                     std::set<zstring> get_regex_components(zstring s);
+                    /*
+                    * (a) --> a
+                    */
+                    void remove_parentheses(zstring &s);
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
@@ -2117,12 +2104,12 @@ namespace smt {
              */
             std::vector<std::pair<expr*, int>> create_equality(expr* node, bool unfold = true);
             std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> list, bool unfold = true);
-            std::vector<std::pair<expr*, int>> create_equality(std::vector<expr*> list, bool unfold = true);
+            std::vector<std::pair<expr*, int>> create_equality_final(ptr_vector<expr> list, bool unfold = true);
                 void create_internal_int_vars(expr* v);
                 void setup_str_int_len(expr* e, int start);
                 void reuse_internal_int_vars(expr* v);
-            std::vector<expr*> set2vector(std::set<expr*> s);
-            unsigned findMaxP(std::vector<expr*> v);
+            expr_ref_vector set2vector(std::set<expr*> s);
+            unsigned findMaxP(ptr_vector<expr> v);
 
             /*
              * cut the same prefix and suffix and check if var is still there
@@ -2154,9 +2141,9 @@ namespace smt {
              * cut the same prefix and suffix
              */
             bool propagate_equality(
-                        expr* lhs,
-                        expr* rhs,
-                        expr_ref_vector &to_assert);
+                    expr* lhs,
+                    expr* rhs,
+                    expr_ref_vector &to_assert);
 
                 bool propagate_equality_right_2_left(
                         expr* lhs,
@@ -2178,8 +2165,8 @@ namespace smt {
             bool is_str_int_var(expr* e);
             void refine_important_vars(
                     std::set<std::pair<expr *, int>> &non_fresh_vars,
-                    std::set<expr*> &notImportant,
-                    std::map<expr *, std::set<expr *>> eq_combination);
+                    expr_ref_vector &notImportant,
+                    obj_map<expr, ptr_vector<expr>> eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 bool belong_to_var_var_inequality(expr* nn);
                 std::vector<zstring> collect_all_inequalities(expr* nn);
@@ -2196,70 +2183,67 @@ namespace smt {
                 bool is_importantVar_recheck(
                     expr* nn,
                     int len,
-                    std::map<expr *, std::set<expr *>> combinations);
+                    obj_map<expr, ptr_vector<expr>> combinations);
                     std::map<expr*, int> countOccurrences_from_root();
                         bool is_replace_var(expr* x);
                     std::map<expr*, int> countOccurrences_from_combination(
-                            std::map<expr *, std::set<expr *>> eq_combination,
+                            obj_map<expr, ptr_vector<expr>> eq_combination,
                             std::set<std::pair<expr *, int>> non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
-            std::map<expr*, std::set<expr*>> collect_inequalities_nonmembership(); // should be removed
-            std::map<expr*, std::set<expr*>> normalize_eq(
-                    std::map<expr*, std::set<expr*>> &causes,
-                    std::set<expr*> &subNodes,
+            obj_map<expr, ptr_vector<expr>> normalize_eq(
+                    expr_ref_vector &subNodes,
                     std::set<std::pair<expr*, int>> &non_fresh_vars);
-                std::map<expr*, std::set<expr*>> refine_eq_combination(
+            obj_map<expr, ptr_vector<expr>> refine_eq_combination(
                         std::set<std::pair<expr*, int>> &non_fresh_vars,
-                        std::map<expr*, std::set<expr*>> combinations,
-                        std::set<expr*> subNodes
+                        obj_map<expr, ptr_vector<expr>> combinations,
+                        expr_ref_vector subNodes
                 );
 
-                std::map<expr*, std::set<expr*>> refine_eq_combination(
+                obj_map<expr, ptr_vector<expr>> refine_eq_combination(
                         std::set<std::pair<expr*, int>> &non_fresh_vars,
-                        std::map<expr*, std::set<expr*>> combinations,
-                        std::set<expr*> subNodes,
-                        std::set<expr*> notnon_fresh_vars
+                        obj_map<expr, ptr_vector<expr>> combinations,
+                        expr_ref_vector subNodes,
+                        expr_ref_vector notnon_fresh_vars
                 );
 
-                bool can_merge_combination(std::map<expr*, std::set<expr*>> combinations);
-                    bool concat_in_set(expr* n, std::set<expr*> s);
+                bool can_merge_combination(obj_map<expr, ptr_vector<expr>> combinations);
+                    bool concat_in_set(expr* n, ptr_vector<expr> s);
                 /*
                 * true if var does not appear in eqs
                 */
-                bool appear_in_eqs(std::set<expr*> s, expr* var);
+                bool appear_in_eqs(ptr_vector<expr> s, expr* var);
 
                 bool is_important_concat(expr* e, std::set<std::pair<expr*, int>> non_fresh_vars);
-                bool is_trivial_combination(expr* v, std::set<expr*> eq, std::set<std::pair<expr*, int>> non_fresh_vars);
-                std::set<expr*> refine_eq_set(
+                bool is_trivial_combination(expr* v, ptr_vector<expr> eq, std::set<std::pair<expr*, int>> non_fresh_vars);
+                ptr_vector<expr> refine_eq_set(
                         expr* var,
-                    std::set<expr*> s,
+                        ptr_vector<expr> s,
                         std::set<std::pair<expr*, int>> non_fresh_vars,
-                    std::set<expr*> notnon_fresh_vars);
-                std::set<expr*> refine_eq_set(
+                        expr_ref_vector notnon_fresh_vars);
+                ptr_vector<expr> refine_eq_set(
                         expr* var,
-                        std::set<expr*> s,
+                        ptr_vector<expr> s,
                         std::set<std::pair<expr*, int>> non_fresh_vars);
-                    std::set<expr*> refine_all_duplications(std::set<expr*> s);
+                    void refine_all_duplications(ptr_vector<expr> &s);
                     bool are_equal_concat(expr* lhs, expr* rhs);
-                std::set<expr*> refine_eq_set(
-                    std::set<expr*> s,
-                    std::set<std::pair<expr*, int>> non_fresh_vars);
+                    ptr_vector<expr> refine_eq_set(
+                        ptr_vector<expr> s,
+                        std::set<std::pair<expr*, int>> non_fresh_vars);
                 bool is_important(expr *n, std::set<std::pair<expr*, int>> non_fresh_vars);
                 bool is_important(expr *n, std::set<std::pair<expr*, int>> non_fresh_vars, int &l);
-                std::set<expr*> extend_object(
+                ptr_vector<expr> extend_object(
                     expr* object,
-                    std::map<expr*, std::set<expr*>> &combinations,
-                    std::map<expr*, std::set<expr*>> &causes,
-                    std::set<expr*> &subNodes,
-                    std::set<expr*> parents,
+                    obj_map<expr, ptr_vector<expr>> &combinations,
+                    expr_ref_vector &subNodes,
+                    expr_ref_vector parents,
                     std::set<std::pair<expr*, int>> non_fresh_vars);
                     expr* create_concat_with_concat(expr* n1, expr* n2);
                     expr* create_concat_with_str(expr* n, zstring str);
                     expr* create_concat_with_str(zstring str, expr* n);
                     expr* ends_with_str(expr* n);
                     expr* starts_with_str(expr* n);
-                void add_subnodes(expr* concatL, expr* concatR, std::set<expr*> &subNodes);
+                void add_subnodes(expr* concatL, expr* concatR, expr_ref_vector &subNodes);
         bool can_propagate() override;
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
@@ -2577,13 +2561,13 @@ namespace smt {
         void dump_assignments();
         void dump_literals();
         void fetch_guessed_core_exprs(
-                std::map<expr*, std::set<expr*>> eq_combination,
+                obj_map<expr, ptr_vector<expr>> eq_combination,
                 expr_ref_vector &guessed_exprs,
                 expr_ref_vector diseq_exprs,
                 rational bound = rational(0));
-        void add_equalities_to_core(expr_ref_vector guessed_exprs, std::set<expr*> &all_vars, expr_ref_vector &core);
+        void add_equalities_to_core(expr_ref_vector guessed_exprs, expr_ref_vector &all_vars, expr_ref_vector &core);
         void add_disequalities_to_core(expr_ref_vector diseq_exprs, expr_ref_vector &core);
-        void add_assignments_to_core(std::set<expr*> all_vars, expr_ref_vector &core);
+        void add_assignments_to_core(expr_ref_vector all_vars, expr_ref_vector &core);
         unsigned get_assign_lvl(expr* a, expr* b);
         void fetch_related_exprs(
                 expr_ref_vector allvars,
@@ -2591,8 +2575,8 @@ namespace smt {
         expr_ref_vector check_contain_related_vars(
                 expr* v,
                 zstring replaceKey);
-        std::set<expr*> collect_all_vars_in_eq_combination(std::map<expr*, std::set<expr*>> eq_combination);
-        void update_all_vars(std::set<expr*> &allvars, expr* e);
+        expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination);
+        void update_all_vars(expr_ref_vector &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
         bool check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars);
         void fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessed_exprs);
