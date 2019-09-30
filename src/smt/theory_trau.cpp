@@ -748,13 +748,10 @@ namespace smt {
               m_rewrite(m),
               m_seq_rewrite(m),
               m_autil(m),
-
               m_find(*this),
-
               m_arrayUtil(m),
               u(m),
               m_trail_stack(*this),
-
               m_trail(m),
               m_delayed_axiom_setup_terms(m),
               m_delayed_assertions_todo(m),
@@ -4436,17 +4433,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << Ival.to_string() << std::endl;);
             // if that value is not -1, we can assert (str.to.int S) = Ival --> S = "Ival"
             if (!Ival.is_minus_one()) {
-//                zstring Ival_str(Ival.to_string().c_str());
-//                expr_ref premise(ctx.mk_eq_atom(a, m_autil.mk_numeral(Ival, true)), m);
-//
-//                expr_ref conclusion(ctx.mk_eq_atom(S, mk_string(Ival_str)), m);
-//                expr_ref axiom(rewrite_implication(conclusion, premise), m);
-//                if (!string_int_axioms.contains(axiom)) {
-//                    string_int_axioms.insert(axiom);
-//                    assert_axiom(axiom);
-//                    m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
-//                    axiomAdd = true;
-//                }
             }
         } else {
             STRACE("str", tout << "integer theory has no assignment for " << mk_pp(a, m) << std::endl;);
@@ -19254,7 +19240,6 @@ namespace smt {
     void theory_trau::fetch_guessed_str_int_with_scopes(expr_ref_vector &guessed_eqs, expr_ref_vector &guessed_diseqs) {
         
         context& ctx = get_context();
-
         expr_ref_vector assignments(m);
         ctx.get_assignments(assignments);
         expr_ref_vector stored_eq(m);

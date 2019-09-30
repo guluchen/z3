@@ -1994,64 +1994,17 @@ namespace smt {
              *
              */
             app* createEqualOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createMulOP(expr *x, expr *y);
-
-            /*
-             *
-             */
             app* createModOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createMinusOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createAddOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createAddOP(expr_ref_vector adds);
-            /*
-             *
-             */
             app* createLessOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createLessEqOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createGreaterOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createGreaterEqOP(expr* x, expr* y);
-
-            /*
-             *
-             */
             app* createAndOP(expr_ref_vector ands);
-
-            /*
-             *
-             */
             app* createOrOP(expr_ref_vector ors);
-
-            /*
-             *
-             */
             app* createSelectOP(expr* x, expr* y);
 
             int optimized_lhs(
@@ -2423,80 +2376,79 @@ namespace smt {
         void assert_implication(expr * premise, expr * conclusion);
 
         enode* ensure_enode(expr* e);
-        bool search_started;
-        th_rewriter      m_rewrite;
-        seq_rewriter m_seq_rewrite;
-        arith_util m_autil;
-        array_util m_arrayUtil;
-        seq_util u;
-        expr_ref_vector m_trail; // trail for generated terms
-        th_union_find m_find;
-        th_trail_stack m_trail_stack;
+        bool                                                search_started;
+        th_rewriter                                         m_rewrite;
+        seq_rewriter                                        m_seq_rewrite;
+        arith_util                                          m_autil;
+        array_util                                          m_arrayUtil;
+        seq_util                                            u;
+        expr_ref_vector                                     m_trail; // trail for generated terms
+        th_union_find                                       m_find;
+        th_trail_stack                                      m_trail_stack;
 
-        std::map<int, obj_hashtable<expr> > internal_variable_scope_levels;
-        obj_pair_map<expr, expr, expr*> concat_astNode_map;
+        std::map<int, obj_hashtable<expr> >                 internal_variable_scope_levels;
+        obj_pair_map<expr, expr, expr*>                     concat_astNode_map;
 
-        std::map<std::pair<expr*, zstring>, expr*> regex_in_bool_map;
-        obj_map<expr, std::set<zstring> > regex_in_var_reg_str_map;
+        std::map<std::pair<expr*, zstring>, expr*>          regex_in_bool_map;
+        obj_map<expr, std::set<zstring> >                   regex_in_var_reg_str_map;
 
-        scoped_ptr_vector<eautomaton> m_automata;
-        ptr_vector<eautomaton> regex_automata;
-        obj_hashtable<expr> regex_terms;
-        obj_map<expr, ptr_vector<expr> > regex_terms_by_string; // S --> [ (str.in.re S *) ]
+        scoped_ptr_vector<eautomaton>                       m_automata;
+        ptr_vector<eautomaton>                              regex_automata;
+        obj_hashtable<expr>                                 regex_terms;
+        obj_map<expr, ptr_vector<expr> >                    regex_terms_by_string; // S --> [ (str.in.re S *) ]
 
         // hashtable of all exprs for which we've already set up term-specific axioms --
         // this prevents infinite recursive descent with respect to axioms that
         // include an occurrence of the term for which axioms are being generated
-        obj_hashtable<expr> axiomatized_terms;
-        obj_hashtable<expr> variable_set;
-        obj_hashtable<expr> internal_variable_set;
-        obj_hashtable<expr> regex_variable_set;
+        obj_hashtable<expr>                                 axiomatized_terms;
+        obj_hashtable<expr>                                 variable_set;
+        obj_hashtable<expr>                                 internal_variable_set;
+        obj_hashtable<expr>                                 regex_variable_set;
 
-        expr_ref_vector m_delayed_axiom_setup_terms;
+        expr_ref_vector                                     m_delayed_axiom_setup_terms;
 
-        ptr_vector<enode> m_basicstr_axiom_todo;
-        svector<std::pair<enode*,enode*> > m_str_eq_todo;
-        ptr_vector<enode> m_concat_axiom_todo;
-        ptr_vector<enode> m_string_constant_length_todo;
-        ptr_vector<enode> m_concat_eval_todo;
-        expr_ref_vector m_delayed_assertions_todo;
+        ptr_vector<enode>                                   m_basicstr_axiom_todo;
+        svector<std::pair<enode*,enode*> >                  m_str_eq_todo;
+        ptr_vector<enode>                                   m_concat_axiom_todo;
+        ptr_vector<enode>                                   m_concat_eval_todo;
+        expr_ref_vector                                     m_delayed_assertions_todo;
 
         // enode lists for library-aware/high-level string terms (e.g. substr, contains)
-        ptr_vector<enode> m_library_aware_axiom_todo;
-        obj_hashtable<expr> input_var_in_len;
-        expr_ref_vector string_int_conversion_terms;
-        obj_hashtable<expr> string_int_axioms;
-        obj_hashtable<expr> string_int_vars;
-        obj_hashtable<expr> int_string_vars;
+        ptr_vector<enode>                                   m_library_aware_axiom_todo;
+        obj_hashtable<expr>                                 input_var_in_len;
+        expr_ref_vector                                     string_int_conversion_terms;
+        obj_hashtable<expr>                                 string_int_axioms;
+        obj_hashtable<expr>                                 string_int_vars;
+        obj_hashtable<expr>                                 int_string_vars;
 
-        expr_ref_vector m_persisted_axiom_todo;
+        expr_ref_vector                                     m_persisted_axiom_todo;
 
-        expr_ref_vector contains_map;
+        expr_ref_vector                                     contains_map;
 
-        theory_str_contain_pair_bool_map_t contain_pair_bool_map;
-        obj_map<expr, std::set<std::pair<expr*, expr*> > > contain_pair_idx_map;
-        obj_map<enode, std::pair<enode*,enode*>> contain_split_map;
-        obj_map<expr, expr*> index_head;
-        obj_map<expr, std::pair<expr*, expr*>> index_tail;
-        std::set<std::pair<expr*, expr*>> length_relation;
-        unsigned m_fresh_id;
-        string_map stringConstantCache;
-        unsigned long totalCacheAccessCount;
+        theory_str_contain_pair_bool_map_t                  contain_pair_bool_map;
+        obj_map<expr, std::set<std::pair<expr*, expr*> > >  contain_pair_idx_map;
+        obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
+        obj_map<expr, expr*>                                index_head;
+        obj_map<expr, std::pair<expr*, expr*>>              index_tail;
+        std::set<std::pair<expr*, expr*>>                   length_relation;
+        unsigned                                            m_fresh_id;
+        string_map                                          stringConstantCache;
+        unsigned long                                       totalCacheAccessCount;
 
-        obj_map<expr, eautomaton*>     m_re2aut;
-        re2automaton                   m_mk_aut;
-        expr_ref_vector                m_res;
-        rational p_bound = rational(2);
-        rational q_bound = rational(10);
-        rational str_int_bound;
-        rational max_str_int_bound = rational(10);
-        rational max_p_bound = rational(3);
-        rational max_q_bound = rational(20);
-        expr* str_int_bound_expr = nullptr;
-        expr* p_bound_expr = nullptr;
-        expr* q_bound_expr = nullptr;
-        bool flat_enabled = false;
-        bool need_change = false;
+        obj_map<expr, eautomaton*>                          m_re2aut;
+        re2automaton                                        m_mk_aut;
+        expr_ref_vector                                     m_res;
+        rational                                            p_bound = rational(2);
+        rational                                            q_bound = rational(10);
+        rational                                            str_int_bound;
+        rational                                            max_str_int_bound = rational(10);
+        rational                                            max_p_bound = rational(3);
+        rational                                            max_q_bound = rational(20);
+        expr*                                               str_int_bound_expr = nullptr;
+        expr*                                               p_bound_expr = nullptr;
+        expr*                                               q_bound_expr = nullptr;
+        bool                                                flat_enabled = false;
+        bool                                                need_change = false;
         /*
          * If DisableIntegerTheoryIntegration is set to true,
          * ALL calls to the integer theory integration methods
@@ -2510,7 +2462,7 @@ namespace smt {
          *
          * The default behaviour of Z3str2 is to set this to 'false'.
          */
-        bool opt_DisableIntegerTheoryIntegration;
+        bool                                                opt_DisableIntegerTheoryIntegration;
 
         /*
          * If ConcatOverlapAvoid is set to true,
@@ -2518,44 +2470,44 @@ namespace smt {
          * avoid simplifying wrt. pairs of Concat terms that will immediately
          * result in an overlap. (false = Z3str2 behaviour)
          */
-        bool opt_ConcatOverlapAvoid;
+        bool                                                 opt_ConcatOverlapAvoid;
 
 
         // under approximation vars
-        const int CONNECTINGSIZE = 300;
-        static const int PMAX = 2;
-        const std::string FLATPREFIX = "__flat_";
-        int flat_var_counter = 0;
+        const int                                           CONNECTINGSIZE = 300;
+        static const int                                    PMAX = 2;
+        const std::string                                   FLATPREFIX = "__flat_";
+        int                                                 flat_var_counter = 0;
 
 
-        std::map<expr*, int> var_pieces_counter;
-        std::map<expr*, int> curr_var_pieces_counter;
-        std::set<std::string> generated_equalities;
+        std::map<expr*, int>                                var_pieces_counter;
+        std::map<expr*, int>                                curr_var_pieces_counter;
+        std::set<std::string>                               generated_equalities;
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
-        std::set<zstring> const_set;
-        std::set<char> sigma_domain;
-        std::map<expr*, std::vector<expr*>> length_map;
-        std::map<expr*, std::vector<expr*>> iter_map;
-        std::map<expr*, std::set<expr*>> appearance_map;
-        std::map<expr*, std::set<expr*>> not_contain_map;
+        std::set<zstring>                                   const_set;
+        std::set<char>                                      sigma_domain;
+        std::map<expr*, std::vector<expr*>>                 length_map;
+        std::map<expr*, std::vector<expr*>>                 iter_map;
+        std::map<expr*, std::set<expr*>>                    appearance_map;
+        std::map<expr*, std::set<expr*>>                    not_contain_map;
 
-        std::map<expr*, std::set<expr*>> dependency_graph;
-        std::map<expr*, expr*> expr_array_linkers;
-        std::map<expr*, expr*> array_map;
-        std::map<std::string, expr*> array_map_reverse;
-        std::map<std::string, expr*> varMap_reverse;
-        std::map<expr*, expr*> arr_linker;
-        int connectingSize;
-        char default_char = 'a';
-        UnderApproxState uState;
-        std::vector<UnderApproxState> completed_branches;
+        std::map<expr*, std::set<expr*>>                    dependency_graph;
+        std::map<expr*, expr*>                              expr_array_linkers;
+        std::map<expr*, expr*>                              array_map;
+        std::map<std::string, expr*>                        array_map_reverse;
+        std::map<std::string, expr*>                        varMap_reverse;
+        std::map<expr*, expr*>                              arr_linker;
+        int                                                 connectingSize;
+        char                                                default_char = 'a';
+        UnderApproxState                                    uState;
+        std::vector<UnderApproxState>                       completed_branches;
 
 
-        expr_ref_vector implied_facts;
+        expr_ref_vector                                     implied_facts;
     private:
-        clock_t startClock;
-        bool newConstraintTriggered = false;
+        clock_t                                             startClock;
+        bool                                                newConstraintTriggered = false;
         void assert_axiom(expr *e);
         void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();
