@@ -83,11 +83,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -99,11 +96,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="393">
-              <caret line="15279" column="43" selection-start-line="15279" selection-start-column="9" selection-end-line="15279" selection-end-column="43" />
+            <state relative-caret-position="767">
+              <caret line="14541" column="141" selection-start-line="14541" selection-start-column="141" selection-end-line="14541" selection-end-column="141" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
@@ -181,11 +178,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="511">
-              <caret line="882" column="116" lean-forward="true" selection-start-line="882" selection-start-column="116" selection-end-line="882" selection-end-column="116" />
+            <state relative-caret-position="1118">
+              <caret line="2619" selection-start-line="2619" selection-end-line="2619" />
               <folding>
                 <element signature="e#49#64#0" expanded="true" />
                 <element signature="e#5244#8019#1" />
@@ -293,8 +290,8 @@
         <option value="$PROJECT_DIR$/src/smt/theory_seq.h" />
         <option value="$PROJECT_DIR$/src/util/obj_hashtable.h" />
         <option value="$PROJECT_DIR$/src/smt/smt_setup.cpp" />
-        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_trau.h" />
+        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
       </list>
     </option>
   </component>
@@ -868,12 +865,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="1180000" />
+      <workItem from="1569868458528" duration="1540000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1822580000" />
+    <option name="totallyTimeSpent" value="1822940000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1294,23 +1291,23 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="393">
-          <caret line="15279" column="43" selection-start-line="15279" selection-start-column="9" selection-end-line="15279" selection-end-column="43" />
+        <state relative-caret-position="1118">
+          <caret line="2619" selection-start-line="2619" selection-end-line="2619" />
           <folding>
-            <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#49#64#0" expanded="true" />
+            <element signature="e#5244#8019#1" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="511">
-          <caret line="882" column="116" lean-forward="true" selection-start-line="882" selection-start-column="116" selection-end-line="882" selection-end-column="116" />
+        <state relative-caret-position="767">
+          <caret line="14541" column="141" selection-start-line="14541" selection-start-column="141" selection-end-line="14541" selection-end-column="141" />
           <folding>
-            <element signature="e#49#64#0" expanded="true" />
-            <element signature="e#5244#8019#1" />
+            <element signature="e#0#20#0" expanded="true" />
           </folding>
         </state>
       </provider>

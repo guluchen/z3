@@ -14537,12 +14537,10 @@ namespace smt {
             if (!notImportant.contains(v.first) || str_int_vars.find(v.first) != str_int_vars.end()) {
                 if (v.second == -1) {
                     expr* rootTmp = ctx.get_enode(v.first)->get_root()->get_owner();
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " consiering " << mk_pp(v.first, m) << " eq_combination size: " << eq_combination[rootTmp].size()
-                                       << std::endl;);
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
                             !more_than_two_occurrences(v.first, occurrences) &&
-                        eq_combination[rootTmp].size() <= 20 &&
-                        !is_contain_equality(v.first) &&
+                            ((eq_combination.contains(rootTmp) && eq_combination[rootTmp].size() <= 20) || !eq_combination.contains(rootTmp)) &&
+                            !is_contain_equality(v.first) &&
                             str_int_vars.find(v.first) == str_int_vars.end() &&
                             !belong_to_var_var_inequality(v.first)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.first, m)
