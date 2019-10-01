@@ -230,32 +230,32 @@ namespace smt {
             }
         };
         typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> > string_map;
-
+        typedef old_svector<std::pair<expr*, int>> pair_expr_vector;
         class Arrangment{
         public:
-            std::vector<int> left_arr;
-            std::vector<int> right_arr;
+            int_vector left_arr;
+            int_vector right_arr;
 
-            Arrangment(std::vector<int> _left_arr,
-                       std::vector<int> _right_arr,
+            Arrangment(int_vector const& _left_arr,
+                       int_vector const& _right_arr,
                        std::map<std::string, std::string> _constMap,
                        int _connectingSize){
-                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
-                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
+                left_arr = _left_arr;
+                right_arr = _right_arr;
             }
 
-            Arrangment(std::vector<int> _left_arr,
-                       std::vector<int> _right_arr){
-                left_arr.insert(left_arr.end(), _left_arr.begin(), _left_arr.end());
-                right_arr.insert(right_arr.end(), _right_arr.begin(), _right_arr.end());
+            Arrangment(int_vector const& _left_arr,
+                       int_vector const& _right_arr){
+                left_arr = _left_arr;
+                right_arr = _right_arr;
             }
 
             void add_left(int number) {
-                left_arr.emplace_back(number);
+                left_arr.push_back(number);
             }
 
             void add_right(int number) {
-                right_arr.emplace_back(number);
+                right_arr.push_back(number);
             }
 
             bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, std::vector<std::string> &flats) {
@@ -307,7 +307,7 @@ namespace smt {
                 return -1;
             }
 
-            void splitPrintTest(std::vector<int> currentSplit, std::string msg = ""){
+            void splitPrintTest(int_vector currentSplit, std::string msg = ""){
                 STRACE("str", tout << msg << std::endl;);
                 for (unsigned int i = 0; i < currentSplit.size(); ++i)
                 STRACE("str", tout << currentSplit[i] << " - " << std::endl;);
@@ -321,7 +321,7 @@ namespace smt {
             void printList(T list, std::string msg = "") {
                 if (msg.length() > 0 )
                     printf("%s\n", msg.c_str());
-                for (std::vector<int>::iterator it = list.begin(); it != list.end(); ++it) {
+                for (int_vector::iterator it = list.begin(); it != list.end(); ++it) {
                     printf("%d ", *it);
                 }
                 printf("\n");
@@ -334,7 +334,7 @@ namespace smt {
             bool feasible_split_const(
                     std::string str,
                     std::vector<std::pair<std::string, int> > elements,
-                    std::vector<int> currentSplit,
+                    int_vector currentSplit,
                     int bound){
                 /* check feasible const split */
                 int pos = 0;
@@ -716,7 +716,7 @@ namespace smt {
                 return node;
             }
 
-            bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> m_root2value,
+            bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value,
                                              zstring &strValue){
                 std::vector<zstring> elements = collect_alternative_components(regex);
                 if (th.u.re.is_union(regex)) {
@@ -751,7 +751,7 @@ namespace smt {
                 return false;
             }
 
-            bool create_string_with_length(std::vector<zstring> elements, zstring &currentStr, int remainLength){
+            bool create_string_with_length(std::vector<zstring> const& elements, zstring &currentStr, int remainLength){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": currentStr: "  << currentStr << std::endl;);
                 if (remainLength == 0)
                     return true;
@@ -854,7 +854,7 @@ namespace smt {
                 return nullptr;
             }
 
-            bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> m_root2value, zstring& strValue){
+            bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue){
                 ast_manager & m = mg.get_manager();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
                 if (len_int != -1) {
@@ -876,7 +876,7 @@ namespace smt {
                     }
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
                     // root var
-                    std::vector<int> val;
+                    int_vector val;
                     for (int i = 0; i < len_int; ++i)
                         val.push_back(-1);
 
@@ -906,7 +906,7 @@ namespace smt {
                 return false;
             }
 
-            bool construct_string_from_array(model_generator mg, obj_map<enode, app *> m_root2value, enode *arr,
+            bool construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr,
                                              int len_int, zstring &val){
                 SASSERT(arr->get_owner() != nullptr);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
@@ -914,7 +914,7 @@ namespace smt {
                 app* arr_val = nullptr;
                 if (m_root2value.find(arr, arr_val)) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-                    std::vector<int> vValue (len_int, -1);
+                    int_vector vValue (len_int, -1);
 
                     func_decl * fd = to_func_decl(arr_val->get_parameter(0).get_ast());
                     func_interp* fi = mg.get_model().get_func_interp(fd);
@@ -1027,7 +1027,7 @@ namespace smt {
                 return false;
             }
 
-            zstring fill_chars(std::vector<int> vValue, std::set<char> char_set, bool &completed){
+            zstring fill_chars(int_vector const& vValue, std::set<char> const& char_set, bool &completed){
                 std::string value;
 
                 for (unsigned i = 0; i < vValue.size(); ++i) {
@@ -1049,8 +1049,8 @@ namespace smt {
                 return zstring(value.c_str());
             }
 
-            void construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> m_root2value,
-                                  std::vector<int> &val){
+            void construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value,
+                                  int_vector &val){
                 if (th.u.str.is_concat(eq)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << mk_pp(eq, th.get_manager()) << std::endl;);
                     ptr_vector<expr> leafNodes;
@@ -1100,7 +1100,7 @@ namespace smt {
                 }
             }
 
-            bool fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> m_root2value, int len,
+            bool fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len,
                                             zstring &value){
                 // component var
                 for (const auto &ancestor : th.dependency_graph[node]) {
@@ -1143,7 +1143,7 @@ namespace smt {
             }
 
             bool fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue,
-                                              obj_map<enode, app *> m_root2value, int len, zstring &value){
+                                              obj_map<enode, app *> const& m_root2value, int len, zstring &value){
                 if (th.u.str.is_concat(concat)){
 
                     ptr_vector<expr> leafNodes;
@@ -1166,7 +1166,7 @@ namespace smt {
                 return false;
             }
 
-            int find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> m_root2value){
+            int find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value){
 
                 if (th.u.str.is_concat(concat)){
                     int prefix = 0;
@@ -1179,7 +1179,7 @@ namespace smt {
                 return -1;
             }
 
-            bool find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> m_root2value,
+            bool find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value,
                                  int &prefix){
                 if (concat == subNode)
                     return true;
@@ -1209,7 +1209,7 @@ namespace smt {
                 return false;
             }
 
-            bool get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> m_root2value, int &value){
+            bool get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> const& m_root2value, int &value){
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
                     rational valInt;
@@ -1238,7 +1238,7 @@ namespace smt {
                 }
             }
 
-            bool get_str_value(enode *n, obj_map<enode, app *> m_root2value, zstring &value){
+            bool get_str_value(enode *n, obj_map<enode, app *> const& m_root2value, zstring &value){
                 app* val = nullptr;
                 if (m_root2value.find(n->get_root(), val)) {
                     zstring valStr;
@@ -1578,31 +1578,31 @@ namespace smt {
              * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
              */
             expr* to_arith(int p,
-                                            std::vector<int> const& left_arr,
-                                            std::vector<int> const& right_arr,
+                                            int_vector const& left_arr,
+                                            int_vector const& right_arr,
                                             std::vector<std::pair<expr*, int>> const& lhs_elements,
                                             std::vector<std::pair<expr*, int>> const& rhs_elements,
                                             obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_others(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
-                                           std::vector<int> const& left_arr,
-                                           std::vector<int> const& right_arr,
+                                           int_vector const& left_arr,
+                                           int_vector const& right_arr,
                                            std::vector<std::pair<expr*, int>> const& lhs_elements,
                                            std::vector<std::pair<expr*, int>> const& rhs_elements,
                                             obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_emptyflats(bool (&checkLeft)[10000], bool (&checkRight)[10000],
-                              std::vector<int> const& left_arr,
-                              std::vector<int> const& right_arr,
+                                          int_vector const& left_arr,
+                                          int_vector const& right_arr,
                               std::vector<std::pair<expr*, int>> const& lhs_elements,
                               std::vector<std::pair<expr*, int>> const& rhs_elements);
                 expr* to_arith_right(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
-                              std::vector<int> const& left_arr,
-                              std::vector<int> const& right_arr,
+                                     int_vector const& left_arr,
+                                     int_vector const& right_arr,
                               std::vector<std::pair<expr*, int>> const& lhs_elements,
                               std::vector<std::pair<expr*, int>> const& rhs_elements,
                               obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_left(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
-                              std::vector<int> const& left_arr,
-                              std::vector<int> const& right_arr,
+                              int_vector const& left_arr,
+                              int_vector const& right_arr,
                               std::vector<std::pair<expr*, int>> const& lhs_elements,
                               std::vector<std::pair<expr*, int>> const& rhs_elements,
                               obj_map<expr, int> const& non_fresh_variables);
@@ -1700,7 +1700,7 @@ namespace smt {
                 expr* gen_constraint_non_fresh_var_const(
                         std::pair<expr *, int> a, /* const || regex */
                         std::vector<std::pair<expr *, int> > const& elements, /* const + non_fresh_ var */
-                        std::vector<int> const& split,
+                        int_vector const& split,
                         obj_map<expr, int> const& non_fresh_variables,
                         bool optimizing,
                         int pMax);
@@ -1736,7 +1736,7 @@ namespace smt {
                 expr_ref_vector gen_constraint_without_non_fresh_vars(
                         std::pair<expr *, int> a, /* const || regex */
                         std::vector<std::pair<expr *, int> > const& elements, /* no non_fresh_ var */
-                        std::vector<int> const& split,
+                        int_vector const& split,
                         bool optimizing);
                 /*
                  *
@@ -1908,7 +1908,7 @@ namespace smt {
                 * Input: constA and a number of flats
                 * Output: all possible ways to split constA
                 */
-                std::vector<std::vector<int> > collect_splits(
+                std::vector<int_vector > collect_splits(
                         std::pair<expr*, int> lhs,
                         std::vector<std::pair<expr*, int> > const& elements,
                         bool optimizing);
@@ -1930,8 +1930,8 @@ namespace smt {
                         zstring str, /* const */
                         int pMax,
                         std::vector<std::pair<expr*, int> > const& elements,
-                        std::vector<int> currentSplit,
-                        std::vector<std::vector<int> > &allPossibleSplits
+                        int_vector currentSplit,
+                        std::vector<int_vector > &allPossibleSplits
                 );
                     /*
                      * (a)|(b | c) --> {a, b, c}
@@ -1950,7 +1950,7 @@ namespace smt {
                 bool feasibleSplit_const(
                         zstring str,
                         std::vector<std::pair<expr*, int> > const& elements,
-                        std::vector<int> const& currentSplit,
+                        int_vector const& currentSplit,
                         int bound);
             /*
              * Given a flat,
@@ -1988,15 +1988,15 @@ namespace smt {
 
             int optimized_lhs(
                     int i, int startPos, int j,
-                    std::vector<int> const& left_arr,
-                    std::vector<int> const& right_arr,
+                    int_vector const& left_arr,
+                    int_vector const& right_arr,
                     std::vector<std::pair<std::string, int>> const& lhs_elements,
                     std::vector<std::pair<std::string, int>> const& rhs_elements);
 
             int optimized_rhs(
                     int i, int startPos, int j,
-                    std::vector<int> const& left_arr,
-                    std::vector<int> const& right_arr,
+                    int_vector const& left_arr,
+                    int_vector const& right_arr,
                     std::vector<std::pair<std::string, int>> const& lhs_elements,
                     std::vector<std::pair<std::string, int>> const& rhs_elements);
             /*

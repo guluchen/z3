@@ -9178,7 +9178,7 @@ namespace smt {
               (lhs_elements[0].second % p_bound.get_int64() == -1 && lhs_elements[1].first == lhs_elements[0].first)))) {
             /* create manually */
             /*9999999 10000000 vs 1 1 1 1 1 */
-            possibleCases.emplace_back(create_arrangments_manually(lhs_elements, rhs_elements));
+            possibleCases.push_back(create_arrangments_manually(lhs_elements, rhs_elements));
         } else {
             update_possible_arrangements(lhs_elements, rhs_elements,
                                          arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)],
@@ -9193,7 +9193,7 @@ namespace smt {
             std::vector<Arrangment> &possibleCases) {
         for (const auto& a : tmp)
             if (a.isPossibleArrangement(lhs_elements, rhs_elements))
-                possibleCases.emplace_back(a);
+                possibleCases.push_back(a);
     }
 
     /*
@@ -9205,22 +9205,22 @@ namespace smt {
 
         /* create manually */
         /*10000000 10000000 vs 0 0 1 1 1 */
-        std::vector<int> left_arr;
-        std::vector<int> right_arr;
+        int_vector left_arr;
+        int_vector right_arr;
         unsigned mid = rhs_elements.size() / 2;
         if (false) {
-            left_arr.emplace_back(SUMFLAT);
-            left_arr.emplace_back(SUMFLAT);
+            left_arr.push_back(SUMFLAT);
+            left_arr.push_back(SUMFLAT);
             for (unsigned i = 0; i <= mid; ++i)
-                right_arr.emplace_back(0);
+                right_arr.push_back(0);
             for (unsigned i = mid + 1; i < rhs_elements.size(); ++i)
-                right_arr.emplace_back(1);
+                right_arr.push_back(1);
         }
         else {
-            left_arr.emplace_back(EMPTYFLAT);
-            left_arr.emplace_back(SUMFLAT);
+            left_arr.push_back(EMPTYFLAT);
+            left_arr.push_back(SUMFLAT);
             for (unsigned i = 0; i < rhs_elements.size(); ++i)
-                right_arr.emplace_back(1);
+                right_arr.push_back(1);
         }
         return Arrangment(left_arr, right_arr);
     }
@@ -9229,8 +9229,8 @@ namespace smt {
      * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
      */
     expr* theory_trau::to_arith(int p,
-                                std::vector<int> const& left_arr,
-                                std::vector<int> const& right_arr,
+                                int_vector const& left_arr,
+                                int_vector const& right_arr,
                                 std::vector<std::pair<expr*, int>> const& lhs_elements,
                                 std::vector<std::pair<expr*, int>> const& rhs_elements,
                                 obj_map<expr, int> const& non_fresh_variables){
@@ -9282,8 +9282,8 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_others(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                           std::vector<int> const& left_arr,
-                                           std::vector<int> const& right_arr,
+                                           int_vector const& left_arr,
+                                           int_vector const& right_arr,
                                            std::vector<std::pair<expr*, int>> const& lhs_elements,
                                            std::vector<std::pair<expr*, int>> const& rhs_elements,
                                             obj_map<expr, int> const& non_fresh_variables){
@@ -9345,8 +9345,8 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_emptyflats(bool (&check_left)[10000], bool (&check_right)[10000],
-                                           std::vector<int> const& left_arr,
-                                           std::vector<int> const& right_arr,
+                                           int_vector const& left_arr,
+                                           int_vector const& right_arr,
                                            std::vector<std::pair<expr*, int>> const& lhs_elements,
                                            std::vector<std::pair<expr*, int>> const& rhs_elements){
         
@@ -9404,8 +9404,8 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_right(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                     std::vector<int> const& left_arr,
-                                     std::vector<int> const& right_arr,
+                                     int_vector const& left_arr,
+                                     int_vector const& right_arr,
                                      std::vector<std::pair<expr*, int>> const& lhs_elements,
                                      std::vector<std::pair<expr*, int>> const& rhs_elements,
                                       obj_map<expr, int> const& non_fresh_variables){
@@ -9423,7 +9423,7 @@ namespace smt {
                         if (left_arr[j] == (int)i) {
                             if (startPos == -1)
                                 startPos = (int)j;
-                            elements.emplace_back(lhs_elements[j]);
+                            elements.push_back(lhs_elements[j]);
                             check_left[j] = true;
                         }
                         else if (startPos >= 0)
@@ -9458,14 +9458,14 @@ namespace smt {
                             return nullptr; // duplicate case
                             check_right[i + 1] = true;
                             check_left[j + 1] = true;
-                            elements.emplace_back(lhs_elements[j + 1]);
+                            elements.push_back(lhs_elements[j + 1]);
                             break;
                         case RIGHT_SUM:
                             return nullptr; // duplicate case
                             check_right[i + 1] = true;
                             for (unsigned k = j + 1; k < left_arr.size(); ++k)
                                 if (left_arr[k] == (int)i + 1) {
-                                    elements.emplace_back(lhs_elements[k]);
+                                    elements.push_back(lhs_elements[k]);
                                     check_left[k] = true;
                                 }
                             break;
@@ -9490,8 +9490,8 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_left(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                     std::vector<int> const& left_arr,
-                                     std::vector<int> const& right_arr,
+                                     int_vector const& left_arr,
+                                     int_vector const& right_arr,
                                      std::vector<std::pair<expr*, int>> const& lhs_elements,
                                      std::vector<std::pair<expr*, int>> const& rhs_elements,
                                      obj_map<expr, int> const& non_fresh_variables){
@@ -9509,7 +9509,7 @@ namespace smt {
                         if (right_arr[j] == (int)i) {
                             if (startPos == -1)
                                 startPos = (int)j;
-                            elements.emplace_back(rhs_elements[j]);
+                            elements.push_back(rhs_elements[j]);
                             check_right[j] = true;
                         }
                         else if (startPos >= 0)
@@ -9547,7 +9547,7 @@ namespace smt {
                             return nullptr; // duplicate case
                             check_left[i + 1] = true;
                             check_right[j + 1] = true;
-                            elements.emplace_back(rhs_elements[j + 1]);
+                            elements.push_back(rhs_elements[j + 1]);
                             STRACE("str", tout << __LINE__ <<  "  RIGHT_EQUAL: elements size: " << elements.size() << std::endl;);
                             break;
                         case RIGHT_SUM:
@@ -9555,7 +9555,7 @@ namespace smt {
                             check_left[i + 1] = true;
                             for (unsigned k = j + 1; k < right_arr.size(); ++k)
                                 if (right_arr[k] == (int)i + 1) {
-                                    elements.emplace_back(rhs_elements[k]);
+                                    elements.push_back(rhs_elements[k]);
                                     check_right[k] = true;
                                 }
                                 else
@@ -9664,11 +9664,11 @@ namespace smt {
         if (non_fresh_variables.contains(b.first)){
             std::vector<std::pair<expr*, int>> elements;
             if (optimizing) {
-                elements.emplace_back(std::make_pair(a.first, -1));
-                elements.emplace_back(std::make_pair(a.first, -2));
+                elements.push_back(std::make_pair(a.first, -1));
+                elements.push_back(std::make_pair(a.first, -2));
             }
             else
-                elements.emplace_back(a);
+                elements.push_back(a);
             result.push_back(unroll_non_fresh_variable(b, elements, non_fresh_variables, optimizing));
         }
     }
@@ -10167,7 +10167,7 @@ namespace smt {
          * 3: have both
          */
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-        std::vector<std::vector<int>> all_possible_splits;
+        std::vector<int_vector> all_possible_splits;
         expr_ref_vector strSplits(m);
         expr* reg = nullptr;
         switch (splitType) {
@@ -10314,7 +10314,7 @@ namespace smt {
     expr* theory_trau::gen_constraint_non_fresh_var_const(
             std::pair<expr *, int> a, /* const || regex */
             std::vector<std::pair<expr *, int> > const& elements, /* const + non_fresh_ var */
-            std::vector<int> const& split,
+            int_vector const& split,
             obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
@@ -10587,7 +10587,7 @@ namespace smt {
 					arrayLhs.c_str(),
 					prefix_lhs.c_str(),
 					content.length());
-			resultParts.emplace_back(strTmp);
+			resultParts.push_back(strTmp);
 #else
             if (!unrollMode){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: content : " << content << std::endl;);
@@ -10644,7 +10644,7 @@ namespace smt {
     expr_ref_vector theory_trau::gen_constraint_without_non_fresh_vars(
             std::pair<expr *, int> a, /* const || regex */
             std::vector<std::pair<expr *, int> > const& elements, /* no non_fresh_ var */
-            std::vector<int> const& split,
+            int_vector const& split,
             bool optimizing){
         STRACE("str", tout << __LINE__ <<  " const|regex = const + ..." << std::endl;);
         
@@ -11933,13 +11933,13 @@ namespace smt {
 	 * Input: constA and a number of flats
 	 * Output: all possible ways to split constA
 	 */
-    std::vector<std::vector<int> > theory_trau::collect_splits(
+    std::vector<int_vector > theory_trau::collect_splits(
             std::pair<expr*, int> lhs,
             std::vector<std::pair<expr*, int> > const& elements,
             bool optimizing){
 
         /* use alias instead of elements */
-        std::vector<std::vector<int> > allPossibleSplits;
+        std::vector<int_vector > allPossibleSplits;
         SASSERT(lhs.second < 0);
 
         zstring value;
@@ -11953,27 +11953,27 @@ namespace smt {
             }
             return {};
             NOT_IMPLEMENTED_YET();
-//            std::vector<int> curr;
+//            int_vector curr;
 //            zstring regexContent = parse_regex_content(lhs.first);
 //            collectAllPossibleSplits_regex(0, regexContent, 10, alias, curr, allPossibleSplits);
         }
         else if (lhs.second % p_bound.get_int64() == 0) /* tail */ {
             if (optimizing){
-                std::vector<int> curr;
+                int_vector curr;
                 collect_const_splits(0, value, 10, elements, curr, allPossibleSplits);
             }
             else for (unsigned i = 0; i <= value.length(); ++i) {
-                    std::vector<int> curr;
+                    int_vector curr;
                     collect_const_splits(0, value.extract(i, value.length() - i), 10, elements, curr, allPossibleSplits);
                 }
         }
         else if (lhs.second % p_bound.get_int64() == -1) /* head */ {
             if (p_bound.get_int64() == 1 || optimizing) {
-                std::vector<int> curr;
+                int_vector curr;
                 collect_const_splits(0, value, 10, elements, curr, allPossibleSplits);
             }
             else for (unsigned i = 0; i <= value.length(); ++i) {
-                    std::vector<int> curr;
+                    int_vector curr;
 
                     collect_const_splits(0, value.extract(0, i), 10, elements, curr, allPossibleSplits);
 
@@ -11999,14 +11999,14 @@ namespace smt {
 //            std::string str, /* regex */
 //            int pMax,
 //            std::vector<std::pair<std::string, int> > elements,
-//            std::vector<int> currentSplit,
-//            std::vector<std::vector<int> > &allPossibleSplits) {
+//            int_vector currentSplit,
+//            std::vector<int_vector > &allPossibleSplits) {
 //
 //        /* reach end */
 //        if (currentSplit.size() == elements.size() &&
 //            (pos == 0 || pos == MINUSZERO)) {
 //
-//            allPossibleSplits.emplace_back(currentSplit);
+//            allPossibleSplits.push_back(currentSplit);
 //            return;
 //        }
 //        else if (currentSplit.size() >= elements.size()) {
@@ -12020,7 +12020,7 @@ namespace smt {
 //        if (elements[currentSplit.size()].second == -1 && p_bound.get_int64() == 1) {
 //            /* compare text, check whether the string can start from the location pos in text */
 //            if (const_in_regex_at_pos(str, elements[currentSplit.size()].first, pos)) {
-//                currentSplit.emplace_back(elements[currentSplit.size()].first.length());
+//                currentSplit.push_back(elements[currentSplit.size()].first.length());
 //                collectAllPossibleSplits_regex((pos + elements[currentSplit.size() - 1].first.length()) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                currentSplit.pop_back();
 //            }
@@ -12034,7 +12034,7 @@ namespace smt {
 //            assert (elements[currentSplit.size() - 1].second - 1 == elements[currentSplit.size()].second);
 //            int length = elements[currentSplit.size()].first.length() - currentSplit[currentSplit.size() - 1]; /* this part gets all const string remaining */
 //
-//            currentSplit.emplace_back(length);
+//            currentSplit.push_back(length);
 //            collectAllPossibleSplits_regex((pos + length) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //            currentSplit.pop_back();
 //        }
@@ -12044,9 +12044,9 @@ namespace smt {
 //                 elements[currentSplit.size()].second > REGEX_CODE &&
 //                 currentSplit.size() == 0) /* tail, first */ {
 //            /* find all possible start points */
-//            std::vector<int> tail = tail_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
+//            int_vector tail = tail_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
 //            for (unsigned i = 0 ; i < tail.size(); ++i) {
-//                currentSplit.emplace_back(tail[i]);
+//                currentSplit.push_back(tail[i]);
 //                collectAllPossibleSplits_regex((pos + tail[i]) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                currentSplit.pop_back();
 //            }
@@ -12058,9 +12058,9 @@ namespace smt {
 //                 currentSplit.size() + 1 == elements.size() &&
 //                 p_bound.get_int64() == 2) /* head, the last element */ {
 //            /* find all possible start points */
-//            std::vector<int> head = head_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
+//            int_vector head = head_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
 //            for (unsigned i = 0 ; i < head.size(); ++i) {
-//                currentSplit.emplace_back(head[i]);
+//                currentSplit.push_back(head[i]);
 //                collectAllPossibleSplits_regex((pos + head[i]) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                currentSplit.pop_back();
 //            }
@@ -12080,8 +12080,8 @@ namespace smt {
 //            if (elements[currentSplit.size() + 1].second == elements[currentSplit.size()].second - 1){
 //                if (canProcess) {
 //                    for (unsigned i = 1 ; i <= elements[currentSplit.size()].first.length(); ++i) { /* cannot be empty */
-//                        currentSplit.emplace_back(i);
-//                        currentSplit.emplace_back(elements[currentSplit.size()].first.length() - i);
+//                        currentSplit.push_back(i);
+//                        currentSplit.push_back(elements[currentSplit.size()].first.length() - i);
 //                        collectAllPossibleSplits_regex((pos + elements[currentSplit.size()].first.length()) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                        currentSplit.pop_back();
 //                        currentSplit.pop_back();
@@ -12092,7 +12092,7 @@ namespace smt {
 //                /* this const only has 1 part */
 //                if (canProcess) {
 //                    for (unsigned i = 1 ; i <= elements[currentSplit.size()].first.length(); ++i) { /* cannot be empty */
-//                        currentSplit.emplace_back(i);
+//                        currentSplit.push_back(i);
 //                        collectAllPossibleSplits_regex((pos + i) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                        currentSplit.pop_back();
 //                    }
@@ -12110,7 +12110,7 @@ namespace smt {
 //                for (const auto& s : components)
 //                    contentLength = std::min(contentLength, (int)s.length());
 //            }
-//            std::vector<int> regexPos = regex_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
+//            int_vector regexPos = regex_in_regex_at_pos(str, elements[currentSplit.size()].first, pos);
 //            /* loop ? */
 //            bool loop = false;
 //            if (regexPos.size() > 0 &&
@@ -12120,7 +12120,7 @@ namespace smt {
 //            __debugPrint(logFile, "%d loop = %d, regexPos size = %ld, contentLength = %d\n", __LINE__, loop ? 1 : 0, regexPos.size(), contentLength);
 //
 //            if (regexPos.size() == 0) {
-//                currentSplit.emplace_back(0);
+//                currentSplit.push_back(0);
 //                collectAllPossibleSplits_regex(pos, str, pMax, elements, currentSplit, allPossibleSplits);
 //                currentSplit.pop_back();
 //            }
@@ -12130,16 +12130,16 @@ namespace smt {
 //                        /* because of loop, do not care about 0 iteration */
 //                        int tmp = (contentLength * regexPos[i]) % regexLen;
 //                        if (tmp == 0)
-//                            currentSplit.emplace_back(MINUSZERO);
+//                            currentSplit.push_back(MINUSZERO);
 //                        else
-//                            currentSplit.emplace_back(-tmp);
+//                            currentSplit.push_back(-tmp);
 //                        collectAllPossibleSplits_regex((pos + contentLength * regexPos[i]) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                        currentSplit.pop_back();
 //                    }
 //                else
 //                    for (unsigned i = 0 ; i < regexPos.size(); ++i) { /* assign value >= 0 */
 //                        int tmp = (pos + contentLength * regexPos[i]) % regexLen;
-//                        currentSplit.emplace_back(contentLength * regexPos[i]);
+//                        currentSplit.push_back(contentLength * regexPos[i]);
 //                        collectAllPossibleSplits_regex(tmp, str, pMax, elements, currentSplit, allPossibleSplits);
 //                        currentSplit.pop_back();
 //                    }
@@ -12150,9 +12150,9 @@ namespace smt {
 //            for (unsigned i = 0; i < regexLen; ++i) { /* assign value < 0 because it can iterate many times */
 //                int length = i;
 //                if (length == 0)
-//                    currentSplit.emplace_back(MINUSZERO);
+//                    currentSplit.push_back(MINUSZERO);
 //                else
-//                    currentSplit.emplace_back(- length);
+//                    currentSplit.push_back(- length);
 //                collectAllPossibleSplits_regex((pos + length) % regexLen, str, pMax, elements, currentSplit, allPossibleSplits);
 //                currentSplit.pop_back();
 //            }
@@ -12302,15 +12302,15 @@ namespace smt {
             zstring str, /* const */
             int pMax,
             std::vector<std::pair<expr*, int> > const& elements,
-            std::vector<int> currentSplit,
-            std::vector<std::vector<int> > &allPossibleSplits
+            int_vector currentSplit,
+            std::vector<int_vector > &allPossibleSplits
     ) {
 
         /* reach end */
         if (currentSplit.size() == elements.size()){
             if (pos == (int)str.length() &&
                 feasibleSplit_const(str, elements, currentSplit, p_bound.get_int64())) {
-                allPossibleSplits.emplace_back(currentSplit);
+                allPossibleSplits.push_back(currentSplit);
             }
             else {
             }
@@ -12326,7 +12326,7 @@ namespace smt {
                 zstring constValue = str.extract(pos, value.length());
 
                 if (constValue == value ) {
-                    currentSplit.emplace_back(value.length());
+                    currentSplit.push_back(value.length());
                     collect_const_splits(pos + value.length(), str, pMax, elements, currentSplit, allPossibleSplits);
                     currentSplit.pop_back();
                 }
@@ -12349,12 +12349,12 @@ namespace smt {
                         if (values.size() > 1) {
                             STRACE("str", tout << __LINE__ << " passed value: " << value << std::endl;);
                         }
-                        currentSplit.emplace_back(v.length());
+                        currentSplit.push_back(v.length());
                         collect_const_splits(pos + v.length(), str, pMax, elements, currentSplit, allPossibleSplits);
                         currentSplit.pop_back();
 
 //                        for (int i = 0; i < std::min(7, (int)v.length()); ++i) {
-//                            currentSplit.emplace_back(i);
+//                            currentSplit.push_back(i);
 //                            collect_const_splits(pos + i, str, pMax, elements, currentSplit, allPossibleSplits);
 //                            currentSplit.pop_back();
 //                        }
@@ -12378,7 +12378,7 @@ namespace smt {
 
                 if (constValue == v) {
                     if (length <= textLeft) {
-                        currentSplit.emplace_back(length);
+                        currentSplit.push_back(length);
                         collect_const_splits(pos + length, str, pMax, elements, currentSplit, allPossibleSplits);
                         currentSplit.pop_back();
                     }
@@ -12406,7 +12406,7 @@ namespace smt {
                     if (tmp00 == tmp01){
                         if (v.length() > 1)
                             STRACE("str", tout << __LINE__ << " passed value: " << v << std::endl;);
-                        currentSplit.emplace_back(tmp00.length());
+                        currentSplit.push_back(tmp00.length());
                         collect_const_splits(pos + tmp00.length(), str, pMax, elements, currentSplit, allPossibleSplits);
                         currentSplit.pop_back();
                     }
@@ -12421,13 +12421,13 @@ namespace smt {
             is_internal_regex_var(elements[currentSplit.size()].first, re);
             if (currentSplit.size() + 1 == elements.size() && elements[currentSplit.size()].second >= 0) {
                 // end by vars
-                currentSplit.emplace_back(textLeft);
+                currentSplit.push_back(textLeft);
                 collect_const_splits(pos + textLeft, str, pMax, elements, currentSplit, allPossibleSplits);
                 currentSplit.pop_back();
             }
             else if (currentSplit.size() + 1 <= elements.size() && elements[currentSplit.size()].second >= 0 && elements[currentSplit.size() + 1].second >= 0) {
                 // next element is also a var
-                currentSplit.emplace_back(0);
+                currentSplit.push_back(0);
                 collect_const_splits(pos, str, pMax, elements, currentSplit, allPossibleSplits);
                 currentSplit.pop_back();
             }
@@ -12440,13 +12440,13 @@ namespace smt {
                         zstring regexValue = str.extract(pos, length);
                         bool matchRes = match_regex(re, regexValue);
                         if (matchRes) {
-                            currentSplit.emplace_back(length);
+                            currentSplit.push_back(length);
                             collect_const_splits(pos + length, str, pMax, elements, currentSplit,
                                                            allPossibleSplits);
                             currentSplit.pop_back();
                         }
                     } else {
-                        currentSplit.emplace_back(length);
+                        currentSplit.push_back(length);
                         collect_const_splits(pos + length, str, pMax, elements, currentSplit,
                                                        allPossibleSplits);
                         currentSplit.pop_back();
@@ -12596,7 +12596,7 @@ namespace smt {
     bool theory_trau::feasibleSplit_const(
             zstring str,
             std::vector<std::pair<expr*, int> > const& elements,
-            std::vector<int> const& currentSplit,
+            int_vector const& currentSplit,
             int bound){
         /* check feasible const split */
         int pos = 0;
@@ -13095,8 +13095,8 @@ namespace smt {
 
     int theory_trau::optimized_lhs(
             int i, int startPos, int j,
-            std::vector<int> const& left_arr,
-            std::vector<int> const& right_arr,
+            int_vector const& left_arr,
+            int_vector const& right_arr,
             std::vector<std::pair<std::string, int>> const& lhs_elements,
             std::vector<std::pair<std::string, int>> const& rhs_elements){
         if (left_arr[i] == SUMFLAT && right_arr[j] == i){
@@ -13172,8 +13172,8 @@ namespace smt {
 
     int theory_trau::optimized_rhs(
             int i, int startPos, int j,
-            std::vector<int> const& left_arr,
-            std::vector<int> const& right_arr,
+            int_vector const& left_arr,
+            int_vector const& right_arr,
             std::vector<std::pair<std::string, int>> const& lhs_elements,
             std::vector<std::pair<std::string, int>> const& rhs_elements){
         if (right_arr[j] == SUMFLAT && left_arr[i] == j){
@@ -13249,14 +13249,14 @@ namespace smt {
      * First base case
      */
     void theory_trau::setup_0_0_general(){
-        std::vector<int> tmpLeft;
-        std::vector<int> tmpRight;
+        int_vector tmpLeft;
+        int_vector tmpRight;
 
         if (arrangements[std::make_pair(0, 0)].size() == 0) {
             /* left = right */
-            tmpLeft.emplace_back(0);
-            tmpRight.emplace_back(0);
-            arrangements[std::make_pair(0, 0)].emplace_back(Arrangment(tmpLeft, tmpRight));
+            tmpLeft.push_back(0);
+            tmpRight.push_back(0);
+            arrangements[std::make_pair(0, 0)].push_back(Arrangment(tmpLeft, tmpRight));
         }
     }
 
@@ -13266,18 +13266,18 @@ namespace smt {
     void theory_trau::setup_0_n_general(int lhs, int rhs){
 
         /* left always has SUMFLAT */
-        std::vector<int> tmpLeft;
-        tmpLeft.emplace_back(SUMFLAT);
+        int_vector tmpLeft;
+        tmpLeft.push_back(SUMFLAT);
 
         /* right has i number of 0 */
-        std::vector<int> tmpRight;
-        tmpRight.emplace_back(0);
+        int_vector tmpRight;
+        tmpRight.push_back(0);
 
         for (int i = 1 ; i < rhs; ++i){
-            tmpRight.emplace_back(0);
+            tmpRight.push_back(0);
 
             std::vector<Arrangment> tmp04;
-            tmp04.emplace_back(Arrangment(tmpLeft, tmpRight));
+            tmp04.push_back(Arrangment(tmpLeft, tmpRight));
 
             /* update */
             /* add directly without checking */
@@ -13293,18 +13293,18 @@ namespace smt {
     void theory_trau::setup_n_0_general(int lhs, int rhs){
 
         /* right always has SUMFLAT */
-        std::vector<int> tmpRight;
-        tmpRight.emplace_back(SUMFLAT);
+        int_vector tmpRight;
+        tmpRight.push_back(SUMFLAT);
 
         /* left has i number of 0 */
-        std::vector<int> tmpLeft;
-        tmpLeft.emplace_back(0);
+        int_vector tmpLeft;
+        tmpLeft.push_back(0);
 
         for (int i = 1; i < lhs; ++i) {
-            tmpLeft.emplace_back(0);
+            tmpLeft.push_back(0);
 
             std::vector<Arrangment> tmp04;
-            tmp04.emplace_back(Arrangment(tmpLeft, tmpRight));
+            tmp04.push_back(Arrangment(tmpLeft, tmpRight));
 
             /* add directly without checking */
             if (arrangements[std::make_pair(i, 0)].size() == 0) {
@@ -13340,18 +13340,18 @@ namespace smt {
 
                     {
                         /* [i] = sum (0..j) */
-                        std::vector<int> tmpLeft;
+                        int_vector tmpLeft;
                         for (int k = 0; k < i; ++k)
-                            tmpLeft.emplace_back(EMPTYFLAT);
-                        tmpLeft.emplace_back(SUMFLAT);
+                            tmpLeft.push_back(EMPTYFLAT);
+                        tmpLeft.push_back(SUMFLAT);
 
-                        std::vector<int> tmpRight;
+                        int_vector tmpRight;
                         for (int k = 0 ; k <= j; ++k)
-                            tmpRight.emplace_back(i);
+                            tmpRight.push_back(i);
 
                         SASSERT ((int)tmpLeft.size() == i + 1);
                         SASSERT ((int)tmpRight.size() == j + 1);
-                        tmp03.emplace_back(Arrangment(tmpLeft, tmpRight));
+                        tmp03.push_back(Arrangment(tmpLeft, tmpRight));
                     }
 
                     /* [i] = sum (k..j) */
@@ -13391,18 +13391,18 @@ namespace smt {
 
                     {
                         /* sum (0..i)  = [j] */
-                        std::vector<int> tmpLeft;
+                        int_vector tmpLeft;
                         for (int k = 0 ; k <= i; ++k)
-                            tmpLeft.emplace_back(j);
+                            tmpLeft.push_back(j);
 
-                        std::vector<int> tmpRight;
+                        int_vector tmpRight;
                         for (int k = 0; k < j; ++k)
-                            tmpRight.emplace_back(EMPTYFLAT);
-                        tmpRight.emplace_back(SUMFLAT);
+                            tmpRight.push_back(EMPTYFLAT);
+                        tmpRight.push_back(SUMFLAT);
 
                         SASSERT ((int)tmpLeft.size() == i + 1);
                         SASSERT ((int)tmpRight.size() == j + 1);
-                        tmp04.emplace_back(Arrangment(tmpLeft, tmpRight));
+                        tmp04.push_back(Arrangment(tmpLeft, tmpRight));
                     }
 
                     /* fourth case: left = right */
@@ -13491,7 +13491,7 @@ namespace smt {
                     if (curr_var_pieces_counter.find(l_k) == curr_var_pieces_counter.end())
                         curr_var_pieces_counter[l_k] = 0;
                     for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
-                        elements.emplace_back(std::make_pair(list[k], -(j + 1)));
+                        elements.push_back(std::make_pair(list[k], -(j + 1)));
                     }
                     if (var_pieces_counter.find(l_k) == var_pieces_counter.end() ||
                             (curr_var_pieces_counter.find(l_k) != curr_var_pieces_counter.end() &&
@@ -13505,7 +13505,7 @@ namespace smt {
                     curr_var_pieces_counter[l_k] += p_bound.get_int64();
                 }
                 else if (content.length() == 1)
-                    elements.emplace_back(std::make_pair(list[k], -1));
+                    elements.push_back(std::make_pair(list[k], -1));
             }
             else if (u.re.is_star(l_k) || u.re.is_plus(l_k) || u.re.is_union(l_k) ||
                 (is_internal_regex_var(l_k, reg))){
@@ -13519,7 +13519,7 @@ namespace smt {
                 else {
                     reuse_internal_int_vars(l_k);
                 }
-                elements.emplace_back(l_k, REGEX_CODE - curr_var_pieces_counter[l_k]);
+                elements.push_back(std::make_pair(l_k, REGEX_CODE - curr_var_pieces_counter[l_k]));
                 curr_var_pieces_counter[l_k] += 1;
             }
             else {
@@ -13528,7 +13528,7 @@ namespace smt {
                 if (curr_var_pieces_counter.find(l_k) == curr_var_pieces_counter.end())
                     curr_var_pieces_counter[l_k] = 0;
                 for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
-                    elements.emplace_back(std::make_pair(list[k], j));
+                    elements.push_back(std::make_pair(list[k], j));
                 }
 
                 if (var_pieces_counter.find(l_k) == var_pieces_counter.end() ||
