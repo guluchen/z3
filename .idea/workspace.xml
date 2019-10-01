@@ -83,6 +83,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
@@ -100,10 +101,55 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="179">
-              <caret line="761" column="39" lean-forward="true" selection-start-line="761" selection-start-column="39" selection-end-line="761" selection-end-column="39" />
+            <state relative-caret-position="15">
+              <caret line="4220" column="8" lean-forward="true" selection-start-line="4220" selection-start-column="8" selection-end-line="4220" selection-end-column="16" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-186263">
+              <caret line="64" column="45" selection-start-line="64" selection-start-column="45" selection-end-line="64" selection-end-column="45" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="4225">
+              <caret line="707" column="9" selection-start-line="707" selection-start-column="9" selection-end-line="707" selection-end-column="9" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="941">
+              <caret line="460" column="42" selection-start-line="460" selection-start-column="42" selection-end-line="460" selection-end-column="42" />
+              <folding>
+                <element signature="e#718#958#1" />
+                <element signature="e#1425#1871#1" />
+                <element signature="e#1980#3469#1" />
+                <element signature="e#3522#4290#1" />
+                <element signature="e#4359#5431#1" />
+                <element signature="e#5691#7843#1" />
+                <element signature="e#7854#8817#1" />
+                <element signature="e#8828#8956#1" />
+                <element signature="e#8967#9338#1" />
+                <element signature="e#9349#9698#1" />
+                <element signature="e#9709#10036#1" />
+                <element signature="e#10048#10389#1" />
+                <element signature="e#10400#10664#1" />
+                <element signature="e#10675#10921#1" />
+                <element signature="e#10932#11254#1" />
+                <element signature="e#11318#11896#1" />
               </folding>
             </state>
           </provider>
@@ -114,6 +160,28 @@
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="375">
               <caret line="26" column="24" selection-start-line="26" selection-start-column="24" selection-end-line="26" selection-end-column="24" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/util/obj_hashtable.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="410">
+              <caret line="49" column="6" selection-start-line="49" selection-start-column="6" selection-end-line="49" selection-end-column="6" />
+              <folding>
+                <element signature="e#1208#1220#0" expanded="true" />
+                <element signature="e#1511#1541#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="468">
+              <caret line="940" column="21" lean-forward="true" selection-start-line="940" selection-start-column="21" selection-end-line="940" selection-end-column="21" />
             </state>
           </provider>
         </entry>
@@ -139,8 +207,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="423">
-              <caret line="2386" column="73" selection-start-line="2386" selection-start-column="60" selection-end-line="2386" selection-end-column="73" />
+            <state relative-caret-position="393">
+              <caret line="2105" column="12" selection-start-line="2105" selection-start-column="12" selection-end-line="2105" selection-end-column="12" />
               <folding>
                 <element signature="e#49#64#0" expanded="true" />
                 <element signature="e#5244#8019#1" />
@@ -149,53 +217,42 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/smt/params/theory_str_params.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="22" column="7" selection-start-line="22" selection-start-column="7" selection-end-line="22" selection-end-column="7" />
-            </state>
-          </provider>
-        </entry>
-      </file>
     </leaf>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>eqdep_map_t</find>
-      <find>obj_map_entry</find>
-      <find>obj</find>
-      <find>m_value</find>
-      <find>default_eq</find>
-      <find>core_hashtable</find>
-      <find>key_data</find>
-      <find>EqProc</find>
-      <find>obj_map</find>
-      <find>m_data</find>
-      <find>ptr_vec</find>
-      <find>obj_map&lt;expr, expr_ref_vector&gt;</find>
-      <find>childrenVector</find>
-      <find>nodes</find>
-      <find>is_long</find>
-      <find>theory_str_params</find>
-      <find>setup_trau</find>
-      <find>~t</find>
-      <find>params</find>
-      <find>create_equality</find>
-      <find>theory_trau</find>
-      <find>list</find>
-      <find>eqc_roots</find>
       <find>eqNodeSet</find>
       <find>bj_map&lt;expr, ptr_vector&lt;expr&gt;&gt; ret</find>
       <find>1089</find>
       <find>eq_combination[</find>
       <find>combination[</find>
-      <find>m_trail</find>
       <find>m_trail_stack</find>
+      <find>const&amp;</find>
+      <find>eq_combination</find>
+      <find>is_not_important</find>
+      <find>rw</find>
+      <find>rhs_elements</find>
+      <find>refine_eq_set</find>
+      <find>*it</find>
+      <find>nodes[i]</find>
+      <find>countOccurrences_from_combination</find>
+      <find>is_non_fresh</find>
+      <find>count_occurrences_from_root</find>
+      <find>occurrences</find>
+      <find>obj_hashtable&lt;</find>
+      <find>all_consts</find>
+      <find>static</find>
+      <find>m_trail</find>
+      <find>init_underapprox</find>
+      <find>obj_hashtable</find>
+      <find>set2map</find>
+      <find>non_fresh_vars</find>
+      <find>unroll_const_non_fresh_variable_str2int</find>
+      <find>var_var</find>
+      <find>obj_hash</find>
+      <find>std::set</find>
     </findStrings>
     <replaceStrings>
-      <replace>forward_propagation(</replace>
-      <replace>backward_propagation_lazy</replace>
       <replace>backward_propagation_lazy(</replace>
       <replace>get_var_value(</replace>
       <replace>get_var_flat_array(</replace>
@@ -224,6 +281,8 @@
       <replace>obj_map&lt;expr*,</replace>
       <replace>obj_map&lt;expr,</replace>
       <replace>obj_map&lt;expr, ptr_vector&lt;expr&gt;&gt;</replace>
+      <replace>n</replace>
+      <replace>nn</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -823,18 +882,18 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="2370000" />
+      <workItem from="1569868458528" duration="16924000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1823770000" />
+    <option name="totallyTimeSpent" value="1838324000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49630997" visible="true" weight="0.17633042" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49630997" visible="true" weight="0.17633042" />
       <window_info id="Structure" order="1" sideWeight="0.5032258" side_tool="true" weight="0.17275615" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -848,7 +907,7 @@
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50080776" side_tool="true" weight="0.10231023" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32981133" />
-      <window_info active="true" anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.05283019" />
+      <window_info anchor="bottom" id="CMake" order="11" sideWeight="0.49919224" visible="true" weight="0.05283019" />
       <window_info anchor="bottom" id="Messages" order="12" visible="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -1147,45 +1206,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="9946">
-          <caret line="707" column="9" selection-start-line="707" selection-start-column="9" selection-end-line="707" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="468">
-          <caret line="64" column="45" lean-forward="true" selection-start-line="64" selection-start-column="45" selection-end-line="64" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="9810">
-          <caret line="654" column="17" selection-start-line="654" selection-start-column="17" selection-end-line="654" selection-end-column="17" />
-          <folding>
-            <element signature="e#718#958#1" />
-            <element signature="e#1425#1871#1" />
-            <element signature="e#1980#3469#1" />
-            <element signature="e#3522#4290#1" />
-            <element signature="e#4359#5431#1" />
-            <element signature="e#5691#7843#1" />
-            <element signature="e#7854#8817#1" />
-            <element signature="e#8828#8956#1" />
-            <element signature="e#8967#9338#1" />
-            <element signature="e#9349#9698#1" />
-            <element signature="e#9709#10036#1" />
-            <element signature="e#10048#10389#1" />
-            <element signature="e#10400#10664#1" />
-            <element signature="e#10675#10921#1" />
-            <element signature="e#10932#11254#1" />
-            <element signature="e#11318#11896#1" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/util.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3210">
@@ -1214,24 +1234,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="402">
-          <caret line="244" column="13" selection-start-line="244" selection-start-column="13" selection-end-line="244" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/util/obj_hashtable.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="193" column="20" selection-start-line="193" selection-start-column="20" selection-end-line="193" selection-end-column="20" />
-          <folding>
-            <element signature="e#1208#1220#0" expanded="true" />
-            <element signature="e#1511#1541#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/util/ref_vector.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1178">
@@ -1249,10 +1251,67 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4225">
+          <caret line="707" column="9" selection-start-line="707" selection-start-column="9" selection-end-line="707" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_str.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-186263">
+          <caret line="64" column="45" selection-start-line="64" selection-start-column="45" selection-end-line="64" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="941">
+          <caret line="460" column="42" selection-start-line="460" selection-start-column="42" selection-end-line="460" selection-end-column="42" />
+          <folding>
+            <element signature="e#718#958#1" />
+            <element signature="e#1425#1871#1" />
+            <element signature="e#1980#3469#1" />
+            <element signature="e#3522#4290#1" />
+            <element signature="e#4359#5431#1" />
+            <element signature="e#5691#7843#1" />
+            <element signature="e#7854#8817#1" />
+            <element signature="e#8828#8956#1" />
+            <element signature="e#8967#9338#1" />
+            <element signature="e#9349#9698#1" />
+            <element signature="e#9709#10036#1" />
+            <element signature="e#10048#10389#1" />
+            <element signature="e#10400#10664#1" />
+            <element signature="e#10675#10921#1" />
+            <element signature="e#10932#11254#1" />
+            <element signature="e#11318#11896#1" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/util/obj_hashtable.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="410">
+          <caret line="49" column="6" selection-start-line="49" selection-start-column="6" selection-end-line="49" selection-end-column="6" />
+          <folding>
+            <element signature="e#1208#1220#0" expanded="true" />
+            <element signature="e#1511#1541#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="468">
+          <caret line="940" column="21" lean-forward="true" selection-start-line="940" selection-start-column="21" selection-end-line="940" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="423">
-          <caret line="2386" column="73" selection-start-line="2386" selection-start-column="60" selection-end-line="2386" selection-end-column="73" />
+        <state relative-caret-position="393">
+          <caret line="2105" column="12" selection-start-line="2105" selection-start-column="12" selection-end-line="2105" selection-end-column="12" />
           <folding>
             <element signature="e#49#64#0" expanded="true" />
             <element signature="e#5244#8019#1" />
@@ -1262,8 +1321,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="179">
-          <caret line="761" column="39" lean-forward="true" selection-start-line="761" selection-start-column="39" selection-end-line="761" selection-end-column="39" />
+        <state relative-caret-position="15">
+          <caret line="4220" column="8" lean-forward="true" selection-start-line="4220" selection-start-column="8" selection-end-line="4220" selection-end-column="16" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>

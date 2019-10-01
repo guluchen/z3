@@ -4700,7 +4700,7 @@ namespace smt {
 
     void theory_trau::refine_not_contain_vars(
             std::set<std::pair<expr *, int>> &non_fresh_vars,
-            obj_map<expr, ptr_vector<expr>> eq_combination){
+            obj_map<expr, ptr_vector<expr>> const& eq_combination){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         
         for (const auto& nn : non_fresh_vars)
@@ -4770,7 +4770,7 @@ namespace smt {
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
     }
 
-    bool theory_trau::is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> eq_combination, std::set<std::pair<expr *, int>> non_fresh_vars){
+    bool theory_trau::is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, std::set<std::pair<expr *, int>> const& non_fresh_vars){
         
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << needle << std::endl;);
         for (const auto& eq : eq_combination) {
@@ -4788,7 +4788,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> s, std::set<std::pair<expr *, int>> non_fresh_vars) {
+    bool theory_trau::appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, std::set<std::pair<expr *, int>> const& non_fresh_vars) {
         
         for (const auto& n : s) {
             if (u.str.is_concat(n)) {
@@ -4809,12 +4809,12 @@ namespace smt {
                     // check if other eq do not contain non_fresh vars && const
                     for (const auto& ex : s)
                         if (n != ex) {
-                            if (is_important(ex, non_fresh_vars) || u.str.is_string(ex))
+                            if (is_non_fresh(ex, non_fresh_vars) || u.str.is_string(ex))
                                 return false;
                             ptr_vector<expr> ex_nodes;
                             get_nodes_in_concat(ex, ex_nodes);
                             for  (const auto& ex_node: ex_nodes)
-                                if (is_important(ex_node, non_fresh_vars) ||  u.str.is_string(ex_node))
+                                if (is_non_fresh(ex_node, non_fresh_vars) ||  u.str.is_string(ex_node))
                                     return false;
                         }
 
@@ -4827,7 +4827,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::eq_in_list(expr* n, ptr_vector<expr> nodes) {
+    bool theory_trau::eq_in_list(expr* n, ptr_vector<expr> const& nodes) {
         expr_ref_vector eqs(m);
         collect_eq_nodes(n, eqs);
         for (const auto& nn : eqs)
@@ -4871,7 +4871,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::appear_in_other_eq(expr* root, zstring needle, obj_map<expr, ptr_vector<expr>> eq_combination) {
+    bool theory_trau::appear_in_other_eq(expr* root, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination) {
         for (const auto& eq : eq_combination)
             if (eq.m_key != root) {
                 for (const auto& n : eq.get_value()) {
@@ -4950,7 +4950,7 @@ namespace smt {
     /*
      * a . b = c .d && |a| = |b| --> a = b
      */
-    bool theory_trau::propagate_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::propagate_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         
 
@@ -4996,7 +4996,7 @@ namespace smt {
      * t, y, z are called related variables of x
      *
      */
-    bool theory_trau::is_notContain_consistent(obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::is_notContain_consistent(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         expr_ref_vector eqList(m), diseqList(m);
         fetch_guessed_exprs_with_scopes(eqList, diseqList);
         fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
@@ -5076,7 +5076,7 @@ namespace smt {
      * z is empty
      *
      */
-    bool theory_trau::parikh_image_check(obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::parikh_image_check(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         
         expr_ref_vector ret(m);
         std::map<zstring, int> maxImages;
@@ -5274,9 +5274,9 @@ namespace smt {
                 img[s[i]] = img[s[i]] + 1;
     }
 
-    bool theory_trau::eq_parikh(std::map<char, int> lhs, std::map<char, int> rhs){
+    bool theory_trau::eq_parikh(std::map<char, int> const& lhs, std::map<char, int> const& rhs){
         for (const auto& ch : lhs)
-            if (rhs[ch.first] != ch.second)
+            if (rhs.at(ch.first) != ch.second)
                 return false;
         return true;
     }
@@ -5490,7 +5490,7 @@ namespace smt {
      * Note 2: some new equalties because of length information, e.g. x . y = "abc" && y.len = 2 implies y = "bc"
      * In such cases, we are still the same "core" branch.
      */
-    bool theory_trau::at_same_eq_state(UnderApproxState state, expr_ref_vector &diff) {
+    bool theory_trau::at_same_eq_state(UnderApproxState const& state, expr_ref_vector &diff) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector guessedExprs(m),  guessedDisEqExprs(m);
@@ -5536,7 +5536,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::at_same_diseq_state(str::state curr, str::state prev) {
+    bool theory_trau::at_same_diseq_state(str::state const& curr, str::state const& prev) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
 
         // compare all diseq
@@ -5557,7 +5557,7 @@ namespace smt {
      * for all constraints over a variable, if they start/end with const strings,
      *      const start/end strings should be consistent
      */
-    bool theory_trau::review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         for (const auto& c : eq_combination) {
             std::vector<zstring> starts;
             std::vector<zstring> ends;
@@ -5664,7 +5664,7 @@ namespace smt {
         return charDomain;
     }
 
-    std::set<char> theory_trau::collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> eq_combination){
+    std::set<char> theory_trau::collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         std::set<char> charDomain;
         for (const auto& v : eq_combination) {
             // skip if it is a simple case
@@ -5728,7 +5728,7 @@ namespace smt {
      * x = y . replace1 . "A" . ...
      * --> indexOf1 = replace1
      */
-    bool theory_trau::handle_contain_family(obj_map<expr, ptr_vector<expr>> eq_combination) {
+    bool theory_trau::handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination) {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector ands(m);
@@ -5823,8 +5823,7 @@ namespace smt {
     /*
      * charAt1 = charAt1 at beginning because they have the same len = 1
      */
-    bool theory_trau::handle_charAt_family(
-            obj_map<expr, ptr_vector<expr>> eq_combination) {
+    bool theory_trau::handle_charAt_family(obj_map<expr, ptr_vector<expr>> const& eq_combination) {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector ands(m);
@@ -6478,9 +6477,9 @@ namespace smt {
     }
 
     bool theory_trau::underapproximation(
-            obj_map<expr, ptr_vector<expr>> eq_combination,
-            std::set<std::pair<expr*, int>> non_fresh_vars,
-            expr_ref_vector diff) {
+            obj_map<expr, ptr_vector<expr>> const& eq_combination,
+            std::set<std::pair<expr*, int>> const& non_fresh_vars,
+            expr_ref_vector const& diff) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
         
         print_eq_combination(eq_combination, __LINE__);
@@ -6500,11 +6499,11 @@ namespace smt {
             uState.str_int_bound = str_int_bound;
         }
 
-        std::map<expr*, int> non_fresh_map = set2map(non_fresh_vars);
+        obj_map<expr, int> non_fresh_map = set2map(non_fresh_vars);
 
         init_underapprox(eq_combination, non_fresh_map);
         for (const auto& n : non_fresh_map)
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.first, m) << " " << n.second << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
 
         handle_diseq_notcontain();
 
@@ -6515,7 +6514,7 @@ namespace smt {
         return axiomAdded;
     }
 
-    bool theory_trau::assert_state(expr_ref_vector guessed_eqs, expr_ref_vector guessed_diseqs, str::state root){
+    bool theory_trau::assert_state(expr_ref_vector const& guessed_eqs, expr_ref_vector const& guessed_diseqs, str::state const& root){
         expr_ref_vector corePrev(m);
         fetch_guessed_exprs_from_cache(uState, corePrev);
 
@@ -7008,14 +7007,14 @@ namespace smt {
         return rewrite_implication(premise, createAndOP(ands));
     }
 
-    std::map<expr*, int> theory_trau::set2map(std::set<std::pair<expr*, int>> s){
-        std::map<expr*, int> ret;
+    obj_map<expr, int> theory_trau::set2map(std::set<std::pair<expr*, int>> const& s){
+        obj_map<expr, int> ret;
         for (const auto& p : s)
-            ret[p.first] = p.second;
+            ret.insert(p.first, p.second);
         return ret;
     }
 
-    void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination, int line){
+    void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
             if (line > 0) {
@@ -7038,7 +7037,7 @@ namespace smt {
         }
     }
 
-    bool theory_trau::is_equal(UnderApproxState preState, UnderApproxState currState){
+    bool theory_trau::is_equal(UnderApproxState const& preState, UnderApproxState const& currState){
         return false;
 
         obj_map<expr, ptr_vector<expr>> _eq_combination = preState.eq_combination;
@@ -7118,7 +7117,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::are_some_empty_vars_omitted(expr* n, ptr_vector<expr> v){
+    bool theory_trau::are_some_empty_vars_omitted(expr* n, ptr_vector<expr> const& v){
         
         ptr_vector <expr> elements;
         get_nodes_in_concat(n, elements);
@@ -7154,7 +7153,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_equal(expr_ref_vector corePrev, expr_ref_vector coreCurr){
+    bool theory_trau::is_equal(expr_ref_vector const& corePrev, expr_ref_vector const& coreCurr){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
 
         if (coreCurr.size() != corePrev.size())
@@ -7279,7 +7278,7 @@ namespace smt {
         }
     }
 
-    bool theory_trau::review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -7311,7 +7310,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination){
         
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
@@ -7373,7 +7372,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> eq_combination){
+    bool theory_trau::review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> const& eq_combination){
 
         if (!review_disequality_trivial(lhs, rhs)){
             return false;
@@ -7681,18 +7680,18 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::static_analysis(obj_map<expr, ptr_vector<expr>> eq_combination){
+    void theory_trau::static_analysis(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
-        
-        std::set<expr*> all_str_exprs;
-        std::set<expr*> all_consts;
+
+        obj_hashtable<expr> all_str_exprs;
+        obj_hashtable<expr> all_consts;
         for (const auto& v : eq_combination){
             expr_ref_vector eqs(m);
             collect_eq_nodes(v.m_key, eqs);
             for (unsigned i = 0; i < eqs.size(); ++i)
                 all_str_exprs.insert(eqs[i].get());
 
-            if (u.str.is_string(v.m_key))
+            if (u.str.is_string(v.m_key) && v.m_value.size() > 0)
                 all_consts.insert(v.m_key);
 
             for (const auto& eq : v.get_value()){
@@ -7739,17 +7738,16 @@ namespace smt {
         // count non internal var
         int cnt = 5;
         for (const auto& v: all_str_exprs){
-            if (!is_internal_var(v))
+            if (!is_internal_var(v) && !u.str.is_string(v))
                 cnt++;
         }
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << maxInt << " " << cnt << " " << sumConst << std::endl;);
         connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, maxInt));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
     void theory_trau::init_underapprox(
-            obj_map<expr, ptr_vector<expr>> eq_combination,
-            std::map<expr*, int> &non_fresh_vars){
+            obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars){
         static_analysis(eq_combination);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         
@@ -7809,7 +7807,7 @@ namespace smt {
         }
 
         std::map<expr*, int> str_int_vars;
-        collect_important_vars_str_int(str_int_vars);
+        collect_non_fresh_vars_str_int(str_int_vars);
         setup_flats();
         for (const auto& we: str_int_vars) {
             all_str_exprs.push_back(we.first);
@@ -7830,7 +7828,7 @@ namespace smt {
 
     void theory_trau::mk_and_setup_arr(
             expr* v,
-            std::map<expr*, int> &non_fresh_vars){
+            obj_map<expr, int> &non_fresh_vars){
         
         context & ctx = get_context();
 
@@ -7867,7 +7865,7 @@ namespace smt {
             }
         }
 
-        if ((!u.str.is_concat(v) || non_fresh_vars.find(v) != non_fresh_vars.end()) && arrVar == nullptr) {
+        if ((!u.str.is_concat(v) || non_fresh_vars.contains(v)) && arrVar == nullptr) {
             STRACE("str", tout << __LINE__ << " var: " << mk_pp(v, m) << std::endl;);
             std::string flatArr = gen_flat_arr(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
             expr_ref v1(m);
@@ -8111,7 +8109,7 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         std::map<expr*, int> str_int_vars;
-        collect_important_vars_str_int(str_int_vars);
+        collect_non_fresh_vars_str_int(str_int_vars);
         for (const auto& we: str_int_vars) {
             all_str_exprs.push_back(we.first);
         }
@@ -8232,7 +8230,7 @@ namespace smt {
         }
     }
 
-    char theory_trau::setup_default_char(std::set<char> includeChars, std::set<char> excludeChars){
+    char theory_trau::setup_default_char(std::set<char> const& includeChars, std::set<char> const& excludeChars){
         char defaultChar = 'a';
 
         for (const auto& ch : includeChars)
@@ -8265,8 +8263,7 @@ namespace smt {
         return includeCharSet;
     }
 
-    void theory_trau::create_appearance_map(
-            obj_map<expr, ptr_vector<expr>> eq_combination){
+    void theory_trau::create_appearance_map(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         appearance_map.clear();
         for (const auto& var : eq_combination){
             for (const auto& eq : var.get_value()) {
@@ -8282,8 +8279,8 @@ namespace smt {
      *
      */
     void theory_trau::init_connecting_size(
-            obj_map<expr, ptr_vector<expr>> eq_combination,
-            std::map<expr*, int> &non_fresh_vars, bool prep){
+            obj_map<expr, ptr_vector<expr>> const& eq_combination,
+            obj_map<expr, int> &non_fresh_vars, bool prep){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         int oldConnectingSize = connectingSize;
         static_analysis(eq_combination);
@@ -8292,22 +8289,22 @@ namespace smt {
         }
         for (auto &v : non_fresh_vars) {
             rational len;
-            if (v.second == -1 || v.second == oldConnectingSize) {
-                if (get_len_value(v.first, len)) {
-                    if (get_assign_lvl(mk_strlen(v.first), mk_int(len)) == 0)
-                        v.second = len.get_int64();
+            if (v.m_value == -1 || v.m_value == oldConnectingSize) {
+                if (get_len_value(v.m_key, len)) {
+                    if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0)
+                        v.m_value = len.get_int64();
                     else
-                        v.second = connectingSize;
+                        v.m_value = connectingSize;
                 }
                 else
-                    v.second = connectingSize;
+                    v.m_value = connectingSize;
             }
         }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
-    bool theory_trau::convert_equalities(obj_map<expr, ptr_vector<expr>> eq_combination,
-                                       std::map<expr*, int> non_fresh_vars,
+    bool theory_trau::convert_equalities(obj_map<expr, ptr_vector<expr>> const& eq_combination,
+                                         obj_map<expr, int> & non_fresh_vars,
                                        expr* premise){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         
@@ -8316,7 +8313,7 @@ namespace smt {
         generated_equalities.clear();
 
         for (const auto& n : non_fresh_vars)
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.first, m) << " " << n.second << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
 
         expr_ref_vector asserted_constraints(m);
         bool axiomAdded = false;
@@ -8363,11 +8360,11 @@ namespace smt {
         return axiomAdded;
     }
 
-    bool theory_trau::is_long_equality(ptr_vector<expr> eqs){
+    bool theory_trau::is_long_equality(ptr_vector<expr> const& eqs){
         return findMaxP(eqs) > 6;
     }
 
-    expr* theory_trau::convert_other_equalities(ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars){
+    expr* theory_trau::convert_other_equalities(ptr_vector<expr> const& eqs, obj_map<expr, int> const& non_fresh_vars){
         
         STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
         expr_ref_vector ands(m);
@@ -8399,13 +8396,13 @@ namespace smt {
         return createAndOP(ands);
     }
 
-    expr* theory_trau::convert_long_equalities(expr* var, ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars){
+    expr* theory_trau::convert_long_equalities(expr* var, ptr_vector<expr> const& eqs, obj_map<expr, int> & non_fresh_vars){
         /* add an eq = flat . flat . flat, then other equalities will compare with it */
         
         expr_ref_vector ands(m);
         std::vector<std::pair<expr*, int>> lhs_elements = create_equality(var, false);
         uState.non_fresh_vars.insert(std::make_pair(var, connectingSize));
-        non_fresh_vars.insert(std::make_pair(var, connectingSize));
+        non_fresh_vars.insert(var, connectingSize);
         mk_and_setup_arr(var, non_fresh_vars);
 
         /* compare with others */
@@ -8425,7 +8422,7 @@ namespace smt {
         return createAndOP(ands);
     }
 
-    expr* theory_trau::convert_const_nonfresh_equalities(expr* var, ptr_vector<expr> eqs, std::map<expr*, int> non_fresh_vars){
+    expr* theory_trau::convert_const_nonfresh_equalities(expr* var, ptr_vector<expr> const& eqs, obj_map<expr, int> const& non_fresh_vars){
         
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
         expr_ref_vector ands(m);
@@ -8460,7 +8457,7 @@ namespace smt {
         return createAndOP(ands);
     }
 
-    void theory_trau::convert_regex_equalities(expr* regexExpr, expr* var, std::map<expr*, int> non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded){
+    void theory_trau::convert_regex_equalities(expr* regexExpr, expr* var, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded){
 
         expr_ref_vector regex_elements = combine_const_str(parse_regex_components(remove_star_in_star(regexExpr)));
         expr_ref_vector ors(m);
@@ -8573,7 +8570,7 @@ namespace smt {
         implied_facts.push_back(tmp.get());
     }
 
-    void theory_trau::negate_context(expr_ref_vector v){
+    void theory_trau::negate_context(expr_ref_vector const& v){
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
@@ -8660,7 +8657,7 @@ namespace smt {
     /*
      * a b c (abc)* --> abc (abc)*
      */
-    expr_ref_vector theory_trau::combine_const_str(expr_ref_vector v){
+    expr_ref_vector theory_trau::combine_const_str(expr_ref_vector const& v){
         return v;
         expr_ref_vector result(m);
         for (const auto& e : v){
@@ -9130,24 +9127,30 @@ namespace smt {
      * convert lhs == rhs to SMT formula
      */
     expr* theory_trau::equality_to_arith(
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements,
-            std::map<expr*, int> non_fresh_variables,
+            std::vector<std::pair<expr*, int>> const& lhs_elements,
+            std::vector<std::pair<expr*, int>> const& rhs_elements,
+            obj_map<expr, int> const& non_fresh_variables,
             int p){
-        
-        th_rewriter rw(m);
-
         //swap if lhs > rhs
         if (lhs_elements.size() > rhs_elements.size()){
-            std::vector<std::pair<expr*, int>> tmpVector = lhs_elements;
-            lhs_elements = rhs_elements;
-            rhs_elements = tmpVector;
+            return equality_to_arith_ordered(rhs_elements, lhs_elements, non_fresh_variables, p);
         }
+        else
+            return equality_to_arith_ordered(lhs_elements, rhs_elements, non_fresh_variables, p);
+    }
 
+    /*
+     * convert lhs == rhs to SMT formula
+     */
+    expr* theory_trau::equality_to_arith_ordered(
+            std::vector<std::pair<expr*, int>> const& lhs_elements,
+            std::vector<std::pair<expr*, int>> const& rhs_elements,
+            obj_map<expr, int> const& non_fresh_variables,
+            int p){
         std::string rep = create_string_representation(lhs_elements, rhs_elements);
 
         if (generated_equalities.find(rep) == generated_equalities.end() &&
-                lhs_elements.size() != 0 && rhs_elements.size() != 0){
+            lhs_elements.size() != 0 && rhs_elements.size() != 0){
             expr_ref_vector cases = arrange(
                     lhs_elements,
                     rhs_elements,
@@ -9166,8 +9169,8 @@ namespace smt {
             return m.mk_true();
     }
 
-    std::string theory_trau::create_string_representation(std::vector<std::pair<expr*, int>> lhs_elements,
-                                                          std::vector<std::pair<expr*, int>> rhs_elements){
+    std::string theory_trau::create_string_representation(std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                                          std::vector<std::pair<expr*, int>> const& rhs_elements){
         std::string ret = "";
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
             ret = ret + "---" + expr2str(lhs_elements[i].first);
@@ -9187,9 +9190,9 @@ namespace smt {
      *
      */
     expr_ref_vector theory_trau::arrange(
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements,
-            std::map<expr*, int> non_fresh_variables,
+            std::vector<std::pair<expr*, int>> const& lhs_elements,
+            std::vector<std::pair<expr*, int>> const& rhs_elements,
+            obj_map<expr, int> const& non_fresh_variables,
             int p){
         /* first base case */
         
@@ -9234,14 +9237,14 @@ namespace smt {
 
     }
 
-    void theory_trau::get_arrangements(std::vector<std::pair<expr*, int>> lhs_elements,
-                                      std::vector<std::pair<expr*, int>> rhs_elements,
-                                      std::map<expr*, int> non_fresh_variables,
-                                      std::vector<Arrangment> &possibleCases) {
+    void theory_trau::get_arrangements(std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                        std::vector<std::pair<expr*, int>> const& rhs_elements,
+                                        obj_map<expr, int> const& non_fresh_variables,
+                                        std::vector<Arrangment> &possibleCases) {
         std::string firstVar = expr2str(lhs_elements[0].first);
         if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == p_bound.get_int64()) ||
             (lhs_elements.size() == 2 &&
-             ((non_fresh_variables.find(lhs_elements[0].first) != non_fresh_variables.end() && lhs_elements[1].second % p_bound.get_int64() == 1) ||
+             ((non_fresh_variables.contains(lhs_elements[0].first) && lhs_elements[1].second % p_bound.get_int64() == 1) ||
               (lhs_elements[0].second % p_bound.get_int64() == -1 && lhs_elements[1].first == lhs_elements[0].first)))) {
             /* create manually */
             /*9999999 10000000 vs 1 1 1 1 1 */
@@ -9254,21 +9257,21 @@ namespace smt {
     }
 
     void theory_trau::update_possible_arrangements(
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements,
-            std::vector<Arrangment> tmp,
+            std::vector<std::pair<expr*, int>> const& lhs_elements,
+            std::vector<std::pair<expr*, int>> const& rhs_elements,
+            std::vector<Arrangment> const& tmp,
             std::vector<Arrangment> &possibleCases) {
-        for (unsigned i = 0; i < tmp.size(); ++i)
-            if (tmp[i].isPossibleArrangement(lhs_elements, rhs_elements))
-                possibleCases.emplace_back(tmp[i]);
+        for (const auto& a : tmp)
+            if (a.isPossibleArrangement(lhs_elements, rhs_elements))
+                possibleCases.emplace_back(a);
     }
 
     /*
      *
      */
     theory_trau::Arrangment theory_trau::create_arrangments_manually(
-            std::vector<std::pair<expr*, int>> lhs_elements,
-            std::vector<std::pair<expr*, int>> rhs_elements){
+            std::vector<std::pair<expr*, int>> const& lhs_elements,
+            std::vector<std::pair<expr*, int>> const& rhs_elements){
 
         /* create manually */
         /*10000000 10000000 vs 0 0 1 1 1 */
@@ -9296,11 +9299,11 @@ namespace smt {
      * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
      */
     expr* theory_trau::to_arith(int p,
-                            std::vector<int> left_arr,
-                            std::vector<int> right_arr,
-                            std::vector<std::pair<expr*, int>> lhs_elements,
-                            std::vector<std::pair<expr*, int>> rhs_elements,
-                            std::map<expr*, int> non_fresh_variables){
+                                std::vector<int> const& left_arr,
+                                std::vector<int> const& right_arr,
+                                std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                std::vector<std::pair<expr*, int>> const& rhs_elements,
+                                obj_map<expr, int> const& non_fresh_variables){
         
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__  << std::endl;);
         expr_ref_vector result(m);
@@ -9322,7 +9325,7 @@ namespace smt {
         else
             result.push_back(rightConstraint);
 
-        expr* emptyflats = to_arith_emptyflats(check_left, check_right, p, left_arr, right_arr, lhs_elements, rhs_elements);
+        expr* emptyflats = to_arith_emptyflats(check_left, check_right, left_arr, right_arr, lhs_elements, rhs_elements);
         if (emptyflats == nullptr)
             return nullptr;
         else
@@ -9349,11 +9352,11 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_others(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                           std::vector<int> left_arr,
-                                           std::vector<int> right_arr,
-                                           std::vector<std::pair<expr*, int>> lhs_elements,
-                                           std::vector<std::pair<expr*, int>> rhs_elements,
-                                           std::map<expr*, int> non_fresh_variables){
+                                           std::vector<int> const& left_arr,
+                                           std::vector<int> const& right_arr,
+                                           std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                           std::vector<std::pair<expr*, int>> const& rhs_elements,
+                                            obj_map<expr, int> const& non_fresh_variables){
         
         expr_ref_vector result(m);
         for (unsigned i = 0 ; i < lhs_elements.size(); ++i)
@@ -9411,11 +9414,11 @@ namespace smt {
         return createAndOP(result);
     }
 
-    expr* theory_trau::to_arith_emptyflats(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                           std::vector<int> left_arr,
-                                           std::vector<int> right_arr,
-                                           std::vector<std::pair<expr*, int>> lhs_elements,
-                                           std::vector<std::pair<expr*, int>> rhs_elements){
+    expr* theory_trau::to_arith_emptyflats(bool (&check_left)[10000], bool (&check_right)[10000],
+                                           std::vector<int> const& left_arr,
+                                           std::vector<int> const& right_arr,
+                                           std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                           std::vector<std::pair<expr*, int>> const& rhs_elements){
         
         for (unsigned i = 0; i < left_arr.size(); ++i)
             if (!check_left[i]) {
@@ -9471,11 +9474,11 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_right(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                     std::vector<int> left_arr,
-                                     std::vector<int> right_arr,
-                                     std::vector<std::pair<expr*, int>> lhs_elements,
-                                     std::vector<std::pair<expr*, int>> rhs_elements,
-                                     std::map<expr*, int> non_fresh_variables){
+                                     std::vector<int> const& left_arr,
+                                     std::vector<int> const& right_arr,
+                                     std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                     std::vector<std::pair<expr*, int>> const& rhs_elements,
+                                      obj_map<expr, int> const& non_fresh_variables){
         
         expr_ref_vector result(m);
         for (unsigned i = 0; i < right_arr.size(); ++i)
@@ -9557,11 +9560,11 @@ namespace smt {
     }
 
     expr* theory_trau::to_arith_left(bool (&check_left)[10000], bool (&check_right)[10000], int p,
-                                     std::vector<int> left_arr,
-                                     std::vector<int> right_arr,
-                                     std::vector<std::pair<expr*, int>> lhs_elements,
-                                     std::vector<std::pair<expr*, int>> rhs_elements,
-                                     std::map<expr*, int> non_fresh_variables){
+                                     std::vector<int> const& left_arr,
+                                     std::vector<int> const& right_arr,
+                                     std::vector<std::pair<expr*, int>> const& lhs_elements,
+                                     std::vector<std::pair<expr*, int>> const& rhs_elements,
+                                     obj_map<expr, int> const& non_fresh_variables){
         
         expr_ref_vector result(m);
         for (unsigned i = 0; i < left_arr.size(); ++i)
@@ -9661,7 +9664,7 @@ namespace smt {
     expr* theory_trau::gen_constraint01(
             std::pair<expr *, int> a, std::pair<expr *, int> b,
             int pMax,
-            std::map<expr *, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing){
         
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
@@ -9713,11 +9716,11 @@ namespace smt {
         }
 
         else if (isConstA) {
-            gen_constraint01_const_var(a, b, pMax, non_fresh_variables, optimizing, result);
+            gen_constraint01_const_var(a, b, non_fresh_variables, optimizing, result);
         }
 
         else { /* isConstB */
-            gen_constraint01_const_var(b, a, pMax, non_fresh_variables, optimizing, result);
+            gen_constraint01_const_var(b, a, non_fresh_variables, optimizing, result);
         }
 
         return createAndOP(result);
@@ -9725,11 +9728,10 @@ namespace smt {
 
     void theory_trau::gen_constraint01_const_var(
             std::pair<expr *, int> a, std::pair<expr *, int> b,
-            int pMax,
-            std::map<expr *, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             expr_ref_vector &result){
-        if (non_fresh_variables.find(b.first) != non_fresh_variables.end()){
+        if (non_fresh_variables.contains(b.first)){
             std::vector<std::pair<expr*, int>> elements;
             if (optimizing) {
                 elements.emplace_back(std::make_pair(a.first, -1));
@@ -9942,14 +9944,13 @@ namespace smt {
     void theory_trau::gen_constraint01_var_var(
             std::pair<expr *, int> a, std::pair<expr *, int> b,
             int pMax,
-            std::map<expr *, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             expr *nameA,
             expr_ref_vector &result){
         
 
-        if (non_fresh_variables.find(b.first) != non_fresh_variables.end() &&
-            non_fresh_variables.find(a.first) != non_fresh_variables.end()){
+        if (non_fresh_variables.contains(b.first) && non_fresh_variables.contains(a.first)){
 
             if (!optimizing) {
                 STRACE("str", tout << __LINE__ <<  " generateConstraint01: non_fresh_Var " << mk_pp(a.first, m) << " == non_fresh_Var " << mk_pp(b.first, m) << std::endl;);
@@ -10005,7 +10006,7 @@ namespace smt {
 
     expr* theory_trau::gen_constraint_flat_var(
             std::pair<expr *, int> a,
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int pos,
             int pMax,
             rational bound){
@@ -10024,7 +10025,7 @@ namespace smt {
 
     expr* theory_trau::gen_constraint_flat_flat(
             std::pair<expr *, int> a,
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int pos,
             int pMax,
             rational bound,
@@ -10135,9 +10136,9 @@ namespace smt {
      */
     expr* theory_trau::gen_constraint02(
             std::pair<expr *, int> a,
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int pMax,
-            std::map<expr *, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing){
 
         
@@ -10175,9 +10176,9 @@ namespace smt {
     }
 
     bool theory_trau::gen_constraint02_const_regex(std::pair<expr *, int> a,
-                                                   std::vector<std::pair<expr *, int>> elements,
+                                                   std::vector<std::pair<expr *, int>> const& elements,
                                                    int pMax,
-                                                   std::map<expr *, int> non_fresh_variables,
+                                                   obj_map<expr, int> const& non_fresh_variables,
                                                    bool optimizing,
                                                    expr_ref_vector &result){
         
@@ -10298,8 +10299,8 @@ namespace smt {
     }
 
     bool theory_trau::generate_constraint02_var(std::pair<expr*, int> a,
-                                                 std::vector<std::pair<expr*, int>> elements,
-                                                 std::map<expr*, int> non_fresh_variables,
+                                                 std::vector<std::pair<expr*, int>> const& elements,
+                                                 obj_map<expr, int> const& non_fresh_variables,
                                                  bool optimizing,
                                                  expr_ref_vector &result){
         
@@ -10343,7 +10344,7 @@ namespace smt {
 
         }
 
-        std::string tmpstr = (non_fresh_variables.find(a.first) != non_fresh_variables.end()) ? " non_fresh_" : " not non_fresh_";
+        std::string tmpstr = (non_fresh_variables.contains(a.first)) ? " non_fresh_" : " not non_fresh_";
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << tmpstr << std::endl;);
         expr_ref addexpr(createAddOP(adds), m);
         if (optimizing)
@@ -10353,7 +10354,7 @@ namespace smt {
         /* DO NOT care about empty flats or not*/
 
         /* handle const for non_fresh_variables*/
-        if (non_fresh_variables.find(a.first) != non_fresh_variables.end()) {
+        if (non_fresh_variables.contains(a.first)) {
             expr* tmp = unroll_non_fresh_variable(
                     a, elements,
                     non_fresh_variables, optimizing);
@@ -10382,9 +10383,9 @@ namespace smt {
 	 */
     expr* theory_trau::gen_constraint_non_fresh_var_const(
             std::pair<expr *, int> a, /* const || regex */
-            std::vector<std::pair<expr *, int> > elements, /* const + non_fresh_ var */
-            std::vector<int> split,
-            std::map<expr *, int> non_fresh_variables,
+            std::vector<std::pair<expr *, int> > const& elements, /* const + non_fresh_ var */
+            std::vector<int> const& split,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
         
@@ -10554,11 +10555,11 @@ namespace smt {
 	 */
     expr* theory_trau::lengthConstraint_tonon_fresh_VarConstraint(
             std::pair<expr*, int> a, /* const || regex */
-            std::vector<std::pair<expr*, int> > elements,
-            expr_ref_vector subElements,
+            std::vector<std::pair<expr*, int> > const& elements,
+            expr_ref_vector const& subElements,
             int currentPos,
             int subLength,
-            std::map<expr*, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
         
@@ -10566,8 +10567,7 @@ namespace smt {
         expr_ref_vector constraints(m);
         expr* reg = nullptr;
         for (int i = currentPos - subElements.size() + 1; i <= currentPos; ++i) {
-            if (non_fresh_variables.find(elements[i].first) != non_fresh_variables.end() ||
-                is_internal_regex_var(elements[i].first, reg)) {
+            if (non_fresh_variables.contains(elements[i].first) || is_internal_regex_var(elements[i].first, reg)) {
                 constraints.push_back(positional_non_fresh_var_in_array(
                         a, /* const or regex */
                         elements, /* have non_fresh_ var */
@@ -10587,10 +10587,10 @@ namespace smt {
 	 */
     expr_ref theory_trau::positional_non_fresh_var_in_array(
             std::pair<expr *, int> a, /* const or regex */
-            std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var */
+            std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var */
             int var_pos,
             int var_length,
-            std::map<expr *, int> non_fresh_variables,
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
         bool unrollMode = pMax == PMAX;
@@ -10713,8 +10713,8 @@ namespace smt {
 	 */
     expr_ref_vector theory_trau::gen_constraint_without_non_fresh_vars(
             std::pair<expr *, int> a, /* const || regex */
-            std::vector<std::pair<expr *, int> > elements, /* no non_fresh_ var */
-            std::vector<int> split,
+            std::vector<std::pair<expr *, int> > const& elements, /* no non_fresh_ var */
+            std::vector<int> const& split,
             bool optimizing){
         STRACE("str", tout << __LINE__ <<  " const|regex = const + ..." << std::endl;);
         
@@ -10883,8 +10883,8 @@ namespace smt {
 	 */
     expr* theory_trau::unroll_non_fresh_variable(
             std::pair<expr*, int> a, /* non_fresh_ variable */
-            std::vector<std::pair<expr*, int> > elements, /* contain const */
-            std::map<expr*, int> non_fresh_variables,
+            std::vector<std::pair<expr*, int> > const& elements, /* contain const */
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
         
@@ -10944,8 +10944,7 @@ namespace smt {
                                     pMax));
                 }
             }
-            else if (elements[i].second >= 0 &&
-                     non_fresh_variables.find(elements[i].first) != non_fresh_variables.end()){
+            else if (elements[i].second >= 0 && non_fresh_variables.contains(elements[i].first)){
                 if (elements[i].second % p_bound.get_int64() == 1 && i > 0)
                     continue;
                 int bound = std::max(non_fresh_variables[elements[i].first], non_fresh_variables[a.first]);
@@ -10973,7 +10972,7 @@ namespace smt {
 	 */
     expr_ref theory_trau::handle_positional_subconst_in_array(
             std::pair<expr *, int> a, // non_fresh_ var
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int constPos,
             bool optimizing,
             int pMax) {
@@ -11099,7 +11098,7 @@ namespace smt {
 	 */
     expr* theory_trau::handle_non_fresh_non_fresh_array(
             std::pair<expr *, int> a,
-            std::vector<std::pair<expr *, int>> elementNames,
+            std::vector<std::pair<expr *, int>> const& elementNames,
             int pos,
             int bound,
             bool optimizing,
@@ -11227,7 +11226,7 @@ namespace smt {
 	 */
     expr_ref theory_trau::handle_positional_regex_in_array(
             std::pair<expr *, int> a, // non_fresh_ var
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int regexPos,
             bool optimizing,
             int pMax,
@@ -11358,7 +11357,7 @@ namespace smt {
 	 */
     expr_ref theory_trau::handle_positional_const_in_array(
             std::pair<expr *, int> a,
-            std::vector<std::pair<expr *, int>> elements,
+            std::vector<std::pair<expr *, int>> const& elements,
             int constPos,
             zstring value, /* value of regex */
             int start, int finish,
@@ -11437,8 +11436,8 @@ namespace smt {
 	 */
     expr* theory_trau::gen_constraint_non_fresh_var(
             std::pair<expr *, int> a, /* const or regex */
-            std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
-            std::map<expr *, int> non_fresh_variables,
+            std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+            obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             int pMax){
         
@@ -11458,7 +11457,7 @@ namespace smt {
             if (elements[i].second >= 0) /* not const */ {
 
                 /* non_fresh_ variable */
-                if (non_fresh_variables.find(elements[i].first) != non_fresh_variables.end()) {
+                if (non_fresh_variables.contains(elements[i].first)) {
                     STRACE("str", tout << __LINE__ << " const|regex = non_fresh_var + ..." << std::endl;);
                     /* sublen = part_1 + part2 + .. */
                     int partCnt = 1;
@@ -11526,8 +11525,8 @@ namespace smt {
     }
 
     expr* theory_trau::unroll_regex_non_fresh_variable(
-            std::pair<expr *, int> a, /* const or regex */
-            std::pair<expr *, int> b,
+            std::pair<expr *, int> const& a, /* const or regex */
+            std::pair<expr *, int> const& b,
             int pMax,
             int part_cnt,
             int max_len,
@@ -11563,7 +11562,7 @@ namespace smt {
 
     expr* theory_trau::unroll_var_non_fresh_variable(
             std::pair<expr *, int> a, /* const or regex */
-            std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
+            std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
             int pMax,
             int pos,
             int part_cnt){
@@ -11607,7 +11606,6 @@ namespace smt {
                 // must be 0
                 ors.push_back(unroll_const_non_fresh_variable_str2int(a, /* const or regex */
                                                                       b,
-                                                                      pMax,
                                                                       std::min(max_len, (int) content.length()),
                                                                       sub_len,
                                                                       prefix_lhs,
@@ -11621,7 +11619,6 @@ namespace smt {
     expr* theory_trau::unroll_const_non_fresh_variable_str2int(
             std::pair<expr *, int> a, /* const or regex */
             std::pair<expr *, int> b,
-            int pMax,
             int max_len,
             expr* sub_len,
             expr* prefix_lhs,
@@ -11758,8 +11755,8 @@ namespace smt {
 
     expr* theory_trau::gen_regex_non_fresh_variable(
             std::pair<expr *, int> a, /* const or regex */
-            std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
-            std::map<expr *, int> non_fresh_variables,
+            std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+            obj_map<expr, int> const& non_fresh_variables,
             int pMax,
             int pos,
             int part_cnt,
@@ -11861,8 +11858,8 @@ namespace smt {
 
     expr* theory_trau::gen_regex_regex(
             std::pair<expr *, int> a, /* const or regex */
-            std::vector<std::pair<expr *, int>> elements, /* have non_fresh_ var, do not have const */
-            std::map<expr *, int> non_fresh_variables,
+            std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+            obj_map<expr, int> const& non_fresh_variables,
             int pMax,
             int pos){
         // handling regex vs const && regex vs regex
@@ -11889,7 +11886,7 @@ namespace smt {
      */
     expr* theory_trau::find_partsOfnon_fresh_variablesInAVector(
             int pos,
-            std::vector<std::pair<expr*, int>> elements,
+            std::vector<std::pair<expr*, int>> const& elements,
             int &partCnt){
         partCnt = 1;
         
@@ -11917,7 +11914,7 @@ namespace smt {
      * pre elements + pre fix of itself
      */
     expr* theory_trau::leng_prefix_lhs(std::pair<expr*, int> a,
-                                std::vector<std::pair<expr*, int>> elements,
+                                std::vector<std::pair<expr*, int>> const& elements,
                                 int pos,
                                 bool optimizing,
                                 bool unrollMode) {
@@ -12008,7 +12005,7 @@ namespace smt {
 	 */
     std::vector<std::vector<int> > theory_trau::collect_splits(
             std::pair<expr*, int> lhs,
-            std::vector<std::pair<expr*, int> > elements,
+            std::vector<std::pair<expr*, int> > const& elements,
             bool optimizing){
 
         /* use alias instead of elements */
@@ -12232,7 +12229,7 @@ namespace smt {
 //        }
 //    }
 
-    bool theory_trau::not_contain_check(expr* e, std::vector<std::pair<expr*, int> > elements){
+    bool theory_trau::not_contain_check(expr* e, std::vector<std::pair<expr*, int> > const& elements){
         zstring value;
         if (u.str.is_string(e, value)) {
             for (unsigned i = 0; i < elements.size(); ++i) {
@@ -12295,7 +12292,7 @@ namespace smt {
 //        return true;
 //    }
 
-    bool theory_trau::const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > elements){
+    bool theory_trau::const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > const& elements){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, m) << std::endl;);
         zstring tmp;
         for (unsigned i = 0; i < elements.size(); ++i)
@@ -12309,7 +12306,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::length_base_split(expr* e, std::vector<std::pair<expr*, int> > elements){
+    bool theory_trau::length_base_split(expr* e, std::vector<std::pair<expr*, int> > const& elements){
         for (const auto& n : elements){
             if (length_relation.find(std::make_pair(n.first, e)) != length_relation.end()){
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << " cannot contain because of length based split" << mk_pp(n.first, m)<< std::endl;);
@@ -12319,7 +12316,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > elements, expr* &extra_assert){
+    bool theory_trau::const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > const& elements, expr* &extra_assert){
         if (string_int_vars.contains(e)){
             for (unsigned i = 0; i < elements.size(); ++i) {
                 zstring val;
@@ -12374,7 +12371,7 @@ namespace smt {
             int pos,
             zstring str, /* const */
             int pMax,
-            std::vector<std::pair<expr*, int> > elements,
+            std::vector<std::pair<expr*, int> > const& elements,
             std::vector<int> currentSplit,
             std::vector<std::vector<int> > &allPossibleSplits
     ) {
@@ -12668,8 +12665,8 @@ namespace smt {
 
     bool theory_trau::feasibleSplit_const(
             zstring str,
-            std::vector<std::pair<expr*, int> > elements,
-            std::vector<int> currentSplit,
+            std::vector<std::pair<expr*, int> > const& elements,
+            std::vector<int> const& currentSplit,
             int bound){
         /* check feasible const split */
         int pos = 0;
@@ -12720,8 +12717,8 @@ namespace smt {
 	 * 3: have both
 	 */
     int theory_trau::choose_split_type(
-            std::vector<std::pair<expr*, int>> elements,
-            std::map<expr*, int> non_fresh_variables,
+            std::vector<std::pair<expr*, int>> const& elements,
+            obj_map<expr, int> const& non_fresh_variables,
             expr* lhs){
 
         bool havingConst = false;
@@ -12757,7 +12754,7 @@ namespace smt {
 
         /* check if containing non_fresh_ vars */
         for (unsigned i = 0 ; i < elements.size(); ++i)
-            if (non_fresh_variables.find(elements[i].first) != non_fresh_variables.end() || elements[i].second <= REGEX_CODE) {
+            if (non_fresh_variables.contains(elements[i].first) || elements[i].second <= REGEX_CODE) {
                 havingnon_fresh_Var = true;
                 break;
             }
@@ -12772,7 +12769,7 @@ namespace smt {
             return CONST_NON_FRESH;
     }
 
-    expr* theory_trau::get_var_size(std::pair<expr*, int> a){
+    expr* theory_trau::get_var_size(std::pair<expr*, int> const& a){
         zstring val;
         if (u.str.is_string(a.first, val)){
             return m_autil.mk_int(val.length());
@@ -12785,7 +12782,7 @@ namespace smt {
     /*
      *
      */
-    std::string theory_trau::gen_flat_iter(std::pair<expr*, int> a){
+    std::string theory_trau::gen_flat_iter(std::pair<expr*, int> const& a){
 
         std::string result = "";
         if (a.second >= 0) {
@@ -12811,7 +12808,7 @@ namespace smt {
         return result;
     }
 
-    expr* theory_trau::get_flat_iter(std::pair<expr*, int> a){
+    expr* theory_trau::get_flat_iter(std::pair<expr*, int> const& a){
         if (u.str.is_string(a.first)){
             return mk_int(1);
         }
@@ -12828,7 +12825,7 @@ namespace smt {
      * Given a flat,
      * generate its size constraint
      */
-    std::string theory_trau::gen_flat_size(std::pair<expr*, int> a, std::string l_r_hs){
+    std::string theory_trau::gen_flat_size(std::pair<expr*, int> const& a){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "," << a.second << std::endl;);
         std::string result = "";
         if (a.second >= 0) {
@@ -12861,7 +12858,7 @@ namespace smt {
         return result;
     }
 
-    expr* theory_trau::get_var_flat_size(std::pair<expr*, int> a){
+    expr* theory_trau::get_var_flat_size(std::pair<expr*, int> const& a){
         zstring val;
         if (!u.str.is_string(a.first, val)) {
             if (a.second <= REGEX_CODE)
@@ -12882,7 +12879,7 @@ namespace smt {
 	 * Given a flat,
 	 * generate its array name
 	 */
-    std::string theory_trau::gen_flat_arr(std::pair<expr*, int> a){
+    std::string theory_trau::gen_flat_arr(std::pair<expr*, int> const& a){
         std::string result = "";
         if (a.second >= 0) {
             std::string tmp = expr2str(a.first);
@@ -12900,7 +12897,7 @@ namespace smt {
         return result;
     }
 
-    expr* theory_trau::get_var_flat_array(std::pair<expr*, int> a){
+    expr* theory_trau::get_var_flat_array(std::pair<expr*, int> const& a){
         return get_var_flat_array(a.first);
     }
 
@@ -13168,10 +13165,10 @@ namespace smt {
 
     int theory_trau::optimized_lhs(
             int i, int startPos, int j,
-            std::vector<int> left_arr,
-            std::vector<int> right_arr,
-            std::vector<std::pair<std::string, int>> lhs_elements,
-            std::vector<std::pair<std::string, int>> rhs_elements){
+            std::vector<int> const& left_arr,
+            std::vector<int> const& right_arr,
+            std::vector<std::pair<std::string, int>> const& lhs_elements,
+            std::vector<std::pair<std::string, int>> const& rhs_elements){
         if (left_arr[i] == SUMFLAT && right_arr[j] == i){
             /* check forward */
             if (i < (int)lhs_elements.size() - 1)
@@ -13245,10 +13242,10 @@ namespace smt {
 
     int theory_trau::optimized_rhs(
             int i, int startPos, int j,
-            std::vector<int> left_arr,
-            std::vector<int> right_arr,
-            std::vector<std::pair<std::string, int>> lhs_elements,
-            std::vector<std::pair<std::string, int>> rhs_elements){
+            std::vector<int> const& left_arr,
+            std::vector<int> const& right_arr,
+            std::vector<std::pair<std::string, int>> const& lhs_elements,
+            std::vector<std::pair<std::string, int>> const& rhs_elements){
         if (right_arr[j] == SUMFLAT && left_arr[i] == j){
             /* check forward */
             if (j < (int)rhs_elements.size() - 1) {
@@ -13495,7 +13492,7 @@ namespace smt {
                 }
     }
 
-    std::vector<std::pair<std::string, int>> theory_trau::vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> v){
+    std::vector<std::pair<std::string, int>> theory_trau::vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> const& v){
         std::vector<std::pair<std::string, int>> ret;
         for (unsigned i = 0; i < v.size(); ++i)
             ret.push_back(std::make_pair(expr2str(v[i].first), v[i].second));
@@ -13524,7 +13521,7 @@ namespace smt {
         return create_equality_final(list, unfold);
     }
 
-    std::vector<std::pair<expr*, int>> theory_trau::create_equality(ptr_vector<expr> list, bool unfold){
+    std::vector<std::pair<expr*, int>> theory_trau::create_equality(ptr_vector<expr> const& list, bool unfold){
         ptr_vector<expr> l;
         expr* reg;
         for (unsigned i = 0; i < list.size(); ++i)
@@ -13552,7 +13549,7 @@ namespace smt {
      * Input: x . y
      * Output: flat . flat . flat . flat . flat . flat
      */
-    std::vector<std::pair<expr*, int>> theory_trau::create_equality_final(ptr_vector<expr> list, bool unfold){
+    std::vector<std::pair<expr*, int>> theory_trau::create_equality_final(ptr_vector<expr> const& list, bool unfold){
         std::vector<std::pair<expr*, int>> elements;
         expr* reg = nullptr;
         for (unsigned k = 0; k < list.size(); ++k) {
@@ -13635,7 +13632,7 @@ namespace smt {
                 if (u.re.is_union(regex)) {
                     start = REGEX_CODE - start;
 
-                    std::string flatSize = gen_flat_size(std::make_pair(v, start), "");
+                    std::string flatSize = gen_flat_size(std::make_pair(v, start));
 
                     expr_ref v1(mk_int_var(flatSize), m);
                     length_map[v].push_back(v1);
@@ -13691,7 +13688,7 @@ namespace smt {
 
         expr_ref_vector adds(m);
         for (int i = start; i < end; ++i) {
-            std::string flatSize = gen_flat_size(std::make_pair(v, i), "");
+            std::string flatSize = gen_flat_size(std::make_pair(v, i));
             std::string flatIter = gen_flat_iter(std::make_pair(v, i));
 
             expr_ref v1(mk_int_var(flatSize), m);
@@ -13855,17 +13852,10 @@ namespace smt {
         }
     }
 
-    expr_ref_vector theory_trau::set2vector(std::set<expr*> s){
-        expr_ref_vector v(m);
-        for (const auto& n : s)
-            v.push_back(n);
-        return v;
-    }
-
     /*
      *generateConstraint02
      */
-    unsigned theory_trau::findMaxP(ptr_vector<expr> v){
+    unsigned theory_trau::findMaxP(ptr_vector<expr> const& v){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         unsigned maxLocal = 0;
 
@@ -14254,7 +14244,7 @@ namespace smt {
         return true;
     }
 
-    expr* theory_trau::create_concat_from_vector(ptr_vector<expr> v){
+    expr* theory_trau::create_concat_from_vector(ptr_vector<expr> const& v){
         if (v.size() == 0)
             return mk_string("");
         else if (v.size() == 1)
@@ -14269,7 +14259,7 @@ namespace smt {
         return ret;
     }
 
-    expr* theory_trau::create_concat_from_vector(ptr_vector<expr> v, int from_pos){
+    expr* theory_trau::create_concat_from_vector(ptr_vector<expr> const& v, int from_pos){
         if (v.size() == 0)
             return mk_string("");
         else if (v.size() == 1)
@@ -14302,7 +14292,7 @@ namespace smt {
      */
     void theory_trau::optimize_equality(
             expr* lhs,
-            ptr_vector<expr> rhs,
+            ptr_vector<expr> const& rhs,
             ptr_vector<expr> &new_lhs,
             ptr_vector<expr> &new_rhs){
         /* cut prefix */
@@ -14342,32 +14332,32 @@ namespace smt {
         
         std::set<expr*> eqc_roots = get_eqc_roots();
         std::map<expr*, int> tmpResult;
-        std::map<expr*, int> occurrences = countOccurrences_from_root();
+        obj_map<expr, int> occurrences = count_occurrences_from_root();
         for (const auto& nn : eqc_roots) {
-            expr_ref_vector eqList(m);
-            expr *value = collect_eq_nodes(nn, eqList);
+            expr_ref_vector eqs(m);
+            expr *value = collect_eq_nodes(nn, eqs);
             if (value == nullptr) {
                 bool imp = false;
                 int maxLen = 0;
-                for (expr_ref_vector::iterator it = eqList.begin(); it != eqList.end(); ++it) {
+                for (const auto& eq : eqs) {
                     int len = -1;
-                    if (is_importantVar(*it, occurrences, len)) {
-                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(*it, m) << ": " << len << std::endl;);
+                    if (is_non_fresh(eq, occurrences, len)) {
+                        STRACE("str", tout << __LINE__ << "\t " << mk_pp(eq, m) << ": " << len << std::endl;);
                         imp = true;
                         maxLen = (maxLen == -1 || len == -1) ? -1 : (maxLen < len ? len : maxLen);
                     }
                 }
 
                 if (imp)
-                    for (expr_ref_vector::iterator itor = eqList.begin(); itor != eqList.end(); ++itor) {
+                    for (const auto& eq : eqs) {
                         STRACE("str",
-                               tout << __LINE__ << "\t \t" << mk_pp(nn, m) << " == " << mk_pp(*itor, m) << std::endl;);
-                        tmpResult[*itor] = maxLen;
+                               tout << __LINE__ << "\t \t" << mk_pp(nn, m) << " == " << mk_pp(eq, m) << std::endl;);
+                        tmpResult[eq] = maxLen;
                     }
             }
         }
 
-        collect_important_vars_str_int(tmpResult);
+        collect_non_fresh_vars_str_int(tmpResult);
 
         for (const auto& nn : tmpResult)
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
@@ -14379,7 +14369,7 @@ namespace smt {
         return ret;
     }
 
-    void theory_trau::collect_important_vars_str_int(std::map<expr*, int> &vars){
+    void theory_trau::collect_non_fresh_vars_str_int(std::map<expr *, int> &vars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         flat_enabled = false;
         if (string_int_conversion_terms.size() > 0) {
@@ -14477,7 +14467,7 @@ namespace smt {
     void theory_trau::refine_important_vars(
             std::set<std::pair<expr *, int>> &non_fresh_vars,
             expr_ref_vector &notImportant,
-            obj_map<expr, ptr_vector<expr>> eq_combination) {
+            obj_map<expr, ptr_vector<expr>> const& eq_combination) {
         std::map<expr *, int> retTmp;
         
         context& ctx = get_context();
@@ -14486,14 +14476,14 @@ namespace smt {
             STRACE("str", tout << __LINE__ << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
 
         std::map<expr*, int> str_int_vars;
-        collect_important_vars_str_int(str_int_vars);
+        collect_non_fresh_vars_str_int(str_int_vars);
 
         for (const auto& nn : non_fresh_vars) {
             if (retTmp.find(nn.first) == retTmp.end()) {
                 rational len_val;
                 if (get_len_value(nn.first, len_val) && len_val == rational(0))
                     continue;
-                if (is_importantVar_recheck(nn.first, nn.second, eq_combination) || str_int_vars.find(nn.first) != str_int_vars.end()) {
+                if (is_non_fresh_recheck(nn.first, nn.second, eq_combination) || str_int_vars.find(nn.first) != str_int_vars.end()) {
                     expr_ref_vector eqs(m);
                     collect_eq_nodes(nn.first, eqs);
                     for (unsigned i = 0; i < eqs.size(); ++i) {
@@ -14516,7 +14506,7 @@ namespace smt {
                     }
             }
 
-        std::map<expr*, int> occurrences = countOccurrences_from_combination(eq_combination, non_fresh_vars);
+        obj_map<expr, int> occurrences = count_occurrences_from_combination(eq_combination, non_fresh_vars);
 
         std::set<std::pair<expr *, int>> non_fresh_varsTmp;
         for (const auto& v : retTmp)
@@ -14563,11 +14553,11 @@ namespace smt {
             STRACE("str", tout << "\t "<< mk_pp(nn.first, m) << ": " << nn.second << std::endl;);
     }
 
-    bool theory_trau::more_than_two_occurrences(expr* n, std::map<expr*, int> occurrences){
+    bool theory_trau::more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences){
         expr_ref_vector eqs(m);
         collect_eq_nodes(n, eqs);
         for (const auto& nn : eqs)
-            if (occurrences[nn] >= 2)
+            if (occurrences.contains(nn) && occurrences[nn] >= 2)
                 return true;
 
         return false;
@@ -14579,9 +14569,9 @@ namespace smt {
      * @param len
      * @return
      */
-    bool theory_trau::is_importantVar(
-            expr* nn,
-            std::map<expr*, int> occurrences,
+    bool theory_trau::is_non_fresh(
+            expr *nn,
+            obj_map<expr, int> const &occurrences,
             int &len){
         
         len = -1;
@@ -14665,7 +14655,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         // now we know it is a leaf node
         // --> check if their parents are fresh
-        if (occurrences.find(nn) != occurrences.end())
+        if (occurrences.contains(nn))
             if (occurrences[nn] >= 2) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
                 return true;
@@ -14673,29 +14663,29 @@ namespace smt {
         return false;
     }
 
-    std::map<expr*, int> theory_trau::countOccurrences_from_root(){
-        std::map<expr*, int> ret;
+    obj_map<expr, int> theory_trau::count_occurrences_from_root(){
+        obj_map<expr, int> ret;
         for (const auto& n : concat_astNode_map){
             expr* arg0 = n.get_key1();
             expr* arg1 = n.get_key2();
             if (arg0 == arg1)
                 ret[arg0] = 2;
             else {
-                if (ret.find(arg0) != ret.end() && (!is_internal_var(arg0) || is_replace_var(arg0)))
+                if (ret.contains(arg0) && (!is_internal_var(arg0) || is_replace_var(arg0)))
                     ret[arg0]++;
                 else
-                    ret[arg0] = 1;
+                    ret.insert(arg0, 1);
 
-                if (ret.find(arg1) != ret.end() && (!is_internal_var(arg1) || is_replace_var(arg1)))
+                if (ret.contains(arg1) && (!is_internal_var(arg1) || is_replace_var(arg1)))
                     ret[arg1]++;
                 else
-                    ret[arg1] = 1;
+                    ret.insert(arg1, 1);
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& p : ret)
-            if (p.second >= 2)
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(p.first, m) << std::endl;);
+            if (p.m_value >= 2)
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(p.m_key, m) << std::endl;);
 
         return ret;
     }
@@ -14708,50 +14698,57 @@ namespace smt {
             return false;
     }
 
-    std::map<expr*, int> theory_trau::countOccurrences_from_combination(
-            obj_map<expr, ptr_vector<expr>> eq_combination,
-            std::set<std::pair<expr *, int>> non_fresh_vars) {
+    obj_map<expr, int> theory_trau::count_occurrences_from_combination(
+            obj_map<expr, ptr_vector<expr>> const &eq_combination,
+            std::set<std::pair<expr *, int>> const &non_fresh_vars) {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        std::map<expr*, int> ret;
+        obj_map<expr, int> ret;
 
         for (const auto& v : eq_combination){
             // inside one variable
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             std::map<expr*, expr*> occurrenceLocation;
-            if (!(v.get_value().size() >= 2 || u.str.is_string(v.m_key) || (v.get_value().size() == 1 && is_important(v.m_key, non_fresh_vars))))
+            if (!(v.get_value().size() >= 2 || u.str.is_string(v.m_key) || (v.get_value().size() == 1 &&
+                    is_non_fresh(v.m_key, non_fresh_vars))))
                 continue;
-
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             for (const auto& e : v.get_value())
                 if (u.str.is_concat(e)){
-                    {
-                        ptr_vector<expr> nodes;
-                        get_nodes_in_concat(e, nodes);
-                        for (unsigned i  = 0; i < nodes.size(); ++i)
-                            if (!u.str.is_string(nodes[i])){
-                                if (ret.find(nodes[i]) != ret.end()){
-                                    if (occurrenceLocation.find(nodes[i]) == occurrenceLocation.end()) {
-                                        ret[nodes[i]]++;
-                                        if (ret[nodes[i]] >= 2){
-                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nodes[i], m) <<  " @ " << mk_pp(e, m) << std::endl;);
-                                        }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(e, m) << std::endl;);
+                    ptr_vector<expr> nodes;
+                    get_nodes_in_concat(e, nodes);
+                    for (const auto& nn : nodes)
+                        if (!u.str.is_string(nn)){
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                            if (ret.contains(nn)){
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                                if (occurrenceLocation.find(nn) == occurrenceLocation.end()) {
+                                    ret[nn]++;
+                                    if (ret[nn] >= 2){
+                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
                                     }
-                                    else {
-                                        // compare two equalities
-                                        if (check_var_after_optimizing(e, occurrenceLocation[nodes[i]], nodes[i])){
-                                            ret[nodes[i]]++;
-                                            if (ret[nodes[i]] >= 2){
-                                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nodes[i], m) <<  " @ " << mk_pp(occurrenceLocation[nodes[i]], m) << " and @ " << mk_pp(e, m) << std::endl;);
-                                            }
-                                        }
-                                    }
-
                                 }
-
                                 else {
-                                    ret[nodes[i]] = 1;
-                                    occurrenceLocation[nodes[i]] = e;
+                                    // compare two equalities
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                                    if (check_var_after_optimizing(e, occurrenceLocation[nn], nn)){
+                                        ret[nn]++;
+                                        if (ret[nn] >= 2){
+                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(occurrenceLocation[nn], m) << " and @ " << mk_pp(e, m) << std::endl;);
+                                        }
+                                    }
                                 }
+
                             }
-                    }
+
+                            else {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                                ret.insert(nn, 1);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                                occurrenceLocation.emplace(nn, e);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                            }
+                        }
                 }
         }
         return ret;
@@ -15038,10 +15035,10 @@ namespace smt {
         return found;
     }
 
-    bool theory_trau::is_importantVar_recheck(
-            expr* nn,
+    bool theory_trau::is_non_fresh_recheck(
+            expr *nn,
             int len,
-            obj_map<expr, ptr_vector<expr>> combinations){
+            obj_map<expr, ptr_vector<expr>> const& combinations){
         
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << len << std::endl;);
@@ -15189,8 +15186,8 @@ namespace smt {
 
     obj_map<expr, ptr_vector<expr>> theory_trau::refine_eq_combination(
             std::set<std::pair<expr*, int>> &non_fresh_vars,
-            obj_map<expr, ptr_vector<expr>> combinations,
-            expr_ref_vector subNodes
+            obj_map<expr, ptr_vector<expr>> const& combinations,
+            expr_ref_vector const& subNodes
             ){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         obj_map<expr, ptr_vector<expr>> ret;
@@ -15199,7 +15196,7 @@ namespace smt {
             ptr_vector<expr> c_second = refine_eq_set(c.m_key, c.get_value(), non_fresh_vars);
             if (c_second.size() == 0 && !u.str.is_string(c.m_key))
                 continue;
-            bool important = is_important(c.m_key, non_fresh_vars);
+            bool important = is_non_fresh(c.m_key, non_fresh_vars);
             if (!important) {
                 // the var is too complicated
                 if (c_second.size() > 20) {
@@ -15257,7 +15254,7 @@ namespace smt {
         return ret;
     }
 
-    bool theory_trau::can_merge_combination(obj_map<expr, ptr_vector<expr>> combinations){
+    bool theory_trau::can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         
         expr_ref_vector implies(m);
@@ -15295,7 +15292,7 @@ namespace smt {
             return false;
     }
 
-    bool theory_trau::concat_in_set(expr* n, ptr_vector<expr> s){
+    bool theory_trau::concat_in_set(expr* n, ptr_vector<expr> const& s){
         if (s.contains(n))
             return true;
         for (const auto& nn : s){
@@ -15307,7 +15304,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_important_concat(expr* e, std::set<std::pair<expr*, int>> non_fresh_vars){
+    bool theory_trau::is_important_concat(expr* e, std::set<std::pair<expr*, int>> const& non_fresh_vars){
         ptr_vector<expr> nodes;
         get_all_nodes_in_concat(e, nodes);
         for (const auto& v : non_fresh_vars)
@@ -15321,11 +15318,11 @@ namespace smt {
     /*
      * size = 0 or size = 1 && trivial equal
      */
-    bool theory_trau::is_trivial_combination(expr* v, ptr_vector<expr> eq, std::set<std::pair<expr*, int>> non_fresh_vars){
+    bool theory_trau::is_trivial_combination(expr* v, ptr_vector<expr> const& eq, std::set<std::pair<expr*, int>> const& non_fresh_vars){
         if (eq.size() == 0)
             return true;
 
-        if (is_important(v, non_fresh_vars)) {
+        if (is_non_fresh(v, non_fresh_vars)) {
             if (eq.size() == 1) {
                 // if it is equal to itself only
                 expr_ref_vector eqs(m);
@@ -15355,26 +15352,26 @@ namespace smt {
     ptr_vector<expr> theory_trau::refine_eq_set(
             expr* var,
             ptr_vector<expr> s,
-            std::set<std::pair<expr*, int>> non_fresh_vars,
-            expr_ref_vector notnon_fresh_vars){
+            std::set<std::pair<expr*, int>> const& non_fresh_vars,
+            expr_ref_vector const& notnon_fresh_vars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         
         refine_all_duplications(s);
         ptr_vector<expr> ret;
-        for (expr_ref_vector::iterator it = s.begin(); it != s.end(); ++it) {
-            if (u.str.is_concat(*it)) {
+        for (const auto& n : s) {
+            if (u.str.is_concat(n)) {
                 ptr_vector<expr> childrenVector;
-                get_all_nodes_in_concat(*it, childrenVector);
+                get_all_nodes_in_concat(n, childrenVector);
 
                 bool notAdd = false;
 
-                if (are_equal_exprs(var, *it)) {
+                if (are_equal_exprs(var, n)) {
                     // do not have const or important var
                     bool found = false;
                     ptr_vector<expr> v;
-                    get_nodes_in_concat(*it, v);
+                    get_nodes_in_concat(n, v);
                     for (const auto& nn : v)
-                        if (u.str.is_string(nn) || is_important(nn, non_fresh_vars)){
+                        if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)){
                             found = true;
                             break;
                         }
@@ -15391,7 +15388,7 @@ namespace smt {
                         if (childrenVector.contains(notimp)) {
                             notAdd = true;
                             if (!appear_in_eqs(ret, notimp)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(*it, m)
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(n, m)
                                                    << " because of " << mk_pp(notimp, m) << std::endl;);
                                 notAdd = false;
                                 break;
@@ -15399,23 +15396,23 @@ namespace smt {
                         }
                 }
 
-                if (!notAdd && !ret.contains(*it))
-                    ret.push_back(*it);
+                if (!notAdd && !ret.contains(n))
+                    ret.push_back(n);
             }
-            else if (is_important(*it, non_fresh_vars)  || u.str.is_string(*it)) {
-                if (!ret.contains(*it))
-                    ret.push_back(*it);
+            else if (is_non_fresh(n, non_fresh_vars)  || u.str.is_string(n)) {
+                if (!ret.contains(n))
+                    ret.push_back(n);
             }
         }
 
-        if (ret.size() == 1 && !is_important(var, non_fresh_vars)) {
+        if (ret.size() == 1 && !is_non_fresh(var, non_fresh_vars)) {
             // check if none of variable is really important
             ptr_vector<expr> v;
             get_all_nodes_in_concat(*ret.begin(), v);
             bool shouldKeep = false;
             for (const auto& nn : v) {
                 int tmp;
-                if (is_important(nn, non_fresh_vars, tmp) && tmp == -1){
+                if (is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1){
                     if (u.str.is_string(var)){
                         shouldKeep = true;
                         break;
@@ -15432,21 +15429,21 @@ namespace smt {
     ptr_vector<expr> theory_trau::refine_eq_set(
             expr* var,
             ptr_vector<expr> s,
-            std::set<std::pair<expr*, int>> non_fresh_vars){
+            std::set<std::pair<expr*, int>> const& non_fresh_vars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         refine_all_duplications(s);
         ptr_vector<expr> ret;
-        for (ptr_vector<expr>::iterator it = s.begin(); it != s.end(); ++it) {
-            if (u.str.is_concat(*it)) {
+        for (const auto& n : s) {
+            if (u.str.is_concat(n)) {
                 bool notAdd = false;
 
-                if (are_equal_exprs(var, *it)) {
+                if (are_equal_exprs(var, n)) {
                     // do not have const or important var
                     bool found = false;
                     ptr_vector<expr> v;
-                    get_nodes_in_concat(*it, v);
+                    get_nodes_in_concat(n, v);
                     for (const auto& nn : v)
-                        if (u.str.is_string(nn) || is_important(nn, non_fresh_vars)){
+                        if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)){
                             found = true;
                             break;
                         }
@@ -15457,22 +15454,22 @@ namespace smt {
                 }
 
                 if (!notAdd)
-                    ret.push_back(*it);
+                    ret.push_back(n);
             }
-            else if (is_important(*it, non_fresh_vars)  || u.str.is_string(*it)) {
-                if (!ret.contains(*it))
-                    ret.push_back(*it);
+            else if (is_non_fresh(n, non_fresh_vars)  || u.str.is_string(n)) {
+                if (!ret.contains(n))
+                    ret.push_back(n);
             }
         }
 
-        if (ret.size() == 1 && !is_important(var, non_fresh_vars)) {
+        if (ret.size() == 1 && !is_non_fresh(var, non_fresh_vars)) {
             // check if none of variable is really important
             ptr_vector<expr> v;
             get_all_nodes_in_concat(*ret.begin(), v);
             bool shouldKeep = false;
             for (const auto& nn : v) {
                 int tmp;
-                if (is_important(nn, non_fresh_vars, tmp) && tmp == -1){
+                if (is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1){
                     if (u.str.is_string(var)){
                         shouldKeep = true;
                         break;
@@ -15547,7 +15544,7 @@ namespace smt {
     /*
      * true if var does appear in eqs
      */
-    bool theory_trau::appear_in_eqs(ptr_vector<expr> s, expr* var){
+    bool theory_trau::appear_in_eqs(ptr_vector<expr> const& s, expr* var){
         for (const auto& eq : s)
             if (u.str.is_concat(eq)) {
                 ptr_vector<expr> nodes;
@@ -15559,27 +15556,27 @@ namespace smt {
     }
 
     ptr_vector<expr> theory_trau::refine_eq_set(
-            ptr_vector<expr> s,
-            std::set<std::pair<expr*, int>> non_fresh_vars){
+            ptr_vector<expr> const& s,
+            std::set<std::pair<expr*, int>> const& non_fresh_vars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
 
         ptr_vector<expr> ret;
-        for (ptr_vector<expr>::iterator it = s.begin(); it != s.end(); ++it) {
-            if (u.str.is_concat(*it)) {
-                expr* arg0 = to_app(*it)->get_arg(0);
+        for (const auto& n : s) {
+            if (u.str.is_concat(n)) {
+                expr* arg0 = to_app(n)->get_arg(0);
                 expr_ref_vector eq0(m);
                 collect_eq_nodes(arg0, eq0);
-                bool imp0 = is_important(arg0, non_fresh_vars);
+                bool imp0 = is_non_fresh(arg0, non_fresh_vars);
 
-                expr* arg1 = to_app(*it)->get_arg(1);
+                expr* arg1 = to_app(n)->get_arg(1);
                 expr_ref_vector eq1(m);
                 collect_eq_nodes(arg1, eq1);
-                bool imp1 = is_important(arg1, non_fresh_vars);
+                bool imp1 = is_non_fresh(arg1, non_fresh_vars);
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": checking " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << std::endl;);
                 bool notAdd = false;
                 if (!imp0 && !u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
                     for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i) && (*i) != (*it)) {
+                        if (u.str.is_concat(*i) && (*i) != (n)) {
                             expr *arg00 = to_app(*i)->get_arg(0);
                             expr *arg01 = to_app(*i)->get_arg(1);
                             if (arg1 == arg01 && eq0.contains(arg00)) {
@@ -15593,7 +15590,7 @@ namespace smt {
 
                 if (!imp1 && !u.str.is_concat(arg1) && !u.str.is_string(arg1)){
                     for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i) && (*i) != (*it)) {
+                        if (u.str.is_concat(*i) && (*i) != (n)) {
                             expr *arg00 = to_app(*i)->get_arg(0);
                             expr *arg01 = to_app(*i)->get_arg(1);
                             if (arg0 == arg00 && eq1.contains(arg01)) {
@@ -15605,14 +15602,14 @@ namespace smt {
                     }
                 }
 
-                if (notAdd == false && !ret.contains(*it))
-                    ret.push_back(*it);
+                if (notAdd == false && !ret.contains(n))
+                    ret.push_back(n);
             }
         }
         return ret;
     }
 
-    bool theory_trau::is_important(expr *n, std::set<std::pair<expr*, int>> non_fresh_vars) {
+    bool theory_trau::is_non_fresh(expr *n, std::set<std::pair<expr *, int>> const &non_fresh_vars) {
         for (const auto& p : non_fresh_vars){
             if (p.first == n){
                 return true;
@@ -15621,7 +15618,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_important(expr *n, std::set<std::pair<expr*, int>> non_fresh_vars, int &l) {
+    bool theory_trau::is_non_fresh(expr *n, std::set<std::pair<expr *, int>> const &non_fresh_vars, int &l) {
         for (const auto& p : non_fresh_vars){
             if (p.first == n){
                 l = p.second;
@@ -15731,12 +15728,12 @@ namespace smt {
                     eqRhs.push_back(arg1);
                 }
 
-                if (is_important(arg1, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(1))) {
+                if (is_non_fresh(arg1, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(1))) {
                     eqRhs.reset();
                     eqRhs.push_back(to_app(*it)->get_arg(1));
                 }
 
-                if (is_important(arg0, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(0))) {
+                if (is_non_fresh(arg0, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(0))) {
                     eqLhs.reset();
                     eqLhs.push_back({to_app(*it)->get_arg(0)});
                 }
@@ -15862,7 +15859,7 @@ namespace smt {
         else {
             // important var, it = itself, size = 1, it is root --> add another option if it is possible
             if ( result.size() == 1 &&
-                    is_important(object, non_fresh_vars) &&
+                    is_non_fresh(object, non_fresh_vars) &&
                     object == *result.begin() &&
                     u.str.is_concat(object)
                 ){
