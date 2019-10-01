@@ -1367,7 +1367,7 @@ namespace smt {
                 std::set<std::pair<expr *, int>> &non_fresh_vars,
                 obj_map<expr, ptr_vector<expr>> &eq_combination);
             void init_chain_free(
-                    obj_hashtable<std::pair<expr *, int>> &non_fresh_vars,
+                    std::set<std::pair<expr *, int>> &non_fresh_vars,
                     obj_map<expr, ptr_vector<expr>> &eq_combination);
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
@@ -2103,7 +2103,7 @@ namespace smt {
                         expr_ref_vector &and_lhs,
                         expr_ref_vector &to_assert);
 
-            obj_hashtable<std::pair<expr*, int>> collect_important_vars();
+            std::set<std::pair<expr*, int>> collect_important_vars();
             void collect_non_fresh_vars_str_int(std::map<expr *, int> &vars);
             void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
             bool is_str_int_var(expr* e);
