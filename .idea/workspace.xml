@@ -85,6 +85,7 @@
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
@@ -100,11 +101,29 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="402">
-              <caret line="14329" column="53" selection-start-line="14329" selection-start-column="53" selection-end-line="14329" selection-end-column="53" />
+            <state relative-caret-position="130">
+              <caret line="13481" column="59" selection-start-line="13481" selection-start-column="59" selection-end-line="13481" selection-end-column="59" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/util/obj_pair_set.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="360">
+              <caret line="24" column="6" selection-start-line="24" selection-start-column="6" selection-end-line="24" selection-end-column="6" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/util/obj_pair_hashtable.h">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="855">
+              <caret line="58" column="15" selection-start-line="58" selection-start-column="6" selection-end-line="58" selection-end-column="15" />
             </state>
           </provider>
         </entry>
@@ -155,19 +174,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/util/vector.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="375">
-              <caret line="26" column="24" selection-start-line="26" selection-start-column="24" selection-end-line="26" selection-end-column="24" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/util/obj_hashtable.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="410">
-              <caret line="49" column="6" selection-start-line="49" selection-start-column="6" selection-end-line="49" selection-end-column="6" />
+            <state relative-caret-position="402">
+              <caret line="140" column="9" selection-start-line="140" selection-start-column="9" selection-end-line="140" selection-end-column="9" />
               <folding>
                 <element signature="e#1208#1220#0" expanded="true" />
                 <element signature="e#1511#1541#0" expanded="true" />
@@ -179,17 +189,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="468">
-              <caret line="940" column="21" selection-start-line="940" selection-start-column="21" selection-end-line="940" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/util/old_vector.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="402">
-              <caret line="542" column="9" selection-start-line="542" selection-start-column="9" selection-end-line="542" selection-end-column="9" />
+            <state relative-caret-position="393">
+              <caret line="4764" column="14" selection-start-line="4764" selection-start-column="4" selection-end-line="4764" selection-end-column="14" />
             </state>
           </provider>
         </entry>
@@ -206,11 +207,12 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="421">
-              <caret line="2105" column="20" selection-start-line="2105" selection-start-column="20" selection-end-line="2105" selection-end-column="20" />
+            <state relative-caret-position="1130">
+              <caret line="2048" column="26" lean-forward="true" selection-start-line="2048" selection-start-column="26" selection-end-line="2048" selection-end-column="26" />
               <folding>
                 <element signature="e#49#64#0" expanded="true" />
                 <element signature="e#5244#8019#1" />
+                <element signature="e#9785#19671#1" />
               </folding>
             </state>
           </provider>
@@ -220,36 +222,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>eqNodeSet</find>
-      <find>bj_map&lt;expr, ptr_vector&lt;expr&gt;&gt; ret</find>
-      <find>1089</find>
-      <find>eq_combination[</find>
-      <find>combination[</find>
-      <find>m_trail_stack</find>
-      <find>const&amp;</find>
-      <find>eq_combination</find>
-      <find>is_not_important</find>
-      <find>rw</find>
-      <find>rhs_elements</find>
-      <find>refine_eq_set</find>
-      <find>*it</find>
-      <find>nodes[i]</find>
-      <find>countOccurrences_from_combination</find>
-      <find>is_non_fresh</find>
-      <find>count_occurrences_from_root</find>
-      <find>occurrences</find>
-      <find>obj_hashtable&lt;</find>
-      <find>all_consts</find>
-      <find>static</find>
-      <find>m_trail</find>
-      <find>init_underapprox</find>
-      <find>obj_hashtable</find>
-      <find>set2map</find>
       <find>non_fresh_vars</find>
-      <find>unroll_const_non_fresh_variable_str2int</find>
-      <find>var_var</find>
-      <find>obj_hash</find>
+      <find>refine_eq_set</find>
+      <find>is_non_fresh(expr *n, obj_map&lt;expr, int&gt; const &amp;non_fresh_vars, int &amp;l)</find>
+      <find>is_non_fresh(e</find>
+      <find>bool theory_trau::is_non_fresh(</find>
+      <find>is_non_fresh(</find>
+      <find>occu</find>
+      <find>is_non_fresh</find>
       <find>std::set</find>
+      <find>occurren</find>
+      <find>std::</find>
+      <find>is_inconsisten</find>
+      <find>eqc_concat_lhs</find>
+      <find>group_terms_by_eqc</find>
+      <find>premises</find>
+      <find>new_eq_check_wrt_disequalities</find>
+      <find>std::map</find>
+      <find>obj_hash</find>
+      <find>varLen</find>
+      <find>positional_non_fresh_var_in_array</find>
+      <find>lengthConstraint_tonon_fresh_VarConstraint</find>
+      <find>gen_constraint_non_fresh_var_const</find>
+      <find>gen_constraint02_const_regex</find>
+      <find>gen_constraint02</find>
+      <find>to_arith_left</find>
+      <find>to_arith</find>
+      <find>arrange</find>
+      <find>ptr_vector</find>
+      <find>obj_pair_</find>
+      <find>equality_to_arith</find>
     </findStrings>
     <replaceStrings>
       <replace>backward_propagation_lazy(</replace>
@@ -881,12 +883,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="17131000" />
+      <workItem from="1569868458528" duration="24249000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1838531000" />
+    <option name="totallyTimeSpent" value="1845649000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -939,13 +941,6 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/smt/smt_consequences.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="490">
-          <caret line="448" column="9" selection-start-line="448" selection-start-column="9" selection-end-line="448" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/smt_enode.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -972,13 +967,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="399">
           <caret line="429" column="4" selection-start-line="429" selection-start-column="4" selection-end-line="429" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/util/obj_pair_hashtable.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="87" column="15" selection-start-line="87" selection-start-column="15" selection-end-line="87" selection-end-column="15" />
         </state>
       </provider>
     </entry>
@@ -1291,8 +1279,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/util/obj_hashtable.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="410">
-          <caret line="49" column="6" selection-start-line="49" selection-start-column="6" selection-end-line="49" selection-end-column="6" />
+        <state relative-caret-position="402">
+          <caret line="140" column="9" selection-start-line="140" selection-start-column="9" selection-end-line="140" selection-end-column="9" />
           <folding>
             <element signature="e#1208#1220#0" expanded="true" />
             <element signature="e#1511#1541#0" expanded="true" />
@@ -1302,15 +1290,29 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_seq.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="468">
-          <caret line="940" column="21" selection-start-line="940" selection-start-column="21" selection-end-line="940" selection-end-column="21" />
+        <state relative-caret-position="393">
+          <caret line="4764" column="14" selection-start-line="4764" selection-start-column="4" selection-end-line="4764" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/util/obj_pair_hashtable.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="855">
+          <caret line="58" column="15" selection-start-line="58" selection-start-column="6" selection-end-line="58" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/util/obj_pair_set.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="360">
+          <caret line="24" column="6" selection-start-line="24" selection-start-column="6" selection-end-line="24" selection-end-column="6" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="402">
-          <caret line="14329" column="53" selection-start-line="14329" selection-start-column="53" selection-end-line="14329" selection-end-column="53" />
+        <state relative-caret-position="130">
+          <caret line="13481" column="59" selection-start-line="13481" selection-start-column="59" selection-end-line="13481" selection-end-column="59" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
           </folding>
@@ -1319,11 +1321,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="421">
-          <caret line="2105" column="20" selection-start-line="2105" selection-start-column="20" selection-end-line="2105" selection-end-column="20" />
+        <state relative-caret-position="1130">
+          <caret line="2048" column="26" lean-forward="true" selection-start-line="2048" selection-start-column="26" selection-end-line="2048" selection-end-column="26" />
           <folding>
             <element signature="e#49#64#0" expanded="true" />
             <element signature="e#5244#8019#1" />
+            <element signature="e#9785#19671#1" />
           </folding>
         </state>
       </provider>

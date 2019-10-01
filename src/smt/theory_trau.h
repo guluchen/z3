@@ -464,7 +464,7 @@ namespace smt {
         class UnderApproxState{
         public:
             obj_map<expr, ptr_vector<expr>> eq_combination;
-            std::set<std::pair<expr*, int>> non_fresh_vars;
+            obj_map<expr, int> non_fresh_vars;
             expr_ref_vector equalities;
             expr_ref_vector disequalities;
             str::state curr_state;
@@ -480,11 +480,11 @@ namespace smt {
             }
 
             UnderApproxState(ast_manager &m, int _eqLevel, int _diseqLevel,
-                             obj_map<expr, ptr_vector<expr>> _eq_combination,
-                            std::set<std::pair<expr*, int>> _non_fresh_vars,
-                            expr_ref_vector _equalities,
-                            expr_ref_vector _disequalities,
-                            str::state _currState,
+                             obj_map<expr, ptr_vector<expr>> const& _eq_combination,
+                             obj_map<expr, int> const& _non_fresh_vars,
+                            expr_ref_vector const& _equalities,
+                            expr_ref_vector const& _disequalities,
+                            str::state const& _currState,
                             rational _str_int_bound):
 
 
@@ -568,7 +568,7 @@ namespace smt {
                 }
 
                 for (const auto& v : non_fresh_vars)
-                    if (state.non_fresh_vars.find(v) == state.non_fresh_vars.end()) {
+                    if (!state.non_fresh_vars.contains(v.m_key)) {
                         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
                         return false;
                     }
@@ -1364,20 +1364,18 @@ namespace smt {
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
             void refined_init_chain_free(
-                std::set<std::pair<expr *, int>> &non_fresh_vars,
-                obj_map<expr, ptr_vector<expr>> &eq_combination);
+                    obj_map<expr, int> &non_fresh_vars,
+                    obj_map<expr, ptr_vector<expr>> &eq_combination);
             void init_chain_free(
-                    std::set<std::pair<expr *, int>> &non_fresh_vars,
+                    obj_map<expr, int> &non_fresh_vars,
                     obj_map<expr, ptr_vector<expr>> &eq_combination);
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
                 rational ten_power(rational n);
 
-            void refine_not_contain_vars(
-                std::set<std::pair<expr *, int>> &non_fresh_vars,
-                obj_map<expr, ptr_vector<expr>> const& eq_combination);
-            bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, std::set<std::pair<expr *, int>> const& non_fresh_vars);
-                bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, std::set<std::pair<expr *, int>> const& non_fresh_vars);
+            void refine_not_contain_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);
+            bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
+                bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
                 bool eq_in_list(expr* n, ptr_vector<expr> const& nodes);
             bool can_omit(expr* lhs, expr* rhs, zstring needle);
             bool appear_in_other_eq(expr* root, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination);
@@ -1425,7 +1423,7 @@ namespace smt {
                 bool propagate_length_within_eqc(expr * var);
             bool underapproximation(
                     obj_map<expr, ptr_vector<expr>> const& eq_combination,
-                    std::set<std::pair<expr*, int>> const& non_fresh_vars,
+                    obj_map<expr, int> & non_fresh_vars,
                     expr_ref_vector const& diff);
                 bool assert_state(expr_ref_vector const& guessedEqs, expr_ref_vector const& guessedDisEqs, str::state const& root);
                 bool handle_str_int();
@@ -1441,7 +1439,6 @@ namespace smt {
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_1st_loop(expr* num, expr* str);
                             bool is_char_at(expr* str);
-                obj_map<expr, int> set2map(std::set<std::pair<expr*, int>> const& s);
                 void print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line = -1);
                 bool is_equal(UnderApproxState const& preState, UnderApproxState const& currState);
                     bool are_some_empty_vars_omitted(expr* n, ptr_vector<expr> const& v);
@@ -1633,21 +1630,13 @@ namespace smt {
                         expr *nameA,
                         expr_ref_vector &result);
 
-                expr* gen_constraint01_regex_head(
-                        std::pair<expr *, int> a, std::pair<expr *, int> b,
-                        expr *nameA);
+                expr* gen_constraint01_regex_head(std::pair<expr *, int> a, std::pair<expr *, int> b, expr *nameA);
 
-                expr* gen_constraint01_regex_tail(
-                        std::pair<expr *, int> a, std::pair<expr *, int> b,
-                        expr *nameA);
+                expr* gen_constraint01_regex_tail(std::pair<expr *, int> a, std::pair<expr *, int> b, expr *nameA);
 
-                expr* gen_constraint01_regex_regex(
-                        std::pair<expr *, int> a, std::pair<expr *, int> b,
-                        expr *nameA);
+                expr* gen_constraint01_regex_regex(std::pair<expr *, int> a, std::pair<expr *, int> b, expr *nameA);
 
-                expr* gen_constraint01_const_const(
-                        std::pair<expr *, int> a, std::pair<expr *, int> b,
-                        expr *nameA);
+                expr* gen_constraint01_const_const(std::pair<expr *, int> a, std::pair<expr *, int> b, expr *nameA);
 
                 void gen_constraint01_var_var(
                         std::pair<expr *, int> a, std::pair<expr *, int> b,
@@ -1902,9 +1891,7 @@ namespace smt {
                 /*
                 *  pre fix of itself
                 */
-                expr* leng_prefix_rhs(
-                        std::pair<expr*, int> a, /* var */
-                        bool unrollMode);
+                expr* leng_prefix_rhs(std::pair<expr*, int> a, /* var */ bool unrollMode);
 
                 /*
                  * 0: No const, No non_fresh_ var
@@ -2103,12 +2090,12 @@ namespace smt {
                         expr_ref_vector &and_lhs,
                         expr_ref_vector &to_assert);
 
-            std::set<std::pair<expr*, int>> collect_important_vars();
-            void collect_non_fresh_vars_str_int(std::map<expr *, int> &vars);
+            obj_map<expr, int> collect_important_vars();
+            void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
             void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
             bool is_str_int_var(expr* e);
             void refine_important_vars(
-                    std::set<std::pair<expr *, int>> &non_fresh_vars,
+                    obj_map<expr, int> &non_fresh_vars,
                     expr_ref_vector &notImportant,
                     obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
@@ -2120,32 +2107,26 @@ namespace smt {
                 bool collect_not_contains(expr* nn);
                 bool collect_not_charAt(expr* nn, int &maxCharAt);
                 bool more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences);
-                bool is_non_fresh(
-                        expr *nn,
-                        obj_map<expr, int> const &occurrences,
-                        int &len);
-                bool is_non_fresh_recheck(
-                        expr *nn,
-                        int len,
-                        obj_map<expr, ptr_vector<expr>> const& combinations);
+                bool is_non_fresh_occurrences(expr *nn, obj_map<expr, int> const &occurrences, int &len);
+                bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
                 obj_map<expr, int> count_occurrences_from_root();
                         bool is_replace_var(expr* x);
                     obj_map<expr, int> count_occurrences_from_combination(
                             obj_map<expr, ptr_vector<expr>> const &eq_combination,
-                            std::set<std::pair<expr *, int>> const &non_fresh_vars);
+                            obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
             obj_map<expr, ptr_vector<expr>> normalize_eq(
                     expr_ref_vector &subNodes,
-                    std::set<std::pair<expr*, int>> &non_fresh_vars);
+                    obj_map<expr, int> &non_fresh_vars);
             obj_map<expr, ptr_vector<expr>> refine_eq_combination(
-                        std::set<std::pair<expr*, int>> &non_fresh_vars,
+                    obj_map<expr, int> &non_fresh_vars,
                         obj_map<expr, ptr_vector<expr>> const& combinations,
                         expr_ref_vector const& subNodes
                 );
 
                 obj_map<expr, ptr_vector<expr>> refine_eq_combination(
-                        std::set<std::pair<expr*, int>> &non_fresh_vars,
+                        obj_map<expr, int> &non_fresh_vars,
                         obj_map<expr, ptr_vector<expr>> combinations,
                         expr_ref_vector subNodes,
                         expr_ref_vector notnon_fresh_vars
@@ -2158,30 +2139,28 @@ namespace smt {
                 */
                 bool appear_in_eqs(ptr_vector<expr> const& s, expr* var);
 
-                bool is_important_concat(expr* e, std::set<std::pair<expr*, int>> const& non_fresh_vars);
-                bool is_trivial_combination(expr* v, ptr_vector<expr> const& eq, std::set<std::pair<expr*, int>> const& non_fresh_vars);
+                bool is_important_concat(expr* e, obj_map<expr, int> const& non_fresh_vars);
+                bool is_trivial_combination(expr* v, ptr_vector<expr> const& eq, obj_map<expr, int> const& non_fresh_vars);
                 ptr_vector<expr> refine_eq_set(
                         expr* var,
                         ptr_vector<expr> s,
-                        std::set<std::pair<expr*, int>> const& non_fresh_vars,
+                        obj_map<expr, int> const& non_fresh_vars,
                         expr_ref_vector const& notnon_fresh_vars);
                 ptr_vector<expr> refine_eq_set(
                         expr* var,
                         ptr_vector<expr> s,
-                        std::set<std::pair<expr*, int>> const& non_fresh_vars);
+                        obj_map<expr, int> const& non_fresh_vars);
                     void refine_all_duplications(ptr_vector<expr> &s);
                     bool are_equal_concat(expr* lhs, expr* rhs);
-                    ptr_vector<expr> refine_eq_set(
-                        ptr_vector<expr> const& s,
-                        std::set<std::pair<expr*, int>> const& non_fresh_vars);
-                bool is_non_fresh(expr *n, std::set<std::pair<expr *, int>> const &non_fresh_vars);
-                bool is_non_fresh(expr *n, std::set<std::pair<expr *, int>> const &non_fresh_vars, int &l);
+                    ptr_vector<expr> refine_eq_set(ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
+                bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
+                bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
                 ptr_vector<expr> extend_object(
                     expr* object,
                     obj_map<expr, ptr_vector<expr>> &combinations,
                     expr_ref_vector &subNodes,
                     expr_ref_vector parents,
-                    std::set<std::pair<expr*, int>> non_fresh_vars);
+                    obj_map<expr, int> non_fresh_vars);
                     expr* create_concat_with_concat(expr* n1, expr* n2);
                     expr* create_concat_with_str(expr* n, zstring str);
                     expr* create_concat_with_str(zstring str, expr* n);
@@ -2197,7 +2176,7 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
-            bool new_eq_check_wrt_disequalities(expr* n, expr_ref_vector premises, zstring containKey, expr_ref conclusion);
+            bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion);
             void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
@@ -2359,7 +2338,7 @@ namespace smt {
         /*
          * Collect important vars in AST node
          */
-        void get_important_asts_in_node(expr * node, std::set<std::pair<expr*, int>> non_fresh_vars, expr_ref_vector & astList, bool consider_itself = false);
+        void get_important_asts_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector & astList, bool consider_itself = false);
         eautomaton* get_automaton(expr* re);
 
         void track_variable_scope(expr * var);
