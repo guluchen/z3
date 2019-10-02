@@ -14310,25 +14310,25 @@ namespace smt {
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    vars[s] = str_int_bound.get_int64();
+                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
                     update_string_int_vars(s, string_int_vars);
                     update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
-                    vars[a->get_arg(1)] = str_int_bound.get_int64();
+                    add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), string_int_vars);
                     update_string_int_vars(num, int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    vars[s] = str_int_bound.get_int64();
+                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
                     update_string_int_vars(s, string_int_vars);
                     update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
-                    vars[a->get_arg(0)] = str_int_bound.get_int64();
+                    add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), string_int_vars);
                     update_string_int_vars(num, int_string_vars);
                 }
@@ -14340,25 +14340,25 @@ namespace smt {
                 app* a = to_app(to_app(e)->get_arg(0));
                 if (u.str.is_stoi(a->get_arg(0))){
                     expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    vars[s] = str_int_bound.get_int64();
+                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
                     update_string_int_vars(s, string_int_vars);
                     update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0))){
                     expr* num = to_app(a->get_arg(0))->get_arg(0);
-                    vars[a->get_arg(1)] = str_int_bound.get_int64();
+                    add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), string_int_vars);
                     update_string_int_vars(num, int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1))){
                     expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    vars[s] = str_int_bound.get_int64();
+                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
                     update_string_int_vars(s, string_int_vars);
                     update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1))){
                     expr* num = to_app(a->get_arg(1))->get_arg(0);
-                    vars[a->get_arg(0)] = str_int_bound.get_int64();
+                    add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), string_int_vars);
                     update_string_int_vars(num, int_string_vars);
                 }
@@ -14368,6 +14368,17 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << vars.size() << std::endl;);
         if (vars.size() > 0)
             flat_enabled = true;
+    }
+
+    void theory_trau::add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len){
+        if (vars.contains(e)){
+            if (!(vars[e] == -1 || vars[e] > len))
+                vars[e] = len;
+        }
+        else{
+            vars.insert(e, len);
+        }
+
     }
 
     void theory_trau::update_string_int_vars(expr* v, obj_hashtable<expr> &s){

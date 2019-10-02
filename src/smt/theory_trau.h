@@ -2092,6 +2092,7 @@ namespace smt {
 
             obj_map<expr, int> collect_important_vars();
             void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
+            void add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len);
             void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
             bool is_str_int_var(expr* e);
             void refine_important_vars(
