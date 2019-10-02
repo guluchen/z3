@@ -8624,12 +8624,12 @@ namespace smt {
         /* 1 vs n, 1 vs 1, n vs 1 */
         for (unsigned i = 0; i < possibleCases.size(); ++i) {
 
-            arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Checking case");
+            arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Checking case");
             expr* tmp = to_arith(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_elements, rhs_elements, non_fresh_variables);
 
             if (tmp != nullptr) {
                 cases.push_back(tmp);
-                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].printArrangement("Correct case");
+                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Correct case");
                 STRACE("str", tout << __LINE__ <<  "  " << mk_pp(tmp, m) << std::endl;);
             }
             else {
@@ -8664,7 +8664,7 @@ namespace smt {
             vector<Arrangment> const& tmp,
             vector<Arrangment> &possibleCases) {
         for (const auto& a : tmp)
-            if (a.isPossibleArrangement(lhs_elements, rhs_elements))
+            if (a.is_possible_arrangement(lhs_elements, rhs_elements))
                 possibleCases.push_back(a);
     }
 
@@ -18771,6 +18771,638 @@ namespace smt {
             }
         }
         STRACE("str", tout << std::endl;);
+        return result;
+    }
+
+    app * theory_trau::string_value_proc::mk_value(model_generator & mg, ptr_vector<expr> & values) {
+        ast_manager & m = mg.get_manager();
+        obj_map<enode, app *> m_root2value = mg.get_root2value();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
+        clock_t t = clock();
+        for (int i = 0; i < (int)m_dependencies.size(); ++i){
+            app* val = nullptr;
+            if (m_root2value.find(m_dependencies[i].get_enode(), val)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << std::endl;);
+            }
+            else
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
+        }
+
+        sort * str_sort = th.u.str.mk_string_sort();
+        bool is_string = str_sort == m_sort;
+
+        if (is_string) {
+            int len_int = len;
+            if (len_int != -1) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": len : " << len_int << std::endl;);
+                if (non_fresh_var) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": important" << std::endl;);
+                    if (len_int != -1) {
+                        zstring strValue;
+                        if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
+                        }
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
+                        return to_app(th.mk_string(strValue));
+                    }
+                }
+                if (regex != nullptr) {
+                    zstring strValue;
+                    if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
+                        return to_app(th.mk_string(strValue));
+                    }
+                    if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
+                        return to_app(th.mk_string(strValue));
+                    }
+                    if (construct_string_from_regex(mg, len_int, m_root2value, strValue)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\"" << std::endl;);
+                        return to_app(th.mk_string(strValue));
+                    }
+                }
+                zstring strValue;
+                construct_normally(mg, len_int, m_root2value, strValue);
+                return to_app(th.mk_string(strValue));
+            }
+            else {
+                STRACE("str",
+                       tout << __LINE__ << " " << __FUNCTION__
+                            << mk_pp(node, m)
+                            << std::endl;);
+                SASSERT(false);
+            }
+        }
+
+        else {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": not string: "  << mk_pp(node, m) << std::endl;);
+        }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
+        return node;
+    }
+
+    bool theory_trau::string_value_proc::construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &strValue){
+        vector<zstring> elements = collect_alternative_components(regex);
+        if (th.u.re.is_union(regex)) {
+            SASSERT(elements.size() > 0);
+            for (int i = 0; i < elements.size(); ++i) {
+                if (elements[i].length() == len_int){
+                    strValue = elements[i];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        else if (th.u.re.is_to_re(regex)) {
+            SASSERT(elements.size() == 1);
+            SASSERT(elements[0].length() == len_int);
+            strValue = elements[0];
+            return true;
+        }
+        else if (th.u.re.is_star(regex) || th.u.re.is_plus(regex)) {
+            zstring valueStr("");
+            for (int i = 0; i < (int)elements.size(); ++i) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << elements[i] << std::endl;);
+            }
+            if (create_string_with_length(elements, valueStr, len_int)) {
+                strValue = valueStr;
+                return true;
+            }
+            else
+                return false;
+        }
+        return false;
+    }
+
+    bool theory_trau::string_value_proc::create_string_with_length(vector<zstring> const& elements, zstring &currentStr, int remainLength){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": currentStr: "  << currentStr << std::endl;);
+        if (remainLength == 0)
+            return true;
+
+        for (const auto& s : elements) {
+            if (s.length() <= remainLength) {
+                int x = remainLength / s.length();
+                int bak_len = currentStr.length();
+                for (int j = 0; j < x; ++j)
+                    currentStr  = currentStr + s;
+
+                if (remainLength % s.length() == 0) {
+                    return true;
+                }
+                else {
+                    int tmpRemainLength = remainLength % s.length();
+                    while ((int)currentStr.length() > bak_len) {
+                        if (create_string_with_length(elements, currentStr, tmpRemainLength)) {
+                            return true;
+                        } else {
+                            currentStr = currentStr.extract(0, currentStr.length() - s.length());
+                            tmpRemainLength += s.length();
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    vector<zstring> theory_trau::string_value_proc::collect_alternative_components(expr* v){
+        vector<zstring> result;
+        collect_alternative_components(v, result);
+        return result;
+    }
+
+    void theory_trau::string_value_proc::collect_alternative_components(expr* v, vector<zstring>& ret){
+        if (th.u.re.is_to_re(v)){
+            expr* arg0 = to_app(v)->get_arg(0);
+            zstring tmpStr;
+            th.u.str.is_string(arg0, tmpStr);
+            ret.push_back(tmpStr);
+        }
+        else if (th.u.re.is_union(v)){
+            expr* arg0 = to_app(v)->get_arg(0);
+            collect_alternative_components(arg0, ret);
+            expr* arg1 = to_app(v)->get_arg(1);
+            collect_alternative_components(arg1, ret);
+        }
+        else if (th.u.re.is_star(v) || th.u.re.is_plus(v)) {
+            expr* arg0 = to_app(v)->get_arg(0);
+            collect_alternative_components(arg0, ret);
+        }
+        else if (th.u.re.is_range(v)){
+            expr* arg0 = to_app(v)->get_arg(0);
+            expr* arg1 = to_app(v)->get_arg(1);
+            zstring start, finish;
+            th.u.str.is_string(arg0, start);
+            th.u.str.is_string(arg1, finish);
+            SASSERT(start.length() == 1);
+            SASSERT(finish.length() == 1);
+
+            for (int i = start[0]; i <= (int)finish[0]; ++i){
+                zstring tmp(i);
+                ret.push_back(tmp);
+            }
+        }
+        else if (th.u.re.is_concat(v)) {
+            expr* tmp = is_regex_plus_breakdown(v);
+            if (tmp != nullptr){
+                return collect_alternative_components(tmp, ret);
+            }
+            else
+                NOT_IMPLEMENTED_YET();
+        }
+        else {
+            NOT_IMPLEMENTED_YET();
+        }
+    }
+
+    expr* theory_trau::string_value_proc::is_regex_plus_breakdown(expr* e){
+        if (th.u.re.is_concat(e)){
+            expr* arg0 = to_app(e)->get_arg(0);
+            expr* arg1 = to_app(e)->get_arg(1);
+
+            if (th.u.re.is_star(arg1)){
+                expr* arg10 = to_app(arg1)->get_arg(0);
+                if (arg10 == arg0)
+                    return arg1;
+            }
+
+            if (th.u.re.is_star(arg0)){
+                expr* arg00 = to_app(arg0)->get_arg(0);
+                if (arg00 == arg1)
+                    return arg0;
+            }
+        }
+        return nullptr;
+    }
+
+    bool theory_trau::string_value_proc::construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue){
+        ast_manager & m = mg.get_manager();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
+        if (len_int != -1) {
+            // non root var
+            clock_t t = clock();
+            bool constraint01 = !th.uState.eq_combination.contains(node);
+            if (!th.dependency_graph.contains(node))
+                th.dependency_graph.insert(node, {});
+            bool constraint02 = th.dependency_graph[node].size() > 0;
+
+            if (constraint01 || constraint02) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
+                if (!constraint02) {
+                    // free var
+                    for (int i = 0; i < len_int; ++i)
+                        strValue = strValue + th.default_char;
+                    return to_app(th.mk_string(strValue));
+                } else {
+                    if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue))
+                        return to_app(th.mk_string(strValue));
+                }
+            }
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
+            // root var
+            int_vector val;
+            for (int i = 0; i < len_int; ++i)
+                val.push_back(-1);
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
+            if (th.u.str.is_concat(node))
+                construct_string(mg, node, m_root2value, val);
+            if (th.uState.eq_combination.contains(node))
+                for (const auto &eq : th.uState.eq_combination[node]) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(eq, m) << std::endl;);
+                    construct_string(mg, eq, m_root2value, val);
+                }
+            std::string ret = "";
+            for (int i = 0; i < len_int; ++i)
+                if (val[i] == -1) {
+                    ret = ret + th.default_char;
+                } else
+                    ret = ret + (char)val[i];
+            strValue = zstring(ret.c_str());
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
+            return to_app(th.mk_string(strValue));
+
+        }
+        else {
+            SASSERT(false);
+        }
+
+        return false;
+    }
+
+    bool theory_trau::string_value_proc::construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val){
+        SASSERT(arr->get_owner() != nullptr);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
+
+        app* arr_val = nullptr;
+        if (m_root2value.find(arr, arr_val)) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+            int_vector vValue (len_int, -1);
+
+            func_decl * fd = to_func_decl(arr_val->get_parameter(0).get_ast());
+            func_interp* fi = mg.get_model().get_func_interp(fd);
+
+            unsigned num_entries = fi->num_entries();
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " num_entries: " << num_entries << std::endl;);
+            for(unsigned i = 0; i < num_entries; i++)
+            {
+                func_entry const* fe = fi->get_entry(i);
+                expr* k =  fe->get_arg(0);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " key: " << mk_pp(k, mg.get_manager()) << std::endl;);
+                rational key;
+                if (th.m_autil.is_numeral(k, key) && key.get_int32() >=0 ) {
+                    expr* v =  fe->get_result();
+
+                    rational value;
+                    if (th.m_autil.is_numeral(v, value)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " key: " << key << "; value:" << value << std::endl;);
+                        if (key.get_int32() < (int)vValue.size())
+                            vValue[key.get_int32()] = value.get_int32();
+                    }
+                }
+            }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
+            bool completed = true;
+            zstring value;
+
+            unsigned_set char_set;
+            get_char_range(char_set);
+            value = fill_chars(vValue, char_set, completed);
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
+            val = value;
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "  << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
+            // revise string basing on regex
+            if (char_set.size() == 0) {
+                if (regex != nullptr) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                       << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
+                    if (!match_regex(regex, val)) {
+                        vector<zstring> elements = collect_alternative_components(regex);
+                        for (int i = 0; i < (int)value.length(); ++i) {
+                            zstring tmp = val.extract(0, i);
+                            STRACE("str",
+                                   tout << __LINE__ << " " << __FUNCTION__ << " tmp: " << tmp << std::endl;);
+                            if (!match_regex(regex, tmp)) {
+                                int err_pos = i;
+                                for (err_pos = i + 1; err_pos < (int)value.length(); ++err_pos)
+                                    if (value[err_pos] != value[i]) {
+                                        break;
+                                    }
+
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                                   << mk_pp(node, th.get_manager()) << " " << value
+                                                   << " " << i
+                                                   << std::endl;);
+                                zstring working_str("");
+                                if (i > 0)
+                                    working_str = val.extract(0, i - 1);
+
+                                zstring new_str("");
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
+                                                   << mk_pp(node, th.get_manager()) << " " << working_str
+                                                   << std::endl;);
+                                if (create_string_with_length(elements, new_str, err_pos - i)) {
+                                    val = working_str + new_str + val.extract(i + new_str.length(),
+                                                                              val.length() -
+                                                                              (i + new_str.length()));
+                                }
+                                else
+                                NOT_IMPLEMENTED_YET();
+                                i = i + new_str.length() - 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (completed == false) {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    bool theory_trau::string_value_proc::get_char_range(unsigned_set & char_set){
+        if (regex != nullptr) {
+            // special case for numbers
+            vector<zstring> elements = collect_alternative_components(regex);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
+                               << mk_pp(regex, th.get_manager()) << " "
+                               << elements.size()
+                               << std::endl;);
+            for (const auto& s : elements) {
+                if (s.length() != 1) {
+                    char_set.reset();
+                    return false;
+                } else {
+                    char_set.insert(s[0]);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    zstring theory_trau::string_value_proc::fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed){
+        std::string value;
+
+        for (unsigned i = 0; i < vValue.size(); ++i) {
+            if (char_set.size() > 0){
+                char tmp = (char)vValue[i];
+                if (char_set.find(tmp) == char_set.end())
+                    value = value + (char)(*(char_set.begin()));
+                else
+                    value = value + (char) vValue[i];
+            }
+            else {
+                if (vValue[i] <= 0 || vValue[i] >= 128) {
+                    value = value + th.default_char;
+                    completed = false;
+                } else
+                    value = value + (char) vValue[i];
+            }
+        }
+        return zstring(value.c_str());
+    }
+
+    void theory_trau::string_value_proc::construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val){
+        if (th.u.str.is_concat(eq)){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << mk_pp(eq, th.get_manager()) << std::endl;);
+            ptr_vector<expr> leafNodes;
+            th.get_nodes_in_concat(eq, leafNodes);
+
+            int sum = 0;
+            for (int i = 0; i < (int)leafNodes.size(); ++i){
+                if (th.is_important(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
+                    zstring leafVal;
+
+                    if (get_str_value(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
+                        int len_int = leafVal.length();
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: "  << mk_pp(leafNodes[i], th.get_manager())  << " = " << leafVal << std::endl;);
+                        for (int j = sum; j < sum + len_int; ++j) {
+                            if (val[j] == -1) {
+                                val[j] = leafVal[j - sum];
+                            } else {
+                                if (val[j] != (int) leafVal[j - sum]) {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": val: " << val[j]
+                                                       << std::endl;);
+                                    STRACE("str",
+                                           tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j
+                                                << " \"" << leafVal << "\" "
+                                                << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                }
+                            }
+                        }
+                        sum = sum + len_int;
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                    }
+                }
+                else {
+                    int len_int = -1;
+                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value,
+                                      len_int)){
+                        sum += len_int;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sum = "  << sum << std::endl;);
+                    }
+                    else {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get len: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                        SASSERT(false);
+                    }
+                }
+            }
+        }
+    }
+
+    bool theory_trau::string_value_proc::fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len, zstring &value){
+        // component var
+        for (const auto &ancestor : th.dependency_graph[node]) {
+            STRACE("str",
+                   tout << __LINE__ << " " << __FUNCTION__ << " "
+                        << mk_pp(ancestor, mg.get_manager())
+                        << std::endl;);
+            zstring ancestorValue;
+            if (get_str_value(th.get_context().get_enode(ancestor), m_root2value,
+                              ancestorValue)) {
+                if (th.u.str.is_concat(ancestor)) {
+                    if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value,
+                                                     len, value)) {
+                        return true;
+                    }
+                }
+
+
+
+                // find in its eq
+                if (th.uState.eq_combination.contains(ancestor)) {
+                    for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
+                        if (th.u.str.is_concat(ancestor_i)) {
+                            if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue,
+                                                             m_root2value, len,
+                                                             value)) {
+                                STRACE("str",
+                                       tout << __LINE__ << " " << __FUNCTION__
+                                            << ": value = " << value
+                                            << std::endl;);
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+        return false;
+    }
+
+    bool theory_trau::string_value_proc::fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue,
+                                      obj_map<enode, app *> const& m_root2value, int len, zstring &value){
+        if (th.u.str.is_concat(concat)){
+
+            ptr_vector<expr> leafNodes;
+            th.get_all_nodes_in_concat(concat, leafNodes);
+
+            if (leafNodes.contains(node) || (linker != nullptr && leafNodes.contains(linker))) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << std::endl;);
+                expr* tmp = nullptr;
+                if (leafNodes.contains(node))
+                    tmp = node;
+                else
+                    tmp = linker;
+                int prefix = find_prefix_len(mg, concat, tmp, m_root2value);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
+                value = concatValue.extract(prefix, len);
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    int theory_trau::string_value_proc::find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value){
+
+        if (th.u.str.is_concat(concat)){
+            int prefix = 0;
+            find_prefix_len(mg, concat, subNode, m_root2value, prefix);
+            return prefix;
+        }
+        else
+        SASSERT(false);
+
+        return -1;
+    }
+
+    bool theory_trau::string_value_proc::find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value,
+                         int &prefix){
+        if (concat == subNode)
+            return true;
+        if (th.u.str.is_concat(concat)){
+            if (!find_prefix_len(mg, to_app(concat)->get_arg(0), subNode, m_root2value, prefix)) {
+                if (!find_prefix_len(mg, to_app(concat)->get_arg(1), subNode, m_root2value, prefix))
+                    return false;
+                else
+                    return true;
+            }
+            else
+                return true;
+        }
+        else {
+            int subLen = -1;
+            zstring val_str;
+            if (th.u.str.is_string(concat, val_str)){
+                prefix += val_str.length();
+            }
+            else if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(concat)), m_root2value, subLen)) {
+                prefix += subLen;
+            }
+            else {
+                SASSERT(false);
+            }
+        }
+        return false;
+    }
+
+    bool theory_trau::string_value_proc::get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> const& m_root2value, int &value){
+        app* val = nullptr;
+        if (m_root2value.find(n->get_root(), val)) {
+            rational valInt;
+            if (th.m_autil.is_numeral(val, valInt)) {
+                value = valInt.get_int32();
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            // query int theory
+            expr *value_ral = th.query_theory_arith_core(n->get_owner(), mg);
+            if (value_ral != nullptr) {
+
+                rational tmp;
+                if (th.m_autil.is_numeral(value_ral, tmp)) {
+                    value = tmp.get_int32();
+                    return true;
+                }
+                else
+                SASSERT(false);
+            }
+            return false;
+        }
+    }
+
+    bool theory_trau::string_value_proc::get_str_value(enode *n, obj_map<enode, app *> const& m_root2value, zstring &value){
+        app* val = nullptr;
+        if (m_root2value.find(n->get_root(), val)) {
+            zstring valStr;
+            if (th.u.str.is_string(val, valStr)) {
+                value = valStr;
+                return true;
+            }
+            else {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(n->get_owner(), th.get_manager()) << std::endl;);
+                return false;
+            }
+        }
+        else {
+            zstring tmp;
+            if (th.u.str.is_string(n->get_owner(), tmp)) {
+                value = tmp;
+                return true;
+            }
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(n->get_owner(), th.get_manager()) << std::endl;);
+            return false;
+        }
+    }
+
+    bool theory_trau::string_value_proc::match_regex(expr *a, zstring b){
+        expr* tmp = th.u.re.mk_to_re(th.u.str.mk_string(b));
+        return match_regex(a, tmp);
+    }
+
+    bool theory_trau::string_value_proc::match_regex(expr *a, expr *b) {
+        expr* intersection = th.u.re.mk_inter(a, b);
+        eautomaton *au01 = get_automaton(intersection);
+        return !au01->is_empty();
+    }
+
+    eautomaton* theory_trau::string_value_proc::get_automaton(expr* re) {
+        eautomaton* result = nullptr;
+        if (th.m_re2aut.find(re, result)) {
+            return result;
+        }
+
+        result = th.m_mk_aut(re);
+        th.m_automata.push_back(result);
+        th.m_re2aut.insert(re, result);
+        th.m_res.push_back(re);
         return result;
     }
 }
