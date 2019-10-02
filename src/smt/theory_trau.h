@@ -154,8 +154,13 @@ namespace smt {
                 return string_hash(s.encode().c_str(), static_cast<unsigned>(s.length()), 17);
             }
         };
-        typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> > string_map;
-        typedef old_svector<std::pair<expr*, int>> pair_expr_vector;
+        typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> >    string_map;
+        typedef hashtable<zstring, zstring_hash_proc,default_eq<zstring> >      string_set;
+        typedef hashtable<int, int_hash, default_eq<int> >                      int_set;
+        typedef hashtable<char, unsigned_hash, default_eq<char> >               char_set;
+        typedef std::pair<expr*, int>                                           expr_int;
+        typedef old_svector<expr_int>                                           pair_expr_vector;
+
         class Arrangment{
         public:
             int_vector left_arr;
@@ -344,8 +349,8 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              */
             bool isPossibleArrangement(
-                    std::vector<std::pair<expr*, int>> const& lhs_elements,
-                    std::vector<std::pair<expr*, int>> const& rhs_elements) const {
+                    pair_expr_vector const& lhs_elements,
+                    pair_expr_vector const& rhs_elements) const {
                 /* bla bla */
                 for (unsigned i = 0; i < left_arr.size(); ++i)
                     if (left_arr[i] != -1){
@@ -1266,7 +1271,7 @@ namespace smt {
              */
             void instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs, bool& skip);
                 expr* handle_trivial_diseq(expr * e, zstring value);
-                    std::set<zstring> extract_const(expr* e, int lvl = 0);
+        string_set extract_const(expr* e, int lvl = 0);
         void create_pq();
         void init_search_eh() override;
         void relevant_eh(app *n) override;
@@ -1330,19 +1335,19 @@ namespace smt {
                 bool at_same_diseq_state(str::state const& curr, str::state const& prev);
 
         bool review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
-            std::set<char> collect_char_domain_from_concat();
-            std::set<char> collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+            char_set collect_char_domain_from_concat();
+            char_set collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination);
             bool handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 expr* create_equations_over_contain_vars(expr* x, expr* y);
             bool handle_charAt_family(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool are_equal_exprs(expr* x, expr* y);
-            std::set<expr*> get_eqc_roots();
+            obj_hashtable<expr> get_eqc_roots();
             void add_theory_aware_branching_info(expr * term, double priority, lbool phase);
 
 
             bool propagate_concat();
             bool propagate_value(expr_ref_vector & concat_set);
-            bool propagate_length(expr_ref_vector & varSet, expr_ref_vector & concatSet, std::map<expr*, int> & exprLenMap);
+            bool propagate_length(expr_ref_vector & varSet, expr_ref_vector & concatSet);
                 void collect_var_concat(expr * node, expr_ref_vector & vars, expr_ref_vector & concats);
                 void get_unique_non_concat_nodes(expr * node, expr_ref_vector & argSet);
                 bool propagate_length_within_eqc(expr * var);
@@ -1377,9 +1382,9 @@ namespace smt {
                     expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
-                char setup_default_char(std::set<char> const& includeChars, std::set<char> const& excludeChars);
-                std::set<char> init_excluded_char_set();
-                std::set<char> init_included_char_set();
+                char setup_default_char(char_set const& included_chars, char_set const& exclude_chars);
+                char_set init_excluded_char_set();
+                char_set init_included_char_set();
                 void create_appearance_map(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 void setup_flats();
                 bool should_use_flat();
@@ -1446,26 +1451,18 @@ namespace smt {
                     bool collect_alternative_components(expr* v, std::vector<zstring>& ret);
                     int find_correspond_right_parentheses(int leftParentheses, zstring str);
 
-                std::set<zstring> collect_strs_in_membership(expr* v);
-                void collect_strs_in_membership(expr* v, std::set<zstring> &ret);
+                string_set collect_strs_in_membership(expr* v);
+                void collect_strs_in_membership(expr* v, string_set &ret);
                     expr* remove_star_in_star(expr* reg);
                     bool contain_star(expr* reg);
                 zstring getStdRegexStr(expr* regex);
+                void setup_encoded_chars(char_set &s);
             /*
              * convert lhs == rhs to SMT formula
              */
-            expr* equality_to_arith(
-                std::vector<std::pair<expr*, int>> const& lhs_elements,
-                std::vector<std::pair<expr*, int>> const& rhs_elements,
-                obj_map<expr, int> const& non_fresh_variables,
-                int p = PMAX);
-                expr* equality_to_arith_ordered(
-                        std::vector<std::pair<expr*, int>> const& lhs_elements,
-                        std::vector<std::pair<expr*, int>> const& rhs_elements,
-                        obj_map<expr, int> const& non_fresh_variables,
-                        int p);
-                std::string create_string_representation(std::vector<std::pair<expr*, int>> const& lhs_elements,
-                                                              std::vector<std::pair<expr*, int>> const& rhs_elements);
+            expr* equality_to_arith(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p = PMAX);
+                expr* equality_to_arith_ordered(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p);
+                std::string create_string_representation(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements);
             /*
              * lhs: size of the lhs
              * rhs: size of the rhs
@@ -1475,63 +1472,47 @@ namespace smt {
              * Pre-Condition: x_i == 0 --> x_i+1 == 0
              *
              */
-            expr_ref_vector arrange(
-                std::vector<std::pair<expr*, int>> const& lhs_elements,
-                std::vector<std::pair<expr*, int>> const& rhs_elements,
-                obj_map<expr, int> const& non_fresh_variables,
-                int p = PMAX);
+            expr_ref_vector arrange(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p = PMAX);
 
-            void get_arrangements(std::vector<std::pair<expr*, int>> const& lhs_elements,
-                                          std::vector<std::pair<expr*, int>> const& rhs_elements,
-                                          obj_map<expr, int> const& non_fresh_variables,
-                                          std::vector<Arrangment> &possibleCases);
+            void get_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, std::vector<Arrangment> &possibleCases);
 
-            void update_possible_arrangements(
-                std::vector<std::pair<expr*, int>> const& lhs_elements,
-                std::vector<std::pair<expr*, int>> const& rhs_elements,
-                std::vector<Arrangment> const& tmp,
-                std::vector<Arrangment> &possibleCases);
+            void update_possible_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, std::vector<Arrangment> const& tmp, std::vector<Arrangment> &possibleCases);
 
             /*
              *
              */
-            Arrangment create_arrangments_manually(
-                std::vector<std::pair<expr*, int>> const& lhs_elements,
-                std::vector<std::pair<expr*, int>> const& rhs_elements);
+            Arrangment create_arrangments_manually(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements);
 
             /*
              * a_1 + a_2 + b_1 + b_2 = c_1 + c_2 + d_1 + d_2 ---> SMT
              */
-            expr* to_arith(int p,
-                                            int_vector const& left_arr,
-                                            int_vector const& right_arr,
-                                            std::vector<std::pair<expr*, int>> const& lhs_elements,
-                                            std::vector<std::pair<expr*, int>> const& rhs_elements,
-                                            obj_map<expr, int> const& non_fresh_variables);
+            expr* to_arith(int p, int_vector const& left_arr, int_vector const& right_arr, pair_expr_vector const& lhs_elements,
+                            pair_expr_vector const& rhs_elements,
+                            obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_others(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
-                                           int_vector const& left_arr,
-                                           int_vector const& right_arr,
-                                           std::vector<std::pair<expr*, int>> const& lhs_elements,
-                                           std::vector<std::pair<expr*, int>> const& rhs_elements,
-                                            obj_map<expr, int> const& non_fresh_variables);
+                        int_vector const& left_arr,
+                        int_vector const& right_arr,
+                        pair_expr_vector const& lhs_elements,
+                        pair_expr_vector const& rhs_elements,
+                        obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_emptyflats(bool (&checkLeft)[10000], bool (&checkRight)[10000],
                                           int_vector const& left_arr,
                                           int_vector const& right_arr,
-                              std::vector<std::pair<expr*, int>> const& lhs_elements,
-                              std::vector<std::pair<expr*, int>> const& rhs_elements);
+                                          pair_expr_vector const& lhs_elements,
+                                          pair_expr_vector const& rhs_elements);
                 expr* to_arith_right(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
                                      int_vector const& left_arr,
                                      int_vector const& right_arr,
-                              std::vector<std::pair<expr*, int>> const& lhs_elements,
-                              std::vector<std::pair<expr*, int>> const& rhs_elements,
-                              obj_map<expr, int> const& non_fresh_variables);
+                                     pair_expr_vector const& lhs_elements,
+                                     pair_expr_vector const& rhs_elements,
+                                     obj_map<expr, int> const& non_fresh_variables);
                 expr* to_arith_left(bool (&checkLeft)[10000], bool (&checkRight)[10000], int p,
-                              int_vector const& left_arr,
-                              int_vector const& right_arr,
-                              std::vector<std::pair<expr*, int>> const& lhs_elements,
-                              std::vector<std::pair<expr*, int>> const& rhs_elements,
-                              obj_map<expr, int> const& non_fresh_variables);
-
+                                    int_vector const& left_arr,
+                                    int_vector const& right_arr,
+                                    pair_expr_vector const& lhs_elements,
+                                    pair_expr_vector const& rhs_elements,
+                                    obj_map<expr, int> const& non_fresh_variables);
+                void insert_top(expr_int const& e, pair_expr_vector &v);
             /*
              * Flat = Flat
              * size = size && it = it  ||
@@ -1542,7 +1523,7 @@ namespace smt {
                     int pMax,
                     obj_map<expr, int> const& non_fresh_variables,
                     bool optimizing);
-
+                pair_expr_vector init_expr_vector(expr_int p);
                 void gen_constraint01_const_var(
                         std::pair<expr *, int> a, std::pair<expr *, int> b,
                         obj_map<expr, int> const& non_fresh_variables,
@@ -1579,14 +1560,14 @@ namespace smt {
 
             expr* gen_constraint_flat_var(
                     std::pair<expr *, int> a,
-                    std::vector<std::pair<expr *, int>> const& elements,
+                    pair_expr_vector const& elements,
                     int pos,
                     int pMax,
                     rational bound);
 
             expr* gen_constraint_flat_flat(
                     std::pair<expr *, int> a,
-                    std::vector<std::pair<expr *, int>> const& elements,
+                    pair_expr_vector const& elements,
                     int pos,
                     int pMax,
                     rational bound,
@@ -1599,20 +1580,20 @@ namespace smt {
              */
             expr* gen_constraint02(
                     std::pair<expr *, int> a,
-                    std::vector<std::pair<expr *, int>> const& elements,
+                    pair_expr_vector const& elements,
                     int pMax,
                     obj_map<expr, int> const& non_fresh_variables,
                     bool optimizing);
 
                 bool gen_constraint02_const_regex(std::pair<expr *, int> a,
-                                                  std::vector<std::pair<expr *, int>> const& elements,
+                                                  pair_expr_vector const& elements,
                                                   int pMax,
                                                   obj_map<expr, int> const& non_fresh_variables,
                                                   bool optimizing,
                                                   expr_ref_vector &result);
 
-                bool generate_constraint02_var(std::pair<expr*, int> a,
-                                                    std::vector<std::pair<expr*, int>> const& elements,
+                bool generate_constraint02_var(expr_int a,
+                                                    pair_expr_vector const& elements,
                                                     obj_map<expr, int> const& non_fresh_variables,
                                                     bool optimizing,
                                                     expr_ref_vector &result);
@@ -1624,7 +1605,7 @@ namespace smt {
                 */
                 expr* gen_constraint_non_fresh_var_const(
                         std::pair<expr *, int> a, /* const || regex */
-                        std::vector<std::pair<expr *, int> > const& elements, /* const + non_fresh_ var */
+                        pair_expr_vector const& elements, /* const + non_fresh_ var */
                         int_vector const& split,
                         obj_map<expr, int> const& non_fresh_variables,
                         bool optimizing,
@@ -1634,8 +1615,8 @@ namespace smt {
                     *
                     */
                     expr* lengthConstraint_tonon_fresh_VarConstraint(
-                            std::pair<expr*, int> a, /* const || regex */
-                            std::vector<std::pair<expr*, int> > const& elements,
+                            expr_int a, /* const || regex */
+                            pair_expr_vector const& elements,
                             expr_ref_vector const& subElements,
                             int currentPos,
                             int subLength,
@@ -1648,7 +1629,7 @@ namespace smt {
                         */
                         expr_ref positional_non_fresh_var_in_array(
                                 std::pair<expr *, int> a, /* const or regex */
-                                std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var */
+                                pair_expr_vector const& elements, /* have non_fresh_ var */
                                 int var_pos,
                                 int var_length,
                                 obj_map<expr, int> const& non_fresh_variables,
@@ -1659,16 +1640,16 @@ namespace smt {
                  * Output: SMT
                  */
                 expr_ref_vector gen_constraint_without_non_fresh_vars(
-                        std::pair<expr *, int> a, /* const || regex */
-                        std::vector<std::pair<expr *, int> > const& elements, /* no non_fresh_ var */
+                        expr_int a, /* const || regex */
+                        pair_expr_vector const& elements, /* no non_fresh_ var */
                         int_vector const& split,
                         bool optimizing);
                 /*
                  *
                  */
                 expr* unroll_non_fresh_variable(
-                        std::pair<expr*, int> a, /* non_fresh_ variable */
-                        std::vector<std::pair<expr*, int> > const& elements, /* contain const */
+                        expr_int a, /* non_fresh_ variable */
+                        pair_expr_vector const& elements, /* contain const */
                         obj_map<expr, int> const& non_fresh_variables,
                         bool optimizing,
                         int pMax = PMAX);
@@ -1679,8 +1660,8 @@ namespace smt {
                      * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                      */
                     expr_ref handle_positional_subconst_in_array(
-                            std::pair<expr *, int> a, // non_fresh_ var
-                            std::vector<std::pair<expr *, int>> const& elements,
+                            expr_int a, // non_fresh_ var
+                            pair_expr_vector const& elements,
                             int constPos,
                             bool optimizing,
                             int pMax = PMAX);
@@ -1692,8 +1673,8 @@ namespace smt {
                         * return: forAll (i Int) and (i < |abc*|) (y[i + |T|] == a | b | c)
                         */
                         expr_ref handle_positional_regex_in_array(
-                                std::pair<expr *, int> a, // non_fresh_ var
-                                std::vector<std::pair<expr *, int>> const& elements,
+                                expr_int a, // non_fresh_ var
+                                pair_expr_vector const& elements,
                                 int regexPos,
                                 bool optimizing,
                                 int pMax = PMAX,
@@ -1707,8 +1688,8 @@ namespace smt {
                         * return: (or (and length header = i && X_i = a && X_[i+1] = b && X_[i+2] = c))
                         */
                         expr_ref handle_positional_const_in_array(
-                                std::pair<expr *, int> a,
-                                std::vector<std::pair<expr *, int>> const& elements,
+                                expr_int a,
+                                pair_expr_vector const& elements,
                                 int constPos,
                                 zstring value, /* value of regex */
                                 int start, int finish,
@@ -1720,8 +1701,8 @@ namespace smt {
                     * non_fresh_ = a + non_fresh_ + b
                     */
                     expr* handle_non_fresh_non_fresh_array(
-                            std::pair<expr *, int> a,
-                            std::vector<std::pair<expr *, int>> const& elements,
+                            expr_int a,
+                            pair_expr_vector const& elements,
                             int pos,
                             int bound,
                             bool optimizing,
@@ -1731,15 +1712,15 @@ namespace smt {
                  *
                  */
                 expr* gen_constraint_non_fresh_var(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+                        expr_int a, /* const or regex */
+                        pair_expr_vector const& elements, /* have non_fresh_ var, do not have const */
                         obj_map<expr, int> const& non_fresh_variables,
                         bool optimizing,
                         int pMax);
 
                 expr* unroll_regex_non_fresh_variable(
-                        std::pair<expr *, int> const& a, /* const or regex */
-                        std::pair<expr *, int> const& b,
+                        expr_int const& a, /* const or regex */
+                        expr_int const& b,
                         int pMax,
                         int part_cnt,
                         int max_len,
@@ -1748,15 +1729,15 @@ namespace smt {
                         expr* prefix_rhs);
 
                 expr* unroll_var_non_fresh_variable(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+                        expr_int a, /* const or regex */
+                        pair_expr_vector const& elements, /* have non_fresh_ var, do not have const */
                         int pMax,
                         int pos,
                         int part_cnt);
 
                 expr* unroll_const_variable(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::pair<expr *, int> b,
+                        expr_int a, /* const or regex */
+                        expr_int b,
                         int pMax,
                         int max_len,
                         expr* sub_len,
@@ -1764,16 +1745,16 @@ namespace smt {
                         expr* prefix_rhs);
 
                 expr* unroll_const_non_fresh_variable_str2int(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::pair<expr *, int> b,
+                        expr_int a, /* const or regex */
+                        expr_int b,
                         int max_len,
                         expr* sub_len,
                         expr* prefix_lhs,
                         expr* prefix_rhs);
 
                 expr* unroll_const_non_fresh_variable(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::pair<expr *, int> b,
+                        expr_int a, /* const or regex */
+                        expr_int b,
                         int pMax,
                         int max_len,
                         expr* sub_len,
@@ -1781,8 +1762,8 @@ namespace smt {
                         expr* prefix_rhs);
 
                 expr* gen_regex_non_fresh_variable(
-                        std::pair<expr *, int> a, /* const or regex */
-                        std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+                        expr_int a, /* const or regex */
+                        pair_expr_vector const& elements, /* have non_fresh_ var, do not have const */
                         obj_map<expr, int> const& non_fresh_variables,
                         int pMax,
                         int pos,
@@ -1790,8 +1771,8 @@ namespace smt {
                         expr* sub_len,
                         expr* prefix_rhs);
                 expr* gen_regex_regex(
-                    std::pair<expr *, int> a, /* const or regex */
-                    std::vector<std::pair<expr *, int>> const& elements, /* have non_fresh_ var, do not have const */
+                    expr_int a, /* const or regex */
+                    pair_expr_vector const& elements, /* have non_fresh_ var, do not have const */
                     obj_map<expr, int> const& non_fresh_variables,
                     int pMax,
                     int pos);
@@ -1802,13 +1783,13 @@ namespace smt {
                  */
                 expr* find_partsOfnon_fresh_variablesInAVector(
                         int pos,
-                        std::vector<std::pair<expr*, int>> const& elements,
+                        pair_expr_vector const& elements,
                         int &partCnt);
                 /*
                 * pre elements + pre fix of itself
                 */
-                expr* leng_prefix_lhs(std::pair<expr*, int> a,
-                                          std::vector<std::pair<expr*, int>> const& elements,
+                expr* leng_prefix_lhs(expr_int a,
+                                          pair_expr_vector const& elements,
                                           int pos,
                                           bool optimizing,
                                           bool unrollMode);
@@ -1816,7 +1797,7 @@ namespace smt {
                 /*
                 *  pre fix of itself
                 */
-                expr* leng_prefix_rhs(std::pair<expr*, int> a, /* var */ bool unrollMode);
+                expr* leng_prefix_rhs(expr_int a, /* var */ bool unrollMode);
 
                 /*
                  * 0: No const, No non_fresh_ var
@@ -1825,7 +1806,7 @@ namespace smt {
                 * 3: have both
                 */
                 int choose_split_type(
-                        std::vector<std::pair<expr*, int>> const& elements,
+                        pair_expr_vector const& elements,
                         obj_map<expr, int> const& non_fresh_variables,
                         expr* lhs);
 
@@ -1834,14 +1815,14 @@ namespace smt {
                 * Output: all possible ways to split constA
                 */
                 std::vector<int_vector > collect_splits(
-                        std::pair<expr*, int> lhs,
-                        std::vector<std::pair<expr*, int> > const& elements,
+                        expr_int lhs,
+                        pair_expr_vector const& elements,
                         bool optimizing);
-                    bool not_contain_check(expr* e, std::vector<std::pair<expr*, int> > const& elements);
-                    bool const_vs_regex(expr* reg, std::vector<std::pair<expr*, int> > const& elements);
-                    bool const_vs_str_int(expr* e, std::vector<std::pair<expr*, int> > const& elements, expr* &extra_assert);
+                    bool not_contain_check(expr* e, pair_expr_vector const& elements);
+                    bool const_vs_regex(expr* reg, pair_expr_vector const& elements);
+                    bool const_vs_str_int(expr* e, pair_expr_vector const& elements, expr* &extra_assert);
                         expr* find_i2s(expr* e);
-                    bool length_base_split(expr* e, std::vector<std::pair<expr*, int> > const& elements);
+                    bool length_base_split(expr* e, pair_expr_vector const& elements);
                 /*
                 * textLeft: length of string
                 * nMax: number of flats
@@ -1854,14 +1835,14 @@ namespace smt {
                         int pos,
                         zstring str, /* const */
                         int pMax,
-                        std::vector<std::pair<expr*, int> > const& elements,
+                        pair_expr_vector const& elements,
                         int_vector currentSplit,
                         std::vector<int_vector > &allPossibleSplits
                 );
                     /*
                      * (a)|(b | c) --> {a, b, c}
                      */
-                     std::set<zstring> get_regex_components(zstring s);
+                    string_set get_regex_components(zstring s);
                     /*
                     * (a) --> a
                     */
@@ -1874,25 +1855,25 @@ namespace smt {
 
                 bool feasibleSplit_const(
                         zstring str,
-                        std::vector<std::pair<expr*, int> > const& elements,
+                        pair_expr_vector const& elements,
                         int_vector const& currentSplit,
                         int bound);
             /*
              * Given a flat,
              * generate its size constraint
              */
-            expr* get_var_size(std::pair<expr*, int> const& a);
+            expr* get_var_size(expr_int const& a);
             /*
              *
              */
-            std::string gen_flat_iter(std::pair<expr*, int> const& a);
-            expr* get_flat_iter(std::pair<expr*, int> const& a);
+            std::string gen_flat_iter(expr_int const& a);
+            expr* get_flat_iter(expr_int const& a);
             /*
              * Given a flat,
              * generate its size constraint
              */
-            std::string gen_flat_size(std::pair<expr*, int> const& a);
-            expr* get_var_flat_size(std::pair<expr*, int> const& a);
+            std::string gen_flat_size(expr_int const& a);
+            expr* get_var_flat_size(expr_int const& a);
 
             /*
              *
@@ -1928,8 +1909,8 @@ namespace smt {
              * Given a flat,
              * generate its array name
              */
-            std::string gen_flat_arr(std::pair<expr*, int> const& a);
-            expr* get_var_flat_array(std::pair<expr*, int> const& a);
+            std::string gen_flat_arr(expr_int const& a);
+            expr* get_var_flat_array(expr_int const& a);
             expr* get_var_flat_array(expr* e);
             expr* get_bound_str_int_control_var();
             expr* get_bound_p_control_var();
@@ -1952,16 +1933,16 @@ namespace smt {
              * general case
              */
             void setup_n_n_general(int lhs, int rhs);
-            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(std::vector<std::pair<expr*, int>> const& v);
+            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(pair_expr_vector const& v);
             std::string expr2str(expr* node);
 
             /*
              * Input: x . y
              * Output: flat . flat . flat . flat . flat . flat
              */
-            std::vector<std::pair<expr*, int>> create_equality(expr* node, bool unfold = true);
-            std::vector<std::pair<expr*, int>> create_equality(ptr_vector<expr> const& list, bool unfold = true);
-            std::vector<std::pair<expr*, int>> create_equality_final(ptr_vector<expr> const& list, bool unfold = true);
+            pair_expr_vector create_equality(expr* node, bool unfold = true);
+            pair_expr_vector create_equality(ptr_vector<expr> const& list, bool unfold = true);
+            pair_expr_vector create_equality_final(ptr_vector<expr> const& list, bool unfold = true);
                 void create_internal_int_vars(expr* v);
                 void setup_str_int_len(expr* e, int start);
                 void reuse_internal_int_vars(expr* v);
@@ -2107,12 +2088,7 @@ namespace smt {
             expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
             expr_ref_vector negate_equality(expr* lhs, expr* rhs);
-            bool is_inconsisten(
-                std::set<expr*> concat_lhs,
-                std::set<expr*> concat_rhs,
-                std::set<expr*> const_lhs,
-                std::set<expr*> const_rhs,
-                bool &wrongStart, bool &wrongEnd);
+            bool is_inconsisten(obj_hashtable<expr> concat_lhs, obj_hashtable<expr> const& concat_rhs, obj_hashtable<expr> const_lhs, obj_hashtable<expr> const& const_rhs, bool &wrongStart, bool &wrongEnd);
         /*
          * strArgmt::solve_concat_eq_str()
          * Solve concatenations of the form:
@@ -2126,7 +2102,7 @@ namespace smt {
         // Returns a constant string expression representing this concatenation
         // if one can be determined, or NULL if this is not possible.
         expr * eval_concat(expr * n1, expr * n2);
-        void group_terms_by_eqc(expr * n, std::set<expr*> & concats, std::set<expr*> & vars, std::set<expr*> & consts);
+        void group_terms_by_eqc(expr * n, obj_hashtable<expr> & concats, obj_hashtable<expr> & vars, obj_hashtable<expr> & consts);
         expr * simplify_concat(expr * node);
 
         /*
@@ -2246,7 +2222,7 @@ namespace smt {
         bool upper_bound(expr* _e, rational& hi) const;
         bool upper_num_bound(expr* e, rational& hi) const;
         bool lower_num_bound(expr* e, rational& hi) const;
-        void get_concats_in_eqc(expr * n, std::set<expr*> & concats);
+        void get_concats_in_eqc(expr * n, obj_hashtable<expr> & concats);
         /*
          * Collect constant strings (from left to right) in an AST node.
          */
@@ -2286,7 +2262,7 @@ namespace smt {
         obj_pair_map<expr, expr, expr*>                     concat_astNode_map;
 
         std::map<std::pair<expr*, zstring>, expr*>          regex_in_bool_map;
-        obj_map<expr, std::set<zstring> >                   regex_in_var_reg_str_map;
+        obj_map<expr, string_set >                   regex_in_var_reg_str_map;
 
         scoped_ptr_vector<eautomaton>                       m_automata;
         ptr_vector<eautomaton>                              regex_automata;
@@ -2382,7 +2358,7 @@ namespace smt {
 
         std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
         std::set<zstring>                                   const_set;
-        std::set<char>                                      sigma_domain;
+        char_set                                            sigma_domain;
         std::map<expr*, std::vector<expr*>>                 length_map;
         std::map<expr*, std::vector<expr*>>                 iter_map;
         std::map<expr*, std::set<expr*>>                    appearance_map;
@@ -2409,25 +2385,25 @@ namespace smt {
         void dump_assignments();
         void dump_literals();
         void fetch_guessed_core_exprs(
-                obj_map<expr, ptr_vector<expr>> eq_combination,
+                obj_map<expr, ptr_vector<expr>> const& eq_combination,
                 expr_ref_vector &guessed_exprs,
-                expr_ref_vector diseq_exprs,
+                expr_ref_vector const& diseq_exprs,
                 rational bound = rational(0));
         void add_equalities_to_core(expr_ref_vector guessed_exprs, expr_ref_vector &all_vars, expr_ref_vector &core);
-        void add_disequalities_to_core(expr_ref_vector diseq_exprs, expr_ref_vector &core);
-        void add_assignments_to_core(expr_ref_vector all_vars, expr_ref_vector &core);
+        void add_disequalities_to_core(expr_ref_vector const& diseq_exprs, expr_ref_vector &core);
+        void add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core);
         unsigned get_assign_lvl(expr* a, expr* b);
         void fetch_related_exprs(
-                expr_ref_vector allvars,
+                expr_ref_vector const& allvars,
                 expr_ref_vector &guessedExprs);
         expr_ref_vector check_contain_related_vars(
                 expr* v,
                 zstring replaceKey);
-        expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> eq_combination);
+        expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
         void update_all_vars(expr_ref_vector &allvars, expr* e);
-        bool check_intersection_not_empty(ptr_vector<expr> v, std::set<expr*> allvars);
-        bool check_intersection_not_empty(ptr_vector<expr> v, expr_ref_vector allvars);
-        void fetch_guessed_exprs_from_cache(UnderApproxState state, expr_ref_vector &guessed_exprs);
+        bool check_intersection_not_empty(ptr_vector<expr> const& v, obj_hashtable<expr> const& allvars);
+        bool check_intersection_not_empty(ptr_vector<expr> const& v, expr_ref_vector const& allvars);
+        void fetch_guessed_exprs_from_cache(UnderApproxState const& state, expr_ref_vector &guessed_exprs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
