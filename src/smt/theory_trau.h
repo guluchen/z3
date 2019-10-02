@@ -6,6 +6,7 @@
 #include <stack>
 #include <map>
 #include <vector>
+#include <strhash.h>
 #include "ast/arith_decl_plugin.h"
 #include "ast/array_decl_plugin.h"
 #include "ast/ast_pp.h"
@@ -98,8 +99,6 @@ namespace smt {
 
         class state {
             using def_node = element;
-            using def_nodes = std::set<def_node>;
-            using def_graph = std::map<def_node, def_nodes>;
             using trans_source = std::pair<const word_equation&, const word_equation&>;
             bool m_allow_empty_var = true;
 
@@ -157,7 +156,8 @@ namespace smt {
         typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> >    string_map;
         typedef hashtable<zstring, zstring_hash_proc,default_eq<zstring> >      string_set;
         typedef hashtable<int, int_hash, default_eq<int> >                      int_set;
-        typedef hashtable<char, unsigned_hash, default_eq<char> >               char_set;
+        typedef hashtable<char, unsigned_hash, default_eq<char> >               unsigned_set;
+        typedef hashtable<expr*, obj_ptr_hash<expr>, ptr_eq<expr> >             expr_set;
         typedef std::pair<expr*, int>                                           expr_int;
         typedef old_svector<expr_int>                                           pair_expr_vector;
 
@@ -169,7 +169,6 @@ namespace smt {
 
             Arrangment(int_vector const& _left_arr,
                        int_vector const& _right_arr,
-                       std::map<std::string, std::string> _constMap,
                        int _connectingSize){
                 left_arr = _left_arr;
                 right_arr = _right_arr;
@@ -392,6 +391,7 @@ namespace smt {
                 STRACE("str", tout <<  std::endl;);
             }
         };
+        typedef map<std::pair<int, int>, vector<Arrangment>, pair_hash<int_hash, int_hash>, default_eq<std::pair<int, int>>> arrangment_map;
         class UnderApproxState{
         public:
             obj_map<expr, ptr_vector<expr>> eq_combination;
@@ -792,7 +792,10 @@ namespace smt {
                     // non root var
                     clock_t t = clock();
                     bool constraint01 = !th.uState.eq_combination.contains(node);
+                    if (!th.dependency_graph.contains(node))
+                        th.dependency_graph.insert(node, {});
                     bool constraint02 = th.dependency_graph[node].size() > 0;
+
                     if (constraint01 || constraint02) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                         if (!constraint02) {
@@ -875,7 +878,7 @@ namespace smt {
                     bool completed = true;
                     zstring value;
 
-                    std::set<char> char_set;
+                    unsigned_set char_set;
                     get_char_range(char_set);
                     value = fill_chars(vValue, char_set, completed);
 
@@ -937,7 +940,7 @@ namespace smt {
                 return false;
             }
 
-            bool get_char_range(std::set<char> & char_set){
+            bool get_char_range(unsigned_set & char_set){
                 if (regex != nullptr) {
                     // special case for numbers
                     vector<zstring> elements = collect_alternative_components(regex);
@@ -947,7 +950,7 @@ namespace smt {
                                        << std::endl;);
                     for (const auto& s : elements) {
                         if (s.length() != 1) {
-                            char_set.clear();
+                            char_set.reset();
                             return false;
                         } else {
                             char_set.insert(s[0]);
@@ -958,7 +961,7 @@ namespace smt {
                 return false;
             }
 
-            zstring fill_chars(int_vector const& vValue, std::set<char> const& char_set, bool &completed){
+            zstring fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed){
                 std::string value;
 
                 for (unsigned i = 0; i < vValue.size(); ++i) {
@@ -1336,8 +1339,8 @@ namespace smt {
                 bool at_same_diseq_state(str::state const& curr, str::state const& prev);
 
         bool review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
-            char_set collect_char_domain_from_concat();
-            char_set collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+            unsigned_set collect_char_domain_from_concat();
+            unsigned_set collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination);
             bool handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 expr* create_equations_over_contain_vars(expr* x, expr* y);
             bool handle_charAt_family(obj_map<expr, ptr_vector<expr>> const& eq_combination);
@@ -1383,9 +1386,9 @@ namespace smt {
                     expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
-                char setup_default_char(char_set const& included_chars, char_set const& exclude_chars);
-                char_set init_excluded_char_set();
-                char_set init_included_char_set();
+                char setup_default_char(unsigned_set const& included_chars, unsigned_set const& exclude_chars);
+                unsigned_set init_excluded_char_set();
+                unsigned_set init_included_char_set();
                 void create_appearance_map(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 void setup_flats();
                 bool should_use_flat();
@@ -1457,13 +1460,13 @@ namespace smt {
                     expr* remove_star_in_star(expr* reg);
                     bool contain_star(expr* reg);
                 zstring getStdRegexStr(expr* regex);
-                void setup_encoded_chars(char_set &s);
+                void setup_encoded_chars(unsigned_set &s);
             /*
              * convert lhs == rhs to SMT formula
              */
             expr* equality_to_arith(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p = PMAX);
                 expr* equality_to_arith_ordered(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p);
-                std::string create_string_representation(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements);
+                zstring create_string_representation(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements);
             /*
              * lhs: size of the lhs
              * rhs: size of the rhs
@@ -1911,7 +1914,7 @@ namespace smt {
              * Given a flat,
              * generate its array name
              */
-            std::string gen_flat_arr(expr_int const& a);
+            zstring gen_flat_arr(expr_int const& a);
             expr* get_var_flat_array(expr_int const& a);
             expr* get_var_flat_array(expr* e);
             expr* get_bound_str_int_control_var();
@@ -2206,7 +2209,7 @@ namespace smt {
         app * mk_unroll(expr * n, expr * bound);
         app * mk_unroll_bound_var();
         app * mk_str_to_re(expr *);
-        app * mk_arr_var(std::string name);
+        app * mk_arr_var(zstring name);
 
         void get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList);
         void get_nodes_in_reg_concat(expr * node, ptr_vector<expr> & nodeList);
@@ -2261,7 +2264,7 @@ namespace smt {
 
         obj_pair_map<expr, expr, expr*>                     concat_astNode_map;
 
-        std::map<std::pair<expr*, zstring>, expr*>          regex_in_bool_map;
+        obj_map<expr, expr*>                                 regex_in_bool_map;
         obj_map<expr, string_set >                          regex_in_var_reg_str_map;
 
         scoped_ptr_vector<eautomaton>                       m_automata;
@@ -2352,28 +2355,28 @@ namespace smt {
         int                                                 flat_var_counter = 0;
 
 
-        std::map<expr*, int>                                var_pieces_counter;
-        std::map<expr*, int>                                curr_var_pieces_counter;
-        std::set<std::string>                               generated_equalities;
+        obj_map<expr, int>                                  var_pieces_counter;
+        obj_map<expr, int>                                  curr_var_pieces_counter;
+        string_set                                          generated_equalities;
 
-        std::map<std::pair<int, int>, vector<Arrangment>> arrangements;
-        std::set<zstring>                                   const_set;
-        char_set                                            sigma_domain;
-        std::map<expr*, std::vector<expr*>>                 length_map;
-        std::map<expr*, std::vector<expr*>>                 iter_map;
-        std::map<expr*, std::set<expr*>>                    appearance_map;
-        std::map<expr*, std::set<expr*>>                    not_contain_map;
+        arrangment_map                                      arrangements;
+//        std::map<std::pair<int, int>, vector<Arrangment>>   arrangements;
+        string_set                                          const_set;
+        unsigned_set                                        sigma_domain;
+        obj_map<expr, ptr_vector <expr>>                    length_map;
+        obj_map<expr, ptr_vector <expr>>                    iter_map;
+        obj_map<expr, expr_set>                             appearance_map;
+        obj_map<expr, expr_set>                             not_contain_map;
 
-        std::map<expr*, std::set<expr*>>                    dependency_graph;
-        std::map<expr*, expr*>                              expr_array_linkers;
-        std::map<expr*, expr*>                              array_map;
-        std::map<std::string, expr*>                        array_map_reverse;
-        std::map<std::string, expr*>                        varMap_reverse;
-        std::map<expr*, expr*>                              arr_linker;
+        obj_map<expr, expr_set>                             dependency_graph;
+        obj_map<expr, expr*>                                expr_array_linkers;
+        obj_map<expr, expr*>                                array_map;
+        string_map                                          array_map_reverse;
+        obj_map<expr, expr*>                                arr_linker;
         int                                                 connectingSize;
         char                                                default_char = 'a';
         UnderApproxState                                    uState;
-        std::vector<UnderApproxState>                       completed_branches;
+        vector<UnderApproxState>                            completed_branches;
 
 
         expr_ref_vector                                     implied_facts;

@@ -510,18 +510,20 @@ namespace smt {
 //                    }
 
                 // add its ancestors
-                for (const auto& nn : dependency_graph[owner]) {
-                    result->add_entry(ctx.get_enode(nn));
-                }
+                if (dependency_graph.contains(owner))
+                    for (const auto& nn : dependency_graph[owner]) {
+                        result->add_entry(ctx.get_enode(nn));
+                    }
             }
             else if (is_internal_regex_var(owner.get(), reg)){
                 // add array
                 result->add_entry(ctx.get_enode(get_var_flat_array(owner.get())));
 
                 // add its ancestors
-                for (const auto& nn : dependency_graph[owner]) {
-                    result->add_entry(ctx.get_enode(nn));
-                }
+                if (dependency_graph.contains(owner))
+                    for (const auto& nn : dependency_graph[owner]) {
+                        result->add_entry(ctx.get_enode(nn));
+                    }
             }
             else {
                 // normal node
@@ -542,12 +544,13 @@ namespace smt {
                     }
 
                 // add its ancestors
-                for (const auto& nn : dependency_graph[owner])
-                    if (ctx.e_internalized(nn) && !addedNodes.contains(nn)){
-                        result->add_entry(ctx.get_enode(nn));
-                    }
+                if (dependency_graph.contains(owner))
+                    for (const auto& nn : dependency_graph[owner])
+                        if (ctx.e_internalized(nn) && !addedNodes.contains(nn)){
+                            result->add_entry(ctx.get_enode(nn));
+                        }
 
-                if (expr_array_linkers.find(owner) != expr_array_linkers.end())
+                if (expr_array_linkers.contains(owner))
                     result->set_linker(expr_array_linkers[owner]);
             }
 
@@ -2081,7 +2084,7 @@ namespace smt {
         // how to get regex_sort?
         sort * regex_sort = nullptr;
         if (regex_in_bool_map.size() > 0){
-            expr *tmp = regex_in_bool_map.begin()->second;
+            expr *tmp = regex_in_bool_map.begin()->m_value;
             app *a_regexIn = to_app(tmp);
             expr *regexTerm = a_regexIn->get_arg(1);
             regex_sort = m.get_sort(regexTerm);
@@ -2127,7 +2130,7 @@ namespace smt {
         // how to get regex_sort?
         sort *regex_sort = nullptr;
         if (regex_in_bool_map.size() > 0) {
-            expr *tmp = regex_in_bool_map.begin()->second;
+            expr *tmp = regex_in_bool_map.begin()->m_value;
             app *a_regexIn = to_app(tmp);
             expr *regexTerm = a_regexIn->get_arg(1);
             regex_sort = m.get_sort(regexTerm);
@@ -2179,7 +2182,7 @@ namespace smt {
         // how to get regex_sort?
         sort *regex_sort = nullptr;
         if (regex_in_bool_map.size() > 0) {
-            expr *tmp = regex_in_bool_map.begin()->second;
+            expr *tmp = regex_in_bool_map.begin()->m_value;
             app *a_regexIn = to_app(tmp);
             expr *regexTerm = a_regexIn->get_arg(1);
             regex_sort = m.get_sort(regexTerm);
@@ -4989,8 +4992,8 @@ namespace smt {
     /*
      *
      */
-    theory_trau::char_set theory_trau::collect_char_domain_from_concat(){
-        char_set charDomain;
+    theory_trau::unsigned_set theory_trau::collect_char_domain_from_concat(){
+        unsigned_set charDomain;
         for (const auto& we : m_we_expr_memo) {
             zstring value;
             // lhs
@@ -5047,8 +5050,8 @@ namespace smt {
         return charDomain;
     }
 
-    theory_trau::char_set theory_trau::collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination){
-        char_set charDomain;
+    theory_trau::unsigned_set theory_trau::collect_char_domain_from_eqmap(obj_map<expr, ptr_vector<expr>> const& eq_combination){
+        unsigned_set charDomain;
         for (const auto& v : eq_combination) {
             // skip if it is a simple case
             if ((v.get_value().size() == 1 && v.m_key == *(v.get_value().begin())) || v.get_value().size() == 0)
@@ -7203,51 +7206,51 @@ namespace smt {
         
         context & ctx = get_context();
 
-        expr* arrVar = get_var_flat_array(v);
-        if (arrVar != nullptr) {
+        expr* arr_var = get_var_flat_array(v);
+        if (arr_var != nullptr) {
             // check if we can use that: cannot use if two nodes are not equal
 
-            ensure_enode(arrVar);
-            std::string arr_str = expr2str(arrVar);
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str << " " << mk_pp(arrVar, m) << " " << std::endl;);
+            ensure_enode(arr_var);
+            std::string arr_str = expr2str(arr_var);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str << " " << mk_pp(arr_var, m) << " " << std::endl;);
             SASSERT(arr_str.find_last_of("!", arr_str.length() - 3) != std::string::npos);
 
             arr_str = arr_str.substr(0, arr_str.find_last_of("!", arr_str.length() - 3));
 
             if (arr_str[0] == '|')
                 arr_str = arr_str.substr(1, arr_str.length() - 1);
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str  << " of " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** checking existing array " << arr_str  << " of " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << std::endl;);
 
-            SASSERT(arr_linker.find(arrVar) != arr_linker.end());
-            if (!are_equal_exprs(v, arr_linker[arrVar])) {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arrVar, m) << std::endl;);
-                arrVar = nullptr;
+            SASSERT(arr_linker.contains(arr_var));
+            if (!are_equal_exprs(v, arr_linker[arr_var])) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arr_var, m) << std::endl;);
+                arr_var = nullptr;
             }
             else {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arrVar, m) << " " << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << std::endl;);
                 zstring val;
                 if (u.str.is_string(v, val)) {
-                    if (v != arr_linker[arrVar])
-                        setup_str_const(val, arrVar, createEqualOP(v, arr_linker[arrVar]));
+                    if (v != arr_linker[arr_var])
+                        setup_str_const(val, arr_var, createEqualOP(v, arr_linker[arr_var]));
                     else
-                        setup_str_const(val, arrVar);
+                        setup_str_const(val, arr_var);
                 }
                 return;
             }
         }
 
-        if ((!u.str.is_concat(v) || non_fresh_vars.contains(v)) && arrVar == nullptr) {
+        if ((!u.str.is_concat(v) || non_fresh_vars.contains(v)) && arr_var == nullptr) {
             STRACE("str", tout << __LINE__ << " var: " << mk_pp(v, m) << std::endl;);
-            std::string flatArr = gen_flat_arr(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
+            zstring flat_arr = gen_flat_arr(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
             expr_ref v1(m);
-            if (array_map_reverse.find(flatArr) != array_map_reverse.end()) {
-                v1 = array_map_reverse[flatArr];
+            if (array_map_reverse.contains(flat_arr)) {
+                v1 = array_map_reverse[flat_arr];
             }
             else {
-                v1 = mk_arr_var(flatArr);
-                array_map_reverse[flatArr] = v1;
-                STRACE("str", tout << __LINE__ << " making arr: " << flatArr << " --> " << mk_pp(v1, m) << std::endl;);
-                arr_linker[v1] = v;
+                v1 = mk_arr_var(flat_arr);
+                array_map_reverse.insert(flat_arr, v1);
+                STRACE("str", tout << __LINE__ << " making arr: " << flat_arr << " --> " << mk_pp(v1, m) << std::endl;);
+                arr_linker.insert(v1, v);
             }
 
             {
@@ -7255,11 +7258,11 @@ namespace smt {
                 collect_eq_nodes(v, eqs);
 
                 for (const auto& vv : eqs)
-                    array_map[vv] = v1;
+                    array_map.insert(vv, v1);
             }
 
 
-            STRACE("str", tout << __LINE__ << " arr: " << flatArr << " : " << mk_pp(v1, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " arr: " << flat_arr << " : " << mk_pp(v1, m) << std::endl;);
 
             zstring val;
             expr* rexpr;
@@ -7274,6 +7277,7 @@ namespace smt {
                 // setup_str_int_arr
             }
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
     }
 
     void theory_trau::setup_str_int_arr(expr* v, int start){
@@ -7492,12 +7496,12 @@ namespace smt {
             if (arrVar == nullptr)
                 continue;
             if (!u.str.is_concat(ap) && arrVar == nullptr) {
-                std::string flatArr = gen_flat_arr(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
+                zstring flatArr = gen_flat_arr(std::make_pair(ctx.get_enode(v)->get_root()->get_owner(), 0));
                 if (u.str.is_string(v))
                     flatArr = gen_flat_arr(std::make_pair(v, 0));
 
                 expr_ref v1(m);
-                if (array_map_reverse.find(flatArr) != array_map_reverse.end()) {
+                if (array_map_reverse.contains(flatArr)) {
                     v1 = array_map_reverse[flatArr];
 
                     if (!ctx.e_internalized(v1.get())){
@@ -7506,7 +7510,7 @@ namespace smt {
                 }
                 else {
                     v1 = mk_arr_var(flatArr);
-                    array_map_reverse[flatArr] = v1;
+                    array_map_reverse.insert(flatArr, v1);
                 }
                 {
                     expr_ref_vector eqs(m);
@@ -7525,7 +7529,7 @@ namespace smt {
             }
         }
         for  (const auto& arr : array_map_reverse) {
-            ensure_enode(arr.second);
+            ensure_enode(arr.m_value);
         }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
@@ -7552,6 +7556,8 @@ namespace smt {
                     bool found02 = varName.find("post_contain") != std::string::npos;
 
                     if (found01 && found02){
+                        if (!not_contain_map.contains(rhs))
+                            not_contain_map.insert(rhs, {});
                         not_contain_map[rhs].insert(exprVector[1]);
                     }
                 }
@@ -7573,6 +7579,8 @@ namespace smt {
                     bool found02 = varName.find("post_contain") != std::string::npos;
 
                     if (found01 && found02){
+                        if (!not_contain_map.contains(lhs))
+                            not_contain_map.insert(lhs, {});
                         not_contain_map[lhs].insert(exprVector[1]);
                     }
                 }
@@ -7583,7 +7591,7 @@ namespace smt {
     }
 
     void theory_trau::create_const_set(){
-        const_set.clear();
+        const_set.reset();
         for (const auto _eq : uState.eq_combination) {
             zstring value;
             if (u.str.is_string(_eq.m_key, value)) {
@@ -7601,7 +7609,7 @@ namespace smt {
         }
     }
 
-    char theory_trau::setup_default_char(char_set const& included_chars, char_set const& exclude_chars){
+    char theory_trau::setup_default_char(unsigned_set const& included_chars, unsigned_set const& exclude_chars){
         char default_char = 'a';
         for (const auto& ch : included_chars)
             if (exclude_chars.find(ch) == exclude_chars.end()) {
@@ -7611,8 +7619,8 @@ namespace smt {
         return default_char;
     }
 
-    theory_trau::char_set theory_trau::init_excluded_char_set(){
-        char_set exclude_chars;
+    theory_trau::unsigned_set theory_trau::init_excluded_char_set(){
+        unsigned_set exclude_chars;
         for (const auto& s : const_set){
             for (unsigned i = 0; i < s.length(); ++i) {
                 exclude_chars.insert(s[i]);
@@ -7624,8 +7632,8 @@ namespace smt {
     /*
      *
      */
-    theory_trau::char_set theory_trau::init_included_char_set(){
-        char_set included_chars;
+    theory_trau::unsigned_set theory_trau::init_included_char_set(){
+        unsigned_set included_chars;
         if (included_chars.size() == 0)
             for (unsigned i = 32; i <= 126; ++i)
                 included_chars.insert(i);
@@ -7634,13 +7642,19 @@ namespace smt {
     }
 
     void theory_trau::create_appearance_map(obj_map<expr, ptr_vector<expr>> const& eq_combination){
-        appearance_map.clear();
+        appearance_map.reset();
         for (const auto& var : eq_combination){
             for (const auto& eq : var.get_value()) {
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(eq, nodes);
                 for (unsigned i = 0; i < nodes.size(); ++i)
-                    appearance_map[nodes[i]].emplace(var.m_key);
+                    if (appearance_map.contains(nodes[i]))
+                        appearance_map[nodes[i]].insert(var.m_key);
+                    else {
+                        expr_set tmp;
+                        tmp.insert(var.m_key);
+                        appearance_map.insert(nodes[i], tmp);
+                    }
             }
         }
     }
@@ -7679,8 +7693,8 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         
         clock_t t = clock();
-        curr_var_pieces_counter.clear();
-        generated_equalities.clear();
+        curr_var_pieces_counter.reset();
+        generated_equalities.reset();
 
         for (const auto& n : non_fresh_vars)
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
@@ -8474,7 +8488,7 @@ namespace smt {
             return ret.extract(1, ret.length() - 1);
         }
         else if (u.re.is_full_seq(regex)){
-            char_set tobeEncoded;
+            unsigned_set tobeEncoded;
             setup_encoded_chars(tobeEncoded);
             zstring tmp;
             for (int i = 32; i <= 126; ++i)
@@ -8483,7 +8497,7 @@ namespace smt {
             return zstring("(") + tmp.extract(0, tmp.length() - 1) + ")*";
         }
         else if (u.re.is_full_char(regex)){
-            char_set tobeEncoded;
+            unsigned_set tobeEncoded;
             setup_encoded_chars(tobeEncoded);
             zstring tmp;
             for (int i = 32; i <= 126; ++i)
@@ -8495,7 +8509,7 @@ namespace smt {
         return nullptr;
     }
 
-    void theory_trau::setup_encoded_chars(char_set &s){
+    void theory_trau::setup_encoded_chars(unsigned_set &s){
         s.insert('?');
         s.insert('\\');
         s.insert('|');
@@ -8535,16 +8549,16 @@ namespace smt {
             pair_expr_vector const& rhs_elements,
             obj_map<expr, int> const& non_fresh_variables,
             int p){
-        std::string rep = create_string_representation(lhs_elements, rhs_elements);
+        zstring rep = create_string_representation(lhs_elements, rhs_elements);
 
-        if (generated_equalities.find(rep) == generated_equalities.end() &&
+        if (!generated_equalities.contains(rep) &&
             lhs_elements.size() != 0 && rhs_elements.size() != 0){
             expr_ref_vector cases = arrange(
                     lhs_elements,
                     rhs_elements,
                     non_fresh_variables,
                     p);
-            generated_equalities.emplace(rep);
+            generated_equalities.insert(rep);
             if (cases.size() > 0) {
                 expr_ref tmp(createOrOP(cases), m);
                 return tmp.get();
@@ -8557,14 +8571,14 @@ namespace smt {
             return m.mk_true();
     }
 
-    std::string theory_trau::create_string_representation(pair_expr_vector const& lhs_elements,
+    zstring theory_trau::create_string_representation(pair_expr_vector const& lhs_elements,
                                                           pair_expr_vector const& rhs_elements){
         std::string ret = "";
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
-            ret = ret + "---" + expr2str(lhs_elements[i].first);
+            ret = ret + "-" + expr2str(lhs_elements[i].first);
         for (unsigned i = 0; i < rhs_elements.size(); ++i)
-            ret = ret + "+++" + expr2str(rhs_elements[i].first);
-        return ret;
+            ret = ret + "+" + expr2str(rhs_elements[i].first);
+        return zstring(ret.c_str());
     }
 
 
@@ -12297,7 +12311,7 @@ namespace smt {
 	 * Given a flat,
 	 * generate its array name
 	 */
-    std::string theory_trau::gen_flat_arr(expr_int const& a){
+    zstring theory_trau::gen_flat_arr(expr_int const& a){
         std::string result = "";
         if (a.second >= 0) {
             std::string tmp = expr2str(a.first);
@@ -12312,7 +12326,7 @@ namespace smt {
             result += ARRPREFIX;
             result += ("\"" + expr2str(a.first) + "\"");
         }
-        return result;
+        return zstring(result.c_str());
     }
 
     expr* theory_trau::get_var_flat_array(expr_int const& a){
@@ -12321,12 +12335,12 @@ namespace smt {
 
     expr* theory_trau::get_var_flat_array(expr* e){
         ensure_enode(e);
-        if (array_map.find(e) != array_map.end())
+        if (array_map.contains(e))
             return array_map[e];
         expr_ref_vector eqs(m);
         collect_eq_nodes(e, eqs);
         for (unsigned i = 0; i < eqs.size(); ++i){
-            if (array_map.find(eqs[i].get()) != array_map.end()) {
+            if (array_map.contains(eqs[i].get())) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, m) << " == " << mk_pp(eqs[i].get(), m) << std::endl;);
                 return array_map[eqs[i].get()];
             }
@@ -12740,11 +12754,13 @@ namespace smt {
         int_vector tmpLeft;
         int_vector tmpRight;
 
-        if (arrangements[std::make_pair(0, 0)].size() == 0) {
+        if (!arrangements.contains(std::make_pair(0, 0)) || arrangements[std::make_pair(0, 0)].size() == 0) {
             /* left = right */
             tmpLeft.push_back(0);
             tmpRight.push_back(0);
-            arrangements[std::make_pair(0, 0)].push_back(Arrangment(tmpLeft, tmpRight));
+            vector<Arrangment> tmp;
+            tmp.push_back(Arrangment(tmpLeft, tmpRight));
+            arrangements.insert(std::make_pair(0, 0), tmp);
         }
     }
 
@@ -12769,8 +12785,8 @@ namespace smt {
 
             /* update */
             /* add directly without checking */
-            if (arrangements[std::make_pair(0, i)].size() == 0) {
-                arrangements[std::make_pair(0, i)] = tmp04;
+            if (!arrangements.contains(std::make_pair(0, i)) || arrangements[std::make_pair(0, i)].size() == 0) {
+                arrangements.insert(std::make_pair(0, i), tmp04);
             }
         }
     }
@@ -12795,8 +12811,8 @@ namespace smt {
             tmp04.push_back(Arrangment(tmpLeft, tmpRight));
 
             /* add directly without checking */
-            if (arrangements[std::make_pair(i, 0)].size() == 0) {
-                arrangements[std::make_pair(i, 0)] = tmp04;
+            if (!arrangements.contains(std::make_pair(i, 0)) || arrangements[std::make_pair(i, 0)].size() == 0) {
+                arrangements.insert(std::make_pair(i, 0), tmp04);
             }
         }
     }
@@ -12810,7 +12826,7 @@ namespace smt {
 
         for (int i = 0 ; i < lhs; ++i)
             for (int j = 0; j < rhs; ++j)
-                if (arrangements.find(std::make_pair(i,j)) == arrangements.end()){
+                if (!arrangements.contains(std::make_pair(i,j))){
                     /* 2.0 [i] = empty */
                     vector<Arrangment> tmp01_ext = arrangements[std::make_pair(i - 1, j)];
                     for (unsigned int t = 0 ; t < tmp01_ext.size(); ++t) {
@@ -12906,7 +12922,7 @@ namespace smt {
                     possibleCases.append(tmp03);
                     possibleCases.append(tmp04);
                     possibleCases.append(tmp05);
-                    arrangements[std::make_pair(i, j)] = possibleCases;
+                    arrangements.insert(std::make_pair(i, j), possibleCases);
                 }
     }
 
@@ -12974,17 +12990,21 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(list[k], m) << std::endl;);
             expr* l_k = list[k];
             zstring content;
+            if (!curr_var_pieces_counter.contains(l_k))
+                curr_var_pieces_counter.insert(l_k, 0);
+
+            bool found = var_pieces_counter.contains(l_k);
             if (u.str.is_string(l_k, content)) {
                 if (content.length() > 1) /* const string */ {
-                    if (curr_var_pieces_counter.find(l_k) == curr_var_pieces_counter.end())
-                        curr_var_pieces_counter[l_k] = 0;
                     for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                         elements.push_back(std::make_pair(list[k], -(j + 1)));
                     }
-                    if (var_pieces_counter.find(l_k) == var_pieces_counter.end() ||
-                            (curr_var_pieces_counter.find(l_k) != curr_var_pieces_counter.end() &&
-                            curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
+                    if (!found ||
+                            (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
                         create_internal_int_vars(l_k);
+
+                        if (!found)
+                            var_pieces_counter.insert(l_k, 0);
                         var_pieces_counter[l_k] += p_bound.get_int64();
                     }
                     else {
@@ -12998,10 +13018,12 @@ namespace smt {
             else if (u.re.is_star(l_k) || u.re.is_plus(l_k) || u.re.is_union(l_k) ||
                 (is_internal_regex_var(l_k, reg))){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << std::endl;);
-                if (var_pieces_counter.find(l_k) == var_pieces_counter.end() ||
-                    (curr_var_pieces_counter.find(l_k) != curr_var_pieces_counter.end() &&
-                     curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
+                if (!found ||
+                    (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
                     create_internal_int_vars(l_k);
+
+                    if (!found)
+                        var_pieces_counter.insert(l_k, 0);
                     var_pieces_counter[l_k] += 1;
                 }
                 else {
@@ -13013,16 +13035,16 @@ namespace smt {
             else {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << "; bound = " << p_bound.get_int64() << std::endl;);
                 // check if it is a regex var
-                if (curr_var_pieces_counter.find(l_k) == curr_var_pieces_counter.end())
-                    curr_var_pieces_counter[l_k] = 0;
                 for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                     elements.push_back(std::make_pair(list[k], j));
                 }
 
-                if (var_pieces_counter.find(l_k) == var_pieces_counter.end() ||
-                    (curr_var_pieces_counter.find(l_k) != curr_var_pieces_counter.end() &&
-                     curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])) {
+                if (!found ||
+                    (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])) {
                     create_internal_int_vars(l_k);
+
+                    if (!found)
+                        var_pieces_counter.insert(l_k, 0);
                     var_pieces_counter[l_k] += p_bound.get_int64();
                 }
                 else {
@@ -13035,7 +13057,8 @@ namespace smt {
     }
 
     void theory_trau::create_internal_int_vars(expr* v){
-        
+        if (!var_pieces_counter.contains(v))
+            var_pieces_counter.insert(v, 0);
         int start = var_pieces_counter[v];
         int end = var_pieces_counter[v] + p_bound.get_int64();
         expr* regex = nullptr;
@@ -13104,6 +13127,17 @@ namespace smt {
             }
         }
 
+        if (!length_map.contains(v)){
+            ptr_vector<expr> tmp;
+            length_map.insert(v, tmp);
+        }
+
+        if (!iter_map.contains(v)){
+            ptr_vector<expr> tmp;
+            iter_map.insert(v, tmp);
+        }
+
+
         expr_ref_vector adds(m);
         for (int i = start; i < end; ++i) {
             std::string flatSize = gen_flat_size(std::make_pair(v, i));
@@ -13171,8 +13205,8 @@ namespace smt {
     }
 
     void theory_trau::reuse_internal_int_vars(expr* v){
-        
-
+        if (!curr_var_pieces_counter.contains(v))
+            curr_var_pieces_counter.insert(v, 0);
         int start = curr_var_pieces_counter[v];
         int end = curr_var_pieces_counter[v] + p_bound.get_int64();
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(v, m) << " " << start << " " << end << std::endl;);
@@ -16848,9 +16882,8 @@ namespace smt {
 
         {
             zstring regexStr = get_std_regex_str(ex->get_arg(1));
-            std::pair<expr *, zstring> key1(ex->get_arg(0), regexStr);
             // skip Z3str's map check, because we already check if we set up axioms on this term
-            regex_in_bool_map[key1] = ex;
+            regex_in_bool_map.insert(ex->get_arg(0), ex);
             if (!regex_in_var_reg_str_map.contains(ex->get_arg(0))) {
                 regex_in_var_reg_str_map.insert(ex->get_arg(0), string_set());
             }
@@ -17410,14 +17443,14 @@ namespace smt {
         return a;
     }
 
-    app * theory_trau::mk_arr_var(std::string name) {
+    app * theory_trau::mk_arr_var(zstring name) {
         context & ctx = get_context();
         
 
         STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
         sort * int_sort = m.mk_sort(m_autil.get_family_id(), INT_SORT);
         sort * arr_sort = m_arrayUtil.mk_array_sort(int_sort, int_sort);
-        app * a = mk_fresh_const(name.c_str(), arr_sort);
+        app * a = mk_fresh_const(name.encode().c_str(), arr_sort);
         ctx.internalize(a, false);
         ctx.mark_as_relevant(a);
         // I'm assuming that this combination will do the correct thing in the integer theory.
@@ -18032,9 +18065,14 @@ namespace smt {
                 if (!ctx.is_relevant(nn))
                     continue;
                 if (u.str.is_string(nn) || is_important(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
-                    if (!are_equal_exprs(n.m_key, nn))
-                        dependency_graph[ctx.get_enode(n.m_key)->get_root()->get_owner()].insert(
+                    if (!are_equal_exprs(n.m_key, nn)) {
+                        expr* tmp = ctx.get_enode(n.m_key)->get_root()->get_owner();
+                        if (!dependency_graph.contains(tmp)){
+                            dependency_graph.insert(tmp, {});
+                        }
+                        dependency_graph[tmp].insert(
                                 ctx.get_enode(nn)->get_root()->get_owner());
+                    }
                     if (!included_nodes.contains(ctx.get_enode(nn)->get_root()->get_owner()))
                         included_nodes.push_back(ctx.get_enode(nn)->get_root()->get_owner());
                 }
@@ -18055,6 +18093,10 @@ namespace smt {
             expr* c_root = ctx.get_enode(c.get_value())->get_root()->get_owner();
             expr* reg = nullptr;
 
+            if (!dependency_graph.contains(c_root)){
+                dependency_graph.insert(c_root, {});
+            }
+
             // arg1
             if (u.str.is_string(key2_root) || is_important(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
                 if (!are_equal_exprs(c_root, key2_root)) {
@@ -18068,12 +18110,22 @@ namespace smt {
                 if ((get_len_value(c.get_key1(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key2(), c.get_value()))
                     continue;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                if (key2_root != c.get_value())
+                if (key2_root != c.get_value()) {
+                    if (!dependency_graph.contains(key2_root)){
+                        dependency_graph.insert(key2_root, {});
+                    }
                     dependency_graph[key2_root].insert(c.get_value());
-
+                }
+                if (!dependency_graph.contains(c.get_key2())){
+                    dependency_graph.insert(c.get_key2(), {});
+                }
                 dependency_graph[c.get_key2()].insert(c.get_value());
-                if (c.get_key2() != key2_root)
+                if (c.get_key2() != key2_root) {
+                    if (!expr_array_linkers.contains(key2_root)){
+                        expr_array_linkers.insert(key2_root, {});
+                    }
                     expr_array_linkers[key2_root] = c.get_key2();
+                }
             }
 
             // arg0
@@ -18089,17 +18141,29 @@ namespace smt {
                 if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key1(), c.get_value()))
                     continue;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
+                if (!dependency_graph.contains(key1_root)){
+                    dependency_graph.insert(key1_root, {});
+                }
+
                 dependency_graph[key1_root].insert(c.get_value());
+
+                if (!dependency_graph.contains(c.get_key1())){
+                    dependency_graph.insert(c.get_key1(), {});
+                }
                 dependency_graph[c.get_key1()].insert(c.get_value());
 
-                if (c.get_key1() != key1_root)
+                if (c.get_key1() != key1_root) {
+                    if (!expr_array_linkers.contains(key1_root)){
+                        expr_array_linkers.insert(key1_root, {});
+                    }
                     expr_array_linkers[key1_root] = c.get_key1();
+                }
             }
         }
 
         for (const auto& e: dependency_graph) {
-            STRACE("str", tout << __LINE__ << " " << mk_pp(e.first, m) << std::endl;);
-            for (const auto& ee : e.second)
+            STRACE("str", tout << __LINE__ << " " << mk_pp(e.m_key, m) << std::endl;);
+            for (const auto& ee : e.m_value)
                 STRACE("str", tout << __LINE__ << " \t" << mk_pp(ee, m) << std::endl;);
         }
 
