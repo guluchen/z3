@@ -116,24 +116,6 @@ namespace smt {
         typedef hashtable<std::pair<expr*, expr*>, obj_ptr_pair_hash<expr, expr>, default_eq<std::pair<expr*, expr*>> > expr_pair_set;
     }
 
-    enum {
-        NONE = 0,
-        LEFT_EMPTY = 1,
-        LEFT_EQUAL = 2,
-        LEFT_SUM = 3,
-        RIGHT_EMPTY = 4,
-        RIGHT_EQUAL = 5,
-        RIGHT_SUM = 6
-    };
-
-    enum {
-        SIMPLE_CASE = 0,
-        CONST_ONLY = 1,
-        NON_FRESH__ONLY = 2,
-        CONST_NON_FRESH = 3
-    };
-
-
     class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
 
     class theory_trau : public theory {
@@ -167,106 +149,16 @@ namespace smt {
             int_vector left_arr;
             int_vector right_arr;
 
-            Arrangment(int_vector const& _left_arr, int_vector const& _right_arr, int _connectingSize){
-                left_arr = _left_arr;
-                right_arr = _right_arr;
-            }
-
-            Arrangment(int_vector const& _left_arr, int_vector const& _right_arr){
-                left_arr = _left_arr;
-                right_arr = _right_arr;
-            }
-
-            void add_left(int number) {
-                left_arr.push_back(number);
-            }
-
-            void add_right(int number) {
-                right_arr.push_back(number);
-            }
-
-            bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, vector<std::string> &flats) {
-                if ((int)flats.size() == boundedFlat)
-                    return false;
-
-                for (int size = 1; size <= boundSize; ++size) { /* size of a flat */
-                    std::string flat = frame.substr(pos, size);
-                    flats.push_back(flat); /* add to stack */
-                    int tmpPos = pos + size;
-
-                    while (true) {
-                        std::string nextIteration = frame.substr(tmpPos, size);
-                        if (nextIteration.compare(flat) != 0)
-                            break;
-                        else if (tmpPos < (int)frame.length() && tmpPos + size <= (int)frame.length()){
-                            tmpPos += size;
-                        }
-                        else
-                            break;
-                    }
-                    if (tmpPos < (int)frame.length()){
-                        if (can_split(boundedFlat, boundSize, tmpPos, frame, flats))
-                            return true;
-                        else {
-                            /* de-stack */
-                            flats.pop_back();
-                        }
-                    }
-                    else {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            bool isUnionStr(std::string str) {
-                return str.find("|") != std::string::npos;
-            }
-
-            /*
-             * Pre-Condition: x_i == 0 --> x_i+1 == 0
-             */
-            bool is_possible_arrangement(pair_expr_vector const &lhs_elements, pair_expr_vector const &rhs_elements) const {
-                /* bla bla */
-                for (unsigned i = 0; i < left_arr.size(); ++i)
-                    if (left_arr[i] != -1){
-                        for (int j = i - 1; j >= 0; --j){
-                            if (lhs_elements[j].second < lhs_elements[i].second) { /* same var */
-                                if (left_arr[j] == -1)
-                                    return false;
-                            }
-                            else
-                                break;
-                        }
-                    }
-                for (unsigned i = 0; i < right_arr.size(); ++i)
-                    if (right_arr[i] != -1){
-                        for (int j = i - 1; j >= 0; --j){
-                            if (rhs_elements[j].second < rhs_elements[i].second) { /* same var */
-                                if (right_arr[j] == -1)
-                                    return false;
-                            }
-                            else
-                                break;
-                        }
-                    }
-                return true;
-            }
-
-
-            void print(std::string msg = ""){
-                if (msg.length() > 0)
-                    STRACE("str", tout << msg << std::endl;);
-
-                for (unsigned int i = 0; i < left_arr.size(); ++i)
-                    STRACE("str", tout << left_arr[i] << " ";);
-
-                STRACE("str", tout << std::endl;);
-                for (unsigned int i = 0; i < right_arr.size(); ++i)
-                    STRACE("str", tout << right_arr[i] << " ";);
-                STRACE("str", tout <<  std::endl;);
-            }
+            Arrangment(int_vector const& _left_arr, int_vector const& _right_arr):left_arr(_left_arr), right_arr(_right_arr){}
+            ~Arrangment() {}
+            void add_left(int number) {left_arr.push_back(number);}
+            void add_right(int number) {right_arr.push_back(number);}
+            bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, vector<std::string> &flats);
+            bool isUnionStr(std::string str);
+            bool is_possible_arrangement(pair_expr_vector const &lhs_elements, pair_expr_vector const &rhs_elements) const;
+            void print(std::string msg = "");
         };
+
         typedef map<std::pair<int, int>, vector<Arrangment>, pair_hash<int_hash, int_hash>, default_eq<std::pair<int, int>>> arrangment_map;
         class UnderApproxState{
         public:
@@ -1657,6 +1549,23 @@ namespace smt {
         str::word_term get_word_term(expr *e) const;
         str::state build_state_from_memo() const;
         void set_up_axioms(expr * ex);
+
+        enum {
+            NONE = 0,
+            LEFT_EMPTY = 1,
+            LEFT_EQUAL = 2,
+            LEFT_SUM = 3,
+            RIGHT_EMPTY = 4,
+            RIGHT_EQUAL = 5,
+            RIGHT_SUM = 6
+        };
+
+        enum {
+            SIMPLE_CASE = 0,
+            CONST_ONLY = 1,
+            NON_FRESH__ONLY = 2,
+            CONST_NON_FRESH = 3
+        };
     };
 
 

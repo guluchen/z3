@@ -19405,4 +19405,86 @@ namespace smt {
         th.m_res.push_back(re);
         return result;
     }
+
+    bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, vector<std::string> &flats) {
+        if ((int)flats.size() == boundedFlat)
+            return false;
+
+        for (int size = 1; size <= boundSize; ++size) { /* size of a flat */
+            std::string flat = frame.substr(pos, size);
+            flats.push_back(flat); /* add to stack */
+            int tmpPos = pos + size;
+
+            while (true) {
+                std::string nextIteration = frame.substr(tmpPos, size);
+                if (nextIteration.compare(flat) != 0)
+                    break;
+                else if (tmpPos < (int)frame.length() && tmpPos + size <= (int)frame.length()){
+                    tmpPos += size;
+                }
+                else
+                    break;
+            }
+            if (tmpPos < (int)frame.length()){
+                if (can_split(boundedFlat, boundSize, tmpPos, frame, flats))
+                    return true;
+                else {
+                    /* de-stack */
+                    flats.pop_back();
+                }
+            }
+            else {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool theory_trau::Arrangment::isUnionStr(std::string str) {
+        return str.find("|") != std::string::npos;
+    }
+
+    /*
+     * Pre-Condition: x_i == 0 --> x_i+1 == 0
+     */
+    bool theory_trau::Arrangment::is_possible_arrangement(pair_expr_vector const &lhs_elements, pair_expr_vector const &rhs_elements) const {
+        /* bla bla */
+        for (unsigned i = 0; i < left_arr.size(); ++i)
+            if (left_arr[i] != -1){
+                for (int j = i - 1; j >= 0; --j){
+                    if (lhs_elements[j].second < lhs_elements[i].second) { /* same var */
+                        if (left_arr[j] == -1)
+                            return false;
+                    }
+                    else
+                        break;
+                }
+            }
+        for (unsigned i = 0; i < right_arr.size(); ++i)
+            if (right_arr[i] != -1){
+                for (int j = i - 1; j >= 0; --j){
+                    if (rhs_elements[j].second < rhs_elements[i].second) { /* same var */
+                        if (right_arr[j] == -1)
+                            return false;
+                    }
+                    else
+                        break;
+                }
+            }
+        return true;
+    }
+
+
+    void theory_trau::Arrangment::print(std::string msg){
+        if (msg.length() > 0)
+        STRACE("str", tout << msg << std::endl;);
+
+        for (unsigned int i = 0; i < left_arr.size(); ++i)
+        STRACE("str", tout << left_arr[i] << " ";);
+
+        STRACE("str", tout << std::endl;);
+        for (unsigned int i = 0; i < right_arr.size(); ++i)
+        STRACE("str", tout << right_arr[i] << " ";);
+        STRACE("str", tout <<  std::endl;);
+    }
 }
