@@ -1391,8 +1391,8 @@ namespace smt {
 
             bool parikh_image_check(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool equal_parikh(expr* nn, expr* n);
-                    void get_parikh_from_strs(zstring s, std::map<char, int> &img);
-                    bool eq_parikh(std::map<char, int> const& lhs, std::map<char, int> const& rhs);
+                    void get_parikh_from_strs(zstring s, map<char, int, unsigned_hash, default_eq<char>> &img);
+                    bool eq_parikh(map<char, int, unsigned_hash, default_eq<char>> const& lhs, map<char, int, unsigned_hash, default_eq<char>> const& rhs);
                 bool same_prefix_same_parikh(expr* nn, expr* n);
                 bool can_match(zstring value, expr* n);
                 void not_contain_string_in_expr(expr* n, expr_ref_vector &constList);

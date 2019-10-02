@@ -5085,8 +5085,8 @@ namespace smt {
 
         ptr_vector<expr> lhs;
         ptr_vector<expr> rhs;
-        std::map<char, int> img_lhs;
-        std::map<char, int> img_rhs;
+        map<char, int, unsigned_hash, default_eq<char>> img_lhs;
+        map<char, int, unsigned_hash, default_eq<char>> img_rhs;
         int diff_len = 0;
         for (unsigned i = 0; i < std::max(nodes.size(), nnodes.size()); ++i){
             zstring val;
@@ -5158,8 +5158,8 @@ namespace smt {
             else
                 remain_vector.push_back(e);
 
-        std::map<char, int> parikh_n;
-        std::map<char, int> parikh_nn;
+        map<char, int, unsigned_hash, default_eq<char>> parikh_n;
+        map<char, int, unsigned_hash, default_eq<char>> parikh_nn;
 
         // eval parikh
         zstring val;
@@ -5190,32 +5190,23 @@ namespace smt {
         if (!eq_parikh(parikh_n, parikh_nn))
             return false;
 
-        // special case for a . x = x . a
-//        if (nnodes.size() == 1 && remain_vector.size() == 1){
-//            u.str.is_string(nnodes[0], val);
-//            zstring lhs = val + val;
-//
-//            zstring rhs;
-//            u.str.is_string(remain_vector[0], rhs);
-//            if (!lhs.contains(rhs))
-//                return false;
-//        }
-
         return true;
     }
 
-    void theory_trau::get_parikh_from_strs(zstring s, std::map<char, int> &img){
-        for (unsigned i = 0; i < s.length(); ++i)
-            if (img.find(s[i]) == img.end()) {
-                img[s[i]] = 1;
-            }
-            else
-                img[s[i]] = img[s[i]] + 1;
+    void theory_trau::get_parikh_from_strs(zstring s, map<char, int, unsigned_hash, default_eq<char>> &img){
+        for (unsigned i = 0; i < s.length(); ++i) {
+            char ch = s[i];
+            if (!img.contains(ch)) {
+                img.insert(ch, 1);
+            } else
+                img[ch] = img[ch] + 1;
+        }
     }
 
-    bool theory_trau::eq_parikh(std::map<char, int> const& lhs, std::map<char, int> const& rhs){
+    bool theory_trau::eq_parikh(map<char, int, unsigned_hash, default_eq<char>> const& lhs, map<char, int, unsigned_hash, default_eq<char>> const& rhs){
         for (const auto& ch : lhs)
-            if (rhs.at(ch.first) != ch.second)
+            if ((ch.m_value > 0 && (!rhs.contains(ch.m_key) || rhs[ch.m_key] != ch.m_value)) ||
+                    (ch.m_value == 0 && rhs.contains(ch.m_key) && rhs[ch.m_key] != ch.m_value))
                 return false;
         return true;
     }
