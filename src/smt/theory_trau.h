@@ -114,7 +114,7 @@ namespace smt {
             std::set<word_equation> m_wes_to_fail;
         };
         using expr_pair = std::pair<expr_ref, expr_ref>;
-
+        typedef hashtable<std::pair<expr*, expr*>, obj_ptr_pair_hash<expr, expr>, default_eq<std::pair<expr*, expr*>> > expr_pair_set;
     }
 
     enum {
@@ -161,6 +161,7 @@ namespace smt {
         typedef std::pair<expr*, int>                                           expr_int;
         typedef old_svector<expr_int>                                           pair_expr_vector;
 
+
         class Arrangment{
         public:
             int_vector left_arr;
@@ -188,13 +189,13 @@ namespace smt {
                 right_arr.push_back(number);
             }
 
-            bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, std::vector<std::string> &flats) {
+            bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, vector<std::string> &flats) {
                 if ((int)flats.size() == boundedFlat)
                     return false;
 
                 for (int size = 1; size <= boundSize; ++size) { /* size of a flat */
                     std::string flat = frame.substr(pos, size);
-                    flats.emplace_back(flat); /* add to stack */
+                    flats.push_back(flat); /* add to stack */
                     int tmpPos = pos + size;
 
                     while (true) {
@@ -228,7 +229,7 @@ namespace smt {
              */
             int splitWithMinFlats(int boundedFlat, int boundSize, std::string frame){
                 for (int i = 1; i <= boundedFlat; ++i) { /* number of flats */
-                    std::vector<std::string> flats;
+                    vector<std::string> flats;
                     if (can_split(i, PMAX, 0, frame, flats)){
                         return i;
                     }
@@ -263,7 +264,7 @@ namespace smt {
 
             bool feasible_split_const(
                     std::string str,
-                    std::vector<std::pair<std::string, int> > elements,
+                    vector<std::pair<std::string, int> > elements,
                     int_vector currentSplit,
                     int bound){
                 /* check feasible const split */
@@ -648,7 +649,7 @@ namespace smt {
 
             bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value,
                                              zstring &strValue){
-                std::vector<zstring> elements = collect_alternative_components(regex);
+                vector<zstring> elements = collect_alternative_components(regex);
                 if (th.u.re.is_union(regex)) {
                     SASSERT(elements.size() > 0);
                     for (int i = 0; i < elements.size(); ++i) {
@@ -681,7 +682,7 @@ namespace smt {
                 return false;
             }
 
-            bool create_string_with_length(std::vector<zstring> const& elements, zstring &currentStr, int remainLength){
+            bool create_string_with_length(vector<zstring> const& elements, zstring &currentStr, int remainLength){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": currentStr: "  << currentStr << std::endl;);
                 if (remainLength == 0)
                     return true;
@@ -713,14 +714,14 @@ namespace smt {
                 return false;
             }
 
-            std::vector<zstring> collect_alternative_components(expr* v){
-                std::vector<zstring> result;
+            vector<zstring> collect_alternative_components(expr* v){
+                vector<zstring> result;
                 collect_alternative_components(v, result);
                 return result;
             }
 
 
-            void collect_alternative_components(expr* v, std::vector<zstring>& ret){
+            void collect_alternative_components(expr* v, vector<zstring>& ret){
                 if (th.u.re.is_to_re(v)){
                     expr* arg0 = to_app(v)->get_arg(0);
                     zstring tmpStr;
@@ -888,7 +889,7 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: "
                                                << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
                             if (!match_regex(regex, val)) {
-                                std::vector<zstring> elements = collect_alternative_components(regex);
+                                vector<zstring> elements = collect_alternative_components(regex);
                                 for (int i = 0; i < (int)value.length(); ++i) {
                                     zstring tmp = val.extract(0, i);
                                     STRACE("str",
@@ -939,7 +940,7 @@ namespace smt {
             bool get_char_range(std::set<char> & char_set){
                 if (regex != nullptr) {
                     // special case for numbers
-                    std::vector<zstring> elements = collect_alternative_components(regex);
+                    vector<zstring> elements = collect_alternative_components(regex);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " s: "
                                        << mk_pp(regex, th.get_manager()) << " "
                                        << elements.size()
@@ -1445,10 +1446,10 @@ namespace smt {
                     /*
                     * (a) | (b) --> {a, b}
                     */
-                    std::vector<zstring> collect_alternative_components(zstring str);
+                    vector<zstring> collect_alternative_components(zstring str);
                     expr_ref_vector collect_alternative_components(expr* v);
                     bool collect_alternative_components(expr* v, expr_ref_vector& ret);
-                    bool collect_alternative_components(expr* v, std::vector<zstring>& ret);
+                    bool collect_alternative_components(expr* v, vector<zstring>& ret);
                     int find_correspond_right_parentheses(int leftParentheses, zstring str);
 
                 string_set collect_strs_in_membership(expr* v);
@@ -1474,9 +1475,9 @@ namespace smt {
              */
             expr_ref_vector arrange(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p = PMAX);
 
-            void get_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, std::vector<Arrangment> &possibleCases);
+            void get_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, vector<Arrangment> &possibleCases);
 
-            void update_possible_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, std::vector<Arrangment> const& tmp, std::vector<Arrangment> &possibleCases);
+            void update_possible_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, vector<Arrangment> const& tmp, vector<Arrangment> &possibleCases);
 
             /*
              *
@@ -1523,7 +1524,8 @@ namespace smt {
                     int pMax,
                     obj_map<expr, int> const& non_fresh_variables,
                     bool optimizing);
-                pair_expr_vector init_expr_vector(expr_int p);
+            pair_expr_vector init_expr_vector(expr_int p);
+            vector<zstring> init_zstring_vector(zstring p);
                 void gen_constraint01_const_var(
                         std::pair<expr *, int> a, std::pair<expr *, int> b,
                         obj_map<expr, int> const& non_fresh_variables,
@@ -1814,7 +1816,7 @@ namespace smt {
                 * Input: constA and a number of flats
                 * Output: all possible ways to split constA
                 */
-                std::vector<int_vector > collect_splits(
+                vector<int_vector > collect_splits(
                         expr_int lhs,
                         pair_expr_vector const& elements,
                         bool optimizing);
@@ -1837,7 +1839,7 @@ namespace smt {
                         int pMax,
                         pair_expr_vector const& elements,
                         int_vector currentSplit,
-                        std::vector<int_vector > &allPossibleSplits
+                        vector<int_vector > &allPossibleSplits
                 );
                     /*
                      * (a)|(b | c) --> {a, b, c}
@@ -1850,8 +1852,8 @@ namespace smt {
                 /*
                 * (a|b|c)*_xxx --> range <a, c>
                 */
-                std::vector<std::pair<int, int>> collect_char_range(expr* a);
-                void collect_char_range(expr* a, std::vector<bool> &chars);
+                vector<std::pair<int, int>> collect_char_range(expr* a);
+                void collect_char_range(expr* a, vector<bool> &chars);
 
                 bool feasibleSplit_const(
                         zstring str,
@@ -1896,15 +1898,15 @@ namespace smt {
                     int i, int startPos, int j,
                     int_vector const& left_arr,
                     int_vector const& right_arr,
-                    std::vector<std::pair<std::string, int>> const& lhs_elements,
-                    std::vector<std::pair<std::string, int>> const& rhs_elements);
+                    vector<std::pair<std::string, int>> const& lhs_elements,
+                    vector<std::pair<std::string, int>> const& rhs_elements);
 
             int optimized_rhs(
                     int i, int startPos, int j,
                     int_vector const& left_arr,
                     int_vector const& right_arr,
-                    std::vector<std::pair<std::string, int>> const& lhs_elements,
-                    std::vector<std::pair<std::string, int>> const& rhs_elements);
+                    vector<std::pair<std::string, int>> const& lhs_elements,
+                    vector<std::pair<std::string, int>> const& rhs_elements);
             /*
              * Given a flat,
              * generate its array name
@@ -1933,7 +1935,7 @@ namespace smt {
              * general case
              */
             void setup_n_n_general(int lhs, int rhs);
-            std::vector<std::pair<std::string, int>> vectorExpr2vectorStr(pair_expr_vector const& v);
+            vector<std::pair<std::string, int>> vectorExpr2vectorStr(pair_expr_vector const& v);
             std::string expr2str(expr* node);
 
             /*
@@ -2007,7 +2009,7 @@ namespace smt {
                     obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool checkIfVarInUnionMembership(expr* nn, int &len);
                 bool belong_to_var_var_inequality(expr* nn);
-                std::vector<zstring> collect_all_inequalities(expr* nn);
+                vector<zstring> collect_all_inequalities(expr* nn);
                     bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(expr* n, zstring s);
@@ -2243,7 +2245,6 @@ namespace smt {
         void get_important_asts_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector & astList, bool consider_itself = false);
         eautomaton* get_automaton(expr* re);
 
-        void track_variable_scope(expr * var);
         expr * rewrite_implication(expr * premise, expr * conclusion);
         void assert_implication(expr * premise, expr * conclusion);
 
@@ -2258,11 +2259,10 @@ namespace smt {
         th_union_find                                       m_find;
         th_trail_stack                                      m_trail_stack;
 
-        std::map<int, obj_hashtable<expr> >                 internal_variable_scope_levels;
         obj_pair_map<expr, expr, expr*>                     concat_astNode_map;
 
         std::map<std::pair<expr*, zstring>, expr*>          regex_in_bool_map;
-        obj_map<expr, string_set >                   regex_in_var_reg_str_map;
+        obj_map<expr, string_set >                          regex_in_var_reg_str_map;
 
         scoped_ptr_vector<eautomaton>                       m_automata;
         ptr_vector<eautomaton>                              regex_automata;
@@ -2298,11 +2298,11 @@ namespace smt {
         expr_ref_vector                                     contains_map;
 
         theory_str_contain_pair_bool_map_t                  contain_pair_bool_map;
-        obj_map<expr, std::set<std::pair<expr*, expr*> > >  contain_pair_idx_map;
+        obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
         obj_map<expr, expr*>                                index_head;
         obj_map<expr, std::pair<expr*, expr*>>              index_tail;
-        std::set<std::pair<expr*, expr*>>                   length_relation;
+        str::expr_pair_set                                  length_relation;
         unsigned                                            m_fresh_id;
         string_map                                          stringConstantCache;
         unsigned long                                       totalCacheAccessCount;
@@ -2356,7 +2356,7 @@ namespace smt {
         std::map<expr*, int>                                curr_var_pieces_counter;
         std::set<std::string>                               generated_equalities;
 
-        std::map<std::pair<int, int>, std::vector<Arrangment>> arrangements;
+        std::map<std::pair<int, int>, vector<Arrangment>> arrangements;
         std::set<zstring>                                   const_set;
         char_set                                            sigma_domain;
         std::map<expr*, std::vector<expr*>>                 length_map;

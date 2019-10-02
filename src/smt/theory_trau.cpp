@@ -1132,7 +1132,7 @@ namespace smt {
             const_lhs.insert(e);
 
         // copy from const vectors
-        std::vector<zstring> starts, ends;
+        vector<zstring> starts, ends;
         for (const auto& s: const_lhs){
             zstring value;
             u.str.is_string(s, value);
@@ -4942,8 +4942,8 @@ namespace smt {
      */
     bool theory_trau::review_starting_ending_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         for (const auto& c : eq_combination) {
-            std::vector<zstring> starts;
-            std::vector<zstring> ends;
+            vector<zstring> starts;
+            vector<zstring> ends;
             zstring constStr;
             for (const auto& concat : c.get_value())
                 if (u.str.is_concat(concat)){
@@ -7334,7 +7334,7 @@ namespace smt {
         if (ret != nullptr) {
         }
         else {
-            std::vector<zstring> elements;
+            vector<zstring> elements;
             expr_ref_vector ors(m);
             collect_alternative_components(rexpr, elements);
             for (unsigned i = 0; i < elements.size(); ++i) {
@@ -7360,7 +7360,7 @@ namespace smt {
 
     expr* theory_trau::setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix){
         
-        std::vector<std::pair<int, int>> charRange = collect_char_range(e);
+        vector<std::pair<int, int>> charRange = collect_char_range(e);
         if (charRange[0].first != -1) {
             expr_ref_vector ret(m);
 
@@ -8136,14 +8136,14 @@ namespace smt {
     /*
      * (a) | (b) --> {a, b}
      */
-    std::vector<zstring> theory_trau::collect_alternative_components(zstring str){
+    vector<zstring> theory_trau::collect_alternative_components(zstring str){
         if (str.length() <= 2)
-            return {str};
+            return init_zstring_vector(str);
         else if (str[0] == '(' && str[str.length() - 1] == ')' && find_correspond_right_parentheses(0, str) == str.length() - 1) {
             return collect_alternative_components(str.extract(1, str.length() - 2));
         }
         else {
-            std::vector<zstring> result;
+            vector<zstring> result;
             int counter = 0;
             unsigned startPos = 0;
             for (unsigned j = 0; j < str.length(); ++j) {
@@ -8153,20 +8153,20 @@ namespace smt {
                     counter++;
                 } else if ((str[j] == '|' || str[j] == '~') && counter == 0) {
                     zstring tmp = str.extract(startPos, j - startPos);
-                    std::vector<zstring> tmp_vec = collect_alternative_components(tmp);
+                    vector<zstring> tmp_vec = collect_alternative_components(tmp);
 
-                    result.insert(result.end(), tmp_vec.begin(), tmp_vec.end());
+                    result.append(tmp_vec);
                     startPos = j + 1;
                 }
             }
             if (startPos != 0) {
                 zstring tmp = str.extract(startPos, str.length() - startPos);
-                std::vector<zstring> tmp_vec = collect_alternative_components(tmp);
+                vector<zstring> tmp_vec = collect_alternative_components(tmp);
 
-                result.insert(result.end(), tmp_vec.begin(), tmp_vec.end());
+                result.append(tmp_vec);
             }
             else {
-                return {str};
+                return init_zstring_vector(str);
             }
             return result;
         }
@@ -8235,7 +8235,7 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::collect_alternative_components(expr* v, std::vector<zstring>& ret){
+    bool theory_trau::collect_alternative_components(expr* v, vector<zstring>& ret){
         if (u.re.is_to_re(v)){
             expr* arg0 = to_app(v)->get_arg(0);
             zstring tmpStr;
@@ -8594,7 +8594,7 @@ namespace smt {
         setup_n_n_general(lhs_elements.size(), rhs_elements.size());
 
         /* because of "general" functions, we need to refine arrangements */
-        std::vector<Arrangment> possibleCases;
+        vector<Arrangment> possibleCases;
         get_arrangements(lhs_elements, rhs_elements, non_fresh_variables, possibleCases);
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
@@ -8628,7 +8628,7 @@ namespace smt {
     void theory_trau::get_arrangements(pair_expr_vector const& lhs_elements,
                                         pair_expr_vector const& rhs_elements,
                                         obj_map<expr, int> const& non_fresh_variables,
-                                        std::vector<Arrangment> &possibleCases) {
+                                        vector<Arrangment> &possibleCases) {
         std::string firstVar = expr2str(lhs_elements[0].first);
         if ((firstVar.find(FLATPREFIX) != std::string::npos && lhs_elements.size() == p_bound.get_int64()) ||
             (lhs_elements.size() == 2 &&
@@ -8647,8 +8647,8 @@ namespace smt {
     void theory_trau::update_possible_arrangements(
             pair_expr_vector const& lhs_elements,
             pair_expr_vector const& rhs_elements,
-            std::vector<Arrangment> const& tmp,
-            std::vector<Arrangment> &possibleCases) {
+            vector<Arrangment> const& tmp,
+            vector<Arrangment> &possibleCases) {
         for (const auto& a : tmp)
             if (a.isPossibleArrangement(lhs_elements, rhs_elements))
                 possibleCases.push_back(a);
@@ -9126,6 +9126,12 @@ namespace smt {
         return ret;
     }
 
+    vector<zstring> theory_trau::init_zstring_vector(zstring p){
+        vector<zstring> ret;
+        ret.push_back(p);
+        return ret;
+    }
+
     void theory_trau::gen_constraint01_const_var(
             expr_int a, expr_int b,
             obj_map<expr, int> const& non_fresh_variables,
@@ -9257,9 +9263,9 @@ namespace smt {
             length = 1;
 
         if (match_regex(regexA, regexB)) {
-            std::vector<zstring> aComp;
+            vector<zstring> aComp;
             collect_alternative_components(regexA, aComp);
-            std::vector<zstring> bComp;
+            vector<zstring> bComp;
             collect_alternative_components(regexB, bComp);
 
             int minA = 10000, minB = 10000, maxA = 0, maxB = 0;
@@ -9637,7 +9643,7 @@ namespace smt {
          * 3: have both
          */
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
-        std::vector<int_vector> all_possible_splits;
+        vector<int_vector> all_possible_splits;
         expr_ref_vector strSplits(m);
         expr* reg = nullptr;
         switch (splitType) {
@@ -9767,7 +9773,7 @@ namespace smt {
     bool theory_trau::is_reg_union(expr* n){
         expr* reg = nullptr;
         if (is_internal_regex_var(n, reg)){
-            std::vector<std::pair<int, int>> charRange = collect_char_range(reg);
+            vector<std::pair<int, int>> charRange = collect_char_range(reg);
             if (charRange.size() == 1 && charRange[0].first == -1){
                 return false;
             }
@@ -10402,7 +10408,7 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
-            std::vector<zstring> components = {content};
+            vector<zstring> components = init_zstring_vector(content);
             if (u.re.is_union(elements[constPos].first)) {
                 components.clear();
                 collect_alternative_components(elements[constPos].first, components);
@@ -10667,7 +10673,7 @@ namespace smt {
         expr_ref_vector andConstraints(m);
         andConstraints.push_back(createLessEqOP(regex_length, m_autil.mk_int(connectingSize)));
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
-        std::vector<std::pair<int, int>> charRange = collect_char_range(elements[regexPos].first);
+        vector<std::pair<int, int>> charRange = collect_char_range(elements[regexPos].first);
 
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << charRange[0].first << std::endl;);
         if (charRange[0].first != -1) {
@@ -10779,7 +10785,7 @@ namespace smt {
         expr_ref tmp01(get_var_flat_array(a), m);
         expr_ref tmp02(get_var_flat_array(elements[constPos]), m);
 
-        std::vector<zstring> components = {value};
+        vector<zstring> components = init_zstring_vector(value);
         if (u.re.is_union(elements[constPos].first)) {
             components.clear();
             collect_alternative_components(elements[constPos].first, components);
@@ -11403,13 +11409,13 @@ namespace smt {
 	 * Input: constA and a number of flats
 	 * Output: all possible ways to split constA
 	 */
-    std::vector<int_vector > theory_trau::collect_splits(
+    vector<int_vector > theory_trau::collect_splits(
             expr_int lhs,
             pair_expr_vector const& elements,
             bool optimizing){
 
         /* use alias instead of elements */
-        std::vector<int_vector > allPossibleSplits;
+        vector<int_vector > allPossibleSplits;
         SASSERT(lhs.second < 0);
 
         zstring value;
@@ -11468,9 +11474,9 @@ namespace smt {
 //            int pos,
 //            std::string str, /* regex */
 //            int pMax,
-//            std::vector<std::pair<std::string, int> > elements,
+//            vector<std::pair<std::string, int> > elements,
 //            int_vector currentSplit,
-//            std::vector<int_vector > &allPossibleSplits) {
+//            vector<int_vector > &allPossibleSplits) {
 //
 //        /* reach end */
 //        if (currentSplit.size() == elements.size() &&
@@ -11574,7 +11580,7 @@ namespace smt {
 //            std::string content = parse_regex_content(elements[currentSplit.size()].first);
 //            int contentLength = (int)content.length();
 //
-//            std::vector<std::string> components = {content};
+//            vector<std::string> components = {content};
 //            if (isUnionStr(content)) {
 //                components = collect_alternative_components(content);
 //                for (const auto& s : components)
@@ -11663,7 +11669,7 @@ namespace smt {
 //    bool theory_trau::const_vs_regex(expr* reg, pair_expr_vector elements){
 //        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(reg, m) << std::endl;);
 //        if (u.re.is_union(reg)) {
-//            std::vector<zstring> components = collect_alternative_components(reg);
+//            vector<zstring> components = collect_alternative_components(reg);
 //            zstring tmp;
 //            for (unsigned i = 0; i < elements.size(); ++i)
 //                if (u.str.is_string(elements[i].first, tmp) &&
@@ -11707,8 +11713,11 @@ namespace smt {
     }
 
     bool theory_trau::length_base_split(expr* e, pair_expr_vector const& elements){
+        expr_ref b(e, m);
         for (const auto& n : elements){
-            if (length_relation.find(std::make_pair(n.first, e)) != length_relation.end()){
+            expr_ref a(n.first, m);
+            str::expr_pair p = std::make_pair(a, b);
+            if (length_relation.contains(p)){
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << " cannot contain because of length based split" << mk_pp(n.first, m)<< std::endl;);
                 return false;
             }
@@ -11773,7 +11782,7 @@ namespace smt {
             int pMax,
             pair_expr_vector const& elements,
             int_vector currentSplit,
-            std::vector<int_vector > &allPossibleSplits
+            vector<int_vector > &allPossibleSplits
     ) {
 
         /* reach end */
@@ -11935,7 +11944,7 @@ namespace smt {
             ret.insert(s);
             return ret;
         }
-        std::vector<zstring> components = collect_alternative_components(s);
+        vector<zstring> components = collect_alternative_components(s);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         if (components.size() > 0) {
             if (components.size() == 1) {
@@ -11967,15 +11976,18 @@ namespace smt {
     /*
 	 * (a|b|c)*_xxx --> range <a, c>
 	 */
-    std::vector<std::pair<int, int>> theory_trau::collect_char_range(expr* a){
-        std::vector<bool> chars;
+    vector<std::pair<int, int>> theory_trau::collect_char_range(expr* a){
+        vector<bool> chars;
         for (int i = 0; i <= 256; ++i)
             chars.push_back(false);
         collect_char_range(a, chars);
-        if (chars[255])
-            return {std::make_pair(-1, -1)};
+        if (chars[255]) {
+            vector<std::pair<int, int>> tmp;
+            tmp.push_back(std::make_pair(-1, -1));
+            return tmp;
+        }
         else {
-            std::vector<std::pair<int, int>> ret;
+            vector<std::pair<int, int>> ret;
 
             while (true) {
                 int start = -1;
@@ -12006,7 +12018,7 @@ namespace smt {
 
     }
 
-    void theory_trau::collect_char_range(expr* a, std::vector<bool> &chars){
+    void theory_trau::collect_char_range(expr* a, vector<bool> &chars){
         if (chars[255])
             return;
         if (u.re.is_plus(a) || u.re.is_star(a)){
@@ -12060,8 +12072,8 @@ namespace smt {
                 else {
                     NOT_IMPLEMENTED_YET();
                     if (u.re.is_concat(a)) {
-                        std::vector<bool> char_lhs;
-                        std::vector<bool> char_rhs;
+                        vector<bool> char_lhs;
+                        vector<bool> char_rhs;
                         collect_char_range(to_app(a)->get_arg(0), char_lhs);
                         collect_char_range(to_app(a)->get_arg(1), char_rhs);
                     }
@@ -12270,7 +12282,6 @@ namespace smt {
         if (!u.str.is_string(a.first, val)) {
             if (a.second <= REGEX_CODE)
                 return mk_strlen(a.first);
-//                return length_map[a.first][std::abs(a.second - REGEX_CODE)];
             else
                 return length_map[a.first][std::abs(a.second)];
         }
@@ -12574,8 +12585,8 @@ namespace smt {
             int i, int startPos, int j,
             int_vector const& left_arr,
             int_vector const& right_arr,
-            std::vector<std::pair<std::string, int>> const& lhs_elements,
-            std::vector<std::pair<std::string, int>> const& rhs_elements){
+            vector<std::pair<std::string, int>> const& lhs_elements,
+            vector<std::pair<std::string, int>> const& rhs_elements){
         if (left_arr[i] == SUMFLAT && right_arr[j] == i){
             /* check forward */
             if (i < (int)lhs_elements.size() - 1)
@@ -12651,8 +12662,8 @@ namespace smt {
             int i, int startPos, int j,
             int_vector const& left_arr,
             int_vector const& right_arr,
-            std::vector<std::pair<std::string, int>> const& lhs_elements,
-            std::vector<std::pair<std::string, int>> const& rhs_elements){
+            vector<std::pair<std::string, int>> const& lhs_elements,
+            vector<std::pair<std::string, int>> const& rhs_elements){
         if (right_arr[j] == SUMFLAT && left_arr[i] == j){
             /* check forward */
             if (j < (int)rhs_elements.size() - 1) {
@@ -12753,7 +12764,7 @@ namespace smt {
         for (int i = 1 ; i < rhs; ++i){
             tmpRight.push_back(0);
 
-            std::vector<Arrangment> tmp04;
+            vector<Arrangment> tmp04;
             tmp04.push_back(Arrangment(tmpLeft, tmpRight));
 
             /* update */
@@ -12780,7 +12791,7 @@ namespace smt {
         for (int i = 1; i < lhs; ++i) {
             tmpLeft.push_back(0);
 
-            std::vector<Arrangment> tmp04;
+            vector<Arrangment> tmp04;
             tmp04.push_back(Arrangment(tmpLeft, tmpRight));
 
             /* add directly without checking */
@@ -12801,19 +12812,19 @@ namespace smt {
             for (int j = 0; j < rhs; ++j)
                 if (arrangements.find(std::make_pair(i,j)) == arrangements.end()){
                     /* 2.0 [i] = empty */
-                    std::vector<Arrangment> tmp01_ext = arrangements[std::make_pair(i - 1, j)];
+                    vector<Arrangment> tmp01_ext = arrangements[std::make_pair(i - 1, j)];
                     for (unsigned int t = 0 ; t < tmp01_ext.size(); ++t) {
                         tmp01_ext[t].add_left(EMPTYFLAT);
                     }
 
                     /* 2.1 [j] = empty */
-                    std::vector<Arrangment> tmp02_ext = arrangements[std::make_pair(i, j - 1)];
+                    vector<Arrangment> tmp02_ext = arrangements[std::make_pair(i, j - 1)];
                     for (unsigned int t = 0 ; t < tmp02_ext.size(); ++t) {
                         tmp02_ext[t].add_right(EMPTYFLAT);
                     }
 
                     /* 3.1 [i] = sum(k...j) */
-                    std::vector<Arrangment> tmp03;
+                    vector<Arrangment> tmp03;
 
                     {
                         /* [i] = sum (0..j) */
@@ -12833,7 +12844,7 @@ namespace smt {
 
                     /* [i] = sum (k..j) */
                     for (int k = 1; k < j; ++k) {
-                        std::vector<Arrangment> tmp03_ext = arrangements[std::make_pair(i - 1, k - 1)];
+                        vector<Arrangment> tmp03_ext = arrangements[std::make_pair(i - 1, k - 1)];
                         for (unsigned int t = 0; t < tmp03_ext.size(); ++t) {
 
                             tmp03_ext[t].add_left(SUMFLAT);
@@ -12845,15 +12856,15 @@ namespace smt {
                             SASSERT ((int)tmp03_ext[t].right_arr.size() == j + 1);
                         }
 
-                        tmp03.insert(tmp03.end(), tmp03_ext.begin(), tmp03_ext.end());
+                        tmp03.append(tmp03_ext);
                     }
 
                     /* 3.2 right = sum(...left) */
-                    std::vector<Arrangment> tmp04;
+                    vector<Arrangment> tmp04;
 
                     /* sum (k..i)  = [j] */
                     for (int k = 1; k < i; ++k) {
-                        std::vector<Arrangment> tmp04_ext = arrangements[std::make_pair(k - 1, j - 1)];
+                        vector<Arrangment> tmp04_ext = arrangements[std::make_pair(k - 1, j - 1)];
                         for (unsigned int t = 0; t < tmp04_ext.size(); ++t) {
                             tmp04_ext[t].add_right(SUMFLAT);
                             for (int tt = k; tt <= i; ++tt)
@@ -12863,7 +12874,7 @@ namespace smt {
                             SASSERT ((int)tmp04_ext[t].right_arr.size() == j + 1);
                         }
 
-                        tmp04.insert(tmp04.end(), tmp04_ext.begin(), tmp04_ext.end());
+                        tmp04.append(tmp04_ext);
                     }
 
                     {
@@ -12883,7 +12894,7 @@ namespace smt {
                     }
 
                     /* fourth case: left = right */
-                    std::vector<Arrangment> tmp05 = arrangements[std::make_pair(i - 1, j - 1)];
+                    vector<Arrangment> tmp05 = arrangements[std::make_pair(i - 1, j - 1)];
                     for (unsigned int k = 0; k < tmp05.size(); ++k) {
                         tmp05[k].add_right(i);
                         tmp05[k].add_left(j);
@@ -12891,16 +12902,16 @@ namespace smt {
 
                     /* update */
                     /* add directly */
-                    std::vector<Arrangment> possibleCases;
-                    possibleCases.insert(possibleCases.end(), tmp03.begin(), tmp03.end());
-                    possibleCases.insert(possibleCases.end(), tmp04.begin(), tmp04.end());
-                    possibleCases.insert(possibleCases.end(), tmp05.begin(), tmp05.end());
+                    vector<Arrangment> possibleCases;
+                    possibleCases.append(tmp03);
+                    possibleCases.append(tmp04);
+                    possibleCases.append(tmp05);
                     arrangements[std::make_pair(i, j)] = possibleCases;
                 }
     }
 
-    std::vector<std::pair<std::string, int>> theory_trau::vectorExpr2vectorStr(pair_expr_vector const& v){
-        std::vector<std::pair<std::string, int>> ret;
+    vector<std::pair<std::string, int>> theory_trau::vectorExpr2vectorStr(pair_expr_vector const& v){
+        vector<std::pair<std::string, int>> ret;
         for (unsigned i = 0; i < v.size(); ++i)
             ret.push_back(std::make_pair(expr2str(v[i].first), v[i].second));
         return ret;
@@ -13043,7 +13054,7 @@ namespace smt {
 
                     expr_ref v1(mk_int_var(flatSize), m);
                     length_map[v].push_back(v1);
-                    std::vector<zstring> tmp;
+                    vector<zstring> tmp;
                     collect_alternative_components(regex, tmp);
                     expr_ref_vector lenConstraints(m);
                     int_set sizes;
@@ -13178,7 +13189,7 @@ namespace smt {
                     start = REGEX_CODE - start;
 
                     expr_ref v1(get_var_flat_size(std::make_pair(v, start)), m);
-                    std::vector<zstring> tmp_strs;
+                    vector<zstring> tmp_strs;
                     collect_alternative_components(regex, tmp_strs);
                     expr_ref_vector lenConstraints(m);
                     int_set sizes;
@@ -13993,7 +14004,7 @@ namespace smt {
             return true;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << std::endl;);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
-        std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
+        vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             len = maxDiffStrs[0].length();
 
@@ -14184,11 +14195,11 @@ namespace smt {
         return false;
     }
 
-    std::vector<zstring> theory_trau::collect_all_inequalities(expr* nn){
+    vector<zstring> theory_trau::collect_all_inequalities(expr* nn){
         
         int diffLen = 0;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
-        std::vector<zstring> maxDiffStrs;
+        vector<zstring> maxDiffStrs;
         expr_ref_vector eqNodeSet(m);
         collect_eq_nodes(nn, eqNodeSet);
         for (const auto& we : m_wi_expr_memo){
@@ -14344,7 +14355,7 @@ namespace smt {
     bool theory_trau::collect_not_contains(expr* nn){
         
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
-        std::vector<zstring> maxDiffStrs;
+        vector<zstring> maxDiffStrs;
         for (const auto& we : m_wi_expr_memo){
             if (we.first.get() == nn){
 
@@ -14430,7 +14441,7 @@ namespace smt {
         if (checkIfVarInUnionMembership(nn, len))
             return true;
 
-        std::vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
+        vector<zstring> maxDiffStrs = collect_all_inequalities(nn);
         if (maxDiffStrs.size() > 0)
             diffLen = maxDiffStrs[0].length();
 
@@ -14440,7 +14451,7 @@ namespace smt {
 
         if (diffLen > 0) {
             context& ctx = get_context();
-            std::vector<zstring> constParts;
+            vector<zstring> constParts;
             int constPartLen = 0;
             if (combinations.contains(ctx.get_enode(nn)->get_root()->get_owner())) {
                 for (const auto& concat : combinations[ctx.get_enode(nn)->get_root()->get_owner()]) {
@@ -15834,13 +15845,13 @@ namespace smt {
             expr * str = ex->get_arg(0);
             expr * substr = ex->get_arg(1);
             contains_map.push_back(ex);
-            std::pair<expr*, expr*> key = std::pair<expr*, expr*>(str, substr);
+            std::pair<expr*, expr*> key = std::make_pair(str, substr);
             contain_pair_bool_map.insert(str, substr, ex);
             if (!contain_pair_idx_map.contains(str)) {
-                contain_pair_idx_map.insert(str, std::set<std::pair<expr*, expr*>>());
+                contain_pair_idx_map.insert(str, str::expr_pair_set());
             }
             if (!contain_pair_idx_map.contains(substr)) {
-                contain_pair_idx_map.insert(substr, std::set<std::pair<expr*, expr*>>());
+                contain_pair_idx_map.insert(substr, str::expr_pair_set());
             }
             contain_pair_idx_map[str].insert(key);
             contain_pair_idx_map[substr].insert(key);
@@ -16882,7 +16893,7 @@ namespace smt {
                         concat = concat == nullptr ? to_app(elements[i])->get_arg(0) : u.str.mk_concat(concat, to_app(elements[i])->get_arg(0));
                     }
                     else if (u.re.is_plus(elements[i]) || u.re.is_union(elements[i])) {
-                        std::vector<zstring> tmpVector;
+                        vector<zstring> tmpVector;
                         collect_alternative_components(elements[i], tmpVector);
                         int_set lenElements;
                         if (tmpVector.size() > 0) {
@@ -17184,7 +17195,6 @@ namespace smt {
 
         variable_set.insert(a);
         internal_variable_set.insert(a);
-        track_variable_scope(a);
 
         return a;
     }
@@ -17338,7 +17348,6 @@ namespace smt {
         m_trail.push_back(a);
         //variable_set.insert(a);
         //internal_variable_set.insert(a);
-        //track_variable_scope(a);
 
         return a;
     }
@@ -17360,7 +17369,6 @@ namespace smt {
         variable_set.insert(a);
         //internal_variable_set.insert(a);
         regex_variable_set.insert(a);
-        track_variable_scope(a);
 
         return a;
     }
@@ -17866,13 +17874,6 @@ namespace smt {
                 get_important_asts_in_node(argAst, non_fresh_vars, astList, true);
             }
         }
-    }
-
-    void theory_trau::track_variable_scope(expr * var) {
-        if (internal_variable_scope_levels.find(m_scope_level) == internal_variable_scope_levels.end()) {
-            internal_variable_scope_levels[m_scope_level] = obj_hashtable<expr>();
-        }
-        internal_variable_scope_levels[m_scope_level].insert(var);
     }
 
     expr * theory_trau::rewrite_implication(expr * premise, expr * conclusion) {
