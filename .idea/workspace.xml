@@ -83,9 +83,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -100,11 +100,10 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="345">
-              <caret line="12797" column="14" selection-start-line="12797" selection-start-column="14" selection-end-line="12797" selection-end-column="14" />
+            <state relative-caret-position="861">
+              <caret line="8477" column="140" selection-start-line="8477" selection-start-column="140" selection-end-line="8477" selection-end-column="140" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
-                <element signature="e#179734#183691#0" />
                 <element signature="e#183697#185433#0" />
                 <element signature="e#185439#189067#0" />
                 <element signature="e#189073#189357#0" />
@@ -251,11 +250,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>def_graph</find>
-      <find>regex_in_bool_map</find>
-      <find>arrangements</find>
-      <find>std::map</find>
-      <find>std::set</find>
       <find>arrangements[</find>
       <find>std::pair&lt;expr *, int&gt;</find>
       <find>setup_char_range_arr</find>
@@ -281,6 +275,11 @@
       <find>UnderApproxState</find>
       <find>element_t</find>
       <find>gen_flat_size</find>
+      <find>final_check_eh</find>
+      <find>is_var_var_inequality</find>
+      <find>collect_all_inequalities</find>
+      <find>is_non_fresh_occurrences</find>
+      <find>to_arith_right</find>
     </findStrings>
     <replaceStrings>
       <replace>get_flat_iter(get_var_size</replace>
@@ -912,12 +911,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="72815000" />
+      <workItem from="1569868458528" duration="75628000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1894215000" />
+    <option name="totallyTimeSpent" value="1897028000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1372,11 +1371,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="345">
-          <caret line="12797" column="14" selection-start-line="12797" selection-start-column="14" selection-end-line="12797" selection-end-column="14" />
+        <state relative-caret-position="861">
+          <caret line="8477" column="140" selection-start-line="8477" selection-start-column="140" selection-end-line="8477" selection-end-column="140" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
-            <element signature="e#179734#183691#0" />
             <element signature="e#183697#185433#0" />
             <element signature="e#185439#189067#0" />
             <element signature="e#189073#189357#0" />
