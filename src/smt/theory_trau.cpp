@@ -2870,55 +2870,6 @@ namespace smt {
                                 return true;
                             }
                         }
-//                        else if (u.str.is_concat(n)){
-//                            expr* arg0 = to_app(n)->get_arg(0);
-//                            expr* arg1 = to_app(n)->get_arg(1);
-//                            if (contain_pair_bool_map.find(arg0, str, boolVar)){
-//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                expr_ref_vector premises(m);
-//                                premises.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-//                                premises.push_back(createEqualOP(rhs, eq));
-//                                assert_implication(createAndOP(premises), mk_not(m, boolVar));
-//                            }
-//
-//                            if (contain_pair_bool_map.find(arg1, str, boolVar)){
-//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                expr_ref_vector premises(m);
-//                                premises.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-//                                premises.push_back(createEqualOP(rhs, eq));
-//                                assert_implication(createAndOP(premises), mk_not(m, boolVar));
-//                            }
-//
-//                            ptr_vector<expr> v_arg;
-//                            get_nodes_in_concat(arg0, v_arg);
-//                            for (const auto& nn : v_arg){
-//                                if (u.str.is_string(nn, tmp)) {
-//                                    if (tmp.contains(key)) {
-//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                        expr_ref_vector premises(m);
-//                                        premises.push_back(createEqualOP(rhs, eq));
-//                                        premises.push_back(createEqualOP(nn, arg0));
-//                                        assert_implication(createAndOP(premises), createEqualOP(lhs, rhs));
-//                                        return true;
-//                                    }
-//                                }
-//                            }
-//
-//                            v_arg.clear();
-//                            get_nodes_in_concat(arg1, v_arg);
-//                            for (const auto& nn : v_arg){
-//                                if (u.str.is_string(nn, tmp)) {
-//                                    if (tmp.contains(key)) {
-//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                        expr_ref_vector premises(m);
-//                                        premises.push_back(createEqualOP(rhs, eq));
-//                                        premises.push_back(createEqualOP(nn, arg1));
-//                                        assert_implication(createAndOP(premises), createEqualOP(lhs, rhs));
-//                                        return true;
-//                                    }
-//                                }
-//                            }
-//                        }
                     }
                 }
             }
@@ -2954,55 +2905,6 @@ namespace smt {
                                 return true;
                             }
                         }
-//                        else if (u.str.is_concat(n)){
-//                            expr* arg0 = to_app(n)->get_arg(0);
-//                            expr* arg1 = to_app(n)->get_arg(1);
-//                            if (contain_pair_bool_map.find(arg0, str, boolVar)){
-//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                expr_ref_vector premises(m);
-//                                premises.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-//                                premises.push_back(createEqualOP(lhs, eq));
-//                                assert_implication(createAndOP(premises), mk_not(m, boolVar));
-//                            }
-//
-//                            if (contain_pair_bool_map.find(arg1, str, boolVar)){
-//                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                expr_ref_vector premises(m);
-//                                premises.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-//                                premises.push_back(createEqualOP(lhs, eq));
-//                                assert_implication(createAndOP(premises), mk_not(m, boolVar));
-//                            }
-//
-//                            ptr_vector<expr> v_arg;
-//                            get_nodes_in_concat(arg0, v_arg);
-//                            for (const auto& nn : v_arg){
-//                                if (u.str.is_string(nn, tmp)) {
-//                                    if (tmp.contains(key)) {
-//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                        expr_ref_vector premises(m);
-//                                        premises.push_back(createEqualOP(lhs, eq));
-//                                        premises.push_back(createEqualOP(nn, arg0));
-//                                        assert_implication(createAndOP(premises), createEqualOP(lhs, rhs));
-//                                        return true;
-//                                    }
-//                                }
-//                            }
-//
-//                            v_arg.clear();
-//                            get_nodes_in_concat(arg1, v_arg);
-//                            for (const auto& nn : v_arg){
-//                                if (u.str.is_string(nn, tmp)) {
-//                                    if (tmp.contains(key)) {
-//                                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " reach it " << std::endl;);
-//                                        expr_ref_vector premises(m);
-//                                        premises.push_back(createEqualOP(lhs, eq));
-//                                        premises.push_back(createEqualOP(nn, arg1));
-//                                        assert_implication(createAndOP(premises), createEqualOP(lhs, rhs));
-//                                        return true;
-//                                    }
-//                                }
-//                            }
-//                        }
                     }
                 }
             }
@@ -12878,22 +12780,22 @@ namespace smt {
             var_pieces_counter.insert(v, 0);
         int start = var_pieces_counter[v];
         int end = var_pieces_counter[v] + p_bound.get_int64();
+
+        if (!length_map.contains(v)){
+            ptr_vector<expr> tmp;
+            length_map.insert(v, tmp);
+        }
+
+        if (!iter_map.contains(v)){
+            ptr_vector<expr> tmp;
+            iter_map.insert(v, tmp);
+        }
         expr* regex = nullptr;
         if (u.str.is_string(v)){
             start ++;
             end ++;
         }
         else {
-            if (!length_map.contains(v)){
-                ptr_vector<expr> tmp;
-                length_map.insert(v, tmp);
-            }
-
-            if (!iter_map.contains(v)){
-                ptr_vector<expr> tmp;
-                iter_map.insert(v, tmp);
-            }
-
             if (is_internal_regex_var(v, regex)) {
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(v, m) << std::endl;);
                 if (u.re.is_union(regex)) {
@@ -16738,8 +16640,7 @@ namespace smt {
             expr_ref finalAxiom(m.mk_iff(ex, rhs), m);
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
-            STRACE("str",
-                  tout << __LINE__ << " "  << "set up Str2Reg: (RegexIn " << mk_pp(str, m) << " " << mk_pp(regex, m) << ")" << std::endl;);
+            STRACE("str", tout << __LINE__ << " "  << "set up Str2Reg: (RegexIn " << mk_pp(str, m) << " " << mk_pp(regex, m) << ")" << std::endl;);
         } else if (u.re.is_concat(regex)) {
             STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
@@ -17952,17 +17853,14 @@ namespace smt {
                 
                 context& ctx = get_context();
 
-                for (unsigned i = 0; i < mful_scope_levels.size(); ++i)
-                    {
+                for (unsigned i = 0; i < mful_scope_levels.size(); ++i){
+                    literal tmp = ctx.get_literal(mful_scope_levels[i].get());
+                    int assignLvl = ctx.get_assign_level(tmp);
+                    STRACE("str", tout << __LINE__ << " assigned expr " << mk_pp(mful_scope_levels[i].get(), m) << ", assignLevel = " << assignLvl << std::endl;);
+                }
 
-                        literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-                        int assignLvl = ctx.get_assign_level(tmp);
-
-                        STRACE("str", tout << __LINE__ << " assigned expr " << mk_pp(mful_scope_levels[i].get(), m) << ", assignLevel = " << assignLvl << std::endl;);
-                    }
 
                 for (const auto& n : variable_set){
-
                     rational vLen;
                     expr_ref value(m);
                     if (ctx.get_value(ctx.get_enode(n), value)){
@@ -18168,30 +18066,30 @@ namespace smt {
     }
 
     void theory_trau::fetch_related_exprs(
-            expr_ref_vector const& allvars,
-            expr_ref_vector &guessedExprs){
+            expr_ref_vector const& all_vars,
+            expr_ref_vector &guessed_eqs){
         
 
         expr_ref_vector ret(m);
-        rational lenValue;
-        for (const auto &e : guessedExprs) {
+        rational len_value;
+        for (const auto &e : guessed_eqs) {
             expr *lhs = to_app(e)->get_arg(0);
             expr *rhs = to_app(e)->get_arg(1);
 
             // skip empty values
-            if (get_len_value(lhs, lenValue) && lenValue.get_int64() == 0)
+            if (get_len_value(lhs, len_value) && len_value.get_int64() == 0)
                 continue;
 
-            if (get_len_value(rhs, lenValue) && lenValue.get_int64() == 0)
+            if (get_len_value(rhs, len_value) && len_value.get_int64() == 0)
                 continue;
 
             // check rhs
             ptr_vector<expr> argVec;
             get_nodes_in_concat(rhs, argVec);
-            if (check_intersection_not_empty(argVec, allvars)) {
+            if (check_intersection_not_empty(argVec, all_vars)) {
                 argVec.reset();
                 get_nodes_in_concat(lhs, argVec);
-                if (check_intersection_not_empty(argVec, allvars)) {
+                if (check_intersection_not_empty(argVec, all_vars)) {
                     // add rhs
                     ret.push_back(e);
                 }
@@ -18199,14 +18097,14 @@ namespace smt {
         }
 
         // capture empty values
-        for (const auto& v : allvars)
-            if (get_len_value(v, lenValue) && lenValue.get_int64() == 0)
+        for (const auto& v : all_vars)
+            if (get_len_value(v, len_value) && len_value.get_int64() == 0)
                 ret.push_back(createEqualOP(v, mk_string("")));
 
-        guessedExprs.reset();
-        guessedExprs.append(ret);
-        for (unsigned i = 0; i < guessedExprs.size(); ++i)
-            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessedExprs[i].get(), m) << std::endl;);
+        guessed_eqs.reset();
+        guessed_eqs.append(ret);
+        for (unsigned i = 0; i < guessed_eqs.size(); ++i)
+            STRACE("str", tout << __LINE__ << " core guessed exprs " << mk_pp(guessed_eqs[i].get(), m) << std::endl;);
     }
 
     /*
@@ -18369,9 +18267,7 @@ namespace smt {
             if (!m.is_not(mful_scope_levels[i].get()))
             {
                 literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-
                 STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(mful_scope_levels[i].get(), m) << std::endl;);
-
                 guessedLiterals.push_back(tmp);
             }
     }
@@ -18423,7 +18319,6 @@ namespace smt {
                 }
             }
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " leave " << std::endl;);
     }
 
 
@@ -18473,7 +18368,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << std::endl;);
             }
             else
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
         }
 
         sort * str_sort = th.u.str.mk_string_sort();
@@ -18511,10 +18406,7 @@ namespace smt {
                 return to_app(th.mk_string(strValue));
             }
             else {
-                STRACE("str",
-                       tout << __LINE__ << " " << __FUNCTION__
-                            << mk_pp(node, m)
-                            << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(node, m) << std::endl;);
                 SASSERT(false);
             }
         }

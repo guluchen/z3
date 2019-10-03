@@ -1354,7 +1354,7 @@ namespace smt {
         void add_disequalities_to_core(expr_ref_vector const& diseq_exprs, expr_ref_vector &core);
         void add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core);
         unsigned get_assign_lvl(expr* a, expr* b);
-        void fetch_related_exprs(expr_ref_vector const& allvars, expr_ref_vector &guessedExprs);
+        void fetch_related_exprs(expr_ref_vector const& all_vars, expr_ref_vector &guessed_eqs);
         expr_ref_vector check_contain_related_vars(expr* v, zstring replaceKey);
         expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
         void update_all_vars(expr_ref_vector &allvars, expr* e);
