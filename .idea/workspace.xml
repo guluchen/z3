@@ -101,10 +101,39 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="375">
-              <caret line="13075" column="12" selection-start-line="13075" selection-start-column="12" selection-end-line="13075" selection-end-column="12" />
+            <state relative-caret-position="321">
+              <caret line="18463" column="4" selection-start-line="18463" selection-start-column="4" selection-end-line="18463" selection-end-column="4" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
+                <element signature="e#179734#183691#0" />
+                <element signature="e#183697#185433#0" />
+                <element signature="e#185439#189067#0" />
+                <element signature="e#189073#189357#0" />
+                <element signature="e#167113#170502#1" />
+                <element signature="e#192928#193719#0" />
+                <element signature="e#193725#194574#0" />
+                <element signature="e#194580#197988#0" />
+                <element signature="e#198602#199694#0" />
+                <element signature="e#199700#200058#0" />
+                <element signature="e#200064#200317#0" />
+                <element signature="e#201098#204280#0" />
+                <element signature="e#205287#207200#0" />
+                <element signature="e#207206#207470#0" />
+                <element signature="e#189473#190845#1" />
+                <element signature="e#191103#191795#1" />
+                <element signature="e#193051#193915#1" />
+                <element signature="e#194076#196693#1" />
+                <element signature="e#219162#222014#0" />
+                <element signature="e#222020#223476#0" />
+                <element signature="e#223482#223788#0" />
+                <element signature="e#223794#224019#0" />
+                <element signature="e#224025#224633#0" />
+                <element signature="e#224639#225660#0" />
+                <element signature="e#225666#226366#0" />
+                <element signature="e#226372#227362#0" />
+                <element signature="e#227368#228555#0" />
+                <element signature="e#228561#230225#0" />
+                <element signature="e#230231#231897#0" />
                 <element signature="e#803216#809035#0" />
               </folding>
             </state>
@@ -140,11 +169,10 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="336">
-              <caret line="568" column="32" selection-start-line="568" selection-start-column="32" selection-end-line="568" selection-end-column="32" />
+            <state relative-caret-position="307">
+              <caret line="1368" column="4" selection-start-line="1368" selection-start-column="4" selection-end-line="1368" selection-end-column="4" />
               <folding>
                 <element signature="e#49#64#0" expanded="true" />
-                <element signature="e#19681#25744#1" />
                 <element signature="e#25755#59832#1" />
               </folding>
             </state>
@@ -154,8 +182,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/util/vector.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="285">
-              <caret line="20" column="6" selection-start-line="20" selection-start-column="6" selection-end-line="20" selection-end-column="6" />
+            <state relative-caret-position="330">
+              <caret line="23" column="6" selection-start-line="23" selection-start-column="6" selection-end-line="23" selection-end-column="6" />
             </state>
           </provider>
         </entry>
@@ -237,16 +265,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_var_flat_array</find>
-      <find>typedef</find>
-      <find>std::vector</find>
-      <find>mk_and_setup_arr</find>
-      <find>{}</find>
-      <find>const_set</find>
-      <find>create_string_representation</find>
-      <find>varMap_reverse</find>
-      <find>generated_equalities</find>
-      <find>std</find>
       <find>_constMap</find>
       <find>array_map_reverse</find>
       <find>def_graph</find>
@@ -256,8 +274,6 @@
       <find>std::set</find>
       <find>arrangements[</find>
       <find>std::pair&lt;expr *, int&gt;</find>
-      <find>m_wes_to_satisfy</find>
-      <find>m_wes_to_fail</find>
       <find>setup_char_range_arr</find>
       <find>setup_regex_var</find>
       <find>v</find>
@@ -265,8 +281,20 @@
       <find>non_fresh_vars</find>
       <find>collect_not_contains</find>
       <find>regex</find>
-      <find>is_non_fresh</find>
       <find>non_fresh_varsTmp</find>
+      <find>&lt;&lt; std::endl;);</find>
+      <find>build_state_from_memo</find>
+      <find>m_wes_to_satisfy</find>
+      <find>m_wes_to_fail</find>
+      <find>at_same_eq_state</find>
+      <find>mful_scope_levels</find>
+      <find>mful_scope_levels.p</find>
+      <find>m_wi_expr_memo.p</find>
+      <find>at_same_diseq_state</find>
+      <find>is_non_fresh</find>
+      <find>is_completed_branch</find>
+      <find>UnderApproxState</find>
+      <find>element_t</find>
     </findStrings>
     <replaceStrings>
       <replace>get_flat_iter(get_var_size</replace>
@@ -898,12 +926,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="68715000" />
+      <workItem from="1569868458528" duration="71915000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1890115000" />
+    <option name="totallyTimeSpent" value="1893315000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1340,18 +1368,17 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/util/vector.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="20" column="6" selection-start-line="20" selection-start-column="6" selection-end-line="20" selection-end-column="6" />
+        <state relative-caret-position="330">
+          <caret line="23" column="6" selection-start-line="23" selection-start-column="6" selection-end-line="23" selection-end-column="6" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="336">
-          <caret line="568" column="32" selection-start-line="568" selection-start-column="32" selection-end-line="568" selection-end-column="32" />
+        <state relative-caret-position="307">
+          <caret line="1368" column="4" selection-start-line="1368" selection-start-column="4" selection-end-line="1368" selection-end-column="4" />
           <folding>
             <element signature="e#49#64#0" expanded="true" />
-            <element signature="e#19681#25744#1" />
             <element signature="e#25755#59832#1" />
           </folding>
         </state>
@@ -1359,10 +1386,39 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="375">
-          <caret line="13075" column="12" selection-start-line="13075" selection-start-column="12" selection-end-line="13075" selection-end-column="12" />
+        <state relative-caret-position="321">
+          <caret line="18463" column="4" selection-start-line="18463" selection-start-column="4" selection-end-line="18463" selection-end-column="4" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#179734#183691#0" />
+            <element signature="e#183697#185433#0" />
+            <element signature="e#185439#189067#0" />
+            <element signature="e#189073#189357#0" />
+            <element signature="e#167113#170502#1" />
+            <element signature="e#192928#193719#0" />
+            <element signature="e#193725#194574#0" />
+            <element signature="e#194580#197988#0" />
+            <element signature="e#198602#199694#0" />
+            <element signature="e#199700#200058#0" />
+            <element signature="e#200064#200317#0" />
+            <element signature="e#201098#204280#0" />
+            <element signature="e#205287#207200#0" />
+            <element signature="e#207206#207470#0" />
+            <element signature="e#189473#190845#1" />
+            <element signature="e#191103#191795#1" />
+            <element signature="e#193051#193915#1" />
+            <element signature="e#194076#196693#1" />
+            <element signature="e#219162#222014#0" />
+            <element signature="e#222020#223476#0" />
+            <element signature="e#223482#223788#0" />
+            <element signature="e#223794#224019#0" />
+            <element signature="e#224025#224633#0" />
+            <element signature="e#224639#225660#0" />
+            <element signature="e#225666#226366#0" />
+            <element signature="e#226372#227362#0" />
+            <element signature="e#227368#228555#0" />
+            <element signature="e#228561#230225#0" />
+            <element signature="e#230231#231897#0" />
             <element signature="e#803216#809035#0" />
           </folding>
         </state>
