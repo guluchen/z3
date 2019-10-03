@@ -154,7 +154,6 @@ namespace smt {
             void add_left(int number) {left_arr.push_back(number);}
             void add_right(int number) {right_arr.push_back(number);}
             bool can_split(int boundedFlat, int boundSize, int pos, std::string frame, vector<std::string> &flats);
-            bool isUnionStr(std::string str);
             bool is_possible_arrangement(pair_expr_vector const &lhs_elements, pair_expr_vector const &rhs_elements) const;
             void print(std::string msg = "");
         };
@@ -383,8 +382,8 @@ namespace smt {
          */
         app * mk_value_helper(app * n, model_generator& mg);
         model_value_proc *mk_value(enode *n, model_generator& mg) override;
-        bool is_important(expr* n);
-        bool is_important(expr* n, int &val);
+        bool is_non_fresh(expr *n);
+        bool is_non_fresh(expr *n, int &val);
         bool is_regex_var(expr* n, expr* &regexExpr);
         bool is_regex_var(expr* n);
         bool is_regex_concat(expr* n);
@@ -1141,16 +1140,15 @@ namespace smt {
             bool is_str_int_var(expr* e);
             void refine_important_vars(
                     obj_map<expr, int> &non_fresh_vars,
-                    expr_ref_vector &notImportant,
+                    expr_ref_vector &fresh_vars,
                     obj_map<expr, ptr_vector<expr>> const& eq_combination);
-                bool checkIfVarInUnionMembership(expr* nn, int &len);
+                bool check_union_membership(expr *nn, int &len);
                 bool belong_to_var_var_inequality(expr* nn);
                 vector<zstring> collect_all_inequalities(expr* nn);
                     bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(expr* n, zstring s);
                 bool collect_not_contains(expr* nn);
-                bool collect_not_charAt(expr* nn, int &maxCharAt);
                 bool more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences);
                 bool is_non_fresh_occurrences(expr *nn, obj_map<expr, int> const &occurrences, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
@@ -1528,12 +1526,8 @@ namespace smt {
         void add_disequalities_to_core(expr_ref_vector const& diseq_exprs, expr_ref_vector &core);
         void add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core);
         unsigned get_assign_lvl(expr* a, expr* b);
-        void fetch_related_exprs(
-                expr_ref_vector const& allvars,
-                expr_ref_vector &guessedExprs);
-        expr_ref_vector check_contain_related_vars(
-                expr* v,
-                zstring replaceKey);
+        void fetch_related_exprs(expr_ref_vector const& allvars, expr_ref_vector &guessedExprs);
+        expr_ref_vector check_contain_related_vars(expr* v, zstring replaceKey);
         expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
         void update_all_vars(expr_ref_vector &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> const& v, obj_hashtable<expr> const& allvars);

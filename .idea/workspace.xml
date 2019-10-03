@@ -98,11 +98,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="556">
-              <caret line="19464" column="22" selection-start-line="19464" selection-start-column="22" selection-end-line="19464" selection-end-column="22" />
+            <state relative-caret-position="375">
+              <caret line="13075" column="12" selection-start-line="13075" selection-start-column="12" selection-end-line="13075" selection-end-column="12" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#803216#809035#0" />
@@ -137,11 +137,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="768">
-              <caret line="1567" column="10" selection-start-line="1567" selection-start-column="10" selection-end-line="1567" selection-end-column="10" />
+            <state relative-caret-position="336">
+              <caret line="568" column="32" selection-start-line="568" selection-start-column="32" selection-end-line="568" selection-end-column="32" />
               <folding>
                 <element signature="e#49#64#0" expanded="true" />
                 <element signature="e#19681#25744#1" />
@@ -237,14 +237,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>var_pieces_counter</find>
-      <find>reuse_internal_int_vars</find>
-      <find>create_equality_final</find>
-      <find>gen_flat_size</find>
-      <find>initializing mode</find>
-      <find>ctx.get_enode(n.m_key)-&gt;get_root()-&gt;get_owner()</find>
-      <find>key2_root</find>
-      <find>setup_str_const</find>
       <find>get_var_flat_array</find>
       <find>typedef</find>
       <find>std::vector</find>
@@ -266,7 +258,15 @@
       <find>std::pair&lt;expr *, int&gt;</find>
       <find>m_wes_to_satisfy</find>
       <find>m_wes_to_fail</find>
+      <find>setup_char_range_arr</find>
+      <find>setup_regex_var</find>
+      <find>v</find>
       <find>word_term</find>
+      <find>non_fresh_vars</find>
+      <find>collect_not_contains</find>
+      <find>regex</find>
+      <find>is_non_fresh</find>
+      <find>non_fresh_varsTmp</find>
     </findStrings>
     <replaceStrings>
       <replace>get_flat_iter(get_var_size</replace>
@@ -323,8 +323,8 @@
         <option value="$PROJECT_DIR$/src/smt/theory_seq.h" />
         <option value="$PROJECT_DIR$/src/util/obj_hashtable.h" />
         <option value="$PROJECT_DIR$/src/smt/smt_setup.cpp" />
-        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
         <option value="$PROJECT_DIR$/src/smt/theory_trau.h" />
+        <option value="$PROJECT_DIR$/src/smt/theory_trau.cpp" />
       </list>
     </option>
   </component>
@@ -898,12 +898,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="60253000" />
+      <workItem from="1569868458528" duration="68715000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1881653000" />
+    <option name="totallyTimeSpent" value="1890115000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1345,25 +1345,25 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="556">
-          <caret line="19464" column="22" selection-start-line="19464" selection-start-column="22" selection-end-line="19464" selection-end-column="22" />
-          <folding>
-            <element signature="e#0#20#0" expanded="true" />
-            <element signature="e#803216#809035#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="768">
-          <caret line="1567" column="10" selection-start-line="1567" selection-start-column="10" selection-end-line="1567" selection-end-column="10" />
+        <state relative-caret-position="336">
+          <caret line="568" column="32" selection-start-line="568" selection-start-column="32" selection-end-line="568" selection-end-column="32" />
           <folding>
             <element signature="e#49#64#0" expanded="true" />
             <element signature="e#19681#25744#1" />
             <element signature="e#25755#59832#1" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="375">
+          <caret line="13075" column="12" selection-start-line="13075" selection-start-column="12" selection-end-line="13075" selection-end-column="12" />
+          <folding>
+            <element signature="e#0#20#0" expanded="true" />
+            <element signature="e#803216#809035#0" />
           </folding>
         </state>
       </provider>
