@@ -84,10 +84,8 @@
   <component name="ChangeListManager">
     <list default="true" id="da56fcff-5837-423a-b58e-489956df5093" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/benchmarks/stringfuzz/regex-deep/regex-deep-00005-2.smt25" beforeDir="false" afterPath="$PROJECT_DIR$/benchmarks/stringfuzz/regex-deep/regex-deep-00005-2.smt25" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/smt/theory_trau.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/smt/theory_trau.h" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -102,8 +100,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="351">
-              <caret line="18663" column="148" selection-start-line="18663" selection-start-column="148" selection-end-line="18663" selection-end-column="148" />
+            <state relative-caret-position="632">
+              <caret line="18655" column="40" selection-start-line="18655" selection-start-column="40" selection-end-line="18655" selection-end-column="40" />
               <folding>
                 <element signature="e#0#20#0" expanded="true" />
                 <element signature="e#183697#185433#0" />
@@ -921,12 +919,12 @@
       <workItem from="1566917158043" duration="2434000" />
       <workItem from="1568106535994" duration="188548000" />
       <workItem from="1569866270333" duration="1785000" />
-      <workItem from="1569868458528" duration="84190000" />
+      <workItem from="1569868458528" duration="85591000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1905590000" />
+    <option name="totallyTimeSpent" value="1906991000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="2560" height="1417" extended-state="6" />
@@ -1381,8 +1379,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/smt/theory_trau.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="351">
-          <caret line="18663" column="148" selection-start-line="18663" selection-start-column="148" selection-end-line="18663" selection-end-column="148" />
+        <state relative-caret-position="632">
+          <caret line="18655" column="40" selection-start-line="18655" selection-start-column="40" selection-end-line="18655" selection-end-column="40" />
           <folding>
             <element signature="e#0#20#0" expanded="true" />
             <element signature="e#183697#185433#0" />

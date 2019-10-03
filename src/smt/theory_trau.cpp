@@ -7832,8 +7832,13 @@ namespace smt {
         expr_ref_vector components = collect_alternative_components(reg);
         for (const auto& e : components)
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << std::endl;);
+
+        unsigned cnt = 0;
         if (components.size() > 1){
             for (const auto& c : components) {
+                cnt++;
+                if (cnt >= 10)
+                    break;
                 expr_ref_vector tmp = parse_regex_components(c);
                 for (const auto& comp : tmp)
                     result.push_back(comp);
@@ -8112,7 +8117,8 @@ namespace smt {
                     expr* tmp3 = remove_star_in_star(tmp1);
                     expr* tmp4 = u.re.mk_concat(tmp2, tmp3);
                     m_trail.push_back(tmp4);
-                    if (tmp2 == tmp3) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(tmp2, m) << " "<< mk_pp(tmp3, m) << std::endl;);
+                    if (tmp2 == tmp3 && tmp4 != reg) {
                         return remove_star_in_star(tmp4);
                     }
                     else
@@ -8141,6 +8147,7 @@ namespace smt {
                     expr *tmp2 = remove_star_in_star(tmp0);
                     expr *tmp3 = remove_star_in_star(tmp1);
                     expr *tmp4 = u.re.mk_union(tmp2, tmp3);
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(tmp2, m) << " "<< mk_pp(tmp3, m) << std::endl;);
                     m_trail.push_back(tmp4);
                     if (tmp2 == tmp3) {
                         return remove_star_in_star(tmp4);
@@ -18642,6 +18649,12 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " value: " << mk_pp(node, th.get_manager()) << " " << value << std::endl;);
                     if (!match_regex(regex, val)) {
                         vector<zstring> elements = collect_alternative_components(regex);
+                        if (elements.size() == 1 && len_int % elements[0].length() == 0){
+                            zstring new_str("");
+                            create_string_with_length(elements, new_str, len_int);
+                            val = new_str;
+                            return true;
+                        }
                         for (int i = 0; i < (int)value.length(); ++i) {
                             zstring tmp = val.extract(0, i);
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " tmp: " << tmp << std::endl;);
