@@ -18007,6 +18007,7 @@ namespace smt {
     }
 
     app * theory_trau::string_value_proc::mk_value(model_generator & mg, expr_ref_vector const &  values) {
+        clock_t start_clock = clock();
         ast_manager & m = mg.get_manager();
         obj_map<enode, app *> m_root2value = mg.get_root2value();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
@@ -18051,7 +18052,9 @@ namespace smt {
                     }
                 }
                 zstring strValue;
+                STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
                 construct_normally(mg, len_int, m_root2value, strValue);
+                STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
                 return to_app(th.mk_string(strValue));
             }
             else {
@@ -18198,6 +18201,7 @@ namespace smt {
     }
 
     bool theory_trau::string_value_proc::construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue){
+        clock_t start_clock = clock();
         ast_manager & m = mg.get_manager();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
         if (len_int != -1) {
@@ -18206,15 +18210,18 @@ namespace smt {
             if (!th.dependency_graph.contains(node))
                 th.dependency_graph.insert(node, {});
             bool constraint02 = th.dependency_graph[node].size() > 0;
-
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (constraint01 || constraint02) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                 if (!constraint02) {
                     // free var
+                    std::string ret = strValue.encode();
                     for (int i = 0; i < len_int; ++i)
-                        strValue = strValue + th.default_char;
+                        ret = ret + th.default_char;
+                    strValue = zstring(ret.c_str());
                     return to_app(th.mk_string(strValue));
                 } else {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                     if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue))
                         return to_app(th.mk_string(strValue));
                 }
@@ -18225,14 +18232,16 @@ namespace smt {
             for (int i = 0; i < len_int; ++i)
                 val.push_back(-1);
 
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (th.u.str.is_concat(node))
                 construct_string(mg, node, m_root2value, val);
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (th.uState.eq_combination.contains(node))
                 for (const auto &eq : th.uState.eq_combination[node]) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(eq, m) << std::endl;);
                     construct_string(mg, eq, m_root2value, val);
                 }
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             std::string ret = "";
             for (int i = 0; i < len_int; ++i)
                 if (val[i] == -1) {
@@ -18240,6 +18249,7 @@ namespace smt {
                 } else
                     ret = ret + (char)val[i];
             strValue = zstring(ret.c_str());
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
             return to_app(th.mk_string(strValue));
 
