@@ -1,5 +1,0 @@
-(declare-fun T_1 () Bool)
-(declare-fun var_0xINPUT_136349 () String)
-(assert (= T_1 (= "-" var_0xINPUT_136349)))
-(assert T_1)
-(check-sat)

@@ -1,5 +1,0 @@
-(declare-fun T_1 () Bool)
-(declare-fun var_0xINPUT_107476 () String)
-(assert (= T_1 (not (= "file:" var_0xINPUT_107476))))
-(assert T_1)
-(check-sat)
