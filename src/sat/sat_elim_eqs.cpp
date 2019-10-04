@@ -230,7 +230,8 @@ namespace sat {
             literal  l(v, false);
             literal r  = roots[v];
             SASSERT(v != r.var());
-            bool root_ok = !m_solver.is_external(v) || m_solver.set_root(l, r);
+            bool set_root = m_solver.set_root(l, r);
+            bool root_ok = !m_solver.is_external(v) || set_root;
             if (m_solver.is_assumption(v) || (m_solver.is_external(v) && (m_solver.is_incremental() || !root_ok))) {
                 // cannot really eliminate v, since we have to notify extension of future assignments
                 m_solver.mk_bin_clause(~l, r, false);
@@ -239,7 +240,7 @@ namespace sat {
             else {
                 model_converter::entry & e = mc.mk(model_converter::ELIM_VAR, v);
                 TRACE("save_elim", tout << "marking as deleted: " << v << " l: " << l << " r: " << r << "\n";);
-                m_solver.m_eliminated[v] = true;
+                m_solver.set_eliminated(v, true);
                 mc.insert(e, ~l, r);
                 mc.insert(e,  l, ~r);
             }

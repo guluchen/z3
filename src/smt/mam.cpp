@@ -79,7 +79,7 @@ namespace smt {
     //
     // ------------------------------------
     class label_hasher {
-        svector<char>               m_lbl2hash;        // cache: lbl_id -> hash
+        svector<signed char>             m_lbl2hash;        // cache: lbl_id -> hash
 
         void mk_lbl_hash(unsigned lbl_id) {
             unsigned a = 17;
@@ -2395,7 +2395,9 @@ namespace smt {
                 goto backtrack;
 
             // we used the equality m_n1 = m_n2 for the match and need to make sure it ends up in the log
-            m_used_enodes.push_back(std::make_tuple(m_n1, m_n2));
+            if (m_ast_manager.has_trace_stream()) {
+                m_used_enodes.push_back(std::make_tuple(m_n1, m_n2));
+            }
 
             m_pc = m_pc->m_next;
             goto main_loop;

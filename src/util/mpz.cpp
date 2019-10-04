@@ -139,8 +139,6 @@ uint64_t u64_gcd(uint64_t u, uint64_t v) {
 template<bool SYNCH>
 mpz_manager<SYNCH>::mpz_manager():
     m_allocator("mpz_manager") {
-    if (SYNCH)
-        omp_init_nest_lock(&m_lock);
 #ifndef _MP_GMP
     if (sizeof(digit_t) == sizeof(uint64_t)) {
         // 64-bit machine
@@ -197,8 +195,6 @@ mpz_manager<SYNCH>::~mpz_manager() {
     mpz_clear(m_int64_max);
     mpz_clear(m_int64_min);
 #endif
-    if (SYNCH)
-        omp_destroy_nest_lock(&m_lock);
 }
 
 #ifndef _MP_GMP
@@ -276,7 +272,12 @@ void mpz_manager<SYNCH>::set_big_i64(mpz & c, int64_t v) {
     c.m_kind = mpz_large;
     SASSERT(capacity(c) >= m_init_cell_capacity);
     uint64_t _v;
-    if (v < 0) {
+    if (v == std::numeric_limits<int64_t>::min()) {
+        // min-int is even
+        _v = -(v/2);
+        c.m_val = -1;
+    }
+    else if (v < 0) {
         _v = -v;
         c.m_val = -1;
     }
@@ -302,14 +303,15 @@ void mpz_manager<SYNCH>::set_big_i64(mpz & c, int64_t v) {
     }
     c.m_kind = mpz_large;
     uint64_t _v;
-    bool sign;
-    if (v < 0) {
+    bool sign = v < 0;
+    if (v == std::numeric_limits<int64_t>::min()) {
+        _v = -(v/2);
+    }
+    else if (v < 0) {
         _v   = -v;
-        sign = true;
     }
     else {
         _v   = v;
-        sign = false;
     }
     mpz_set_ui(*c.m_ptr, static_cast<unsigned>(_v));
     MPZ_BEGIN_CRITICAL();
@@ -320,6 +322,9 @@ void mpz_manager<SYNCH>::set_big_i64(mpz & c, int64_t v) {
     if (sign)
         mpz_neg(*c.m_ptr, *c.m_ptr);
 #endif
+    if (v == std::numeric_limits<int64_t>::min()) {
+        big_add(c, c, c);
+    }
 }
 
 template<bool SYNCH>
@@ -1783,9 +1788,10 @@ void display_binary_data(std::ostream &out, unsigned val, unsigned numBits) {
 
 template<bool SYNCH>
 void mpz_manager<SYNCH>::display_bin(std::ostream & out, mpz const & a, unsigned num_bits) const {
-    if (is_small(a)) {
-        display_binary_data(out, static_cast<unsigned>(get_uint64(a)), num_bits);
-    } else {
+    if (is_uint(a)) {
+        display_binary_data(out, get_uint(a), num_bits);
+    } 
+    else {
 #ifndef _MP_GMP
         digit_t *ds = digits(a);
         unsigned sz = size(a);
@@ -2469,7 +2475,7 @@ bool mpz_manager<SYNCH>::divides(mpz const & a, mpz const & b) {
     return r;
 }
 
-#ifndef _NO_OMP_
+#ifndef SINGLE_THREAD
 template class mpz_manager<true>;
 #endif
 template class mpz_manager<false>;

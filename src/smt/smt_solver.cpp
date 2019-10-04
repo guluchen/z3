@@ -42,7 +42,7 @@ namespace smt {
             expr_ref cube() {
                 switch (m_round) {
                 case 0:
-                    m_result = m_solver.m_context.next_decision();
+                    m_result = m_solver.m_context.next_cube();
                     break;
                 case 1:
                     m_result = m_solver.get_manager().mk_not(m_result);
@@ -203,10 +203,6 @@ namespace smt {
             return m_context.get_trail();
         }
 
-        void set_activity(expr* lit, double activity) override {
-            m_context.set_activity(lit, activity);
-        }
-
         struct scoped_minimize_core {
             smt_solver& s;
             expr_ref_vector m_assumptions;
@@ -285,6 +281,9 @@ namespace smt {
             ast_manager& m = get_manager();
             if (!m_cuber) {
                 m_cuber = alloc(cuber, *this);
+                // force propagation
+                push_core();
+                pop_core(1);
             }
             expr_ref result = m_cuber->cube();
             expr_ref_vector lits(m);

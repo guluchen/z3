@@ -19,6 +19,7 @@ Revision History:
 #ifndef AST_H_
 #define AST_H_
 
+
 #include "util/vector.h"
 #include "util/hashtable.h"
 #include "util/buffer.h"
@@ -398,6 +399,7 @@ struct func_decl_info : public decl_info {
     bool m_injective:1;
     bool m_idempotent:1;
     bool m_skolem:1;
+    bool m_lambda:1;
 
     func_decl_info(family_id family_id = null_family_id, decl_kind k = null_decl_kind, unsigned num_parameters = 0, parameter const * parameters = nullptr);
     ~func_decl_info() {}
@@ -412,6 +414,7 @@ struct func_decl_info : public decl_info {
     bool is_injective() const { return m_injective; }
     bool is_idempotent() const { return m_idempotent; }
     bool is_skolem() const { return m_skolem; }
+    bool is_lambda() const { return m_lambda; }
 
     void set_associative(bool flag = true) { m_left_assoc = flag; m_right_assoc = flag; }
     void set_left_associative(bool flag = true) { m_left_assoc = flag; }
@@ -423,6 +426,7 @@ struct func_decl_info : public decl_info {
     void set_injective(bool flag = true) { m_injective = flag; }
     void set_idempotent(bool flag = true) { m_idempotent = flag; }
     void set_skolem(bool flag = true) { m_skolem = flag; }
+    void set_lambda(bool flag = true) { m_lambda = flag; }
 
     bool operator==(func_decl_info const & info) const;
 
@@ -641,6 +645,7 @@ public:
     bool is_pairwise() const { return get_info() != nullptr && get_info()->is_pairwise(); }
     bool is_injective() const { return get_info() != nullptr && get_info()->is_injective(); }
     bool is_skolem() const { return get_info() != nullptr && get_info()->is_skolem(); }
+    bool is_lambda() const { return get_info() != nullptr && get_info()->is_lambda(); }
     bool is_idempotent() const { return get_info() != nullptr && get_info()->is_idempotent(); }
     unsigned get_arity() const { return m_arity; }
     sort * get_domain(unsigned idx) const { SASSERT(idx < get_arity()); return m_domain[idx]; }
@@ -1101,6 +1106,8 @@ enum basic_op_kind {
 
     PR_HYPOTHESIS, PR_LEMMA, PR_UNIT_RESOLUTION, PR_IFF_TRUE, PR_IFF_FALSE, PR_COMMUTATIVITY, PR_DEF_AXIOM,
 
+    PR_ASSUMPTION_ADD, PR_TH_ASSUMPTION_ADD, PR_LEMMA_ADD, PR_TH_LEMMA_ADD, PR_REDUNDANT_DEL, PR_CLAUSE_TRAIL,
+
     PR_DEF_INTRO, PR_APPLY_DEF, PR_IFF_OEQ, PR_NNF_POS, PR_NNF_NEG, PR_SKOLEMIZE, 
     PR_MODUS_PONENS_OEQ, PR_TH_LEMMA, PR_HYPER_RESOLVE, LAST_BASIC_PR
 };
@@ -1155,6 +1162,12 @@ protected:
     func_decl * m_iff_oeq_decl;
     func_decl * m_skolemize_decl;
     func_decl * m_mp_oeq_decl;
+    func_decl * m_assumption_add_decl;
+    func_decl * m_lemma_add_decl;
+    func_decl * m_th_assumption_add_decl;
+    func_decl * m_th_lemma_add_decl;
+    func_decl * m_redundant_del_decl;
+    func_decl * m_clause_trail_decl;
     ptr_vector<func_decl> m_apply_def_decls;
     ptr_vector<func_decl> m_nnf_pos_decls;
     ptr_vector<func_decl> m_nnf_neg_decls;
@@ -1522,6 +1535,7 @@ protected:
     family_id                 m_user_sort_family_id;
     family_id                 m_arith_family_id;
     ast_table                 m_ast_table;
+    obj_map<func_decl, quantifier*> m_lambda_defs;
     id_gen                    m_expr_id_gen;
     id_gen                    m_decl_id_gen;
     sort *                    m_bool_sort;
@@ -1651,6 +1665,8 @@ public:
     
     bool is_rec_fun_def(quantifier* q) const { return q->get_qid() == m_rec_fun; }
     bool is_lambda_def(quantifier* q) const { return q->get_qid() == m_lambda_def; }
+    void add_lambda_def(func_decl* f, quantifier* q);
+    quantifier* is_lambda_def(func_decl* f);
     func_decl* get_rec_fun_decl(quantifier* q) const;
     
     symbol const& rec_fun_qid() const { return m_rec_fun; }
@@ -1804,6 +1820,12 @@ public:
                             arity, domain);
     }
 
+    func_decl * mk_skolem_const_decl(symbol const& name, sort* s) {
+        func_decl_info info;
+        info.set_skolem(true);
+        return mk_func_decl(name, static_cast<unsigned>(0), nullptr, s, info);
+    }
+
     func_decl * mk_const_decl(const char* name, sort * s) {
         return mk_func_decl(symbol(name), static_cast<unsigned>(0), nullptr, s);
     }
@@ -1846,6 +1868,14 @@ public:
         return mk_func_decl(name, 2, d, range, assoc, comm, false);
     }
 
+    bool is_considered_uninterpreted(func_decl* f) {
+        if (f->get_family_id() == null_family_id) {
+            return true;
+        }
+        decl_plugin* p = get_plugin(f->get_family_id());
+        return !p || p->is_considered_uninterpreted(f);        
+    }
+
     app * mk_app(func_decl * decl, unsigned num_args, expr * const * args);
 
     app * mk_app(func_decl * decl, expr * const * args) {
@@ -1874,6 +1904,10 @@ public:
         return mk_app(decl, static_cast<unsigned>(0), static_cast<expr**>(nullptr));
     }
 
+    app * mk_skolem_const(symbol const & name, sort * s) {
+        return mk_const(mk_skolem_const_decl(name, s));
+    }
+
     app * mk_const(symbol const & name, sort * s) {
         return mk_const(mk_const_decl(name, s));
     }
@@ -1887,20 +1921,32 @@ public:
     }
 
     func_decl * mk_fresh_func_decl(symbol const & prefix, symbol const & suffix, unsigned arity,
-                                   sort * const * domain, sort * range);
+                                   sort * const * domain, sort * range, bool skolem = true);
 
-    func_decl * mk_fresh_func_decl(unsigned arity, sort * const * domain, sort * range) { return mk_fresh_func_decl(symbol::null, symbol::null, arity, domain, range); }
+    func_decl * mk_fresh_func_decl(unsigned arity, sort * const * domain, sort * range, bool skolem = true) { 
+        return mk_fresh_func_decl(symbol::null, symbol::null, arity, domain, range, skolem); 
+    }
 
     func_decl * mk_fresh_func_decl(char const * prefix, char const * suffix, unsigned arity,
-                                   sort * const * domain, sort * range) {
-        return mk_fresh_func_decl(symbol(prefix), symbol(suffix), arity, domain, range);
+                                   sort * const * domain, sort * range, bool skolem = true) {
+        return mk_fresh_func_decl(symbol(prefix), symbol(suffix), arity, domain, range, skolem);
     }
 
-    func_decl * mk_fresh_func_decl(char const * prefix, unsigned arity, sort * const * domain, sort * range) {
-        return mk_fresh_func_decl(symbol(prefix), symbol::null, arity, domain, range);
+    func_decl * mk_fresh_func_decl(char const * prefix, unsigned arity, sort * const * domain, sort * range, bool skolem = true) {
+        return mk_fresh_func_decl(symbol(prefix), symbol::null, arity, domain, range, skolem);
     }
 
-    app * mk_fresh_const(char const * prefix, sort * s) { return mk_const(mk_fresh_func_decl(prefix, 0, nullptr, s)); }
+    app * mk_fresh_const(char const * prefix, sort * s, bool skolem = true) { 
+        return mk_const(mk_fresh_func_decl(prefix, 0, nullptr, s, skolem)); 
+    }
+
+    app * mk_fresh_const(std::string const& prefix, sort * s, bool skolem = true) { 
+        return mk_fresh_const(prefix.c_str(), s, skolem);        
+    }
+
+    app * mk_fresh_const(symbol const& prefix, sort * s, bool skolem = true) { 
+        return mk_fresh_const(prefix.str().c_str(), s, skolem);
+    }
 
     symbol mk_fresh_var_name(char const * prefix = nullptr);
 
@@ -2122,6 +2168,7 @@ public:
     app * mk_or(expr * arg1, expr * arg2) { return mk_app(m_basic_family_id, OP_OR, arg1, arg2); }
     app * mk_and(expr * arg1, expr * arg2) { return mk_app(m_basic_family_id, OP_AND, arg1, arg2); }
     app * mk_or(expr * arg1, expr * arg2, expr * arg3) { return mk_app(m_basic_family_id, OP_OR, arg1, arg2, arg3); }
+    app * mk_or(expr* a, expr* b, expr* c, expr* d) { expr* args[4] = { a, b, c, d }; return mk_app(m_basic_family_id, OP_OR, 4, args); }
     app * mk_and(expr * arg1, expr * arg2, expr * arg3) { return mk_app(m_basic_family_id, OP_AND, arg1, arg2, arg3); }
     app * mk_implies(expr * arg1, expr * arg2) { return mk_app(m_basic_family_id, OP_IMPLIES, arg1, arg2); }
     app * mk_not(expr * n) { return mk_app(m_basic_family_id, OP_NOT, n); }
@@ -2281,6 +2328,14 @@ public:
     proof * mk_elim_unused_vars(quantifier * q, expr * r);
     proof * mk_der(quantifier * q, expr * r);
     proof * mk_quant_inst(expr * not_q_or_i, unsigned num_bind, expr* const* binding);
+
+    proof * mk_clause_trail_elem(proof* p, expr* e, decl_kind k);
+    proof * mk_assumption_add(proof* pr, expr* e);
+    proof * mk_lemma_add(proof* pr, expr* e);
+    proof * mk_th_assumption_add(proof* pr, expr* e);
+    proof * mk_th_lemma_add(proof* pr, expr* e);
+    proof * mk_redundant_del(expr* e);
+    proof * mk_clause_trail(unsigned n, proof* const* ps);
 
     proof * mk_def_axiom(expr * ax);
     proof * mk_unit_resolution(unsigned num_proofs, proof * const * proofs);

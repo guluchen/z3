@@ -16,7 +16,6 @@ Author:
 Revision History:
 
 --*/
-#include "util/cooperate.h"
 #include "util/backtrackable_set.h"
 #include "ast/ast_util.h"
 #include "ast/macros/macro_util.h"
@@ -523,7 +522,6 @@ namespace smt {
             }
 
             instantiation_set const * get_uvar_inst_set(quantifier * q, unsigned i) const {
-                SASSERT(!has_quantifiers(q->get_expr()));
                 ast_idx_pair k(q, i);
                 node * r = nullptr;
                 if (m_uvars.find(k, r))
@@ -598,7 +596,7 @@ namespace smt {
 
                 for (expr* e : exceptions) {
                     expr * val = eval(e, true);
-                    SASSERT(val != 0);
+                    SASSERT(val != nullptr);
                     r.push_back(val);
                 }
 
@@ -606,7 +604,7 @@ namespace smt {
                     node * n = a->get_root();
                     if (!n->is_mono_proj() && n->get_else() != nullptr) {
                         expr * val = eval(n->get_else(), true);
-                        SASSERT(val != 0);
+                        SASSERT(val != nullptr);
                         r.push_back(val);
                     }
                 }
@@ -629,7 +627,7 @@ namespace smt {
                     expr *     t = kv.m_key;
                     unsigned gen = kv.m_value;
                     expr * t_val = eval(t, true);
-                    SASSERT(t_val != 0);
+                    SASSERT(t_val != nullptr);
                     bool found = false;
                     for (expr* v : ex_vals) {
                         if (!m.are_distinct(t_val, v)) {
@@ -1203,7 +1201,7 @@ namespace smt {
                 if (uvar_inst_sets[m_var_j] == 0)
                     uvar_inst_sets[m_var_j] = alloc(instantiation_set, ctx->get_manager());
                 instantiation_set * s = uvar_inst_sets[m_var_j];
-                SASSERT(s != 0);
+                SASSERT(s != nullptr);
 
                 for (enode * n : ctx->enodes_of(m_f)) {
                     if (ctx->is_relevant(n)) {
@@ -1689,6 +1687,7 @@ namespace smt {
         */
         class quantifier_info {
             model_finder&            m_mf;
+            quantifier_ref           m_q;      // original quantifier
             quantifier_ref           m_flat_q; // flat version of the quantifier
             bool                     m_is_auf;
             bool                     m_has_x_eq_y;
@@ -1728,18 +1727,13 @@ namespace smt {
 
             quantifier_info(model_finder& mf, ast_manager & m, quantifier * q):
                 m_mf(mf),
+                m_q(q, m),
                 m_flat_q(m),
                 m_is_auf(true),
                 m_has_x_eq_y(false),
                 m_the_one(nullptr),
                 m_uvar_inst_sets(nullptr) {
                 if (has_quantifiers(q->get_expr()) && !m.is_lambda_def(q)) {
-                    static bool displayed_flat_msg = false;
-                    if (!displayed_flat_msg) {
-                        // [Leo]: This warning message is not useful.
-                        // warning_msg("For problems containing quantifiers, the model finding capabilities of Z3 work better when the formula does not contain nested quantifiers. You can use PULL_NESTED_QUANTIFIERS=true to eliminate nested quantifiers.");
-                        displayed_flat_msg = true;
-                    }
                     proof_ref pr(m);
                     expr_ref  new_q(m);
                     pull_quant pull(m);
@@ -1752,7 +1746,6 @@ namespace smt {
                 }
                 CTRACE("model_finder_bug", has_quantifiers(m_flat_q->get_expr()),
                        tout << mk_pp(q, m) << "\n" << mk_pp(m_flat_q, m) << "\n";);
-                SASSERT(m.is_lambda_def(q) || !has_quantifiers(m_flat_q->get_expr()));
             }
 
             ~quantifier_info() {
@@ -2198,8 +2191,7 @@ namespace smt {
                         m_info->m_is_auf = false; // unexpected occurrence of variable.
                     }
                     else {
-                        SASSERT(is_quantifier(curr)); // no nested quantifiers
-                        UNREACHABLE();
+                        SASSERT(is_lambda(curr)); 
                     }
                 }
             }
@@ -2331,7 +2323,8 @@ namespace smt {
                     }
                     else {
                         SASSERT(is_quantifier(curr));
-                        UNREACHABLE(); // can't happen, the quantifier is supposed to be flat.
+                        SASSERT(is_lambda(curr));
+                        //UNREACHABLE(); // can't happen, the quantifier is supposed to be flat.
                     }
                 }
             }
@@ -2384,7 +2377,6 @@ namespace smt {
                 quantifier * q = d->get_flat_q();
                 if (m.is_lambda_def(q)) return;
                 expr * e = q->get_expr();
-                SASSERT(!has_quantifiers(e));
                 reset_cache();
                 SASSERT(m_ttodo.empty());
                 SASSERT(m_ftodo.empty());
@@ -2418,14 +2410,11 @@ namespace smt {
             proto_model *                                  m_model;
 
             quantifier_info * get_qinfo(quantifier * q) const {
-                quantifier_info * qi = nullptr;
-                m_q2info.find(q, qi);
-                SASSERT(qi != 0);
-                return qi;
+                return m_q2info[q];
             }
 
             void set_else_interp(func_decl * f, expr * f_else) {
-                SASSERT(f_else != 0);
+                SASSERT(f_else != nullptr);
                 func_interp * fi = m_model->get_func_interp(f);
                 if (fi == nullptr) {
                     fi = alloc(func_interp, m, f->get_arity());
@@ -2494,7 +2483,7 @@ namespace smt {
                     if (!contains(f, qs, q)) {
                         qi->set_the_one(f);
                         expr * f_else = m->get_def();
-                        SASSERT(f_else != 0);
+                        SASSERT(f_else != nullptr);
                         // Remark: I can ignore the conditions of m because
                         // I know the (partial) interpretation of f satisfied the ground part.
                         // MBQI will force extra instantiations if the (partial) interpretation of f
@@ -2587,7 +2576,7 @@ namespace smt {
                     m_q_f.insert(f, s);
                     m_qsets.push_back(s);
                 }
-                SASSERT(s != 0);
+                SASSERT(s != nullptr);
                 s->insert(q);
             }
 
@@ -2598,7 +2587,7 @@ namespace smt {
                     m_f2defs.insert(f, s);
                     m_esets.push_back(s);
                 }
-                SASSERT(s != 0);
+                SASSERT(s != nullptr);
                 s->insert(def);
             }
 
@@ -2611,7 +2600,7 @@ namespace smt {
                     insert_f2def(f, def);
                     m_qsets.push_back(s);
                 }
-                SASSERT(s != 0);
+                SASSERT(s != nullptr);
                 s->insert(q);
             }
 
@@ -2620,7 +2609,7 @@ namespace smt {
             quantifier_set * get_q_f_def(func_decl * f, expr * def) {
                 quantifier_set * s = nullptr;
                 m_q_f_def.find(f, def, s);
-                SASSERT(s != 0);
+                SASSERT(s != nullptr);
                 return s;
             }
 
@@ -2771,8 +2760,8 @@ namespace smt {
                     for (quantifier * q : m_satisfied) {
                         SASSERT(!m_residue.contains(q));
                         quantifier_info * qi = get_qinfo(q);
-                        SASSERT(qi != 0);
-                        SASSERT(qi->get_the_one() != 0);
+                        SASSERT(qi != nullptr);
+                        SASSERT(qi->get_the_one() != nullptr);
                     });
                 return true;
             }
@@ -3060,7 +3049,7 @@ namespace smt {
                             func_decl * f = m->get_f();
                             TRACE("model_finder", tout << "considering macro for: " << f->get_name() << "\n";
                                   m->display(tout); tout << "\n";);
-                            SASSERT(m_qi_params != 0);
+                            SASSERT(m_qi_params != nullptr);
                             if (m->is_unconditional() && (!qi->is_auf() || m->get_weight() >= m_qi_params->m_mbqi_force_template)) {
                                 full_macros.insert(f, std::make_pair(m, q));
                                 cond_macros.erase(f);
@@ -3180,16 +3169,12 @@ namespace smt {
     }
 
     void model_finder::checkpoint(char const* msg) {
-        cooperate(msg);
         if (m_context && m_context->get_cancel_flag())
             throw tactic_exception(m_context->get_manager().limit().get_cancel_msg());
     }
 
     mf::quantifier_info * model_finder::get_quantifier_info(quantifier * q) const {
-        quantifier_info * info = nullptr;
-        m_q2info.find(q, info);
-        SASSERT(info != 0);
-        return info;
+        return m_q2info[q];
     }
 
     void model_finder::set_context(context * ctx) {
@@ -3221,8 +3206,8 @@ namespace smt {
             quantifier * q = m_quantifiers[i];
             SASSERT(m_q2info.contains(q));
             quantifier_info * info = get_quantifier_info(q);
-            dealloc(info);
             m_q2info.erase(q);
+            dealloc(info);
         }
         m_quantifiers.shrink(old_size);
     }
@@ -3355,7 +3340,7 @@ namespace smt {
         // it must have been satisfied by "macro"/"hint".
         quantifier_info * qinfo = get_quantifier_info(q);
         SASSERT(qinfo);
-        SASSERT(qinfo->get_the_one() != 0);
+        SASSERT(qinfo->get_the_one() != nullptr);
         return qinfo->get_macro_based_inst_set(i, m_context, *(m_auf_solver.get()));
     }
 

@@ -223,9 +223,6 @@ void solver::assert_expr(expr* f, expr* t) {
     assert_expr_core2(fml, a);    
 }
 
-static void insert_ctrl_c(param_descrs & r) {
-    r.insert("ctrl_c", CPK_BOOL, "enable interrupts from ctrl-c", "false");
-}
 
 
 void solver::collect_param_descrs(param_descrs & r) {
@@ -329,7 +326,7 @@ lbool solver::check_sat(unsigned num_assumptions, expr * const * assumptions) {
         r = check_sat_core(num_assumptions, assumptions);
     }
     catch (...) {
-        if (get_manager().canceled()) {
+        if (!get_manager().limit().inc(0)) {
             dump_state(num_assumptions, assumptions);
         }
         throw;

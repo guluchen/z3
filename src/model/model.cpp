@@ -27,12 +27,14 @@ Revision History:
 #include "ast/for_each_expr.h"
 #include "ast/for_each_ast.h"
 #include "model/model.h"
+#include "model/model_params.hpp"
 #include "model/model_evaluator.h"
 
 model::model(ast_manager & m):
     model_core(m),
     m_mev(*this),
-    m_cleaned(false) {
+    m_cleaned(false),
+    m_inline(false) {
 }
 
 model::~model() {
@@ -42,6 +44,13 @@ model::~model() {
         dealloc(kv.m_value);
     }
 }
+
+void model::updt_params(params_ref const & p) {
+    model_params mp(p);
+    m_inline = mp.inline_def();
+    m_mev.updt_params(p); 
+}
+
 
 void model::copy_const_interps(model const & source) {
     for (auto const& kv : source.m_interp) 
@@ -170,7 +179,11 @@ struct model::top_sort : public ::top_sort<func_decl> {
 
     top_sort(ast_manager& m):
         m_rewrite(m)
-    {}
+    {
+        params_ref p;
+        p.set_bool("elim_ite", false);
+        m_rewrite.updt_params(p);
+    }
 
     void add_occurs(func_decl* f) {
         m_occur_count.insert(f, occur_count(f) + 1);
@@ -217,6 +230,7 @@ void model::compress() {
             }
         }
         if (removed.empty()) break;
+        TRACE("model", tout << "remove\n"; for (func_decl* f : removed) tout << f->get_name() << "\n";);
         remove_decls(m_decls, removed);
         remove_decls(m_func_decls, removed);
         remove_decls(m_const_decls, removed);
@@ -307,6 +321,13 @@ void model::cleanup_interp(top_sort& ts, func_decl* f) {
         expr_ref e2 = cleanup_expr(ts, e1, pid);
         if (e1 != e2) 
             fi->set_else(e2);
+        for (auto& fe : *fi) {
+            e2 = cleanup_expr(ts, fe->get_result(), pid);
+            if (e2 != fe->get_result()) {
+                fi->insert_entry(fe->get_args(), e2);
+            }
+        }
+
     }
 }
 
@@ -321,6 +342,12 @@ void model::collect_occs(top_sort& ts, func_decl* f) {
             e = fi->get_else();
             if (e != nullptr)
                collect_occs(ts, e);
+            for (auto const& fe : *fi) {
+                collect_occs(ts, fe->get_result());
+                for (unsigned i = 0; i < fi->get_arity(); ++i) {
+                    collect_occs(ts, fe->get_arg(i));
+                }
+            }
         }
     }
 }
@@ -335,6 +362,7 @@ bool model::can_inline_def(top_sort& ts, func_decl* f) {
     func_interp* fi = get_func_interp(f);
     if (!fi) return false;
     if (fi->get_else() == nullptr) return false;
+    if (m_inline) return true;
     expr* e = fi->get_else();
     obj_hashtable<expr> subs;
     ptr_buffer<expr> todo;
@@ -396,24 +424,20 @@ expr_ref model::cleanup_expr(top_sort& ts, expr* e, unsigned current_partition) 
                 continue;
             }
             fi = nullptr;
+            new_t = nullptr;
+            sort_ref_vector domain(m);
             if (autil.is_as_array(a)) {
                 func_decl* f = autil.get_as_array_func_decl(a);
                 // only expand auxiliary definitions that occur once.
                 if (can_inline_def(ts, f)) {
                     fi = get_func_interp(f);
+                    new_t = fi->get_array_interp(f);
+                    TRACE("model", tout << "array interpretation:" << new_t << "\n";);
                 }
             }
-            
-            if (fi && fi->get_interp()) {
-                f = autil.get_as_array_func_decl(a);
-                expr_ref_vector sargs(m);
-                sort_ref_vector vars(m);
-                svector<symbol> var_names;
-                for (unsigned i = 0; i < f->get_arity(); ++i) {
-                    var_names.push_back(symbol(i));
-                    vars.push_back(f->get_domain(f->get_arity() - i - 1));
-                }
-                new_t = m.mk_lambda(vars.size(), vars.c_ptr(), var_names.c_ptr(), fi->get_interp());
+
+            if (new_t) {
+                // noop
             }
             else if (f->is_skolem() && can_inline_def(ts, f) && (fi = get_func_interp(f)) && 
                      fi->get_interp() && (!ts.partition_ids().find(f, pid) || pid != current_partition)) {
@@ -427,7 +451,7 @@ expr_ref model::cleanup_expr(top_sort& ts, expr* e, unsigned current_partition) 
             }
 #endif
             else {
-                new_t = ts.m_rewrite.mk_app(f, args.size(), args.c_ptr());
+                new_t = ts.m_rewrite.mk_app(f, args.size(), args.c_ptr());                
             }
             
             if (t != new_t.get()) trail.push_back(new_t);
@@ -442,7 +466,7 @@ expr_ref model::cleanup_expr(top_sort& ts, expr* e, unsigned current_partition) 
             break;
         }
     }
-
+    
     ts.m_rewrite(cache[e], new_t);
     return new_t;
 }
@@ -479,6 +503,10 @@ void model::set_solver(expr_solver* s) {
     m_mev.set_solver(s);
 }
 
+bool model::has_solver() {
+    return m_mev.has_solver();
+}
+
 expr_ref_vector model::operator()(expr_ref_vector const& ts) {
     expr_ref_vector rs(m);
     for (expr* t : ts) rs.push_back((*this)(t));
@@ -496,6 +524,15 @@ bool model::is_false(expr* t) {
 bool model::is_true(expr_ref_vector const& ts) {
     for (expr* t : ts) if (!is_true(t)) return false;
     return true;
+}
+
+bool model::is_false(expr_ref_vector const& ts) {
+    for (expr* t : ts) if (is_false(t)) return true;
+    return false;
+}
+
+bool model::are_equal(expr* s, expr* t) {
+    return m_mev.are_equal(s, t);
 }
 
 void model::reset_eval_cache() {

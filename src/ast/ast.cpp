@@ -169,6 +169,7 @@ bool family_manager::has_family(symbol const & s) const {
     return m_families.contains(s);
 }
 
+
 // -----------------------------------
 //
 // decl_info
@@ -269,7 +270,8 @@ func_decl_info::func_decl_info(family_id family_id, decl_kind k, unsigned num_pa
     m_pairwise(false),
     m_injective(false),
     m_idempotent(false),
-    m_skolem(false) {
+    m_skolem(false),
+    m_lambda(false) {
 }
 
 bool func_decl_info::operator==(func_decl_info const & info) const {
@@ -281,20 +283,22 @@ bool func_decl_info::operator==(func_decl_info const & info) const {
         m_chainable == info.m_chainable &&
         m_pairwise == info.m_pairwise &&
         m_injective == info.m_injective &&
-        m_skolem == info.m_skolem;
+        m_skolem == info.m_skolem &&
+        m_lambda == info.m_lambda;
 }
 
 std::ostream & operator<<(std::ostream & out, func_decl_info const & info) {
     operator<<(out, static_cast<decl_info const&>(info));
-    out << " :left-assoc " << info.is_left_associative();
-    out << " :right-assoc " << info.is_right_associative();
-    out << " :flat-associative " << info.is_flat_associative();
-    out << " :commutative " << info.is_commutative();
-    out << " :chainable " << info.is_chainable();
-    out << " :pairwise " << info.is_pairwise();
-    out << " :injective " << info.is_injective();
-    out << " :idempotent " << info.is_idempotent();
-    out << " :skolem " << info.is_skolem();
+    if (info.is_left_associative()) out << " :left-assoc ";
+    if (info.is_right_associative()) out << " :right-assoc ";
+    if (info.is_flat_associative()) out << " :flat-associative ";
+    if (info.is_commutative()) out << " :commutative ";
+    if (info.is_chainable()) out << " :chainable ";
+    if (info.is_pairwise()) out << " :pairwise ";
+    if (info.is_injective()) out << " :injective ";
+    if (info.is_idempotent()) out << " :idempotent ";
+    if (info.is_skolem()) out << " :skolem ";
+    if (info.is_lambda()) out << " :lambda ";
     return out;
 }
 
@@ -735,6 +739,12 @@ basic_decl_plugin::basic_decl_plugin():
     m_iff_oeq_decl(nullptr),
     m_skolemize_decl(nullptr),
     m_mp_oeq_decl(nullptr),
+    m_assumption_add_decl(nullptr),
+    m_lemma_add_decl(nullptr),
+    m_th_assumption_add_decl(nullptr),
+    m_th_lemma_add_decl(nullptr),
+    m_redundant_del_decl(nullptr),
+    m_clause_trail_decl(nullptr),
     m_hyper_res_decl0(nullptr) {
 }
 
@@ -905,6 +915,12 @@ func_decl * basic_decl_plugin::mk_proof_decl(basic_op_kind k, unsigned num_paren
     case PR_MODUS_PONENS_OEQ:             return mk_proof_decl("mp~", k, 2, m_mp_oeq_decl);
     case PR_TH_LEMMA:                     return mk_proof_decl("th-lemma", k, num_parents, m_th_lemma_decls);
     case PR_HYPER_RESOLVE:                return mk_proof_decl("hyper-res", k, num_parents, m_hyper_res_decl0);
+    case PR_ASSUMPTION_ADD:               return mk_proof_decl("add-assume", k, num_parents, m_assumption_add_decl);
+    case PR_LEMMA_ADD:                    return mk_proof_decl("add-lemma", k, num_parents, m_lemma_add_decl);
+    case PR_TH_ASSUMPTION_ADD:            return mk_proof_decl("add-th-assume", k, num_parents, m_th_assumption_add_decl);
+    case PR_TH_LEMMA_ADD:                 return mk_proof_decl("add-th-lemma", k, num_parents, m_th_lemma_add_decl);
+    case PR_REDUNDANT_DEL:                return mk_proof_decl("del-redundant", k, num_parents, m_redundant_del_decl);
+    case PR_CLAUSE_TRAIL:                 return mk_proof_decl("proof-trail", k, num_parents, m_clause_trail_decl);
     default:
         UNREACHABLE();
         return nullptr;
@@ -1020,6 +1036,12 @@ void basic_decl_plugin::finalize() {
     DEC_REF(m_iff_oeq_decl);
     DEC_REF(m_skolemize_decl);
     DEC_REF(m_mp_oeq_decl);
+    DEC_REF(m_assumption_add_decl);
+    DEC_REF(m_lemma_add_decl);
+    DEC_REF(m_th_assumption_add_decl);
+    DEC_REF(m_th_lemma_add_decl);
+    DEC_REF(m_redundant_del_decl);
+    DEC_REF(m_clause_trail_decl);
     DEC_ARRAY_REF(m_apply_def_decls);
     DEC_ARRAY_REF(m_nnf_pos_decls);
     DEC_ARRAY_REF(m_nnf_neg_decls);
@@ -1713,6 +1735,20 @@ bool ast_manager::are_distinct(expr* a, expr* b) const {
     return false;
 }
 
+void ast_manager::add_lambda_def(func_decl* f, quantifier* q) {
+    m_lambda_defs.insert(f, q);
+    f->get_info()->set_lambda(true);
+    inc_ref(q);
+}
+
+quantifier* ast_manager::is_lambda_def(func_decl* f) {
+    if (f->get_info() && f->get_info()->is_lambda()) {
+        return m_lambda_defs[f];
+    }
+    return nullptr;
+}
+
+
 func_decl* ast_manager::get_rec_fun_decl(quantifier* q) const {
     SASSERT(is_rec_fun_def(q)); 
     return to_app(to_app(q->get_pattern(0))->get_arg(0))->get_decl(); 
@@ -1758,7 +1794,8 @@ ast * ast_manager::register_node_core(ast * n) {
     CASSERT("nondet_bug", contains || slow_not_contains(n));
 #endif
 
-    ast * r = m_ast_table.insert_if_not_there(n);
+    ast* r = m_ast_table.insert_if_not_there(n);    
+
     SASSERT(r->m_hash == h);
     if (r != n) {
         SASSERT(contains);
@@ -1777,9 +1814,7 @@ ast * ast_manager::register_node_core(ast * n) {
         SASSERT(m_ast_table.contains(n));
     }
 
-
     n->m_id   = is_decl(n) ? m_decl_id_gen.mk() : m_expr_id_gen.mk();
-    
 
     TRACE("ast", tout << "Object " << n->m_id << " was created.\n";);
     TRACE("mk_var_bug", tout << "mk_ast: " << n->m_id << "\n";);
@@ -1875,9 +1910,8 @@ void ast_manager::delete_node(ast * n) {
 
     while ((n = m_ast_table.pop_erase())) {
 
-        TRACE("ast", tout << "Deleting object " << n->m_id << " " << n << "\n";);
         CTRACE("del_quantifier", is_quantifier(n), tout << "deleting quantifier " << n->m_id << " " << n << "\n";);
-        TRACE("mk_var_bug", tout << "del_ast: " << n->m_id << "\n";);
+        TRACE("mk_var_bug", tout << "del_ast: " << " " << n->m_ref_count << "\n";);
         TRACE("ast_delete_node", tout << mk_bounded_pp(n, *this) << "\n";);
 
         SASSERT(!m_debug_ref_count || !m_debug_free_indices.contains(n->m_id));
@@ -1902,6 +1936,10 @@ void ast_manager::delete_node(ast * n) {
             func_decl* f = to_func_decl(n);
             if (f->m_info != nullptr && !m_debug_ref_count) {
                 func_decl_info * info = f->get_info();
+                if (info->is_lambda()) {
+                    push_dec_ref(m_lambda_defs[f]);
+                    m_lambda_defs.remove(f);
+                }
                 info->del_eh(*this);
                 dealloc(info);
             }
@@ -2308,10 +2346,10 @@ app * ast_manager::mk_app(func_decl * decl, unsigned num_args, expr * const * ar
 
 
 func_decl * ast_manager::mk_fresh_func_decl(symbol const & prefix, symbol const & suffix, unsigned arity,
-                                            sort * const * domain, sort * range) {
+                                            sort * const * domain, sort * range, bool skolem) {
     func_decl_info info(null_family_id, null_decl_kind);
-    info.m_skolem = true;
-    SASSERT(info.is_skolem());
+    info.m_skolem = skolem;
+    SASSERT(skolem == info.is_skolem());
     func_decl * d;
     if (prefix == symbol::null && suffix == symbol::null) {
         d = mk_func_decl(symbol(m_fresh_id), arity, domain, range, &info);
@@ -2330,7 +2368,7 @@ func_decl * ast_manager::mk_fresh_func_decl(symbol const & prefix, symbol const 
     }
     m_fresh_id++;
     SASSERT(d->get_info());
-    SASSERT(d->is_skolem());
+    SASSERT(skolem == d->is_skolem());
     return d;
 }
 
@@ -2444,7 +2482,7 @@ bool ast_manager::is_pattern(expr const * n, ptr_vector<expr> &args) {
 
 static void trace_quant(std::ostream& strm, quantifier* q) {
     strm << (is_lambda(q) ? "[mk-lambda]" : "[mk-quant]")
-         << " #" << q->get_id() << " " << q->get_qid();
+         << " #" << q->get_id() << " " << q->get_qid() << " " << q->get_num_decls();
     for (unsigned i = 0; i < q->get_num_patterns(); ++i) {
         strm << " #" << q->get_pattern(i)->get_id();
     }
@@ -3257,6 +3295,39 @@ proof * ast_manager::mk_not_or_elim(proof * p, unsigned i) {
     return mk_app(m_basic_family_id, PR_NOT_OR_ELIM, p, f);
 }
 
+proof* ast_manager::mk_clause_trail_elem(proof *pr, expr* e, decl_kind k) {
+    ptr_buffer<expr> args;
+    if (pr) args.push_back(pr);
+    args.push_back(e);
+    return mk_app(m_basic_family_id, k, 0, nullptr, args.size(), args.c_ptr());
+}
+
+proof * ast_manager::mk_assumption_add(proof* pr, expr* e) {
+    return mk_clause_trail_elem(pr, e, PR_ASSUMPTION_ADD);
+}
+
+proof * ast_manager::mk_lemma_add(proof* pr, expr* e) {
+    return mk_clause_trail_elem(pr, e, PR_LEMMA_ADD);
+}
+
+proof * ast_manager::mk_th_assumption_add(proof* pr, expr* e) {
+    return mk_clause_trail_elem(pr, e, PR_TH_ASSUMPTION_ADD);
+}
+
+proof * ast_manager::mk_th_lemma_add(proof* pr, expr* e) {
+    return mk_clause_trail_elem(pr, e, PR_TH_LEMMA_ADD);
+}
+
+proof * ast_manager::mk_redundant_del(expr* e) {
+    return mk_clause_trail_elem(nullptr, e, PR_REDUNDANT_DEL);
+}
+
+proof * ast_manager::mk_clause_trail(unsigned n, proof* const* ps) {    
+    ptr_buffer<expr> args;
+    args.append(n, (expr**) ps);
+    args.push_back(mk_false());
+    return mk_app(m_basic_family_id, PR_CLAUSE_TRAIL, 0, nullptr, args.size(), args.c_ptr());
+}
 
 proof * ast_manager::mk_th_lemma(
     family_id tid,
@@ -3433,9 +3504,9 @@ void scoped_mark::pop_scope(unsigned num_scopes) {
 // show an expr_ref on stdout
 
 void prexpr(expr_ref &e){
-  std::cout << mk_pp(e.get(), e.get_manager()) << std::endl;
+    std::cout << mk_pp(e.get(), e.get_manager()) << std::endl;
 }
 
 void ast_manager::show_id_gen(){
-  std::cout << "id_gen: " << m_expr_id_gen.show_hash() << " " << m_decl_id_gen.show_hash() << "\n";
+    std::cout << "id_gen: " << m_expr_id_gen.show_hash() << " " << m_decl_id_gen.show_hash() << "\n";
 }

@@ -127,9 +127,8 @@ public:
     void init();
 
     virtual ~lp_core_solver_base() {
-        if (m_factorization != nullptr)
-            delete m_factorization;
-     }
+        delete m_factorization;
+    }
 
     vector<unsigned> & non_basis() {
         return m_nbasis;
@@ -214,7 +213,7 @@ public:
             if (m_A.m_columns[bj].size() > 1)
                 return true;
             for (const auto & c : m_A.m_columns[bj]) {
-                if (m_A.get_val(c) != one_of_type<mpq>())
+                if (m_A.get_val(c) != one_of_type<T>())
                     return true;
                 else
                     break;
@@ -551,6 +550,7 @@ public:
     bool non_basic_columns_are_set_correctly() const {
         for (unsigned j : this->m_nbasis)
             if (!column_is_feasible(j)) {
+                TRACE("lp_core", tout << "inf col "; print_column_info(j, tout) << "\n";);
                 return false;
             }
         return true;
@@ -574,7 +574,7 @@ public:
         }
     }
 
-    void print_column_info(unsigned j, std::ostream & out) const {
+    std::ostream& print_column_info(unsigned j, std::ostream & out) const {
         out << "j = " << j << ",\tname = "<< column_name(j) << "\t";
         switch (m_column_types[j]) {
         case column_type::fixed:
@@ -599,6 +599,7 @@ public:
             out << " base\n";
         else
            out << " \n";
+        return out;
     }
 
     bool column_is_free(unsigned j) const { return this->m_column_type[j] == free; }

@@ -521,7 +521,7 @@ public:
 
     static unsigned hash(mpz const & a) { return mpz_manager<SYNCH>::hash(a); }
 
-    static unsigned hash(mpq const & a) { return hash(a.m_num); }
+    static unsigned hash(mpq const & a) { return hash(a.m_num) + 3*hash(a.m_den); }
 
     bool eq(mpz const & a, mpz const & b) { return mpz_manager<SYNCH>::eq(a, b); }
     
@@ -816,7 +816,7 @@ public:
     bool is_even(mpq const & a) { return is_int(a) && is_even(a.m_num); }
 };
 
-#ifndef _NO_OMP_
+#ifndef SINGLE_THREAD
 typedef mpq_manager<true> synch_mpq_manager;
 #else
 typedef mpq_manager<false> synch_mpq_manager;

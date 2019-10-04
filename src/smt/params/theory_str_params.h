@@ -64,7 +64,7 @@ struct theory_str_params {
 
     /*
      * If StringConstantCache is set to true,
-     * all string constants in theory_trau generated from anywhere will be cached and saved.
+     * all string constants in theory_str generated from anywhere will be cached and saved.
      */
     bool m_StringConstantCache;
 

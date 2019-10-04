@@ -95,6 +95,32 @@ extern "C" {
         Z3_CATCH_RETURN(false);
     }
 
+    Z3_sort Z3_API Z3_get_seq_sort_basis(Z3_context c, Z3_sort s) {
+        Z3_TRY;
+        LOG_Z3_get_seq_sort_basis(c, s);
+        RESET_ERROR_CODE();
+        sort* r = nullptr;
+        if (!mk_c(c)->sutil().is_seq(to_sort(s), r)) {
+            SET_ERROR_CODE(Z3_INVALID_ARG, "expected sequence sort");
+            RETURN_Z3(nullptr);
+        }
+        RETURN_Z3(of_sort(r));
+        Z3_CATCH_RETURN(nullptr);
+    }
+
+    Z3_sort Z3_API Z3_get_re_sort_basis(Z3_context c, Z3_sort s) {
+        Z3_TRY;
+        LOG_Z3_get_re_sort_basis(c, s);
+        RESET_ERROR_CODE();
+        sort* r = nullptr;
+        if (!mk_c(c)->sutil().is_re(to_sort(s), r)) {
+            SET_ERROR_CODE(Z3_INVALID_ARG, "expected regex sort");
+            RETURN_Z3(nullptr);
+        }
+        RETURN_Z3(of_sort(r));
+        Z3_CATCH_RETURN(nullptr);
+    }
+
     bool Z3_API Z3_is_string_sort(Z3_context c, Z3_sort s) {
         Z3_TRY;
         LOG_Z3_is_string_sort(c, s);
@@ -124,6 +150,25 @@ extern "C" {
         Z3_CATCH_RETURN("");
     }
 
+    Z3_string Z3_API Z3_get_lstring(Z3_context c, Z3_ast s, unsigned* length) {
+        Z3_TRY;
+        LOG_Z3_get_lstring(c, s, length);
+        RESET_ERROR_CODE();
+        zstring str;
+        if (!length) {
+            SET_ERROR_CODE(Z3_INVALID_ARG, "length argument is null");
+            return "";
+        }
+        if (!mk_c(c)->sutil().str.is_string(to_expr(s), str)) {
+            SET_ERROR_CODE(Z3_INVALID_ARG, "expression is not a string literal");
+            return "";
+        }
+        std::string s = str.as_string();        
+        *length = (unsigned)(s.size());
+        return mk_c(c)->mk_external_string(s.c_str(), *length);
+        Z3_CATCH_RETURN("");
+    }
+
 #define MK_SORTED(NAME, FN )                                    \
     Z3_ast Z3_API NAME(Z3_context c, Z3_sort s) {               \
     Z3_TRY;                                                     \
@@ -142,12 +187,16 @@ extern "C" {
     MK_BINARY(Z3_mk_seq_prefix, mk_c(c)->get_seq_fid(), OP_SEQ_PREFIX, SKIP);
     MK_BINARY(Z3_mk_seq_suffix, mk_c(c)->get_seq_fid(), OP_SEQ_SUFFIX, SKIP);
     MK_BINARY(Z3_mk_seq_contains, mk_c(c)->get_seq_fid(), OP_SEQ_CONTAINS, SKIP);
+    MK_BINARY(Z3_mk_str_lt, mk_c(c)->get_seq_fid(), OP_STRING_LT, SKIP);
+    MK_BINARY(Z3_mk_str_le, mk_c(c)->get_seq_fid(), OP_STRING_LE, SKIP);
+
     MK_TERNARY(Z3_mk_seq_extract, mk_c(c)->get_seq_fid(), OP_SEQ_EXTRACT, SKIP);
     MK_TERNARY(Z3_mk_seq_replace, mk_c(c)->get_seq_fid(), OP_SEQ_REPLACE, SKIP);
     MK_BINARY(Z3_mk_seq_at, mk_c(c)->get_seq_fid(), OP_SEQ_AT, SKIP);
-    MK_BINARY(Z3_mk_seq_nth, mk_c(c)->get_seq_fid(), OP_SEQ_AT, SKIP);
+    MK_BINARY(Z3_mk_seq_nth, mk_c(c)->get_seq_fid(), OP_SEQ_NTH, SKIP);
     MK_UNARY(Z3_mk_seq_length, mk_c(c)->get_seq_fid(), OP_SEQ_LENGTH, SKIP);
     MK_TERNARY(Z3_mk_seq_index, mk_c(c)->get_seq_fid(), OP_SEQ_INDEX, SKIP);
+    MK_BINARY(Z3_mk_seq_last_index, mk_c(c)->get_seq_fid(), OP_SEQ_LAST_INDEX, SKIP);
     MK_UNARY(Z3_mk_seq_to_re, mk_c(c)->get_seq_fid(), OP_SEQ_TO_RE, SKIP);
     MK_BINARY(Z3_mk_seq_in_re, mk_c(c)->get_seq_fid(), OP_SEQ_IN_RE, SKIP);
 

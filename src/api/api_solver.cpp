@@ -31,11 +31,7 @@ Revision History:
 #include "api/api_stats.h"
 #include "api/api_ast_vector.h"
 #include "solver/tactic2solver.h"
-#include "util/scoped_ctrl_c.h"
-#include "util/cancel_eh.h"
-#include "util/scoped_timer.h"
 #include "util/file_path.h"
-#include "tactic/portfolio/smt_strategic_solver.h"
 #include "smt/smt_solver.h"
 #include "smt/smt_implied_equalities.h"
 #include "solver/smt_logics.h"
@@ -431,15 +427,6 @@ extern "C" {
         Z3_CATCH;
     }
 
-    void Z3_API Z3_solver_set_activity(Z3_context c, Z3_solver s, Z3_ast a, double activity) {
-        Z3_TRY;
-        LOG_Z3_solver_set_activity(c, s, a, activity);
-        RESET_ERROR_CODE();
-        init_solver(c, s);
-        to_solver_ref(s)->set_activity(to_expr(a), activity);
-        Z3_CATCH;
-    }
-
     Z3_ast_vector Z3_API Z3_solver_get_trail(Z3_context c, Z3_solver s) {
         Z3_TRY;
         LOG_Z3_solver_get_trail(c, s);
@@ -465,7 +452,7 @@ extern "C" {
         expr * const * _assumptions = to_exprs(assumptions);
         unsigned timeout     = to_solver(s)->m_params.get_uint("timeout", mk_c(c)->get_timeout());
         unsigned rlimit      = to_solver(s)->m_params.get_uint("rlimit", mk_c(c)->get_rlimit());
-        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", false);
+        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", true);
         cancel_eh<reslimit> eh(mk_c(c)->m().limit());
         api::context::set_interruptable si(*(mk_c(c)), eh);
         lbool result;
@@ -656,7 +643,7 @@ extern "C" {
         lbool result = l_undef;
         unsigned timeout     = to_solver(s)->m_params.get_uint("timeout", mk_c(c)->get_timeout());
         unsigned rlimit      = to_solver(s)->m_params.get_uint("rlimit", mk_c(c)->get_rlimit());
-        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", false);
+        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", true);
         cancel_eh<reslimit> eh(mk_c(c)->m().limit());
         api::context::set_interruptable si(*(mk_c(c)), eh);
         {
@@ -698,7 +685,7 @@ extern "C" {
         }
         unsigned timeout     = to_solver(s)->m_params.get_uint("timeout", mk_c(c)->get_timeout());
         unsigned rlimit      = to_solver(s)->m_params.get_uint("rlimit", mk_c(c)->get_rlimit());
-        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", false);
+        bool     use_ctrl_c  = to_solver(s)->m_params.get_bool("ctrl_c", true);
         cancel_eh<reslimit> eh(mk_c(c)->m().limit());
         api::context::set_interruptable si(*(mk_c(c)), eh);
         {

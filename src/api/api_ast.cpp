@@ -202,7 +202,7 @@ extern "C" {
         func_decl* d = mk_c(c)->m().mk_fresh_func_decl(prefix,
                                                        domain_size,
                                                        reinterpret_cast<sort*const*>(domain),
-                                                       to_sort(range));
+                                                       to_sort(range), false);
 
         mk_c(c)->save_ast_trail(d);
         RETURN_Z3(of_func_decl(d));
@@ -216,7 +216,7 @@ extern "C" {
         if (prefix == nullptr) {
             prefix = "";
         }
-        app* a = mk_c(c)->m().mk_fresh_const(prefix, to_sort(ty));
+        app* a = mk_c(c)->m().mk_fresh_const(prefix, to_sort(ty), false);
         mk_c(c)->save_ast_trail(a);
         RETURN_Z3(of_ast(a));
         Z3_CATCH_RETURN(nullptr);
@@ -996,6 +996,10 @@ extern "C" {
             case PR_IFF_FALSE: return Z3_OP_PR_IFF_FALSE;
             case PR_COMMUTATIVITY: return Z3_OP_PR_COMMUTATIVITY;
             case PR_DEF_AXIOM: return Z3_OP_PR_DEF_AXIOM;
+            case PR_ASSUMPTION_ADD: return Z3_OP_PR_ASSUMPTION_ADD;
+            case PR_LEMMA_ADD: return Z3_OP_PR_LEMMA_ADD;
+            case PR_REDUNDANT_DEL: return Z3_OP_PR_REDUNDANT_DEL;
+            case PR_CLAUSE_TRAIL: return Z3_OP_PR_CLAUSE_TRAIL;
             case PR_DEF_INTRO: return Z3_OP_PR_DEF_INTRO;
             case PR_APPLY_DEF: return Z3_OP_PR_APPLY_DEF;
             case PR_IFF_OEQ: return Z3_OP_PR_IFF_OEQ;
@@ -1047,10 +1051,24 @@ extern "C" {
             case OP_SET_SUBSET: return Z3_OP_SET_SUBSET;
             case OP_AS_ARRAY: return Z3_OP_AS_ARRAY;
             case OP_ARRAY_EXT: return Z3_OP_ARRAY_EXT;
+            case OP_SET_CARD: return Z3_OP_SET_CARD;
+            case OP_SET_HAS_SIZE: return Z3_OP_SET_HAS_SIZE;
             default:
                 return Z3_OP_INTERNAL;
             }
         }
+
+        if (mk_c(c)->get_special_relations_fid() == _d->get_family_id()) {
+            switch(_d->get_decl_kind()) {
+            case OP_SPECIAL_RELATION_LO : return Z3_OP_SPECIAL_RELATION_LO;
+            case OP_SPECIAL_RELATION_PO : return Z3_OP_SPECIAL_RELATION_PO;
+            case OP_SPECIAL_RELATION_PLO: return Z3_OP_SPECIAL_RELATION_PLO;
+            case OP_SPECIAL_RELATION_TO : return Z3_OP_SPECIAL_RELATION_TO;
+            case OP_SPECIAL_RELATION_TC : return Z3_OP_SPECIAL_RELATION_TC;
+            default: UNREACHABLE();
+            }
+        }
+
 
         if (mk_c(c)->get_bv_fid() == _d->get_family_id()) {
             switch(_d->get_decl_kind()) {
@@ -1192,8 +1210,8 @@ extern "C" {
             case OP_RE_UNION: return Z3_OP_RE_UNION;
             case OP_RE_INTERSECT: return Z3_OP_RE_INTERSECT;
             case OP_RE_LOOP: return Z3_OP_RE_LOOP;
-            // case OP_RE_FULL_SEQ_SET: return Z3_OP_RE_FULL_SET;
-            case OP_RE_FULL_CHAR_SET: return Z3_OP_RE_FULL_SET;
+            case OP_RE_FULL_SEQ_SET: return Z3_OP_RE_FULL_SET;
+            //case OP_RE_FULL_CHAR_SET: return Z3_OP_RE_FULL_SET;
             case OP_RE_EMPTY_SET: return Z3_OP_RE_EMPTY_SET;
             default:
                 return Z3_OP_INTERNAL;

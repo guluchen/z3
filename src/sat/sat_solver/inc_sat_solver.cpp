@@ -336,18 +336,7 @@ public:
         return result;
     }
 
-    void set_activity(expr* var, double activity) override {
-        m.is_not(var, var);
-        sat::bool_var v = m_map.to_bool_var(var);
-        if (v == sat::null_bool_var) {
-            v = m_solver.add_var(true);
-            m_map.insert(var, v);
-        }
-        m_solver.set_activity(v, static_cast<unsigned>(activity));
-    }
-
     proof * get_proof() override {
-        UNREACHABLE();
         return nullptr;
     }
 
@@ -879,7 +868,11 @@ private:
             mdl = nullptr;
             return;
         }
-        sat::model const & ll_m = m_solver.get_model();
+        TRACE("sat", m_solver.display_model(tout););
+        sat::model ll_m = m_solver.get_model();
+        if (m_sat_mc) {
+            (*m_sat_mc)(ll_m);
+        }
         mdl = alloc(model, m);
         for (sat::bool_var v = 0; v < ll_m.size(); ++v) {
             expr* n = m_sat_mc->var2expr(v);
@@ -898,12 +891,11 @@ private:
             }
         }
 
+        TRACE("sat", m_solver.display(tout););
         if (m_sat_mc) {
-            // IF_VERBOSE(0, m_sat_mc->display(verbose_stream() << "satmc\n"););
             (*m_sat_mc)(mdl);
         }
         if (m_mcs.back()) {            
-            //IF_VERBOSE(0, m_mc0->display(verbose_stream() << "mc0\n"););
             (*m_mcs.back())(mdl);
         }
         TRACE("sat", model_smt2_pp(tout, m, *mdl, 0););        
@@ -931,16 +923,11 @@ private:
         }
         if (!all_true) {
             IF_VERBOSE(0, verbose_stream() << m_params << "\n");
-            // IF_VERBOSE(0, m_sat_mc->display(verbose_stream() << "sat mc\n"));
             IF_VERBOSE(0, if (m_mcs.back()) m_mcs.back()->display(verbose_stream() << "mc0\n"));
-            //IF_VERBOSE(0, m_solver.display(verbose_stream()));
             IF_VERBOSE(0, for (auto const& kv : m_map) verbose_stream() << mk_pp(kv.m_key, m) << " |-> " << kv.m_value << "\n");
         }
         else {
             IF_VERBOSE(1, verbose_stream() << "solution verified\n");
-//            IF_VERBOSE(0, if (m_mcs.back()) m_mcs.back()->display(verbose_stream() << "mcs\n"));
-//            IF_VERBOSE(0, if (m_sat_mc) m_sat_mc->display(verbose_stream() << "sat_mc\n"));
-//            IF_VERBOSE(0, model_smt2_pp(verbose_stream() << "after\n", m, *mdl, 0););
         }
     }
 };

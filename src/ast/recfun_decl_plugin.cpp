@@ -50,7 +50,7 @@ namespace recfun {
     }
 
     def::def(ast_manager &m, family_id fid, symbol const & s,
-             unsigned arity, sort* const * domain, sort* range)
+             unsigned arity, sort* const * domain, sort* range, bool is_generated)
         :   m(m), m_name(s),
             m_domain(m, arity, domain), 
             m_range(range, m), m_vars(m), m_cases(),
@@ -59,21 +59,35 @@ namespace recfun {
             m_fid(fid)
     {
         SASSERT(arity == get_arity());        
-        func_decl_info info(fid, OP_FUN_DEFINED);
+        parameter p(is_generated);
+        func_decl_info info(fid, OP_FUN_DEFINED, 1, &p);
         m_decl = m.mk_func_decl(s, arity, domain, range, info);
     }
 
+    bool def::contains_def(util& u, expr * e) {
+        struct def_find_p : public i_expr_pred {
+            util& u;
+            def_find_p(util& u): u(u) {}
+            bool operator()(expr* a) override { return is_app(a) && u.is_defined(to_app(a)->get_decl()); }
+        };
+        def_find_p p(u);
+        check_pred cp(p, m, false);
+        return cp(e);
+    }
+
     // does `e` contain any `ite` construct?
-    bool def::contains_ite(expr * e) {
+    bool def::contains_ite(util& u, expr * e) {
         struct ite_find_p : public i_expr_pred {
             ast_manager & m;
-            ite_find_p(ast_manager & m) : m(m) {}
-            bool operator()(expr * e) override { return m.is_ite(e); }
+            def& d;
+            util& u;
+            ite_find_p(ast_manager & m, def& d, util& u) : m(m), d(d), u(u) {}
+            bool operator()(expr * e) override { return m.is_ite(e) && d.contains_def(u, e); }
         };
         // ignore ites under quantifiers.
         // this is redundant as the code
         // that unfolds ites uses quantifier-free portion.
-        ite_find_p p(m);
+        ite_find_p p(m, *this, u);
         check_pred cp(p, m, false);
         return cp(e);
     }
@@ -188,7 +202,8 @@ namespace recfun {
 
 
     // Compute a set of cases, given the RHS
-    void def::compute_cases(replace& subst, 
+    void def::compute_cases(util& u,
+                            replace& subst, 
                             is_immediate_pred & is_i, 
                             unsigned n_vars, var *const * vars, expr* rhs)
     {
@@ -208,7 +223,7 @@ namespace recfun {
         expr_ref_vector conditions(m);
 
         // is the function a macro (unconditional body)?
-        if (n_vars == 0 || !contains_ite(rhs)) {
+        if (n_vars == 0 || !contains_ite(u, rhs)) {
             // constant function or trivial control flow, only one (dummy) case
             add_case(name, 0, conditions, rhs);
             return;
@@ -238,6 +253,7 @@ namespace recfun {
                 while (! stack.empty()) {
                     expr * e = stack.back();
                     stack.pop_back();
+                    TRACEFN("unfold: " << mk_pp(e, m));
 
                     if (m.is_ite(e)) {
                         // need to do a case split on `e`, forking the search space
@@ -246,7 +262,7 @@ namespace recfun {
                     else if (is_app(e)) {
                         // explore arguments
                         for (expr * arg : *to_app(e)) {
-                            if (contains_ite(arg)) {
+                            if (contains_ite(u, arg)) {
                                 stack.push_back(arg);
                             }
                         }
@@ -257,6 +273,7 @@ namespace recfun {
             if (b.to_split != nullptr) {
                 // split one `ite`, which will lead to distinct (sets of) cases
                 app * ite = b.to_split->ite;
+                TRACEFN("split: " << mk_pp(ite, m));
                 expr* c = nullptr, *th = nullptr, *el = nullptr;
                 VERIFY(m.is_ite(ite, c, th, el));
 
@@ -287,6 +304,7 @@ namespace recfun {
                 
                 // substitute, to get rid of `ite` terms
                 expr_ref case_rhs = subst(rhs);
+                TRACEFN("case_rhs: " << case_rhs);
                 for (unsigned i = 0; i < conditions.size(); ++i) {
                     conditions[i] = subst(conditions.get(i));
                 }
@@ -312,9 +330,10 @@ namespace recfun {
     util::~util() {
     }
 
-    def * util::decl_fun(symbol const& name, unsigned n, sort *const * domain, sort * range) {
-        return alloc(def, m(), m_fid, name, n, domain, range);
+    def * util::decl_fun(symbol const& name, unsigned n, sort *const * domain, sort * range, bool is_generated) {
+        return alloc(def, m(), m_fid, name, n, domain, range, is_generated);
     }
+
 
     void util::set_definition(replace& subst, promise_def & d, unsigned n_vars, var * const * vars, expr * rhs) {
         d.set_definition(subst, n_vars, vars, rhs);
@@ -356,7 +375,7 @@ namespace recfun {
         SASSERT(n_vars == d->get_arity());
                     
         is_imm_pred is_i(*u);
-        d->compute_cases(r, is_i, n_vars, vars, rhs);
+        d->compute_cases(*u, r, is_i, n_vars, vars, rhs);
     }
 
     namespace decl {
@@ -382,9 +401,19 @@ namespace recfun {
             return *(m_util.get());
         }
 
-        promise_def plugin::mk_def(symbol const& name, unsigned n, sort *const * params, sort * range) {
-            def* d = u().decl_fun(name, n, params, range);
-            SASSERT(! m_defs.contains(d->get_decl()));
+        promise_def plugin::mk_def(symbol const& name, unsigned n, sort *const * params, sort * range, bool is_generated) {
+            def* d = u().decl_fun(name, n, params, range, is_generated);
+            SASSERT(!m_defs.contains(d->get_decl()));
+            m_defs.insert(d->get_decl(), d);
+            return promise_def(&u(), d);
+        }
+
+        promise_def plugin::ensure_def(symbol const& name, unsigned n, sort *const * params, sort * range, bool is_generated) {
+            def* d = u().decl_fun(name, n, params, range, is_generated);
+            def* d2 = nullptr;
+            if (m_defs.find(d->get_decl(), d2)) {
+                dealloc(d2);
+            }
             m_defs.insert(d->get_decl(), d);
             return promise_def(&u(), d);
         }

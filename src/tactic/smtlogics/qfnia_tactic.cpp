@@ -87,7 +87,7 @@ static tactic * mk_qfnia_sat_solver(ast_manager & m, params_ref const & p) {
 
     return and_then(using_params(mk_simplify_tactic(m), simp_p),
                     mk_nla2bv_tactic(m, nia2sat_p),
-                    mk_qfnia_bv_solver(m, p),
+                    skip_if_failed(mk_qfnia_bv_solver(m, p)),
                     mk_fail_if_undecided_tactic());
 }
 
@@ -97,7 +97,6 @@ static tactic * mk_qfnia_nlsat_solver(ast_manager & m, params_ref const & p) {
     params_ref simp_p = p;
     simp_p.set_bool("som", true); // expand into sums of monomials
     simp_p.set_bool("factor", false);
-
 
     return and_then(using_params(mk_simplify_tactic(m), simp_p),
                     try_for(mk_qfnra_nlsat_tactic(m, simp_p), 3000),

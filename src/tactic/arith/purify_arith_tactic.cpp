@@ -181,6 +181,10 @@ struct purify_arith_proc {
         return true;
     }
   
+    struct div_def {
+        expr* x, *y, *d;
+        div_def(expr* x, expr* y, expr* d): x(x), y(y), d(d) {}
+    };
 
     struct rw_cfg : public default_rewriter_cfg {
         purify_arith_proc &  m_owner;
@@ -189,6 +193,7 @@ struct purify_arith_proc {
         expr_ref_vector      m_pinned;
         expr_ref_vector      m_new_cnstrs;
         proof_ref_vector     m_new_cnstr_prs;
+        svector<div_def>     m_divs;
         expr_ref             m_subst;
         proof_ref            m_subst_pr;
         expr_ref_vector      m_new_vars;
@@ -297,12 +302,13 @@ struct purify_arith_proc {
                           EQ(u().mk_mul(y, k), x)));
             push_cnstr_pr(result_pr);
             rational r;
-            if (complete() && (!u().is_numeral(y, r) || r.is_zero())) {
+            if (complete()) {
                 // y != 0 \/ k = div-0(x)
                 push_cnstr(OR(NOT(EQ(y, mk_real_zero())),
                               EQ(k, u().mk_div(x, mk_real_zero()))));
                 push_cnstr_pr(result_pr);
             }
+            m_divs.push_back(div_def(x, y, k));
         }
    
         void process_idiv(func_decl * f, unsigned num, expr * const * args, expr_ref & result, proof_ref & result_pr) { 
@@ -401,15 +407,18 @@ struct purify_arith_proc {
                 return BR_DONE;
 
             bool is_int = u().is_int(args[0]);
+            expr * x = args[0];
+            rational xr;
+            if (u().is_numeral(x, xr) && xr.is_zero())
+                return BR_FAILED;
 
             expr * k = mk_fresh_var(is_int);
             result = k;
             mk_def_proof(k, t, result_pr);
             cache_result(t, result, result_pr);
             
-            expr * x = args[0];
-            expr * zero = u().mk_numeral(rational(0), is_int);
-            expr * one  = u().mk_numeral(rational(1), is_int);
+            expr_ref zero(u().mk_numeral(rational(0), is_int), m());
+            expr_ref one(u().mk_numeral(rational(1), is_int), m());
             if (y.is_zero()) {
                 // (^ x 0) --> k  |  x != 0 implies k = 1,   x = 0 implies k = 0^0 
                 push_cnstr(OR(EQ(x, zero), EQ(k, one)));
@@ -764,6 +773,16 @@ struct purify_arith_proc {
         TRACE("purify_arith", tout << r.cfg().m_new_cnstrs << "\n";);
         for (unsigned i = 0; i < sz; i++) {
             m_goal.assert_expr(r.cfg().m_new_cnstrs.get(i), m_produce_proofs ? r.cfg().m_new_cnstr_prs.get(i) : nullptr, nullptr);
+        }
+        auto const& divs = r.cfg().m_divs;
+        for (unsigned i = 0; i < divs.size(); ++i) {
+            auto const& p1 = divs[i];
+            for (unsigned j = i + 1; j < divs.size(); ++j) {
+                auto const& p2 = divs[j];
+                m_goal.assert_expr(m().mk_implies(
+                                       m().mk_and(m().mk_eq(p1.x, p2.x), m().mk_eq(p1.y, p2.y)), 
+                                       m().mk_eq(p1.d, p2.d)));
+            }
         }
         
         // add generic_model_converter to eliminate auxiliary variables from model

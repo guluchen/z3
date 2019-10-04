@@ -69,7 +69,7 @@ class nla2bv_tactic : public tactic {
             m_arith(m), 
             m_bv(m), 
             m_bv2real(m, rational(p.get_uint("nla2bv_root",2)), rational(p.get_uint("nla2bv_divisor",2)), p.get_uint("nla2bv_max_bv_size", UINT_MAX)),
-            m_bv2int_ctx(m, p),
+            m_bv2int_ctx(m, p, p.get_uint("nla2bv_max_bv_size", UINT_MAX)),
             m_bounds(m), 
             m_subst(m), 
             m_vars(m), 
@@ -80,6 +80,9 @@ class nla2bv_tactic : public tactic {
         }
 
         ~imp() {}
+
+		void updt_params(params_ref const& p)  {
+		}
         
         
         void operator()(goal & g, model_converter_ref & mc) {
@@ -235,8 +238,7 @@ class nla2bv_tactic : public tactic {
                 set_satisfiability_preserving(false);
             }
             bv_sort = m_bv.mk_sort(num_bits);
-            std::string name = n->get_decl()->get_name().str();
-            s_bv = m_manager.mk_fresh_const(name.c_str(), bv_sort);
+            s_bv = m_manager.mk_fresh_const(n->get_decl()->get_name(), bv_sort);
             m_fmc->hide(s_bv);
             s_bv = m_bv.mk_bv2int(s_bv);
             if (low) {
@@ -272,9 +274,9 @@ class nla2bv_tactic : public tactic {
             bv_sort = m_bv.mk_sort(m_num_bits);
             set_satisfiability_preserving(false);
             std::string name = n->get_decl()->get_name().str();
-            s = m_manager.mk_fresh_const(name.c_str(), bv_sort);
+            s = m_manager.mk_fresh_const(name, bv_sort);
             name += "_r";
-            t = m_manager.mk_fresh_const(name.c_str(), bv_sort);
+            t = m_manager.mk_fresh_const(name, bv_sort);
             m_fmc->hide(s);
             m_fmc->hide(t);
             s_bv = m_bv2real.mk_bv2real(s, t);
@@ -440,7 +442,7 @@ public:
     }
 
     void updt_params(params_ref const & p) override {
-        m_params = p;
+		m_params.append(p);
     }
 
     void collect_param_descrs(param_descrs & r) override {

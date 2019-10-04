@@ -49,6 +49,7 @@ namespace smt {
         m_iteration_idx(0),
         m_has_rec_fun(false),
         m_curr_model(nullptr),
+        m_fresh_exprs(m),
         m_pinned_exprs(m) {
     }
 
@@ -76,6 +77,33 @@ namespace smt {
         expr * t = nullptr;
         m_value2expr.find(val, t);
         return t;
+    }
+
+    expr * model_checker::get_type_compatible_term(expr * val) {
+        app* fresh_term;
+        if (is_app(val) && to_app(val)->get_num_args() > 0) {
+            ptr_buffer<expr> args;
+            for (expr* arg : *to_app(val)) {
+                args.push_back(get_type_compatible_term(arg));
+            }
+            fresh_term = m.mk_app(to_app(val)->get_decl(), args.size(), args.c_ptr());
+        }
+        else {
+            expr * sk_term = get_term_from_ctx(val);
+            if (sk_term != nullptr) {
+                return sk_term;
+            }
+
+            for (expr* f : m_fresh_exprs) {
+                if (m.get_sort(f) == m.get_sort(val)) {
+                    return f;
+                }
+            }
+            fresh_term = m.mk_fresh_const("sk", m.get_sort(val));
+        }
+        m_fresh_exprs.push_back(fresh_term);
+        m_context->ensure_internalized(fresh_term);
+        return fresh_term;
     }
 
     void model_checker::init_value2expr() {
@@ -143,7 +171,7 @@ namespace smt {
         TRACE("model_checker", tout << "q after applying interpretation:\n" << mk_ismt2_pp(tmp, m) << "\n";);
         ptr_buffer<expr> subst_args;
         unsigned num_decls = q->get_num_decls();
-        subst_args.resize(num_decls, 0);
+        subst_args.resize(num_decls, nullptr);
         sks.resize(num_decls, nullptr);
         for (unsigned i = 0; i < num_decls; i++) {
             sort * s  = q->get_decl_sort(num_decls - i - 1);
@@ -207,8 +235,7 @@ namespace smt {
                 }
             }
             if (contains_model_value(sk_value)) {
-                TRACE("model_checker", tout << "value is private to model: " << sk_value << "\n";);
-                return false;
+                sk_value = get_type_compatible_term(sk_value);
             }
             func_decl * f = nullptr;
             if (autil.is_as_array(sk_value, f) && cex->get_func_interp(f)) {
@@ -267,7 +294,6 @@ namespace smt {
         return false;
     }
 
-
     bool model_checker::add_blocking_clause(model * cex, expr_ref_vector & sks) {
         SASSERT(cex != nullptr);
         expr_ref_buffer diseqs(m);
@@ -275,6 +301,7 @@ namespace smt {
             func_decl * sk_d = to_app(sk)->get_decl();
             expr_ref sk_value(cex->get_some_const_interp(sk_d), m);
             if (!sk_value) {
+                TRACE("model_checker", tout << "no constant interpretation for " << mk_pp(sk, m) << "\n";);
                 return false; // get_some_value failed... aborting add_blocking_clause
             }
             diseqs.push_back(m.mk_not(m.mk_eq(sk, sk_value)));
@@ -295,12 +322,13 @@ namespace smt {
     /**
        \brief Return true if q is satisfied by m_curr_model.
     */
+
     bool model_checker::check(quantifier * q) {
         SASSERT(!m_aux_context->relevancy());
         scoped_ctx_push _push(m_aux_context.get());
 
         quantifier * flat_q = get_flat_quantifier(q);
-        TRACE("model_checker", tout << "model checking:\n" << expr_ref(q->get_expr(), m) << "\n" << expr_ref(flat_q->get_expr(), m) << "\n";);
+        TRACE("model_checker", tout << "model checking:\n" << expr_ref(flat_q->get_expr(), m) << "\n";);
         expr_ref_vector sks(m);
 
         assert_neg_q_m(flat_q, sks);

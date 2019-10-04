@@ -59,6 +59,7 @@ class bool_rewriter {
     bool           m_ite_extra_rules;
     unsigned       m_local_ctx_limit;
     unsigned       m_local_ctx_cost;
+    bool           m_elim_ite;
 
     br_status mk_flat_and_core(unsigned num_args, expr * const * args, expr_ref & result);
     br_status mk_flat_or_core(unsigned num_args, expr * const * args, expr_ref & result);
@@ -126,9 +127,11 @@ public:
     br_status mk_ite_core(expr * c, expr * t, expr * e, expr_ref & result);
     br_status mk_not_core(expr * t, expr_ref & result);
 
+    app* mk_eq(expr* lhs, expr* rhs);
+
     void mk_eq(expr * lhs, expr * rhs, expr_ref & result) {
         if (mk_eq_core(lhs, rhs, result) == BR_FAILED)
-            result = m().mk_eq(lhs, rhs);
+            result = mk_eq(lhs, rhs);
     }
     void mk_iff(expr * lhs, expr * rhs, expr_ref & result) { mk_eq(lhs, rhs, result); }
     void mk_xor(expr * lhs, expr * rhs, expr_ref & result);

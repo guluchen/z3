@@ -476,7 +476,7 @@ class theory_lra::imp {
                     internalize_eq(v, v1);                    
                 }
                 else if (a.is_idiv(n, n1, n2)) {
-                    if (!a.is_numeral(n2, r) || r.is_zero()) found_not_handled(n);
+                    if (!a.is_numeral(n2, r)) found_not_handled(n);
                     m_idiv_terms.push_back(n);
                     app * mod = a.mk_mod(n1, n2);
                     ctx().internalize(mod, false);
@@ -486,11 +486,11 @@ class theory_lra::imp {
                     if (!ctx().relevancy()) mk_idiv_mod_axioms(n1, n2);                    
                 }
                 else if (a.is_rem(n, n1, n2)) {
-                    if (!a.is_numeral(n2, r) || r.is_zero()) found_not_handled(n);
+                    if (!a.is_numeral(n2, r)) found_not_handled(n);
                     if (!ctx().relevancy()) mk_rem_axiom(n1, n2);                    
                 }
                 else if (a.is_div(n, n1, n2)) {
-                    if (!a.is_numeral(n2, r) || r.is_zero()) found_not_handled(n);
+                    if (!a.is_numeral(n2, r)) found_not_handled(n);
                     if (!ctx().relevancy()) mk_div_axiom(n1, n2);                    
                 }
                 else if (a.is_power(n)) {
@@ -937,6 +937,26 @@ public:
     void assign_eh(bool_var v, bool is_true) {
         TRACE("arith", tout << mk_pp(ctx().bool_var2expr(v), m) << " " << (is_true?"true":"false") << "\n";);
         m_asserted_atoms.push_back(delayed_atom(v, is_true));
+    }
+
+    lbool get_phase(bool_var v) {
+        lp_api::bound* b;
+        if (!m_bool_var2bound.find(v, b)) {
+            return l_undef;
+        }
+        lp::lconstraint_kind k = lp::EQ;
+        switch (b->get_bound_kind()) {
+        case lp_api::lower_t:
+            k = lp::GE;
+            break;
+        case lp_api::upper_t:
+            k = lp::LE;
+            break;
+        default:
+            break;
+        }         
+        auto vi = get_var_index(b->get_var());
+        return m_solver->compare_values(vi, k, b->get_value()) ? l_true : l_false;
     }
 
     void new_eq_eh(theory_var v1, theory_var v2) {
@@ -2005,11 +2025,6 @@ public:
     }
 
     bool can_propagate() {
-#if 0
-        if (ctx().at_base_level() && has_delayed_constraints()) {
-            // we could add the delayed constraints here directly to the tableau instead of using bounds variables.
-        }
-#endif
         return m_asserted_atoms.size() > m_asserted_qhead;
     }
 
@@ -2020,29 +2035,16 @@ public:
         }
         while (m_asserted_qhead < m_asserted_atoms.size() && !ctx().inconsistent()) {
             bool_var bv  = m_asserted_atoms[m_asserted_qhead].m_bv;
-            bool is_true = m_asserted_atoms[m_asserted_qhead].m_is_true;
-                
-#if 1
+            bool is_true = m_asserted_atoms[m_asserted_qhead].m_is_true;                
             m_to_check.push_back(bv);
-#else
-            propagate_bound(bv, is_true, b);
-#endif
             lp_api::bound& b = *m_bool_var2bound.find(bv);
-            assert_bound(bv, is_true, b);
-                
-
+            assert_bound(bv, is_true, b);                
             ++m_asserted_qhead;
         }
         if (ctx().inconsistent()) {
             m_to_check.reset();
             return;
         }
-        /*for (; qhead < m_asserted_atoms.size() && !ctx().inconsistent(); ++qhead) {
-          bool_var bv  = m_asserted_atoms[qhead].m_bv;
-          bool is_true = m_asserted_atoms[qhead].m_is_true;
-          lp_api::bound& b = *m_bool_var2bound.find(bv);
-          propagate_bound_compound(bv, is_true, b);
-          }*/
 
         lbool lbl = make_feasible();
             
@@ -2208,7 +2210,7 @@ public:
                 js = alloc(theory_lemma_justification, get_id(), ctx(), m_core2.size(), m_core2.c_ptr(),
                            m_params.size(), m_params.c_ptr());
             }
-            ctx().mk_clause(m_core2.size(), m_core2.c_ptr(), js, CLS_AUX_LEMMA, nullptr);
+            ctx().mk_clause(m_core2.size(), m_core2.c_ptr(), js, CLS_TH_LEMMA, nullptr);
         }
         else {
             ctx().assign(
@@ -3204,12 +3206,6 @@ public:
         return false;
     }
 
-    bool validate_eq_in_model(theory_var v1, theory_var v2, bool is_true) const {
-        SASSERT(v1 != null_theory_var);
-        SASSERT(v2 != null_theory_var);
-        return (get_value(v1) == get_value(v2)) == is_true;
-    }
-
     // Auxiliary verification utilities.
 
     struct scoped_arith_mode {
@@ -3429,7 +3425,7 @@ public:
     }
 
     app_ref mk_obj(theory_var v) {
-        lp::var_index vi = m_theory_var2var_index[v];
+        lp::var_index vi = get_var_index(v);
         bool is_int = a.is_int(get_enode(v)->get_owner());
         if (m_solver->is_term(vi)) {           
             return mk_term(m_solver->get_term(vi), is_int);
@@ -3583,6 +3579,9 @@ void theory_lra::internalize_eq_eh(app * atom, bool_var v) {
 void theory_lra::assign_eh(bool_var v, bool is_true) {
     m_imp->assign_eh(v, is_true);
 }
+lbool theory_lra::get_phase(bool_var v) {
+    return m_imp->get_phase(v);
+}
 void theory_lra::new_eq_eh(theory_var v1, theory_var v2) {
     m_imp->new_eq_eh(v1, v2);
 }
@@ -3650,10 +3649,6 @@ bool theory_lra::get_lower(enode* n, rational& r, bool& is_strict) {
 }
 bool theory_lra::get_upper(enode* n, rational& r, bool& is_strict) {
     return m_imp->get_upper(n, r, is_strict);
-}
-
-bool theory_lra::validate_eq_in_model(theory_var v1, theory_var v2, bool is_true) const {
-    return m_imp->validate_eq_in_model(v1, v2, is_true);
 }
 void theory_lra::display(std::ostream & out) const {
     m_imp->display(out);

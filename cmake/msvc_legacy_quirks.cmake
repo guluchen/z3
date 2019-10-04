@@ -182,5 +182,6 @@ foreach (_build_type ${_build_types_as_upper})
     # Indicate that the executable is compatible with DEP
     # See https://msdn.microsoft.com/en-us/library/ms235442.aspx
     string(APPEND CMAKE_EXE_LINKER_FLAGS_${_build_type} " /NXCOMPAT")
+
   endif()
 endforeach()

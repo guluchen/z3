@@ -46,7 +46,7 @@ symbol smt_renaming::fix_symbol(symbol s, int k) {
     std::ostringstream buffer;
     char const * data = s.is_numerical() ? "" : s.bare_str();
 
-    if (k == 0 && *data) {
+    if (k == 0 && data && *data) {
         if (s.is_numerical()) {
             return s;
         }
@@ -664,7 +664,7 @@ class smt_printer {
             if (s.is_numerical()) {
                 sz += 7;
             }
-            else {
+            else if (s.bare_str()) {
                 sz += 3 + static_cast<unsigned>(strlen(s.bare_str()));
             }
             for (unsigned i = 0; i < a->get_num_args() && sz <= m_line_length; ++i) {
@@ -924,11 +924,11 @@ void ast_smt_pp::display_smt2(std::ostream& strm, expr* n) {
     decl_collector decls(m);
     smt_renaming rn;
 
-    for (unsigned i = 0; i < m_assumptions.size(); ++i) {
-        decls.visit(m_assumptions[i].get());
+    for (expr* a : m_assumptions) {
+        decls.visit(a);
     }
-    for (unsigned i = 0; i < m_assumptions_star.size(); ++i) {
-        decls.visit(m_assumptions_star[i].get());
+    for (expr* a : m_assumptions_star) {
+        decls.visit(a);
     }
     decls.visit(n);
 
@@ -959,8 +959,7 @@ void ast_smt_pp::display_smt2(std::ostream& strm, expr* n) {
 #else
     decls.order_deps();
     ast_mark sort_mark;
-    for (unsigned i = 0; i < decls.get_num_sorts(); ++i) {
-        sort* s = decls.get_sorts()[i];
+    for (sort* s : decls.get_sorts()) {
         if (!(*m_is_declared)(s)) {
             smt_printer p(strm, m, ql, rn, m_logic, true, true, m_simplify_implies, 0);
             p.pp_sort_decl(sort_mark, s);

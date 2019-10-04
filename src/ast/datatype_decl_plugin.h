@@ -108,7 +108,7 @@ namespace datatype {
             size(): m_ref(0) {}
             virtual ~size() {}
             void inc_ref() { ++m_ref; }
-            void dec_ref() { --m_ref; if (m_ref == 0) dealloc(this); }
+            void dec_ref();
             static size* mk_offset(sort_size const& s); 
             static size* mk_param(sort_ref& p); 
             static size* mk_plus(size* a1, size* a2); 
@@ -159,13 +159,13 @@ namespace datatype {
     };
 
     class def {
-        ast_manager&        m;
-        util&               m_util;
-        symbol              m_name;
-        unsigned            m_class_id;
-        param_size::size*   m_sort_size;
-        sort_ref_vector     m_params;
-        mutable sort_ref    m_sort;
+        ast_manager&            m;
+        util&                   m_util;
+        symbol                  m_name;
+        unsigned                m_class_id;
+        param_size::size*       m_sort_size;
+        sort_ref_vector         m_params;
+        mutable sort_ref        m_sort;
         ptr_vector<constructor> m_constructors;
     public:
         def(ast_manager& m, util& u, symbol const& n, unsigned class_id, unsigned num_params, sort * const* params):
@@ -210,13 +210,14 @@ namespace datatype {
             unsigned                 m_id_counter;
             svector<symbol>          m_def_block;
             unsigned                 m_class_id;
+            mutable bool             m_has_nested_arrays;
 
             void inherit(decl_plugin* other_p, ast_translation& tr) override;
 
             void log_axiom_definitions(symbol const& s, sort * new_sort);
 
         public:
-            plugin(): m_id_counter(0), m_class_id(0) {}
+            plugin(): m_id_counter(0), m_class_id(0), m_has_nested_arrays(false) {}
             ~plugin() override;
 
             void finalize() override;
@@ -253,6 +254,8 @@ namespace datatype {
             bool is_declared(sort* s) const { return m_defs.contains(datatype_name(s)); }
             unsigned get_axiom_base_id(symbol const& s) { return m_axiom_bases[s]; }
             util & u() const;
+
+            bool has_nested_arrays() const { return m_has_nested_arrays; }
 
         private:
             bool is_value_visit(expr * arg, ptr_buffer<app> & todo) const;
@@ -301,6 +304,7 @@ namespace datatype {
         obj_map<sort, bool>                         m_is_enum;
         mutable obj_map<sort, bool>                 m_is_fully_interp;
         mutable ast_ref_vector                      m_asts;
+        sref_vector<param_size::size>               m_refs;
         ptr_vector<ptr_vector<func_decl> >          m_vectors;
         unsigned                                    m_start;
         mutable ptr_vector<sort>                    m_fully_interp_trail;
@@ -314,6 +318,8 @@ namespace datatype {
         void compute_datatype_size_functions(svector<symbol> const& names);
         param_size::size* get_sort_size(sort_ref_vector const& params, sort* s);
         bool is_well_founded(unsigned num_types, sort* const* sorts);
+        bool is_covariant(unsigned num_types, sort* const* sorts) const;
+        bool is_covariant(ast_mark& mark, ptr_vector<sort>& subsorts, sort* s) const;
         def& get_def(symbol const& s) { return m_plugin->get_def(s); }
         void get_subsorts(sort* s, ptr_vector<sort>& sorts) const;        
 
@@ -350,6 +356,8 @@ namespace datatype {
         ptr_vector<func_decl> const * get_constructor_accessors(func_decl * constructor);
         func_decl * get_accessor_constructor(func_decl * accessor);
         func_decl * get_recognizer_constructor(func_decl * recognizer) const;
+        func_decl * get_update_accessor(func_decl * update) const;
+        bool has_nested_arrays() const { return m_plugin->has_nested_arrays(); }
         family_id get_family_id() const { return m_family_id; }
         bool are_siblings(sort * s1, sort * s2);
         bool is_func_decl(op_kind k, unsigned num_params, parameter const* params, func_decl* f);
@@ -364,6 +372,12 @@ namespace datatype {
         decl::plugin* get_plugin() { return m_plugin; }
         void get_defs(sort* s, ptr_vector<def>& defs);
         def const& get_def(sort* s) const;
+        sort_ref mk_list_datatype(sort* elem, symbol const& name,
+                                  func_decl_ref& cons, func_decl_ref& is_cons, 
+                                  func_decl_ref& hd, func_decl_ref& tl, 
+                                  func_decl_ref& nil, func_decl_ref& is_nil);
+        sort_ref mk_pair_datatype(sort* a, sort* b, func_decl_ref& fst, func_decl_ref& snd, func_decl_ref& pair);
+        sort_ref mk_tuple_datatype(svector<std::pair<symbol, sort*>> const& elems, symbol const& name, symbol const& test, func_decl_ref& tup, func_decl_ref_vector& accs);
     };
 
 };

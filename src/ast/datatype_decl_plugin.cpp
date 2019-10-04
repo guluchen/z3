@@ -121,6 +121,7 @@ namespace datatype {
     };
 
     namespace param_size {
+        void  size::dec_ref() { --m_ref; if (m_ref == 0) dealloc(this); }
         size* size::mk_offset(sort_size const& s) { return alloc(offset, s); }
         size* size::mk_param(sort_ref& p) { return alloc(sparam, p); }
         size* size::mk_plus(size* a1, size* a2) { return alloc(plus, a1, a2); }
@@ -290,6 +291,7 @@ namespace datatype {
                     obj_map<sort, sort_size> S;
                     for (unsigned i = 0; i + 1 < num_parameters; ++i) {
                         sort* r = to_sort(parameters[i + 1].get_ast());
+                        TRACE("datatype", tout << "inserting " << mk_ismt2_pp(r, *m_manager) << " " << r->get_num_elements() << "\n";);
                         S.insert(d->params()[i], r->get_num_elements()); 
                     }
                     sort_size ts = d->sort_size()->eval(S);
@@ -445,7 +447,23 @@ namespace datatype {
             if (!u().is_well_founded(sorts.size(), sorts.c_ptr())) {
                 m_manager->raise_exception("datatype is not well-founded");
             }
+            if (!u().is_covariant(sorts.size(), sorts.c_ptr())) {
+                m_manager->raise_exception("datatype is not co-variant");
+            }
 
+            array_util autil(m);
+            for (sort* s : sorts) {
+                for (constructor const* c : get_def(s)) {
+                    for (accessor const* a : *c) {
+                        if (autil.is_array(a->range())) {
+                            if (sorts.contains(get_array_range(a->range()))) {
+                                m_has_nested_arrays = true;
+                            }
+                        }                    
+                    }
+                }
+            }
+            
             u().compute_datatype_size_functions(m_def_block);
             for (symbol const& s : m_def_block) {
                 sort_ref_vector ps(m);
@@ -454,23 +472,28 @@ namespace datatype {
         }
 
         void plugin::log_axiom_definitions(symbol const& s, sort * new_sort) {
+            std::ostream& out = m_manager->trace_stream();
             symbol const& family_name = m_manager->get_family_name(get_family_id());
             for (constructor const* c : *m_defs[s]) {
                 func_decl_ref f = c->instantiate(new_sort);
                 const unsigned num_args = f->get_arity();
                 if (num_args == 0) continue;
+
+                // log constructor with quantified variables as arguments
                 for (unsigned i = 0; i < num_args; ++i) {
-                    m_manager->trace_stream() << "[mk-var] " << family_name << "#" << m_id_counter << " " << i << "\n";
+                    out << "[mk-var] " << family_name << "#" << m_id_counter << " " << i << "\n";
                     ++m_id_counter;
                 }
                 const unsigned constructor_id = m_id_counter;
-                m_manager->trace_stream() << "[mk-app] " << family_name << "#" << constructor_id << " " << f->get_name();
+                out << "[mk-app] " << family_name << "#" << constructor_id << " " << f->get_name();
                 for (unsigned i = 0; i < num_args; ++i) {
-                    m_manager->trace_stream() << " " << family_name << "#" << constructor_id - num_args + i;
+                    out << " " << family_name << "#" << constructor_id - num_args + i;
                 }
-                m_manager->trace_stream() << "\n";
+                out << "\n";
                 ++m_id_counter;
-                m_manager->trace_stream() << "[mk-app] " << family_name << "#" << m_id_counter << " pattern " << family_name << "#" << constructor_id << "\n";
+
+                // axioms for all accessors are generated when a constructor is applied => use constructor as pattern
+                out << "[mk-app] " << family_name << "#" << m_id_counter << " pattern " << family_name << "#" << constructor_id << "\n";
                 ++m_id_counter;
                 m_axiom_bases.insert(f->get_name(), constructor_id + 4);
                 std::ostringstream var_sorts;
@@ -478,17 +501,19 @@ namespace datatype {
                     var_sorts << " (;" << a->range()->get_name() << ")";
                 }
                 std::string var_description = var_sorts.str();
+
+                // create axioms: the ith accessor returns the ith argument of the constructor
                 unsigned i = 0;
                 for (accessor const* a : *c) {
                     func_decl_ref acc = a->instantiate(new_sort);
-                    m_manager->trace_stream() << "[mk-app] " << family_name << "#" << m_id_counter << " " << acc->get_name() << " " << family_name << "#" << constructor_id << "\n";
+                    out << "[mk-app] " << family_name << "#" << m_id_counter << " " << acc->get_name() << " " << family_name << "#" << constructor_id << "\n";
                     ++m_id_counter;
-                    m_manager->trace_stream() << "[mk-app] " << family_name << "#" << m_id_counter << " = " << family_name << "#" << constructor_id - num_args + i 
+                    out << "[mk-app] " << family_name << "#" << m_id_counter << " = " << family_name << "#" << constructor_id - num_args + i 
                         << " " << family_name << "#" << m_id_counter - 1 << "\n";
                     ++m_id_counter;
-                    m_manager->trace_stream() << "[mk-quant] " << family_name << "#" << m_id_counter << " constructor_accessor_axiom " << family_name << "#" << constructor_id + 1
-                        << " " << family_name << "#" << m_id_counter - 1 << "\n";
-                    m_manager->trace_stream() << "[attach-var-names] " << family_name << "#" << m_id_counter << var_description << "\n";
+                    out << "[mk-quant] " << family_name << "#" << m_id_counter << " constructor_accessor_axiom " << num_args << " " << family_name
+                        << "#" << constructor_id + 1 << " " << family_name << "#" << m_id_counter - 1 << "\n";
+                    out << "[attach-var-names] " << family_name << "#" << m_id_counter << var_description << "\n";
                     ++m_id_counter;
                     ++i;
                 }
@@ -521,7 +546,9 @@ namespace datatype {
 
         void plugin::remove(symbol const& s) {
             def* d = nullptr;
-            if (m_defs.find(s, d)) dealloc(d);
+            if (m_defs.find(s, d)) {
+                dealloc(d);
+            }
             m_defs.remove(s);
         }
 
@@ -692,7 +719,7 @@ namespace datatype {
     }
 
     param_size::size* util::get_sort_size(sort_ref_vector const& params, sort* s) {
-        if (params.empty()) {
+        if (params.empty() && !is_datatype(s)) {
             return param_size::size::mk_offset(s->get_num_elements());
         }
         if (is_datatype(s)) {
@@ -704,14 +731,15 @@ namespace datatype {
             for (unsigned i = 0; i < n; ++i) {
                 sort* ps = get_datatype_parameter_sort(s, i);
                 sz = get_sort_size(params, ps);
-                sz->inc_ref();                
+                m_refs.push_back(sz);
                 S.insert(d.params().get(i), sz); 
             }            
-            sz = d.sort_size()->subst(S);
-            for (auto & kv : S) {
-                kv.m_value->dec_ref();
+            auto ss = d.sort_size();
+            if (!ss) {
+                d.set_sort_size(param_size::size::mk_offset(sort_size::mk_infinite()));
+                ss = d.sort_size();
             }
-            return sz;
+            return ss->subst(S);
         }
         array_util autil(m);
         if (autil.is_array(s)) {
@@ -741,6 +769,7 @@ namespace datatype {
         map<symbol, status, symbol_hash_proc, symbol_eq_proc> already_found;
         map<symbol, param_size::size*, symbol_hash_proc, symbol_eq_proc> szs;
 
+        TRACE("datatype", for (auto const& s : names) tout << s << " "; tout << "\n";);
         svector<symbol> todo(names);
         status st;
         while (!todo.empty()) {
@@ -779,6 +808,7 @@ namespace datatype {
             todo.pop_back();
             already_found.insert(s, BLACK);
             if (is_infinite) {
+                TRACE("datatype", tout << "infinite " << s << "\n";);
                 d.set_sort_size(param_size::size::mk_offset(sort_size::mk_infinite()));
                 continue;
             }
@@ -791,7 +821,9 @@ namespace datatype {
                 }
                 s_add.push_back(param_size::size::mk_times(s_mul));
             }
+            TRACE("datatype", tout << "set sort size " << s << "\n";);
             d.set_sort_size(param_size::size::mk_plus(s_add));
+            m_refs.reset();
         }
     }
     
@@ -838,6 +870,51 @@ namespace datatype {
         } 
         while (changed && num_well_founded < num_types);
         return num_well_founded == num_types;
+    }
+
+    /**
+       \brief Return true if the inductive datatype is co-variant.
+       Pre-condition: The given argument constrains the parameters of an inductive datatype.
+    */
+    bool util::is_covariant(unsigned num_types, sort* const* sorts) const {
+        ast_mark mark;
+        ptr_vector<sort> subsorts;
+
+        for (unsigned tid = 0; tid < num_types; tid++) {
+            mark.mark(sorts[tid], true);
+        }
+        
+        for (unsigned tid = 0; tid < num_types; tid++) {
+            sort* s = sorts[tid];
+            def const& d = get_def(s);
+            for (constructor const* c : d) {
+                for (accessor const* a : *c) {
+                    if (!is_covariant(mark, subsorts, a->range())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    bool util::is_covariant(ast_mark& mark, ptr_vector<sort>& subsorts, sort* s) const {
+        array_util autil(m);
+        if (!autil.is_array(s)) {
+            return true;
+        }
+        unsigned n = get_array_arity(s);
+        subsorts.reset();
+        for (unsigned i = 0; i < n; ++i) {
+            get_subsorts(get_array_domain(s, i), subsorts);
+        }
+        if (!is_datatype(get_array_range(s))) {
+            get_subsorts(get_array_range(s), subsorts);
+        }
+        for (sort* r : subsorts) {
+            if (mark.is_marked(r)) return false;
+        }
+        return true;
     }
 
     def const& util::get_def(sort* s) const {
@@ -949,6 +1026,11 @@ namespace datatype {
         return to_func_decl(recognizer->get_parameter(0).get_ast());
     }
 
+    func_decl * util::get_update_accessor(func_decl * updt) const {
+        SASSERT(is_update_field(updt));
+        return to_func_decl(updt->get_parameter(0).get_ast());
+    }
+
     bool util::is_recursive(sort * ty) {
         SASSERT(is_datatype(ty));
         bool r = false;
@@ -1052,6 +1134,7 @@ namespace datatype {
 
         ptr_vector<func_decl> const& constructors = *get_datatype_constructors(ty);
         unsigned sz = constructors.size();
+        array_util autil(m);
         TRACE("util_bug", tout << "get-non-rec constructor: " << sort_ref(ty, m) << "\n";
               tout << "forbidden: ";
               for (sort* s : forbidden_set) tout << sort_ref(s, m) << " ";
@@ -1066,7 +1149,7 @@ namespace datatype {
             TRACE("util_bug", tout << "checking " << sort_ref(ty, m) << ": " << func_decl_ref(c, m) << "\n";);
             unsigned num_args = c->get_arity();
             unsigned i = 0;
-            for (; i < num_args && !is_datatype(c->get_domain(i)); i++);
+            for (; i < num_args && !is_datatype(autil.get_array_range_rec(c->get_domain(i))); i++);
             if (i == num_args) {
                 TRACE("util_bug", tout << "found non-rec " << func_decl_ref(c, m) << "\n";);
                 return c;
@@ -1079,7 +1162,7 @@ namespace datatype {
             unsigned num_args = c->get_arity();
             unsigned i = 0;
             for (; i < num_args; i++) {
-                sort * T_i = c->get_domain(i);
+                sort * T_i = autil.get_array_range_rec(c->get_domain(i));
                 TRACE("util_bug", tout << "c: " << i << " " << sort_ref(T_i, m) << "\n";);
                 if (!is_datatype(T_i)) {
                     TRACE("util_bug", tout << sort_ref(T_i, m) << " is not a datatype\n";);
@@ -1187,6 +1270,85 @@ namespace datatype {
             }
         }
     }
+
+    sort_ref util::mk_list_datatype(sort* elem, symbol const& name, 
+                                    func_decl_ref& cons, func_decl_ref& is_cons, 
+                                    func_decl_ref& hd, func_decl_ref& tl, 
+                                    func_decl_ref& nil, func_decl_ref& is_nil) {
+
+        accessor_decl* head_tail[2] = {
+            mk_accessor_decl(m, symbol("head"), type_ref(elem)),
+            mk_accessor_decl(m, symbol("tail"), type_ref(0))
+        };
+        constructor_decl* constrs[2] = {
+            mk_constructor_decl(symbol("nil"), symbol("is_nil"), 0, nullptr),
+            mk_constructor_decl(symbol("cons"), symbol("is_cons"), 2, head_tail)
+        };
+        decl::plugin& p = *get_plugin();
+
+        sort_ref_vector sorts(m);
+        datatype_decl * decl = mk_datatype_decl(*this, name, 0, nullptr, 2, constrs);
+        bool is_ok = p.mk_datatypes(1, &decl, 0, nullptr, sorts);
+        del_datatype_decl(decl);
+        
+        if (!is_ok) {
+            return sort_ref(m);
+        }
+        sort* s = sorts.get(0);
+        ptr_vector<func_decl> const& cnstrs = *get_datatype_constructors(s);
+        SASSERT(cnstrs.size() == 2);
+        nil = cnstrs[0];
+        is_nil = get_constructor_is(cnstrs[0]);
+        cons = cnstrs[1];
+        is_cons = get_constructor_is(cnstrs[1]);
+        ptr_vector<func_decl> const& acc = *get_constructor_accessors(cnstrs[1]);
+        SASSERT(acc.size() == 2);
+        hd = acc[0];
+        tl = acc[1];
+        return sort_ref(s, m);
+    }
+
+    sort_ref util::mk_pair_datatype(sort* a, sort* b, func_decl_ref& fst, func_decl_ref& snd, func_decl_ref& pair) {
+        type_ref t1(a), t2(b);
+        accessor_decl* fstd = mk_accessor_decl(m, symbol("fst"), t1);
+        accessor_decl* sndd = mk_accessor_decl(m, symbol("snd"), t2);
+        accessor_decl* accd[2] = { fstd, sndd };
+        auto * p = mk_constructor_decl(symbol("pair"), symbol("is-pair"), 2, accd);
+        auto* dt = mk_datatype_decl(*this, symbol("pair"), 0, nullptr, 1, &p);
+        sort_ref_vector sorts(m);
+        VERIFY(get_plugin()->mk_datatypes(1, &dt, 0, nullptr, sorts));
+        del_datatype_decl(dt);
+        sort* s = sorts.get(0);
+        ptr_vector<func_decl> const& cnstrs = *get_datatype_constructors(s);
+        SASSERT(cnstrs.size() == 1);
+        ptr_vector<func_decl> const& acc = *get_constructor_accessors(cnstrs[0]);
+        SASSERT(acc.size() == 2);
+        fst = acc[0];
+        snd = acc[1];
+        pair = cnstrs[0];
+        return sort_ref(s, m);
+    }
+
+    sort_ref util::mk_tuple_datatype(svector<std::pair<symbol, sort*>> const& elems, symbol const& name, symbol const& test, func_decl_ref& tup, func_decl_ref_vector& accs) {
+        ptr_vector<accessor_decl> accd;
+        for (auto const& e : elems) {
+            type_ref t(e.second);
+            accd.push_back(mk_accessor_decl(m, e.first, t));
+        }
+        auto* tuple = mk_constructor_decl(name, test, accd.size(), accd.c_ptr());
+        auto* dt = mk_datatype_decl(*this, name, 0, nullptr, 1, &tuple);
+        sort_ref_vector sorts(m);
+        VERIFY(get_plugin()->mk_datatypes(1, &dt, 0, nullptr, sorts));
+        del_datatype_decl(dt);
+        sort* s = sorts.get(0);
+        ptr_vector<func_decl> const& cnstrs = *get_datatype_constructors(s);
+        SASSERT(cnstrs.size() == 1);
+        ptr_vector<func_decl> const& acc = *get_constructor_accessors(cnstrs[0]);
+        for (auto* f : acc) accs.push_back(f);
+        tup = cnstrs[0];
+        return sort_ref(s, m);
+    }
+
 }
 
 datatype_decl * mk_datatype_decl(datatype_util& u, symbol const & n, unsigned num_params, sort*const* params, unsigned num_constructors, constructor_decl * const * cs) {

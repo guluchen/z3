@@ -297,6 +297,7 @@ class parallel_tactic : public tactic {
             p.set_uint("restart.max", pp.simplify_restart_max() * mult);
             p.set_bool("lookahead_simplify", true);
             p.set_bool("retain_blocked_clauses", retain_blocked);
+            p.set_uint("max_conflicts", pp.simplify_max_conflicts());
             if (m_depth > 1) p.set_uint("bce_delay", 0);
             get_solver().updt_params(p);
         }
@@ -336,7 +337,7 @@ private:
 
     void init() {
         parallel_params pp(m_params);
-        m_num_threads = std::min((unsigned)omp_get_num_procs(), pp.threads_max());
+        m_num_threads = std::min((unsigned) std::thread::hardware_concurrency(), pp.threads_max());
         m_progress = 0;
         m_has_undef = false;
         m_allsat = false;
@@ -351,7 +352,7 @@ private:
     }
 
     void log_branches(lbool status) {
-        IF_VERBOSE(0, verbose_stream() << "(tactic.parallel :progress " << m_progress << "% ";
+        IF_VERBOSE(1, verbose_stream() << "(tactic.parallel :progress " << m_progress << "% ";
                    if (status == l_true)  verbose_stream() << ":status sat";
                    if (status == l_undef) verbose_stream() << ":status unknown";
                    if (m_num_unsat > 0) verbose_stream() << " :closed " << m_num_unsat << "@" << m_last_depth;

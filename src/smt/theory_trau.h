@@ -44,8 +44,6 @@ namespace smt {
         typedef hashtable<std::pair<expr*, expr*>, obj_ptr_pair_hash<expr, expr>, default_eq<std::pair<expr*, expr*>> > expr_pair_set;
     }
 
-    class theory_str_contain_pair_bool_map_t : public obj_pair_map<expr, expr, expr*> {};
-
     class theory_trau : public theory {
         ast_manager&                    m;
         int                             m_scope_level;
@@ -245,7 +243,8 @@ namespace smt {
             void get_dependencies(buffer<model_value_dependency> & result) override {
                 result.append(m_dependencies.size(), m_dependencies.c_ptr());
             }
-            app * mk_value(model_generator & mg, ptr_vector<expr> & values) override ;
+
+            app * mk_value(model_generator & mg, expr_ref_vector const & values) override ;
             bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value);
             bool create_string_with_length(vector<zstring> const& elements, zstring &current_str, int remain_length);
             vector<zstring> collect_alternative_components(expr* v);
@@ -1044,7 +1043,6 @@ namespace smt {
         bool can_propagate() override;
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
-        expr* query_theory_array(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
         void finalize_model(model_generator& mg) override;
 
@@ -1262,7 +1260,7 @@ namespace smt {
 
         expr_ref_vector                                     contains_map;
 
-        theory_str_contain_pair_bool_map_t                  contain_pair_bool_map;
+        obj_pair_map<expr, expr, expr*>                     contain_pair_bool_map;
         obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
         obj_map<expr, expr*>                                index_head;
@@ -1365,7 +1363,6 @@ namespace smt {
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void fetch_guessed_str_int_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
-        void dump_bool_vars();
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;
         void set_up_axioms(expr * ex);

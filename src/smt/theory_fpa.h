@@ -47,19 +47,31 @@ namespace smt {
 
         expr * get_some_value(sort * s) override {
             mpf_manager & mpfm = m_util.fm();
-            scoped_mpf q(mpfm);
-            mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 0);
-            return m_util.mk_value(q);
+
+            if (m_util.is_rm(s))
+                return m_util.mk_round_toward_zero();
+            else
+            {
+                scoped_mpf q(mpfm);
+                mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 0);
+                return m_util.mk_value(q);
+            }
         }
 
         bool get_some_values(sort * s, expr_ref & v1, expr_ref & v2) override {
             mpf_manager & mpfm = m_util.fm();
-            scoped_mpf q(mpfm);
-            mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 0);
-            v1 = m_util.mk_value(q);
-            mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 1);
-            v2 = m_util.mk_value(q);
-            return true;
+
+            if (m_util.is_rm(s))
+                v1 = v2 = m_util.mk_round_toward_zero();
+            else
+            {
+                scoped_mpf q(mpfm);
+                mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 0);
+                v1 = m_util.mk_value(q);
+                mpfm.set(q, m_util.get_ebits(s), m_util.get_sbits(s), 1);
+                v2 = m_util.mk_value(q);
+            }
+           return true;
         }
 
         expr * get_fresh_value(sort * s) override { return get_some_value(s); }
@@ -108,7 +120,7 @@ namespace smt {
                 result.append(m_deps);
             }
 
-            app * mk_value(model_generator & mg, ptr_vector<expr> & values) override;
+            app * mk_value(model_generator & mg, expr_ref_vector const & values) override;
         };
 
         class fpa_rm_value_proc : public model_value_proc {
@@ -129,7 +141,7 @@ namespace smt {
             }
 
             ~fpa_rm_value_proc() override {}
-            app * mk_value(model_generator & mg, ptr_vector<expr> & values) override;
+            app * mk_value(model_generator & mg, expr_ref_vector const & values) override;
         };
 
     protected:

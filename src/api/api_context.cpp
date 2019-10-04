@@ -27,6 +27,7 @@ Revision History:
 #include "ast/reg_decl_plugins.h"
 #include "math/realclosure/realclosure.h"
 
+
 // The install_tactics procedure is automatically generated
 void install_tactics(tactic_manager & ctx);
 
@@ -101,6 +102,7 @@ namespace api {
         m_datalog_fid = m().mk_family_id("datalog_relation");
         m_fpa_fid   = m().mk_family_id("fpa");
         m_seq_fid   = m().mk_family_id("seq");
+        m_special_relations_fid   = m().mk_family_id("special_relations");
         m_dt_plugin = static_cast<datatype_decl_plugin*>(m().get_plugin(m_dt_fid));
     
         install_tactics(*this);
@@ -118,28 +120,22 @@ namespace api {
 
     context::set_interruptable::set_interruptable(context & ctx, event_handler & i):
         m_ctx(ctx) {
-        #pragma omp critical (set_interruptable) 
-        {
-            SASSERT(m_ctx.m_interruptable == 0);
-            m_ctx.m_interruptable = &i;
-        }
+        lock_guard lock(ctx.m_mux);
+        SASSERT(m_ctx.m_interruptable == 0);
+        m_ctx.m_interruptable = &i;        
     }
 
     context::set_interruptable::~set_interruptable() {
-        #pragma omp critical (set_interruptable) 
-        {
-            m_ctx.m_interruptable = nullptr;
-        }
+        lock_guard lock(m_ctx.m_mux);
+        m_ctx.m_interruptable = nullptr;        
     }
 
     void context::interrupt() {
-        #pragma omp critical (set_interruptable)
-        {
-            if (m_interruptable)
-                (*m_interruptable)(API_INTERRUPT_EH_CALLER);
-            m_limit.cancel();
-            m().limit().cancel();
-        }
+        lock_guard lock(m_mux);
+        if (m_interruptable)
+            (*m_interruptable)(API_INTERRUPT_EH_CALLER);
+        m_limit.cancel();
+        m().limit().cancel();        
     }
     
     void context::set_error_code(Z3_error_code err, char const* opt_msg) {
@@ -163,6 +159,12 @@ namespace api {
 
     char * context::mk_external_string(char const * str) {
         m_string_buffer = str?str:"";
+        return const_cast<char *>(m_string_buffer.c_str());
+    }
+
+    char * context::mk_external_string(char const * str, unsigned n) {
+        m_string_buffer.clear();
+        m_string_buffer.append(str, n);
         return const_cast<char *>(m_string_buffer.c_str());
     }
     
@@ -382,7 +384,6 @@ extern "C" {
         if (a) {
             mk_c(c)->m().dec_ref(to_ast(a));
         }
-
         Z3_CATCH;
     }
 

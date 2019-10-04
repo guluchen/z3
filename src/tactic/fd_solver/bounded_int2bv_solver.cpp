@@ -56,7 +56,7 @@ public:
         m_solver(s),
         m_bv_fns(m),
         m_int_fns(m),
-        m_rewriter_ctx(m, p),
+        m_rewriter_ctx(m, p, p.get_uint("max_bv_size", UINT_MAX)),
         m_rewriter(m, m_rewriter_ctx)
     {
         solver::updt_params(p);
@@ -160,9 +160,6 @@ public:
     }
     expr_ref_vector get_trail() override {
         return m_solver->get_trail();
-    }
-    void set_activity(expr* var, double activity) override {
-        m_solver->set_activity(var, activity);
     }
 
     model_converter* external_model_converter() const {

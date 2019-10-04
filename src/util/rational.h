@@ -53,7 +53,7 @@ public:
 
     rational(mpz const & z) { m().set(m_val, z); }
 
-    rational(double  z) { UNREACHABLE(); }
+    explicit rational(double  z) { UNREACHABLE(); }
     
     explicit rational(char const * v) { m().set(m_val, v); }
 
@@ -421,6 +421,8 @@ public:
         }
         return num_bits;
     }
+
+    static bool limit_denominator(rational &num, rational const& limit);
 };
 
 inline bool operator!=(rational const & r1, rational const & r2) { 

@@ -31,8 +31,6 @@ namespace smt {
             return out << "OK";
         case UNKNOWN:
             return out << "UNKNOWN";
-        case TIMEOUT:
-            return out << "TIMEOUT";
         case MEMOUT:
             return out << "MEMOUT";
         case CANCELED:
@@ -64,7 +62,6 @@ namespace smt {
         std::string r;
         switch(m_last_search_failure) {
         case OK: r = m_unknown; break;
-        case TIMEOUT: r = "timeout"; break;
         case MEMOUT: r = "memout"; break;
         case CANCELED: r = "canceled"; break;
         case NUM_CONFLICTS: r = "max-conflicts-reached"; break;
@@ -104,12 +101,24 @@ namespace smt {
         display_verbose(out, m_manager, num_lits, lits, m_bool_var2expr.c_ptr(), "\n"); return out;
     }
 
-    void context::display_literal_info(std::ostream & out, literal l) const {
-        l.display_compact(out, m_bool_var2expr.c_ptr());
+    std::ostream& context::display_literal_smt2(std::ostream& out, literal l) const {
         if (l.sign())
             out << "  (not " << mk_bounded_pp(bool_var2expr(l.var()), m_manager, 10) << ") ";
         else
             out << "  " << mk_bounded_pp(bool_var2expr(l.var()), m_manager, 10) << " ";
+        return out;
+    }
+
+    std::ostream& context::display_literals_smt2(std::ostream& out, unsigned num_lits, literal const* lits) const {
+        for (unsigned i = 0; i < num_lits; ++i) {
+            display_literal_smt2(out, lits[i]) << "\n";
+        }
+        return out;
+    }
+
+    void context::display_literal_info(std::ostream & out, literal l) const {
+        l.display_compact(out, m_bool_var2expr.c_ptr());
+        display_literal_smt2(out, l);
         out << "relevant: " << is_relevant(bool_var2expr(l.var())) << ", val: " << get_assignment(l) << "\n";
     }
 
@@ -147,30 +156,36 @@ namespace smt {
         }
     }
 
-    void context::display_clause_detail(std::ostream & out, clause const * cls) const {
+    std::ostream& context::display_clause_detail(std::ostream & out, clause const * cls) const {
         out << "lemma: " << cls->is_lemma() << "\n";
-        unsigned num_lits = cls->get_num_literals();
-        for (unsigned i = 0; i < num_lits; i++) {
-            literal l = cls->get_literal(i);
+        for (literal l : *cls) {
             display_literal(out, l);
             out << ", val: " << get_assignment(l) << ", lvl: " << get_assign_level(l)
                 << ", ilvl: " << get_intern_level(l.var()) << ", var: " << l.var() << "\n"
                 << mk_pp(bool_var2expr(l.var()), m_manager) << "\n\n";
         }
+        return out;
     }
 
-    void context::display_clause(std::ostream & out, clause const * cls) const {
-        cls->display_smt2(out, m_manager, m_bool_var2expr.c_ptr());
+    std::ostream& context::display_clause(std::ostream & out, clause const * cls) const {
+        cls->display_compact(out, m_manager, m_bool_var2expr.c_ptr());
+        return out;
     }
 
-    void context::display_clauses(std::ostream & out, ptr_vector<clause> const & v) const {
+    std::ostream& context::display_clause_smt2(std::ostream & out, clause const& cls) const {
+        cls.display_smt2(out, m_manager, m_bool_var2expr.c_ptr());
+        return out;
+    }
+
+    std::ostream& context::display_clauses(std::ostream & out, ptr_vector<clause> const & v) const {
         for (clause* cp : v) {
-            display_clause(out, cp);
+            display_clause_smt2(out, *cp);
             out << "\n";
         }
+        return out;
     }
 
-    void context::display_binary_clauses(std::ostream & out) const {
+    std::ostream& context::display_binary_clauses(std::ostream & out) const {
         bool first = true;
         unsigned l_idx = 0;
         for (watch_list const& wl : m_watches) {
@@ -200,6 +215,7 @@ namespace smt {
                 }
             }
         }
+        return out;
     }
 
     void context::display_assignment(std::ostream & out) const {
@@ -582,6 +598,7 @@ namespace smt {
             clause * cls = j.get_clause();
             out << "clause ";
             if (cls) out << literal_vector(cls->get_num_literals(), cls->begin());
+            if (cls) display_literals_smt2(out << "\n", cls->get_num_literals(), cls->begin());
             break;
         }
         case b_justification::JUSTIFICATION: {

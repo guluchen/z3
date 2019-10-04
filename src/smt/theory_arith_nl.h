@@ -811,15 +811,13 @@ namespace smt {
     bool theory_arith<Ext>::is_monomial_linear(expr * m) const {
         SASSERT(is_pure_monomial(m));
         unsigned num_nl_vars = 0;
-        for (unsigned i = 0; i < to_app(m)->get_num_args(); i++) {
-            expr * arg = to_app(m)->get_arg(i);
+        for (expr* arg : *to_app(m)) {
             theory_var _var = expr2var(arg);
             if (!is_fixed(_var)) {
                 num_nl_vars++;
             }
-            else {
-                if (lower_bound(_var).is_zero())
-                     return true;
+            else if (lower_bound(_var).is_zero()) {
+                return true;
             }
         }
         return num_nl_vars <= 1;
@@ -1219,10 +1217,8 @@ namespace smt {
             m_var2num_occs.insert(VAR, occs);                                                           \
         }
 
-        typename sbuffer<coeff_expr>::const_iterator it  = p.begin();
-        typename sbuffer<coeff_expr>::const_iterator end = p.end();
-        for (; it != end; ++it) {
-            expr * m = it->second;
+        for (coeff_expr const& kv : p) {
+            expr * m = kv.second;
             if (is_pure_monomial(m)) {
                 unsigned num_vars = get_num_vars_in_monomial(m);
                 for (unsigned i = 0; i < num_vars; i++) {
@@ -1239,6 +1235,7 @@ namespace smt {
             else {
                 TRACE("non_linear", tout << mk_pp(m, get_manager()) << "\n";);
                 UNREACHABLE();
+                return;
             }
         }
 
@@ -1255,7 +1252,6 @@ namespace smt {
     template<typename Ext>
     expr * theory_arith<Ext>::p2expr(sbuffer<coeff_expr> & p) {
         SASSERT(!p.empty());
-        TRACE("p2expr_bug", display_coeff_exprs(tout, p););
         ptr_buffer<expr> args;
         for (coeff_expr const& ce : p) {
             rational const & c = ce.first;
@@ -1277,6 +1273,7 @@ namespace smt {
         SASSERT(!args.empty());
         expr * r = mk_nary_add(args.size(), args.c_ptr());
         m_nl_new_exprs.push_back(r);
+        TRACE("p2expr_bug", display_coeff_exprs(tout, p); tout << mk_pp(r, get_manager()) << "\n";);
         return r;
     }
 
@@ -1537,7 +1534,7 @@ namespace smt {
         rational a, b;
         unsigned n  = UINT_MAX;
         unsigned nm = UINT_MAX;
-        if (in_monovariate_monomials(p, var, i1, a, n, i2, b, nm)) {
+        if (in_monovariate_monomials(p, var, i1, a, n, i2, b, nm) && n != nm) {
             CTRACE("in_monovariate_monomials", n == nm,
                    for (unsigned i = 0; i < p.size(); i++) {
                        if (i > 0) tout << " + "; tout << p[i].first << "*" << mk_pp(p[i].second, get_manager());
@@ -1931,7 +1928,7 @@ namespace smt {
         derived_bound  b(null_theory_var, inf_numeral(0), B_LOWER);
         dependency2new_bound(d, b);
         set_conflict(b, ante, "arith_nl");
-        TRACE("non_linear", for (literal lit : b.m_lits) tout << lit << " "; tout << "\n";); 
+        TRACE("non_linear", for (literal lit : b.m_lits) get_context().display_literal_verbose(tout, lit) << "\n"; tout << "\n";); 
     }
 
     /**

@@ -39,6 +39,10 @@ Revision History:
 #include "util/file_path.h"
 #include "shell/lp_frontend.h"
 
+#if defined( _WINDOWS ) && defined( __MINGW32__ ) && ( defined( __GNUG__ ) || defined( __clang__ ) )
+#include <crtdbg.h>
+#endif
+
 typedef enum { IN_UNSPECIFIED, IN_SMTLIB_2, IN_DATALOG, IN_DIMACS, IN_WCNF, IN_OPB, IN_LP, IN_Z3_LOG, IN_MPS } input_kind;
 
 static std::string  g_aux_input_file;
@@ -258,13 +262,11 @@ static void parse_cmd_line_args(int argc, char ** argv) {
                 enable_trace(opt_arg);
             }
 #endif
-#ifdef Z3DEBUG
             else if (strcmp(opt_name, "dbg") == 0) {
                 if (!opt_arg)
                     error("option argument (-dbg:tag) is missing.");
                 enable_debug(opt_arg);
             }
-#endif
             else if (strcmp(opt_name, "memory") == 0) {
                 if (!opt_arg)
                     error("option argument (-memory:val) is missing.");

@@ -38,6 +38,7 @@ Notes:
 #include "tactic/arith/eq2bv_tactic.h"
 #include "tactic/bv/dt2bv_tactic.h"
 #include "tactic/generic_model_converter.h"
+#include "ackermannization/ackermannize_bv_tactic.h"
 #include "sat/sat_solver/inc_sat_solver.h"
 #include "qe/qsat.h"
 #include "opt/opt_context.h"
@@ -361,7 +362,8 @@ namespace opt {
 
     void context::fix_model(model_ref& mdl) {
         if (mdl && !m_model_fixed.contains(mdl.get())) {
-            TRACE("opt", tout << "fix-model\n";);
+            TRACE("opt", m_fm->display(tout << "fix-model\n");
+                  if (m_model_converter) m_model_converter->display(tout););
             (*m_fm)(mdl);
             apply(m_model_converter, mdl);
             m_model_fixed.push_back(mdl.get());
@@ -803,6 +805,8 @@ namespace opt {
             and_then(mk_simplify_tactic(m, m_params), 
                      mk_propagate_values_tactic(m),
                      mk_solve_eqs_tactic(m),
+                     // NB: cannot ackermannize because max/min objectives would disappear
+                     // mk_ackermannize_bv_tactic(m, m_params), 
                      // NB: mk_elim_uncstr_tactic(m) is not sound with soft constraints
                      mk_simplify_tactic(m));   
         opt_params optp(m_params);
@@ -941,7 +945,7 @@ namespace opt {
             return true;
         }
         if (is_max && get_pb_sum(term, terms, weights, offset)) {
-            TRACE("opt", tout << "try to convert maximization" << mk_pp(term, m) << "\n";);
+            TRACE("opt", tout << "try to convert maximization " << mk_pp(term, m) << "\n";);
             // maximize 2*x + 3*y - z 
             // <=>
             // (assert-soft x 2)
@@ -1116,7 +1120,9 @@ namespace opt {
         val = (*mdl)(term);
         unsigned bvsz;
         if (!m_arith.is_numeral(val, r) && !m_bv.is_numeral(val, r, bvsz)) {
-            TRACE("opt", tout << "model does not evaluate objective to a value\n";);
+            TRACE("opt", tout << "model does not evaluate objective to a value but instead " << val << "\n";
+                  tout << *mdl << "\n";
+                  );
             return false;
         }
         if (r != v) {
@@ -1164,7 +1170,7 @@ namespace opt {
     app* context::purify(generic_model_converter_ref& fm, expr* term) {
        std::ostringstream out;
        out << mk_pp(term, m);
-       app* q = m.mk_fresh_const(out.str().c_str(), m.get_sort(term));
+       app* q = m.mk_fresh_const(out.str(), m.get_sort(term));
        if (!fm) fm = alloc(generic_model_converter, m, "opt");
        if (m_arith.is_int_real(term)) {
            m_hard_constraints.push_back(m_arith.mk_ge(q, term));
@@ -1487,6 +1493,8 @@ namespace opt {
 
     void context::collect_param_descrs(param_descrs & r) {
         opt_params::collect_param_descrs(r);
+        insert_timeout(r);
+        insert_ctrl_c(r);
     }
     
     void context::updt_params(params_ref const& p) {

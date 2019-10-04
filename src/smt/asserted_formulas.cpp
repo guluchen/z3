@@ -184,6 +184,7 @@ void asserted_formulas::push_scope() {
     SASSERT(inconsistent() || s.m_formulas_lim == m_qhead || m.canceled());
     s.m_inconsistent_old = m_inconsistent;
     m_defined_names.push();
+    m_elim_term_ite.push();
     m_bv_sharing.push_scope();
     m_macro_manager.push_scope();
     commit();
@@ -198,6 +199,7 @@ void asserted_formulas::pop_scope(unsigned num_scopes) {
     scope & s           = m_scopes[new_lvl];
     m_inconsistent      = s.m_inconsistent_old;
     m_defined_names.pop(num_scopes);
+    m_elim_term_ite.pop(num_scopes);
     m_scoped_substitution.pop(num_scopes);
     m_formulas.shrink(s.m_formulas_lim);
     m_qhead    = s.m_formulas_lim;
@@ -214,6 +216,11 @@ void asserted_formulas::reset() {
     m_bv_sharing.reset();
     m_rewriter.reset();
     m_inconsistent = false;
+}
+
+void asserted_formulas::finalize() {
+    reset();
+    m_substitution.cleanup();
 }
 
 bool asserted_formulas::check_well_sorted() const {
@@ -258,6 +265,7 @@ void asserted_formulas::reduce() {
     if (!invoke(m_max_bv_sharing_fn)) return;
     if (!invoke(m_elim_bvs_from_quantifiers)) return;
     if (!invoke(m_reduce_asserted_formulas)) return;
+//    if (!invoke(m_propagate_values)) return;
 
     IF_VERBOSE(10, verbose_stream() << "(smt.simplifier-done)\n";);
     TRACE("after_reduce", display(tout););
@@ -431,6 +439,7 @@ void asserted_formulas::commit() {
 }
 
 void asserted_formulas::commit(unsigned new_qhead) {
+    TRACE("asserted_formulas", tout << "commit " << new_qhead << "\n";);
     m_macro_manager.mark_forbidden(new_qhead - m_qhead, m_formulas.c_ptr() + m_qhead);
     m_expr2depth.reset();
     for (unsigned i = m_qhead; i < new_qhead; ++i) {
@@ -473,6 +482,7 @@ void asserted_formulas::propagate_values() {
         }
         num_prop = prop;
     }
+    TRACE("asserted_formulas", tout << num_prop << "\n";);
     if (num_prop > 0)
         m_reduce_asserted_formulas();
 }
@@ -496,7 +506,7 @@ unsigned asserted_formulas::propagate_values(unsigned i) {
     return n != new_n ? 1 : 0;
 }
 
-void asserted_formulas::update_substitution(expr* n, proof* pr) {
+bool asserted_formulas::update_substitution(expr* n, proof* pr) {
     expr* lhs, *rhs, *n1;
     proof_ref pr1(m);
     if (is_ground(n) && m.is_eq(n, lhs, rhs)) {
@@ -505,13 +515,13 @@ void asserted_formulas::update_substitution(expr* n, proof* pr) {
         if (is_gt(lhs, rhs)) {
             TRACE("propagate_values", tout << "insert " << mk_pp(lhs, m) << " -> " << mk_pp(rhs, m) << "\n";);
             m_scoped_substitution.insert(lhs, rhs, pr);
-            return;
+            return true;
         }
         if (is_gt(rhs, lhs)) {
             TRACE("propagate_values", tout << "insert " << mk_pp(rhs, m) << " -> " << mk_pp(lhs, m) << "\n";);
             pr1 = m.proofs_enabled() ? m.mk_symmetry(pr) : nullptr;
             m_scoped_substitution.insert(rhs, lhs, pr1);
-            return;
+            return true;
         }
         TRACE("propagate_values", tout << "incompatible " << mk_pp(n, m) << "\n";);
     }
@@ -523,6 +533,7 @@ void asserted_formulas::update_substitution(expr* n, proof* pr) {
         pr1 = m.proofs_enabled() ? m.mk_iff_true(pr) : nullptr;
         m_scoped_substitution.insert(n, m.mk_true(), pr1);
     }
+    return false;
 }
 
 
