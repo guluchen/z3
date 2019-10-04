@@ -168,14 +168,10 @@ namespace smt {
      * or else returns NULL if no concrete value was derived.
      */
     app * theory_trau::mk_value_helper(app * n, model_generator& mg) {
+        expr* a0 = nullptr, *a1 = nullptr;
         if (u.str.is_string(n)) {
             return n;
-        } else if (u.str.is_concat(n)) {
-            // recursively call this function on each argument
-            SASSERT(n->get_num_args() == 2);
-            expr * a0 = n->get_arg(0);
-            expr * a1 = n->get_arg(1);
-
+        } else if (u.str.is_concat(n, a0, a1)) {
             app * a0_conststr = mk_value_helper(to_app(a0), mg);
             app * a1_conststr = mk_value_helper(to_app(a1), mg);
 
@@ -540,11 +536,8 @@ namespace smt {
      * x . "abc" = x . y && y = "abc"
      */
     bool theory_trau::is_trivial_eq_concat(expr* x, expr* y){
-        if (u.str.is_concat(x) && u.str.is_concat(y)) {
-            expr* x0 = to_app(x)->get_arg(0);
-            expr* x1 = to_app(x)->get_arg(1);
-            expr* y0 = to_app(y)->get_arg(0);
-            expr* y1 = to_app(y)->get_arg(1);
+        expr* x0 = nullptr, *x1 = nullptr, *y0 = nullptr, *y1 = nullptr;
+        if (u.str.is_concat(x, x0, x1) && u.str.is_concat(y, y0, y1)) {
             if (are_equal_exprs(x0, y0) && are_equal_exprs(x1, y1)) {
                  return true;
             }
@@ -610,17 +603,12 @@ namespace smt {
            }
            }
         */
-
-        if (u.str.is_concat(to_app(lhs)) && u.str.is_concat(to_app(rhs))) {
+        expr *nn1_arg0 = nullptr, *nn1_arg1 = nullptr, *nn2_arg0 = nullptr, *nn2_arg1 = nullptr;
+        if (u.str.is_concat(lhs, nn1_arg0, nn1_arg1) && u.str.is_concat(rhs, nn2_arg0, nn2_arg1)) {
             bool nn1HasEqcValue = false;
             bool nn2HasEqcValue = false;
             get_eqc_value(lhs, nn1HasEqcValue);
             get_eqc_value(rhs, nn2HasEqcValue);
-
-            expr * nn1_arg0 = to_app(lhs)->get_arg(0);
-            expr * nn1_arg1 = to_app(lhs)->get_arg(1);
-            expr * nn2_arg0 = to_app(rhs)->get_arg(0);
-            expr * nn2_arg1 = to_app(rhs)->get_arg(1);
             if (nn1_arg0 == nn2_arg0 && in_same_eqc(nn1_arg1, nn2_arg1)) {
                 STRACE("str", tout << "skip: lhs arg0 == rhs arg0" << std::endl;);
                 return;
@@ -827,26 +815,20 @@ namespace smt {
         // (str.++ replace1!tmp0 (str.++ "A" replace2!tmp1)) == (str.substr url 0 (+ 1 (str.indexof url "A" 0)))
         expr* contain = nullptr;
         if (is_contain_equality(lhs, contain)) {
-            if (u.str.is_extract(rhs)) {
-                expr* arg1 = to_app(rhs)->get_arg(1);
-                expr* arg2 = to_app(rhs)->get_arg(2);
+            expr* arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
+            if (u.str.is_extract(rhs, arg0, arg1, arg2)) {
                 rational value;
                 if (m_autil.is_numeral(arg1, value) && value.get_int64() == 0) {
                     // check 3rd arg
-                    if (u.str.is_index(arg2)) {
-                        app* indexApp = to_app(arg2);
-                        expr* arg1_index = indexApp->get_arg(1);
-                        expr* arg2_index = indexApp->get_arg(2);
+                    expr* arg0_index = nullptr, *arg1_index = nullptr, *arg2_index = nullptr;
+                    if (u.str.is_index(arg2, arg0_index, arg1_index, arg2_index)) {
                         if (arg1_index == contain && arg2_index == arg1){
                             assert_axiom(mk_not(m, createEqualOP(lhs, rhs)));
                         }
                     }
                     else {
                         for (int i = 0; i < to_app(arg2)->get_num_args(); ++i)
-                            if (u.str.is_index(to_app(arg2)->get_arg(i))){
-                                app* indexApp = to_app(to_app(arg2)->get_arg(i));
-                                expr* arg1_index = indexApp->get_arg(1);
-                                expr* arg2_index = indexApp->get_arg(2);
+                            if (u.str.is_index(to_app(arg2)->get_arg(i), arg0_index, arg1_index, arg2_index)){
                                 if (arg1_index == contain && arg2_index == arg1) {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " end of " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
                                     // same containKey, same pos
@@ -1045,12 +1027,8 @@ namespace smt {
         TRACE("str", tout << mk_ismt2_pp(concat, m) << " == " << mk_ismt2_pp(str, m) << std::endl;);
 
         zstring const_str;
-        if (u.str.is_concat(to_app(concat)) && u.str.is_string(to_app(str), const_str)) {
-            app *a_concat = to_app(concat);
-            SASSERT(a_concat->get_num_args() == 2);
-            expr *a1 = a_concat->get_arg(0);
-            expr *a2 = a_concat->get_arg(1);
-
+        expr *a1 = nullptr, *a2 = nullptr;
+        if (u.str.is_concat(to_app(concat), a1, a2) && u.str.is_string(to_app(str), const_str)) {
             if (const_str.empty()) {
                 TRACE("str", tout << "quick path: concat == \"\"" << std::endl;);
                 // assert the following axiom:
@@ -2800,13 +2778,14 @@ namespace smt {
                     skip = true;
             }
 
-            if (u.str.is_concat(n1)){
-                if (n2 == to_app(n1)->get_arg(0) || n2 == to_app(n1)->get_arg(1))
+            expr *a0 = nullptr, *a1 = nullptr;
+            if (u.str.is_concat(n1, a0, a1)){
+                if (n2 == a0 || n2 == a1)
                     skip = true;
             }
 
-            if (u.str.is_concat(n2)){
-                if (n1 == to_app(n2)->get_arg(0) || n1 == to_app(n2)->get_arg(1))
+            if (u.str.is_concat(n2, a0, a1)){
+                if (n1 == a0 || n1 == a1)
                     skip = true;
             }
         }
@@ -2814,8 +2793,7 @@ namespace smt {
         instantiate_str_diseq_length_axiom(n1, n2, skip);
 
         if (!skip && is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m})) {
-            STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
-                               << mk_ismt2_pp(n2, m) << std::endl;);
+            STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
             // skip all trivial diseq
             newConstraintTriggered = true;
             expr_ref tmp(mk_not(m, createEqualOP(n1, n2)), m);
@@ -2827,8 +2805,7 @@ namespace smt {
         }
         else {
             newConstraintTriggered = true;
-            STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != "
-                               << mk_ismt2_pp(n2, m) << std::endl;);
+            STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
         }
     }
 
@@ -3047,10 +3024,11 @@ namespace smt {
         }
         else {
             string_set ret;
+            expr *a0 = nullptr, *a1 = nullptr;
             for (unsigned i = 0; i < eq.size(); ++i)
-                if (u.str.is_concat(eq[i].get())) {
-                    string_set const00 = extract_const(to_app(eq[i].get())->get_arg(0), lvl + 1);
-                    string_set const01 = extract_const(to_app(eq[i].get())->get_arg(1), lvl + 1);
+                if (u.str.is_concat(eq[i].get(), a0, a1)) {
+                    string_set const00 = extract_const(a0, lvl + 1);
+                    string_set const01 = extract_const(a1, lvl + 1);
                     if (const00.size() == 0)
                         if (const01.size() > 0) {
                             for (const auto& c : const01)
@@ -3243,17 +3221,15 @@ namespace smt {
         // YFC: membership constraint goes here
         (void) v;
         (void) is_true;
-        
+        expr *n1 = nullptr, *n2 = nullptr;
         context& ctx = get_context();
         expr* var =  ctx.bool_var2expr(v);
         if (u.str.is_prefix(var)){
         }
         else if (u.str.is_suffix(var)){
         }
-        else if (u.str.is_in_re(var)){
+        else if (u.str.is_in_re(var, n1, n2)){
             newConstraintTriggered = true;
-            expr* n1 = to_app(var)->get_arg(0);
-            expr* n2 = to_app(var)->get_arg(1);
             const str::expr_pair wi{expr_ref{n1, m}, expr_ref{n2, m}};
             if (is_true)
                 membership_memo.push_back(wi);
@@ -4669,10 +4645,10 @@ namespace smt {
     }
 
     bool theory_trau::is_empty_comparison(expr* e){
-        if (m.is_not(e)){
-            expr* eq = to_app(e)->get_arg(0);
-            expr* lhs = to_app(eq)->get_arg(0);
-            expr* rhs = to_app(eq)->get_arg(1);
+        expr *a = nullptr;
+        if (m.is_not(e, a)){
+            expr* lhs = to_app(a)->get_arg(0);
+            expr* rhs = to_app(a)->get_arg(1);
 
             if (lhs == mk_string("") || rhs == mk_string(""))
                 return true;
@@ -5178,10 +5154,9 @@ namespace smt {
                         }
                     }
 
-                    if (u.str.is_concat(eqs[i].get())) {
-                        app *concat_i = to_app(eqs[i].get());
-                        expr *i_lhs = concat_i->get_arg(0);
-                        expr *i_rhs = concat_i->get_arg(1);
+                    expr *i_lhs = nullptr;
+                    expr *i_rhs = nullptr;
+                    if (u.str.is_concat(eqs[i].get(), i_lhs, i_rhs)) {
                         rational len_i_lhs, len_i_rhs;
                         if (get_len_value(i_lhs, len_i_lhs) && has_len_lhs && len_i_lhs == len_lhs) {
 
@@ -5549,13 +5524,12 @@ namespace smt {
 
     void theory_trau::get_unique_non_concat_nodes(expr * node, expr_ref_vector & argSet) {
         app * a_node = to_app(node);
-        if (!u.str.is_concat(a_node) && !argSet.contains(node)) {
+        expr * leftArg = nullptr;
+        expr * rightArg = nullptr;
+        if (!u.str.is_concat(a_node, leftArg, rightArg) && !argSet.contains(node)) {
             argSet.push_back(node);
             return;
         } else {
-            SASSERT(a_node->get_num_args() == 2);
-            expr * leftArg = a_node->get_arg(0);
-            expr * rightArg = a_node->get_arg(1);
             get_unique_non_concat_nodes(leftArg, argSet);
             get_unique_non_concat_nodes(rightArg, argSet);
         }
@@ -5676,47 +5650,41 @@ namespace smt {
             for (const auto &e : guessed_eqs) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 app* a = to_app(e);
-                if (u.str.is_stoi(a->get_arg(0))){
-                    expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    handle_str2int(a->get_arg(1), s);
+                expr* a0 = nullptr;
+                if (u.str.is_stoi(a->get_arg(0), a0)){
+                    handle_str2int(a->get_arg(1), a0);
                 }
-                else if (u.str.is_itos(a->get_arg(0))){
-                    expr* num = to_app(a->get_arg(0))->get_arg(0);
-                    if (!m_autil.is_numeral(num))
-                        handle_int2str(num, a->get_arg(1));
+                else if (u.str.is_itos(a->get_arg(0), a0)){
+                    if (!m_autil.is_numeral(a0))
+                        handle_int2str(a0, a->get_arg(1));
                 }
-                else if (u.str.is_stoi(a->get_arg(1))){
-                    expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    handle_str2int(a->get_arg(0), s);
+                else if (u.str.is_stoi(a->get_arg(1), a0)){
+                    handle_str2int(a->get_arg(0), a0);
 
                 }
-                else if (u.str.is_itos(a->get_arg(1))){
-                    expr* num = to_app(a->get_arg(1))->get_arg(0);
-                    if (!m_autil.is_numeral(num))
-                        handle_int2str(num, a->get_arg(0));
+                else if (u.str.is_itos(a->get_arg(1), a0)){
+                    if (!m_autil.is_numeral(a0))
+                        handle_int2str(a0, a->get_arg(0));
                 }
             }
 
             for (const auto &e : guessed_diseqs) {
                 app* a = to_app(to_app(e)->get_arg(0));
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
-                if (u.str.is_stoi(a->get_arg(0))){
-                    expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    handle_str2int(a->get_arg(1), s);
+                expr* a0 = nullptr;
+                if (u.str.is_stoi(a->get_arg(0), a0)){
+                    handle_str2int(a->get_arg(1), a0);
                 }
-                else if (u.str.is_itos(a->get_arg(0))){
-                    expr* num = to_app(a->get_arg(0))->get_arg(0);
-                    if (!m_autil.is_numeral(num))
-                        handle_int2str(num, a->get_arg(1));
+                else if (u.str.is_itos(a->get_arg(0), a0)){
+                    if (!m_autil.is_numeral(a0))
+                        handle_int2str(a0, a->get_arg(1));
                 }
-                else if (u.str.is_stoi(a->get_arg(1))){
-                    expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    handle_str2int(a->get_arg(0), s);
+                else if (u.str.is_stoi(a->get_arg(1), a0)){
+                    handle_str2int(a->get_arg(0), a0);
                 }
-                else if (u.str.is_itos(a->get_arg(1))){
-                    expr* num = to_app(a->get_arg(1))->get_arg(0);
-                    if (!m_autil.is_numeral(num))
-                        handle_int2str(num, a->get_arg(0));
+                else if (u.str.is_itos(a->get_arg(1), a0)){
+                    if (!m_autil.is_numeral(a0))
+                        handle_int2str(a0, a->get_arg(0));
                 }
             }
             return true;
@@ -6618,10 +6586,8 @@ namespace smt {
 
     void theory_trau::handle_not_contain_cached(){
         for (const auto &wi : uState.disequalities) {
-            SASSERT(to_app(wi)->get_num_args() == 1);
             expr* equality = to_app(wi)->get_arg(0);
 
-            SASSERT(to_app(equality)->get_num_args() == 2);
             expr* lhs = to_app(equality)->get_arg(0);
             expr* rhs = to_app(equality)->get_arg(1);
 
@@ -7736,7 +7702,8 @@ namespace smt {
         }
         else {
             expr *arg0 = to_app(e)->get_arg(0);
-            if (u.re.is_to_re(arg0)) {
+            expr *arg00 = nullptr;
+            if (u.re.is_to_re(arg0, arg00)) {
                 expr *arg00 = to_app(arg0)->get_arg(0);
                 zstring value;
                 SASSERT (u.str.is_string(arg00, value));
@@ -7758,13 +7725,10 @@ namespace smt {
             if (nodes.size() > 0) {
                 ptr_vector<expr> tmp_nodes;
                 tmp_nodes.push_back(nodes[0]);
+                expr* tmp00 = nullptr, *tmp01 = nullptr;
                 for (unsigned i = 1; i < nodes.size(); ++i) {
-                    if (u.re.is_to_re(nodes[i]) && u.re.is_to_re(tmp_nodes[tmp_nodes.size() - 1])) {
-
+                    if (u.re.is_to_re(nodes[i], tmp01) && u.re.is_to_re(tmp_nodes[tmp_nodes.size() - 1], tmp00)) {
                         // group them
-                        expr* tmp00 = to_app(tmp_nodes[tmp_nodes.size() - 1])->get_arg(0);
-                        expr* tmp01 = to_app(nodes[i])->get_arg(0);
-
                         zstring value00, value01;
                         u.str.is_string(tmp00, value00);
                         u.str.is_string(tmp01, value01);
@@ -7819,9 +7783,9 @@ namespace smt {
             }
         }
         else {
-            if (u.re.is_concat(reg)) {
-                expr* arg0 = to_app(reg)->get_arg(0);
-                expr* arg1 = to_app(reg)->get_arg(1);
+            expr* arg0 = nullptr;
+            expr* arg1 = nullptr;
+            if (u.re.is_concat(reg, arg0, arg1)) {
                 expr_ref_vector tmp00(m);
                 tmp00.append(parse_regex_components(arg0));
                 expr_ref_vector tmp01(m);
@@ -7905,26 +7869,24 @@ namespace smt {
     }
 
     bool theory_trau::collect_alternative_components(expr* v, expr_ref_vector& ret){
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
         if (u.re.is_to_re(v)){
             ret.push_back(v);
         }
-        else if (u.re.is_union(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        else if (u.re.is_union(v, arg0, arg1)){
             if (!collect_alternative_components(arg0, ret))
                 return false;
-            expr* arg1 = to_app(v)->get_arg(1);
             if (!collect_alternative_components(arg1, ret))
                 return false;
         }
         else if (u.re.is_star(v) || u.re.is_plus(v)) {
             ret.push_back(v);
         }
-        else if (u.re.is_concat(v)){
+        else if (u.re.is_concat(v, arg0, arg1)){
             expr_ref_vector lhs(m);
             expr_ref_vector rhs(m);
-            expr* arg0 = to_app(v)->get_arg(0);
             collect_alternative_components(arg0, lhs);
-            expr* arg1 = to_app(v)->get_arg(1);
             collect_alternative_components(arg1, rhs);
 
             for (const auto& l : lhs){
@@ -7934,9 +7896,7 @@ namespace smt {
                 }
             }
         }
-        else if (u.re.is_range(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
-            expr* arg1 = to_app(v)->get_arg(1);
+        else if (u.re.is_range(v, arg0, arg1)){
             zstring start, finish;
             u.str.is_string(arg0, start);
             u.str.is_string(arg1, finish);
@@ -7956,25 +7916,23 @@ namespace smt {
     }
 
     bool theory_trau::collect_alternative_components(expr* v, vector<zstring>& ret){
-        if (u.re.is_to_re(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        if (u.re.is_to_re(v, arg0)){
             zstring tmpStr;
             u.str.is_string(arg0, tmpStr);
             ret.push_back(tmpStr);
         }
-        else if (u.re.is_union(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        else if (u.re.is_union(v, arg0, arg1)){
             if (!collect_alternative_components(arg0, ret))
                 return false;
-            expr* arg1 = to_app(v)->get_arg(1);
             if (!collect_alternative_components(arg1, ret))
                 return false;
         }
-        else if (u.re.is_star(v) || u.re.is_plus(v)) {
-            expr* arg0 = to_app(v)->get_arg(0);
+        else if (u.re.is_star(v, arg0) || u.re.is_plus(v, arg0)) {
             return collect_alternative_components(arg0, ret);
         }
-        else if (u.re.is_concat(v)){
+        else if (u.re.is_concat(v, arg0, arg1)){
             expr* tmp = is_regex_plus_breakdown(v);
             if (tmp != nullptr){
                 return collect_alternative_components(tmp, ret);
@@ -7982,9 +7940,7 @@ namespace smt {
             else
                 return false;
         }
-        else if (u.re.is_range(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
-            expr* arg1 = to_app(v)->get_arg(1);
+        else if (u.re.is_range(v, arg0, arg1)){
             zstring start, finish;
             u.str.is_string(arg0, start);
             u.str.is_string(arg1, finish);
@@ -8010,28 +7966,25 @@ namespace smt {
     }
 
     void theory_trau::collect_strs_in_membership(expr* v, string_set &ret) {
-        if (u.re.is_to_re(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        if (u.re.is_to_re(v, arg0)){
             zstring tmpStr;
             u.str.is_string(arg0, tmpStr);
             ret.insert(tmpStr);
         }
-        else if (u.re.is_union(v)){
-            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
-            collect_strs_in_membership(to_app(v)->get_arg(1), ret);
+        else if (u.re.is_union(v, arg0, arg1)){
+            collect_strs_in_membership(arg0, ret);
+            collect_strs_in_membership(arg1, ret);
         }
-        else if (u.re.is_star(v) || u.re.is_plus(v)) {
-            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
+        else if (u.re.is_star(v, arg0) || u.re.is_plus(v, arg0)) {
+            collect_strs_in_membership(arg0, ret);
         }
-        else if (u.re.is_concat(v)){
-            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
-            collect_strs_in_membership(to_app(v)->get_arg(1), ret);
+        else if (u.re.is_concat(v, arg0, arg1)){
+            collect_strs_in_membership(arg0, ret);
+            collect_strs_in_membership(arg1, ret);
         }
-        else if (u.re.is_range(v)){
-            expr* arg0 = nullptr;
-            expr* arg1 = nullptr;
-            arg0 = to_app(v)->get_arg(0);
-            arg1 = to_app(v)->get_arg(1);
+        else if (u.re.is_range(v, arg0, arg1)){
             zstring start, finish;
             u.str.is_string(arg0, start);
             u.str.is_string(arg1, finish);
@@ -8049,23 +8002,23 @@ namespace smt {
 
     expr* theory_trau::remove_star_in_star(expr* reg){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(reg, m) << std::endl;);
-        if (u.re.is_star(reg)){
-            if (contain_star(to_app(reg)->get_arg(0))) {
-                return remove_star_in_star(to_app(reg)->get_arg(0));
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        if (u.re.is_star(reg, arg0)){
+            if (contain_star(arg0)) {
+                return remove_star_in_star(arg0);
             }
             else
-                return u.re.mk_star(remove_star_in_star(to_app(reg)->get_arg(0)));
+                return u.re.mk_star(remove_star_in_star(arg0));
         }
-        else if (u.re.is_plus(reg)){
-            if (contain_star(to_app(reg)->get_arg(0)))
-                return remove_star_in_star(to_app(reg)->get_arg(0));
+        else if (u.re.is_plus(reg, arg0)){
+            if (contain_star(arg0))
+                return remove_star_in_star(arg0);
             else {
-                return u.re.mk_plus(remove_star_in_star(to_app(reg)->get_arg(0)));
+                return u.re.mk_plus(remove_star_in_star(arg0));
             }
         }
-        else if (u.re.is_concat(reg)) {
-            expr* arg0 = to_app(reg)->get_arg(0);
-            expr* arg1 = to_app(reg)->get_arg(1);
+        else if (u.re.is_concat(reg, arg0, arg1)) {
             if (u.re.is_star(arg0) && arg0 == arg1)
                 return arg0;
             if (u.re.is_plus(arg0) && arg0 == arg1)
@@ -8100,9 +8053,7 @@ namespace smt {
                 }
             }
         }
-        else if (u.re.is_union(reg)) {
-            expr* arg0 = to_app(reg)->get_arg(0);
-            expr* arg1 = to_app(reg)->get_arg(1);
+        else if (u.re.is_union(reg, arg0, arg1)) {
             if (arg0 == arg1)
                 return arg0;
             else {
@@ -8136,17 +8087,19 @@ namespace smt {
     }
 
     bool theory_trau::contain_star(expr* reg){
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
         if (u.re.is_star(reg)){
             return true;
         }
         if (u.re.is_plus(reg)){
             return true;
         }
-        else if (u.re.is_concat(reg)) {
-            return contain_star(to_app(reg)->get_arg(0)) || contain_star(to_app(reg)->get_arg(1));
+        else if (u.re.is_concat(reg, arg0, arg1)) {
+            return contain_star(arg0) || contain_star(arg1);
         }
-        else if (u.re.is_union(reg)) {
-            return contain_star(to_app(reg)->get_arg(0)) || contain_star(to_app(reg)->get_arg(1));
+        else if (u.re.is_union(reg, arg0, arg1)) {
+            return contain_star(arg0) || contain_star(arg1);
         }
         else
             return false;
@@ -8156,33 +8109,27 @@ namespace smt {
      *
      */
     zstring theory_trau::getStdRegexStr(expr* regex) {
-        if (u.re.is_to_re(regex)) {
-            expr* arg0 = to_app(regex)->get_arg(0);
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        if (u.re.is_to_re(regex, arg0)) {
             zstring value;
             u.str.is_string(arg0, value);
             return value;
-        } else if (u.re.is_concat(regex)) {
-            expr* arg0 = to_app(regex)->get_arg(0);
-            expr* arg1 = to_app(regex)->get_arg(1);
+        } else if (u.re.is_concat(regex, arg0, arg1)) {
             zstring reg1Str = getStdRegexStr(arg0);
             zstring reg2Str = getStdRegexStr(arg1);
             STRACE("str", tout << __LINE__ <<  " " << zstring("(") + reg1Str + ")(" + reg2Str + ")" << std::endl;);
             return zstring("(") + reg1Str + ")(" + reg2Str + ")";
-        } else if (u.re.is_union(regex)) {
-            expr* arg0 = to_app(regex)->get_arg(0);
-            expr* arg1 = to_app(regex)->get_arg(1);
+        } else if (u.re.is_union(regex, arg0, arg1)) {
             zstring reg1Str = getStdRegexStr(arg0);
             zstring reg2Str = getStdRegexStr(arg1);
             STRACE("str", tout << __LINE__ <<  " " << zstring("(") + reg1Str + ")~(" + reg2Str + ")" << std::endl;);
             return  zstring("(") + reg1Str + ")~(" + reg2Str + ")";
-        } else if (u.re.is_star(regex)) {
-            expr* arg0 = to_app(regex)->get_arg(0);
+        } else if (u.re.is_star(regex, arg0)) {
             zstring reg1Str = getStdRegexStr(arg0);
             STRACE("str", tout << __LINE__ <<  " " << zstring("(") + reg1Str + ")*" << std::endl;);
             return zstring("(") + reg1Str + ")*";
-        } else if (u.re.is_range(regex)) {
-            expr* arg0 = to_app(regex)->get_arg(0);
-            expr* arg1 = to_app(regex)->get_arg(1);
+        } else if (u.re.is_range(regex, arg0, arg1)) {
             zstring start;
             zstring finish;
             u.str.is_string(arg0, start);
@@ -8279,8 +8226,7 @@ namespace smt {
             return m.mk_true();
     }
 
-    zstring theory_trau::create_string_representation(pair_expr_vector const& lhs_elements,
-                                                          pair_expr_vector const& rhs_elements){
+    zstring theory_trau::create_string_representation(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements){
         std::string ret = "";
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
             ret = ret + "-" + expr2str(lhs_elements[i].first);
@@ -11430,9 +11376,10 @@ namespace smt {
     expr* theory_trau::find_i2s(expr* e){
         expr_ref_vector eqs(m);
         collect_eq_nodes(e, eqs);
+        expr* a0 = nullptr;
         for (const auto& s : eqs)
-            if (u.str.is_itos(s)) {
-                return to_app(s)->get_arg(0);
+            if (u.str.is_itos(s, a0)) {
+                return a0;
             }
 
         return nullptr;
@@ -11688,13 +11635,14 @@ namespace smt {
     void theory_trau::collect_char_range(expr* a, vector<bool> &chars){
         if (chars[255])
             return;
-        if (u.re.is_plus(a) || u.re.is_star(a)){
-            expr* tmp = to_app(a)->get_arg(0);
-            collect_char_range(tmp, chars);
+        expr* arg0 = nullptr;
+        expr* arg1 = nullptr;
+        if (u.re.is_plus(a, arg0) || u.re.is_star(a, arg0)){
+            collect_char_range(arg0, chars);
         }
-        else if (u.re.is_to_re(a)){
+        else if (u.re.is_to_re(a, arg0)){
             zstring value;
-            u.str.is_string(to_app(a)->get_arg(0), value);
+            u.str.is_string(arg0, value);
             if (value.length() != 1) {
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: give up because " << mk_pp(a, m) << " " << value << "; len " << value.length() << std::endl;);
                 chars[255] = true;
@@ -11702,16 +11650,11 @@ namespace smt {
             else
                 chars[value[0]] = true;
         }
-        else if (u.re.is_union(a)){
-            expr* arg0 = to_app(a)->get_arg(0);
+        else if (u.re.is_union(a, arg0, arg1)){
             collect_char_range(arg0, chars);
-
-            expr* arg1 = to_app(a)->get_arg(1);
             collect_char_range(arg1, chars);
         }
-        else if (u.re.is_range(a)) {
-            expr* arg0 = to_app(a)->get_arg(0);
-            expr* arg1 = to_app(a)->get_arg(1);
+        else if (u.re.is_range(a, arg0, arg1)) {
             zstring start;
             zstring finish;
             u.str.is_string(arg0, start);
@@ -11736,11 +11679,11 @@ namespace smt {
                     collect_char_range(tmp, chars);
                 else {
                     NOT_IMPLEMENTED_YET();
-                    if (u.re.is_concat(a)) {
+                    if (u.re.is_concat(a, arg0, arg1)) {
                         vector<bool> char_lhs;
                         vector<bool> char_rhs;
-                        collect_char_range(to_app(a)->get_arg(0), char_lhs);
-                        collect_char_range(to_app(a)->get_arg(1), char_rhs);
+                        collect_char_range(arg0, char_lhs);
+                        collect_char_range(arg1, char_rhs);
                     }
                 }
             }
@@ -13470,32 +13413,29 @@ namespace smt {
             
             expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
             fetch_guessed_str_int_with_scopes(guessed_eqs, guessed_diseqs);
+            expr* a0 = nullptr;
             for (const auto &e : guessed_eqs) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m)<< std::endl;);
                 app* a = to_app(e);
-                if (u.str.is_stoi(a->get_arg(0))){
-                    expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
-                    update_string_int_vars(s, string_int_vars);
+                if (u.str.is_stoi(a->get_arg(0), a0)){
+                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    update_string_int_vars(a0, string_int_vars);
                     update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
-                else if (u.str.is_itos(a->get_arg(0))){
-                    expr* num = to_app(a->get_arg(0))->get_arg(0);
+                else if (u.str.is_itos(a->get_arg(0), a0)){
                     add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), string_int_vars);
-                    update_string_int_vars(num, int_string_vars);
+                    update_string_int_vars(a0, int_string_vars);
                 }
-                else if (u.str.is_stoi(a->get_arg(1))){
-                    expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
-                    update_string_int_vars(s, string_int_vars);
+                else if (u.str.is_stoi(a->get_arg(1), a0)){
+                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    update_string_int_vars(a0, string_int_vars);
                     update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
-                else if (u.str.is_itos(a->get_arg(1))){
-                    expr* num = to_app(a->get_arg(1))->get_arg(0);
+                else if (u.str.is_itos(a->get_arg(1), a0)){
                     add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), string_int_vars);
-                    update_string_int_vars(num, int_string_vars);
+                    update_string_int_vars(a0, int_string_vars);
                 }
             }
 
@@ -13503,29 +13443,25 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m)<< std::endl;);
 
                 app* a = to_app(to_app(e)->get_arg(0));
-                if (u.str.is_stoi(a->get_arg(0))){
-                    expr* s = to_app(a->get_arg(0))->get_arg(0);
-                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
-                    update_string_int_vars(s, string_int_vars);
+                if (u.str.is_stoi(a->get_arg(0), a0)){
+                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    update_string_int_vars(a0, string_int_vars);
                     update_string_int_vars(a->get_arg(1), int_string_vars);
                 }
-                else if (u.str.is_itos(a->get_arg(0))){
-                    expr* num = to_app(a->get_arg(0))->get_arg(0);
+                else if (u.str.is_itos(a->get_arg(0), a0)){
                     add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), string_int_vars);
-                    update_string_int_vars(num, int_string_vars);
+                    update_string_int_vars(a0, int_string_vars);
                 }
-                else if (u.str.is_stoi(a->get_arg(1))){
-                    expr* s = to_app(a->get_arg(1))->get_arg(0);
-                    add_non_fresh_var(s, vars, str_int_bound.get_int64());
-                    update_string_int_vars(s, string_int_vars);
+                else if (u.str.is_stoi(a->get_arg(1), a0)){
+                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    update_string_int_vars(a0, string_int_vars);
                     update_string_int_vars(a->get_arg(0), int_string_vars);
                 }
-                else if (u.str.is_itos(a->get_arg(1))){
-                    expr* num = to_app(a->get_arg(1))->get_arg(0);
+                else if (u.str.is_itos(a->get_arg(1), a0)){
                     add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), string_int_vars);
-                    update_string_int_vars(num, int_string_vars);
+                    update_string_int_vars(a0, int_string_vars);
                 }
             }
         }
@@ -14564,24 +14500,24 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
 
         ptr_vector<expr> ret;
+        expr *arg0 = nullptr;
+        expr *arg1 = nullptr;
         for (const auto& n : s) {
-            if (u.str.is_concat(n)) {
-                expr* arg0 = to_app(n)->get_arg(0);
+            if (u.str.is_concat(n, arg0, arg1)) {
                 expr_ref_vector eq0(m);
                 collect_eq_nodes(arg0, eq0);
                 bool imp0 = is_non_fresh(arg0, non_fresh_vars);
 
-                expr* arg1 = to_app(n)->get_arg(1);
                 expr_ref_vector eq1(m);
                 collect_eq_nodes(arg1, eq1);
                 bool imp1 = is_non_fresh(arg1, non_fresh_vars);
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": checking " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << std::endl;);
                 bool notAdd = false;
                 if (!imp0 && !u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
+                    expr *arg00 = nullptr;
+                    expr *arg01 = nullptr;
                     for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i) && (*i) != (n)) {
-                            expr *arg00 = to_app(*i)->get_arg(0);
-                            expr *arg01 = to_app(*i)->get_arg(1);
+                        if (u.str.is_concat(*i, arg00, arg01) && (*i) != (n)) {
                             if (arg1 == arg01 && eq0.contains(arg00)) {
                                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg0, m) << " " << mk_pp(arg00, m) << std::endl;);
                                 notAdd = true;
@@ -14592,10 +14528,10 @@ namespace smt {
                 }
 
                 if (!imp1 && !u.str.is_concat(arg1) && !u.str.is_string(arg1)){
+                    expr *arg00 = nullptr;
+                    expr *arg01 = nullptr;
                     for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i) && (*i) != (n)) {
-                            expr *arg00 = to_app(*i)->get_arg(0);
-                            expr *arg01 = to_app(*i)->get_arg(1);
+                        if (u.str.is_concat(*i, arg00, arg01) && (*i) != (n)) {
                             if (arg0 == arg00 && eq1.contains(arg01)) {
                                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg1, m) << " " << mk_pp(arg01, m) << std::endl;);
                                 notAdd = true;
@@ -14662,18 +14598,19 @@ namespace smt {
         obj_hashtable<expr> eqConcat;
         // refine concat: a . b = c . d && a = c && b = d
         expr_ref_vector refined_eqNodeSet(m);
+        expr *arg0 = nullptr;
+        expr *arg1 = nullptr;
         for (expr_ref_vector::iterator it = eqNodeSet.begin(); it != eqNodeSet.end(); ++it) {
-            if (u.str.is_concat(*it) && *it != object) {
+            if (u.str.is_concat(*it, arg0, arg1) && *it != object) {
                 // get lhs
                 expr_ref_vector eqLhsSet(m);
-                collect_eq_nodes(to_app(*it)->get_arg(0), eqLhsSet);
+                collect_eq_nodes(arg0, eqLhsSet);
 
                 expr_ref_vector eqRhsSet(m);
-                collect_eq_nodes(to_app(*it)->get_arg(1), eqRhsSet);
+                collect_eq_nodes(arg1, eqRhsSet);
 
                 bool found = false;
-                for (expr_ref_vector::iterator itor = refined_eqNodeSet.begin();
-                     itor != refined_eqNodeSet.end(); ++itor) {
+                for (expr_ref_vector::iterator itor = refined_eqNodeSet.begin(); itor != refined_eqNodeSet.end(); ++itor) {
                     expr* lhs = to_app(*itor)->get_arg(0);
                     expr* rhs = to_app(*itor)->get_arg(1);
 
@@ -14691,12 +14628,7 @@ namespace smt {
         }
 
         for (expr_ref_vector::iterator it = refined_eqNodeSet.begin(); it != refined_eqNodeSet.end(); ++it) {
-            if (u.str.is_concat(*it)) {
-
-                // get lhs
-                expr* arg0 = ctx.get_enode(to_app(*it)->get_arg(0))->get_root()->get_owner();
-                expr* arg1 = ctx.get_enode(to_app(*it)->get_arg(1))->get_root()->get_owner();
-
+            if (u.str.is_concat(*it, arg0, arg1)) {
                 add_subnodes(arg0, arg1, subNodes);
 
                 STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
@@ -14723,14 +14655,14 @@ namespace smt {
                     eqRhs.push_back(arg1);
                 }
 
-                if (is_non_fresh(arg1, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(1))) {
+                if (is_non_fresh(arg1, non_fresh_vars) && !has_empty_vars(arg1)) {
                     eqRhs.reset();
-                    eqRhs.push_back(to_app(*it)->get_arg(1));
+                    eqRhs.push_back(arg1);
                 }
 
-                if (is_non_fresh(arg0, non_fresh_vars) && !has_empty_vars(to_app(*it)->get_arg(0))) {
+                if (is_non_fresh(arg0, non_fresh_vars) && !has_empty_vars(arg0)) {
                     eqLhs.reset();
-                    eqLhs.push_back({to_app(*it)->get_arg(0)});
+                    eqLhs.push_back({arg0});
                 }
 
                 // to prevent the exponential growth
@@ -15189,7 +15121,6 @@ namespace smt {
         len_xy = mk_strlen(a_cat);
 
         // build RHS: start by extracting x and y from Concat(x, y)
-        SASSERT(a_cat->get_num_args() == 2);
         app * a_x = to_app(a_cat->get_arg(0));
         app * a_y = to_app(a_cat->get_arg(1));
         concat_astNode_map.insert(a_x, a_y, a_cat);
@@ -15303,6 +15234,7 @@ namespace smt {
         // quick path, because this is necessary due to rewriter behaviour
         // at minimum it should fix z3str/concat-006.smt2
         zstring haystackStr, needleStr;
+        expr *arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
         if (u.str.is_string(ex->get_arg(1), needleStr)) {
             if (u.str.is_string(ex->get_arg(0), haystackStr)) {
                 if (haystackStr.contains(needleStr)) {
@@ -15325,20 +15257,11 @@ namespace smt {
                         }
                 }
             }
-            else if (u.str.is_extract(ex->get_arg(0))){
+            else if (u.str.is_extract(ex->get_arg(0), arg0, arg1, arg2)){
                 // (str.contains (str.substr value1 0 (+ 1 (str.indexof value1 "J" 0))) "J")
-                expr* substr = ex->get_arg(0);
-                STRACE("str", tout << __LINE__ << " " << mk_pp(substr, m) << std::endl;);
-                expr* arg0 = to_app(substr)->get_arg(0);
-                expr* arg1 = to_app(substr)->get_arg(1);
-                expr* arg2 = to_app(substr)->get_arg(2);
-
+                expr* arg2_arg0 = nullptr, *arg2_arg1 = nullptr, *arg2_arg2 = nullptr;
                 // check the 2nd arg:
-                if (u.str.is_index(arg1)){
-                    app* indexOfApp = to_app(arg1);
-                    expr* arg2_arg0 = indexOfApp->get_arg(0);
-                    expr* arg2_arg1 = indexOfApp->get_arg(1);
-
+                if (u.str.is_index(arg1, arg2_arg0, arg2_arg1)){
                     // same var, same keyword
                     if (arg2_arg0 == arg0 && arg2_arg1 == ex->get_arg(1)){
                         // 3rd arg = 0 || contain = true
@@ -15362,13 +15285,9 @@ namespace smt {
                     int sum = 0;
                     app* arg2app = to_app(arg2);
                     for (unsigned i = 0; i < arg2app->get_num_args(); ++i) {
-
-                        if (u.str.is_index(arg2app->get_arg(i))){
-                            STRACE("str", tout << __LINE__ << " " << mk_pp(arg2app->get_arg(i), m) << std::endl;);
+                        if (u.str.is_index(arg2app->get_arg(i), arg2_arg0, arg2_arg1, arg2_arg2)){
                             indexOfApp = to_app(arg2app->get_arg(i));
-                            expr* arg2_arg0 = indexOfApp->get_arg(0);
-                            expr* arg2_arg1 = indexOfApp->get_arg(1);
-                            expr* arg2_arg2 = indexOfApp->get_arg(2);
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(arg2app->get_arg(i), m) << std::endl;);
                             if (arg2_arg0 == arg0){
                                 zstring indexOfStr;
                                 if (u.str.is_string(arg2_arg1, indexOfStr) && indexOfStr == needleStr) {
@@ -15377,6 +15296,7 @@ namespace smt {
                                     }
                                 }
                             }
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(arg2app->get_arg(i), m) << std::endl;);
                         }
                         else {
                             rational val;
@@ -16052,9 +15972,9 @@ namespace smt {
                                 if (first_part != index_tail[arg0].first)
                                     assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg0].first));
 
-                                if (u.str.is_concat(index_tail[arg0].first)) {
-                                    expr* concat_0 = to_app(index_tail[arg0].first)->get_arg(0);
-                                    expr* concat_1 = to_app(index_tail[arg0].first)->get_arg(1);
+                                expr* concat_0 = nullptr;
+                                expr* concat_1 = nullptr;
+                                if (u.str.is_concat(index_tail[arg0].first, concat_0, concat_1)) {
                                     length_relation.insert(std::make_pair(first_part, concat_0));
                                     length_relation.insert(std::make_pair(first_part, concat_1));
                                 }
@@ -16077,9 +15997,9 @@ namespace smt {
                                 if (first_part != index_tail[arg1].first)
                                     assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg1].first));
 
-                                if (u.str.is_concat(index_tail[arg1].first)) {
-                                    expr* concat_0 = to_app(index_tail[arg1].first)->get_arg(0);
-                                    expr* concat_1 = to_app(index_tail[arg1].first)->get_arg(1);
+                                expr* concat_0 = nullptr;
+                                expr* concat_1 = nullptr;
+                                if (u.str.is_concat(index_tail[arg1].first, concat_0, concat_1)) {
                                     length_relation.insert(std::make_pair(first_part, concat_0));
                                     length_relation.insert(std::make_pair(first_part, concat_1));
                                 }
@@ -16513,22 +16433,24 @@ namespace smt {
         //  - regex: regex term appearing in ex
         //  ex ::= (str.in.re str regex)
 
-        if (u.re.is_to_re(regex)) {
+        expr* a0 = nullptr;
+        expr* a1 = nullptr;
+        if (u.re.is_to_re(regex, a0)) {
             STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
-            expr_ref rxStr(regex->get_arg(0), m);
+            expr_ref rxStr(a0, m);
             // want to assert 'expr IFF (str == rxStr)'
             expr_ref rhs(ctx.mk_eq_atom(str, rxStr), m);
             expr_ref finalAxiom(m.mk_iff(ex, rhs), m);
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
-        } else if (u.re.is_concat(regex)) {
+        } else if (u.re.is_concat(regex, a0, a1)) {
             STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
             expr_ref var1(mk_regex_rep_var(), m);
             expr_ref var2(mk_regex_rep_var(), m);
             expr_ref rhs(mk_concat(var1, var2), m);
-            expr_ref rx1(regex->get_arg(0), m);
-            expr_ref rx2(regex->get_arg(1), m);
+            expr_ref rx1(a0, m);
+            expr_ref rx2(a1, m);
             expr_ref var1InRegex1(mk_regexIn(var1, rx1), m);
             expr_ref var2InRegex2(mk_regexIn(var2, rx2), m);
 
@@ -16540,14 +16462,14 @@ namespace smt {
             expr_ref finalAxiom(mk_and(items), m);
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
-        } else if (u.re.is_union(regex)) {
+        } else if (u.re.is_union(regex, a0, a1)) {
             STRACE("str", tout << __LINE__ << " "  << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
 
             expr_ref var1(mk_regex_rep_var(), m);
             expr_ref var2(mk_regex_rep_var(), m);
             expr_ref orVar(m.mk_or(ctx.mk_eq_atom(str, var1), ctx.mk_eq_atom(str, var2)), m);
-            expr_ref regex1(regex->get_arg(0), m);
-            expr_ref regex2(regex->get_arg(1), m);
+            expr_ref regex1(a0, m);
+            expr_ref regex2(a1, m);
             expr_ref var1InRegex1(mk_regexIn(var1, regex1), m);
             expr_ref var2InRegex2(mk_regexIn(var2, regex2), m);
             expr_ref_vector items(m);
@@ -16556,23 +16478,22 @@ namespace smt {
             items.push_back(ctx.mk_eq_atom(ex, orVar));
             assert_axiom(mk_and(items));
 
-        } else if (u.re.is_star(regex)) {
+        } else if (u.re.is_star(regex, a0)) {
             // slightly more complex due to the unrolling step.
-            expr_ref regex1(regex->get_arg(0), m);
+            expr_ref regex1(a0, m);
             expr_ref unrollCount(mk_unroll_bound_var(), m);
             expr_ref unrollFunc(mk_unroll(regex1, unrollCount), m);
             expr_ref_vector items(m);
             items.push_back(ctx.mk_eq_atom(ex, ctx.mk_eq_atom(str, unrollFunc)));
-            items.push_back(
-                    ctx.mk_eq_atom(ctx.mk_eq_atom(unrollCount, mk_int(0)), ctx.mk_eq_atom(unrollFunc, mk_string(""))));
+            items.push_back(ctx.mk_eq_atom(ctx.mk_eq_atom(unrollCount, mk_int(0)), ctx.mk_eq_atom(unrollFunc, mk_string(""))));
             expr_ref finalAxiom(mk_and(items), m);
             SASSERT(finalAxiom);
             assert_axiom(finalAxiom);
-        } else if (u.re.is_range(regex)) {
+        } else if (u.re.is_range(regex, a0, a1)) {
             // (re.range "A" "Z") unfolds to (re.union "A" "B" ... "Z");
             // we rewrite to expr IFF (str = "A" or str = "B" or ... or str = "Z")
-            expr_ref lo(regex->get_arg(0), m);
-            expr_ref hi(regex->get_arg(1), m);
+            expr_ref lo(a0, m);
+            expr_ref hi(a1, m);
             zstring str_lo, str_hi;
             SASSERT(u.str.is_string(lo));
             SASSERT(u.str.is_string(hi));
@@ -16613,18 +16534,15 @@ namespace smt {
     }
 
     expr* theory_trau::is_regex_plus_breakdown(expr* e){
-        if (u.re.is_concat(e)){
-            expr* arg0 = to_app(e)->get_arg(0);
-            expr* arg1 = to_app(e)->get_arg(1);
-
-            if (u.re.is_star(arg1)){
-                expr* arg10 = to_app(arg1)->get_arg(0);
+        expr* arg0 = nullptr, * arg1 = nullptr;
+        if (u.re.is_concat(to_app(e), arg0, arg1)){
+            expr* arg10 = nullptr, * arg00 = nullptr;
+            if (u.re.is_star(to_app(arg1), arg10)){
                 if (arg10 == arg0)
                     return arg1;
             }
 
-            if (u.re.is_star(arg0)){
-                expr* arg00 = to_app(arg0)->get_arg(0);
+            if (u.re.is_star(to_app(arg0), arg00)){
                 if (arg00 == arg1)
                     return arg0;
             }
@@ -16759,15 +16677,13 @@ namespace smt {
         if (n1HasEqcValue && n2HasEqcValue) {
             return mk_concat_const_str(n1, n2);
         } else if (n1HasEqcValue && !n2HasEqcValue) {
-            bool n2_isConcatFunc = u.str.is_concat(to_app(n2));
             zstring n1_str;
             u.str.is_string(n1, n1_str);
             if (n1_str.empty()) {
                 return n2;
             }
-            if (n2_isConcatFunc) {
-                expr *n2_arg0 = to_app(n2)->get_arg(0);
-                expr *n2_arg1 = to_app(n2)->get_arg(1);
+            expr *n2_arg0 = nullptr, *n2_arg1 = nullptr;
+            if (u.str.is_concat(to_app(n2), n2_arg0, n2_arg1)) {
                 if (u.str.is_string(n2_arg0)) {
                     n1 = mk_concat_const_str(n1, n2_arg0); // n1 will be a constant
                     n2 = n2_arg1;
@@ -16779,21 +16695,16 @@ namespace smt {
             if (n2_str.empty()) {
                 return n1;
             }
-
-            if (u.str.is_concat(to_app(n1))) {
-                expr *n1_arg0 = to_app(n1)->get_arg(0);
-                expr *n1_arg1 = to_app(n1)->get_arg(1);
+            expr *n1_arg0 = nullptr, *n1_arg1 = nullptr;
+            if (u.str.is_concat(to_app(n1), n1_arg0, n1_arg1)) {
                 if (u.str.is_string(n1_arg1)) {
                     n1 = n1_arg0;
                     n2 = mk_concat_const_str(n1_arg1, n2); // n2 will be a constant
                 }
             }
         } else {
-            if (u.str.is_concat(to_app(n1)) && u.str.is_concat(to_app(n2))) {
-                expr *n1_arg0 = to_app(n1)->get_arg(0);
-                expr *n1_arg1 = to_app(n1)->get_arg(1);
-                expr *n2_arg0 = to_app(n2)->get_arg(0);
-                expr *n2_arg1 = to_app(n2)->get_arg(1);
+            expr *n1_arg0 = nullptr, *n1_arg1 = nullptr, *n2_arg0 = nullptr, *n2_arg1 = nullptr;
+            if (u.str.is_concat(to_app(n1), n1_arg0, n1_arg1) && u.str.is_concat(to_app(n2), n2_arg0, n2_arg1)) {
                 if (u.str.is_string(n1_arg1) && u.str.is_string(n2_arg0)) {
                     expr *tmpN1 = n1_arg0;
                     expr *tmpN2 = mk_concat_const_str(n1_arg1, n2_arg0);
@@ -16960,8 +16871,6 @@ namespace smt {
 
     app * theory_trau::mk_arr_var(zstring name) {
         context & ctx = get_context();
-        
-
         STRACE("str", tout << __FUNCTION__ << ":" << name << std::endl;);
         sort * int_sort = m.mk_sort(m_autil.get_family_id(), INT_SORT);
         sort * arr_sort = m_arrayUtil.mk_array_sort(int_sort, int_sort);
@@ -16977,13 +16886,11 @@ namespace smt {
 
     void theory_trau::get_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList) {
         app * a_node = to_app(node);
-        if (!u.str.is_concat(a_node)) {
+        expr * leftArg = nullptr, * rightArg = nullptr;
+        if (!u.str.is_concat(a_node, leftArg, rightArg)) {
             nodeList.push_back(node);
             return;
         } else {
-            SASSERT(a_node->get_num_args() == 2);
-            expr * leftArg = a_node->get_arg(0);
-            expr * rightArg = a_node->get_arg(1);
             get_nodes_in_concat(leftArg, nodeList);
             get_nodes_in_concat(rightArg, nodeList);
         }
@@ -16991,12 +16898,11 @@ namespace smt {
 
     void theory_trau::get_nodes_in_reg_concat(expr * node, ptr_vector<expr> & nodeList) {
         app * a_node = to_app(node);
-        if (!u.re.is_concat(a_node)) {
+        expr * leftArg = nullptr, * rightArg = nullptr;
+        if (!u.re.is_concat(a_node, leftArg, rightArg)) {
             nodeList.push_back(node);
             return;
         } else {
-            expr * leftArg = a_node->get_arg(0);
-            expr * rightArg = a_node->get_arg(1);
             get_nodes_in_reg_concat(leftArg, nodeList);
             get_nodes_in_reg_concat(rightArg, nodeList);
         }
@@ -17004,14 +16910,12 @@ namespace smt {
 
     void theory_trau::get_all_nodes_in_concat(expr * node, ptr_vector<expr> & nodeList) {
         app * a_node = to_app(node);
-        if (!u.str.is_concat(a_node)) {
+        expr * leftArg = nullptr, * rightArg = nullptr;
+        if (!u.str.is_concat(a_node, leftArg, rightArg)) {
             nodeList.push_back(node);
             return;
         } else {
-            SASSERT(a_node->get_num_args() == 2);
             nodeList.push_back(node);
-            expr * leftArg = a_node->get_arg(0);
-            expr * rightArg = a_node->get_arg(1);
             get_all_nodes_in_concat(leftArg, nodeList);
             get_all_nodes_in_concat(rightArg, nodeList);
         }
@@ -17136,34 +17040,27 @@ namespace smt {
 
     zstring theory_trau::get_std_regex_str(expr * regex) {
         app *a_regex = to_app(regex);
-        if (u.re.is_to_re(a_regex)) {
-            expr *regAst = a_regex->get_arg(0);
+        expr *reg1Ast = nullptr, *reg2Ast = nullptr;
+        if (u.re.is_to_re(a_regex, reg1Ast)) {
             zstring regAstVal;
-            u.str.is_string(regAst, regAstVal);
+            u.str.is_string(reg1Ast, regAstVal);
             zstring regStr = str2RegexStr(regAstVal);
             return regStr;
-        } else if (u.re.is_concat(a_regex)) {
-            expr *reg1Ast = a_regex->get_arg(0);
-            expr *reg2Ast = a_regex->get_arg(1);
+        } else if (u.re.is_concat(a_regex, reg1Ast, reg2Ast)) {
             zstring reg1Str = get_std_regex_str(reg1Ast);
             zstring reg2Str = get_std_regex_str(reg2Ast);
             return zstring("(") + reg1Str + zstring(")(") + reg2Str + zstring(")");
-        } else if (u.re.is_union(a_regex)) {
-            expr *reg1Ast = a_regex->get_arg(0);
-            expr *reg2Ast = a_regex->get_arg(1);
+        } else if (u.re.is_union(a_regex, reg1Ast, reg2Ast)) {
             zstring reg1Str = get_std_regex_str(reg1Ast);
             zstring reg2Str = get_std_regex_str(reg2Ast);
             return zstring("(") + reg1Str + zstring(")|(") + reg2Str + zstring(")");
-        } else if (u.re.is_star(a_regex)) {
-            expr *reg1Ast = a_regex->get_arg(0);
+        } else if (u.re.is_star(a_regex, reg1Ast)) {
             zstring reg1Str = get_std_regex_str(reg1Ast);
             return zstring("(") + reg1Str + zstring(")*");
-        } else if (u.re.is_range(a_regex)) {
-            expr *range1 = a_regex->get_arg(0);
-            expr *range2 = a_regex->get_arg(1);
+        } else if (u.re.is_range(a_regex, reg1Ast, reg2Ast)) {
             zstring range1val, range2val;
-            u.str.is_string(range1, range1val);
-            u.str.is_string(range2, range2val);
+            u.str.is_string(reg1Ast, range1val);
+            u.str.is_string(reg2Ast, range2val);
             return zstring("[") + range1val + zstring("-") + range2val + zstring("]");
         } else if (u.re.is_loop(a_regex)) {
             expr *body;
@@ -17196,16 +17093,14 @@ namespace smt {
 
         rational val1;
         expr_ref len(m), len_val(m);
-        expr* e1, *e2;
+        expr* e1 = nullptr, *e2 = nullptr;
         ptr_vector<expr> todo;
         todo.push_back(e);
         val.reset();
         while (!todo.empty()) {
             expr* c = todo.back();
             todo.pop_back();
-            if (u.str.is_concat(to_app(c))) {
-                e1 = to_app(c)->get_arg(0);
-                e2 = to_app(c)->get_arg(1);
+            if (u.str.is_concat(c, e1, e2)) {
                 todo.push_back(e1);
                 todo.push_back(e2);
             }
@@ -17915,6 +17810,7 @@ namespace smt {
         }
 
         int pos = 0;
+        expr *arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
         while (pos < ret.size()){
             expr* tmp = ret[pos].get();
             pos++;
@@ -17922,9 +17818,7 @@ namespace smt {
             if (get_len_value(tmp, lenValue) && lenValue.get_int64() == 0)
                 continue;
 
-            if (u.str.is_replace(tmp)){
-                expr* arg0 = to_app(tmp)->get_arg(0);
-                expr* arg1 = to_app(tmp)->get_arg(1);
+            if (u.str.is_replace(tmp, arg0, arg1, arg2)){
                 zstring val;
                 if (u.str.is_string(arg1, val)) {
                     if (!val.contains(containKey)) {  // x = replace y val ? && val does not contain key --> y does not contain key
@@ -18064,41 +17958,38 @@ namespace smt {
         ctx.get_assignments(assignments);
         expr_ref_vector stored_eq(m);
         expr_ref_vector stored_diseq(m);
+
+        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
         for (const auto& s : assignments) {
             if (ctx.is_relevant(s)) {
-                if (!m.is_not(s)) {
+                if (!m.is_not(s, a0)) {
                     app* a = to_app(s);
-                    if (a->get_num_args() == 2 && m.is_eq(a) &&
-                            ((u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) ||
-                                    (u.str.is_itos(a->get_arg(0)) || u.str.is_itos(a->get_arg(1))))) {
+                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
+                            ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
-                        if ((u.str.is_stoi(a->get_arg(0)) || u.str.is_itos(a->get_arg(0))) &&
-                                !stored_eq.contains(a->get_arg(0))) {
+                        if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) && !stored_eq.contains(a1)) {
                             guessed_eqs.push_back(s);
-                            stored_eq.push_back(a->get_arg(0));
+                            stored_eq.push_back(a1);
                         }
-                        else if ((u.str.is_stoi(a->get_arg(1)) || u.str.is_itos(a->get_arg(1))) &&
-                                 !stored_eq.contains(a->get_arg(1))) {
+                        else if ((u.str.is_stoi(a2) || u.str.is_itos(a2)) && !stored_eq.contains(a2)) {
                             guessed_eqs.push_back(s);
-                            stored_eq.push_back(a->get_arg(1));
+                            stored_eq.push_back(a2);
                         }
                     }
                 }
                 else if (to_app(s)->get_num_args() == 1){
-                    app* a = to_app(to_app(s)->get_arg(0));
-                    if (a->get_num_args() == 2 && m.is_eq(a) &&
-                        ((u.str.is_stoi(a->get_arg(0)) || u.str.is_stoi(a->get_arg(1))) ||
-                                (u.str.is_itos(a->get_arg(0)) || u.str.is_itos(a->get_arg(1))))) {
+                    app* a = to_app(a0);
+                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
+                        ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
-                        if ((u.str.is_stoi(a->get_arg(0)) || u.str.is_itos(a->get_arg(0))) &&
-                            !stored_diseq.contains(a->get_arg(0))) {
+                        if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) &&
+                            !stored_diseq.contains(a1)) {
                             guessed_diseqs.push_back(s);
-                            stored_diseq.push_back(a->get_arg(0));
+                            stored_diseq.push_back(a1);
                         }
-                        else if ((u.str.is_stoi(a->get_arg(1)) || u.str.is_itos(a->get_arg(1))) &&
-                                 !stored_diseq.contains(a->get_arg(1))) {
+                        else if ((u.str.is_stoi(a2) || u.str.is_itos(a2)) && !stored_diseq.contains(a2)) {
                             guessed_diseqs.push_back(s);
-                            stored_diseq.push_back(a->get_arg(1));
+                            stored_diseq.push_back(a2);
                         }
                     }
                 }
@@ -18250,25 +18141,20 @@ namespace smt {
     }
 
     void theory_trau::string_value_proc::collect_alternative_components(expr* v, vector<zstring>& ret){
-        if (th.u.re.is_to_re(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        expr* arg0 = nullptr, * arg1 = nullptr;
+        if (th.u.re.is_to_re(v, arg0)){
             zstring tmpStr;
             th.u.str.is_string(arg0, tmpStr);
             ret.push_back(tmpStr);
         }
-        else if (th.u.re.is_union(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
+        else if (th.u.re.is_union(v, arg0, arg1)){
             collect_alternative_components(arg0, ret);
-            expr* arg1 = to_app(v)->get_arg(1);
             collect_alternative_components(arg1, ret);
         }
-        else if (th.u.re.is_star(v) || th.u.re.is_plus(v)) {
-            expr* arg0 = to_app(v)->get_arg(0);
+        else if (th.u.re.is_star(v, arg0) || th.u.re.is_plus(v, arg0)) {
             collect_alternative_components(arg0, ret);
         }
-        else if (th.u.re.is_range(v)){
-            expr* arg0 = to_app(v)->get_arg(0);
-            expr* arg1 = to_app(v)->get_arg(1);
+        else if (th.u.re.is_range(v, arg0, arg1)){
             zstring start, finish;
             th.u.str.is_string(arg0, start);
             th.u.str.is_string(arg1, finish);
@@ -18294,18 +18180,16 @@ namespace smt {
     }
 
     expr* theory_trau::string_value_proc::is_regex_plus_breakdown(expr* e){
-        if (th.u.re.is_concat(e)){
-            expr* arg0 = to_app(e)->get_arg(0);
-            expr* arg1 = to_app(e)->get_arg(1);
-
-            if (th.u.re.is_star(arg1)){
-                expr* arg10 = to_app(arg1)->get_arg(0);
+        expr* arg0 = nullptr, *arg1 = nullptr;
+        if (th.u.re.is_concat(e, arg0, arg1)){
+            expr *arg10 = nullptr;
+            if (th.u.re.is_star(arg1, arg10)){
                 if (arg10 == arg0)
                     return arg1;
             }
 
-            if (th.u.re.is_star(arg0)){
-                expr* arg00 = to_app(arg0)->get_arg(0);
+            expr *arg00 = nullptr;
+            if (th.u.re.is_star(arg0, arg00)){
                 if (arg00 == arg1)
                     return arg0;
             }
@@ -18379,8 +18263,7 @@ namespace smt {
             func_interp* fi = mg.get_model().get_func_interp(fd);
 
             unsigned num_entries = fi->num_entries();
-            for(unsigned i = 0; i < num_entries; i++)
-            {
+            for (unsigned i = 0; i < num_entries; i++){
                 func_entry const* fe = fi->get_entry(i);
                 expr* k =  fe->get_arg(0);
                 rational key;
@@ -18546,24 +18429,18 @@ namespace smt {
                         << mk_pp(ancestor, mg.get_manager())
                         << std::endl;);
             zstring ancestorValue;
-            if (get_str_value(th.get_context().get_enode(ancestor), m_root2value,
-                              ancestorValue)) {
+            if (get_str_value(th.get_context().get_enode(ancestor), m_root2value, ancestorValue)) {
                 if (th.u.str.is_concat(ancestor)) {
-                    if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value,
-                                                     len, value)) {
+                    if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value, len, value)) {
                         return true;
                     }
                 }
-
-
 
                 // find in its eq
                 if (th.uState.eq_combination.contains(ancestor)) {
                     for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
                         if (th.u.str.is_concat(ancestor_i)) {
-                            if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue,
-                                                             m_root2value, len,
-                                                             value)) {
+                            if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue, m_root2value, len, value)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << value << std::endl;);
                                 return true;
                             }
@@ -18576,8 +18453,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::string_value_proc::fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue,
-                                      obj_map<enode, app *> const& m_root2value, int len, zstring &value){
+    bool theory_trau::string_value_proc::fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue, obj_map<enode, app *> const& m_root2value, int len, zstring &value){
         if (th.u.str.is_concat(concat)){
 
             ptr_vector<expr> leafNodes;
@@ -18590,6 +18466,7 @@ namespace smt {
                     tmp = node;
                 else
                     tmp = linker;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << std::endl;);
                 int prefix = find_prefix_len(mg, concat, tmp, m_root2value);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
@@ -18608,18 +18485,18 @@ namespace smt {
             return prefix;
         }
         else
-        SASSERT(false);
+            SASSERT(false);
 
         return -1;
     }
 
-    bool theory_trau::string_value_proc::find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value,
-                         int &prefix){
+    bool theory_trau::string_value_proc::find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value, int &prefix){
         if (concat == subNode)
             return true;
-        if (th.u.str.is_concat(concat)){
-            if (!find_prefix_len(mg, to_app(concat)->get_arg(0), subNode, m_root2value, prefix)) {
-                if (!find_prefix_len(mg, to_app(concat)->get_arg(1), subNode, m_root2value, prefix))
+        expr* e1 = nullptr, *e2 = nullptr;
+        if (th.u.str.is_concat(concat, e1, e2)){
+            if (!find_prefix_len(mg, e1, subNode, m_root2value, prefix)) {
+                if (!find_prefix_len(mg, e2, subNode, m_root2value, prefix))
                     return false;
                 else
                     return true;
