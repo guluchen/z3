@@ -12950,7 +12950,7 @@ namespace smt {
 
         /* cut prefix */
         int prefix = -1;
-        for ((unsigned) i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
             else
@@ -12958,7 +12958,7 @@ namespace smt {
 
         /* cut suffix */
         int suffix = -1;
-        for ((unsigned) i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+        for (unsigned i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
             else
@@ -18070,7 +18070,7 @@ namespace smt {
         vector<zstring> elements = collect_alternative_components(regex);
         if (th.u.re.is_union(regex)) {
             SASSERT(elements.size() > 0);
-            for ((unsigned) i = 0; i < elements.size(); ++i) {
+            for (unsigned i = 0; i < elements.size(); ++i) {
                 if (elements[i].length() == (unsigned)len_int){
                     str_value = elements[i];
                     return true;
