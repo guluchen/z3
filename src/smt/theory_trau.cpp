@@ -7365,8 +7365,7 @@ namespace smt {
                                          obj_map<expr, int> & non_fresh_vars,
                                        expr* premise){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
-        
-        clock_t t = clock();
+         
         curr_var_pieces_counter.reset();
         generated_equalities.reset();
 
@@ -7703,8 +7702,7 @@ namespace smt {
         else {
             expr *arg0 = to_app(e)->get_arg(0);
             expr *arg00 = nullptr;
-            if (u.re.is_to_re(arg0, arg00)) {
-                expr *arg00 = to_app(arg0)->get_arg(0);
+            if (u.re.is_to_re(arg0, arg00)) { 
                 zstring value;
                 SASSERT (u.str.is_string(arg00, value));
                 return value;
@@ -18201,8 +18199,7 @@ namespace smt {
     }
 
     bool theory_trau::string_value_proc::construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue){
-        clock_t start_clock = clock();
-        ast_manager & m = mg.get_manager();
+        clock_t start_clock = clock(); 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
         if (len_int != -1) {
             // non root var

@@ -5,8 +5,7 @@
 #include <set>
 #include <stack>
 #include <map>
-#include <vector>
-#include <strhash.h>
+#include <vector> 
 #include "ast/arith_decl_plugin.h"
 #include "ast/array_decl_plugin.h"
 #include "ast/ast_pp.h"
