@@ -827,7 +827,7 @@ namespace smt {
                         }
                     }
                     else {
-                        for (int i = 0; i < to_app(arg2)->get_num_args(); ++i)
+                        for (unsigned i = 0; i < to_app(arg2)->get_num_args(); ++i)
                             if (u.str.is_index(to_app(arg2)->get_arg(i), arg0_index, arg1_index, arg2_index)){
                                 if (arg1_index == contain && arg2_index == arg1) {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " end of " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
@@ -3968,7 +3968,7 @@ namespace smt {
                 break;
 
         zstring val;
-        for (int i = prefix; i < rhsVec.size() - suffix; ++i)
+        for (int i = prefix; i < (int)rhsVec.size() - suffix; ++i)
             if (u.str.is_string(rhsVec[i], val))
                 if (val.contains(needle) || needle.contains(val))
                     return false;
@@ -4188,7 +4188,7 @@ namespace smt {
                         if (nn != e){
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                             int cnt = get_lower_bound_image_in_expr(nn, constList[0].get());
-                            if (cnt > constList.size())
+                            if (cnt > (int)constList.size())
                                 return false;
                         }
                 }
@@ -4719,7 +4719,7 @@ namespace smt {
                 get_nodes_in_concat(we.first.get(), childNodes);
                 for (const auto& n : childNodes){
                     if (u.str.is_string(n, value)) {
-                        for (int i = 0; i < value.length(); ++i)
+                        for (unsigned i = 0; i < value.length(); ++i)
                             charDomain.insert(value[i]);
                     }
                 }
@@ -6208,7 +6208,7 @@ namespace smt {
                 }
 
                 // reach the end
-                if (pos == elements.size())
+                if (pos == (int)elements.size())
                     return true;
             }
         }
@@ -6651,7 +6651,7 @@ namespace smt {
             if (arr == nullptr)
                 return;
 
-            for (unsigned i = rhs.length(); i <= bound; ++i){
+            for (int i = (int)rhs.length(); i <= bound; ++i){
                 expr_ref_vector subcases(m);
 //                subcases.push_back(createLessEqOP(lenExpr, mk_int(i - 1)));
                 for (unsigned k = 0; k < rhs.length(); ++k) {
@@ -7555,7 +7555,7 @@ namespace smt {
                 return m_autil.mk_eq(mk_strlen(pre_contain), mk_int(index));
             }
         }
-        else if (lenInt > 0 && lenInt <= c.length()){
+        else if (lenInt > 0 && lenInt <= (int)c.length()){
             expr_ref_vector ors(m);
             expr* arr = get_var_flat_array(key);
 
@@ -7565,7 +7565,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(pre_contain), mk_int(i)));
 
                 // arr = ?
-                for (unsigned j = 0; j < lenInt; ++j) {
+                for (int j = 0; j < lenInt; ++j) {
                     ands.push_back(createEqualOP(createSelectOP(arr, mk_int(j)), mk_int(c[i + j])));
                 }
                 ors.push_back(createAndOP(ands));
@@ -7811,7 +7811,7 @@ namespace smt {
     vector<zstring> theory_trau::collect_alternative_components(zstring str){
         if (str.length() <= 2)
             return init_zstring_vector(str);
-        else if (str[0] == '(' && str[str.length() - 1] == ')' && find_correspond_right_parentheses(0, str) == str.length() - 1) {
+        else if (str[0] == '(' && str[str.length() - 1] == ')' && find_correspond_right_parentheses(0, str) == (int)str.length() - 1) {
             return collect_alternative_components(str.extract(1, str.length() - 2));
         }
         else {
@@ -7901,7 +7901,7 @@ namespace smt {
             SASSERT(start.length() == 1);
             SASSERT(finish.length() == 1);
 
-            for (int i = start[0]; i <= finish[0]; ++i){
+            for (unsigned i = start[0]; i <= finish[0]; ++i){
                 expr* tmp = mk_string(i);
                 ret.push_back(tmp);
             }
@@ -7945,7 +7945,7 @@ namespace smt {
             SASSERT(start.length() == 1);
             SASSERT(finish.length() == 1);
 
-            for (int i = start[0]; i <= finish[0]; ++i){
+            for (unsigned i = start[0]; i <= finish[0]; ++i){
                 zstring tmp(i);
                 ret.push_back(tmp);
             }
@@ -7989,7 +7989,7 @@ namespace smt {
             SASSERT(start.length() == 1);
             SASSERT(finish.length() == 1);
 
-            for (int i = start[0]; i <= finish[0]; ++i) {
+            for (unsigned i = start[0]; i <= finish[0]; ++i) {
                 zstring tmp((char)i);
                 ret.insert(tmp);
             }
@@ -8876,7 +8876,7 @@ namespace smt {
             if (match_regex(regex, regexValue)) {
                 expr_ref_vector ands(m);
                 ands.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
-                for (int i = 0; i < length - 1; ++i) {
+                for (int i = 0; i < (int)length - 1; ++i) {
                     // TODO arr vs arr
                 }
                 ors.push_back(createEqualOP(nameA, m_autil.mk_int(length)));
@@ -10339,7 +10339,7 @@ namespace smt {
                 for (int i = 0; i < pMax; ++i) {
                     expr_ref_vector ors(m);
                     expr_ref_vector ors_range(m);
-                    for (int j = 0; j < charRange.size(); ++j) {
+                    for (int j = 0; j < (int)charRange.size(); ++j) {
                         expr_ref_vector ands(m);
                         ands.push_back(createGreaterEqOP(
                                 createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs)),
@@ -10363,7 +10363,7 @@ namespace smt {
                 for (int i = 0; i < bound; ++i) {
                     expr_ref_vector ors(m);
                     expr_ref_vector ors_range(m);
-                    for (int j = 0; j < charRange.size(); ++j) {
+                    for (int j = 0; j < (int)charRange.size(); ++j) {
                         expr_ref_vector ands(m);
                         ands.push_back(createGreaterEqOP(
                                 createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs)),
@@ -12313,7 +12313,7 @@ namespace smt {
                 if (left_arr[i + 1] == EMPTYFLAT){
                     return RIGHT_EMPTY;
                 }
-                else if (j + 1 < rhs_elements.size()){
+                else if (j + 1 < (int)rhs_elements.size()){
                     if (left_arr[i + 1] == j + 1 &&
                         right_arr[j + 1] == i + 1 &&
                         rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0){
@@ -12556,13 +12556,11 @@ namespace smt {
             }
             else {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(list[i], eqs);
-                bool found = false;
+                collect_eq_nodes(list[i], eqs); 
 
                 for (unsigned j = 0; j < eqs.size(); ++j) {
                     if (is_internal_regex_var(eqs[j].get(), reg)) {
-                        l.push_back(eqs[j].get());
-                        found = true;
+                        l.push_back(eqs[j].get()); 
                         break;
                     }
                 }
@@ -12952,7 +12950,7 @@ namespace smt {
 
         /* cut prefix */
         int prefix = -1;
-        for (int i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+        for ((unsigned) i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[i], rhsVec[i]))
                 prefix = i;
             else
@@ -12960,7 +12958,7 @@ namespace smt {
 
         /* cut suffix */
         int suffix = -1;
-        for (int i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
+        for ((unsigned) i = 0; i < std::min(lhsVec.size(), rhsVec.size()); ++i)
             if (are_equal_exprs(lhsVec[lhsVec.size() - 1 - i], rhsVec[rhsVec.size() - 1 - i]))
                 suffix = i;
             else
@@ -13047,7 +13045,7 @@ namespace smt {
             return false;
 
         // reach the end of equality
-        if (prefix == std::min(lhs_nodes.size(), rhs_nodes.size()) - 1 || suffix == std::min(lhs_nodes.size(), rhs_nodes.size()) - 1)
+        if (prefix == (int)std::min(lhs_nodes.size(), rhs_nodes.size()) - 1 || suffix == (int)std::min(lhs_nodes.size(), rhs_nodes.size()) - 1)
             return true;
 
         and_lhs.append(and_rhs);
@@ -13621,12 +13619,12 @@ namespace smt {
 
         if (len > 0) {
             zstring constPart = "";
-            for (unsigned i = 0; i < eqList.size(); ++i) {
+            for (unsigned i = 0; i < (unsigned)eqList.size(); ++i) {
                 if (u.str.is_concat(eqList[i].get())) {
                     ptr_vector<expr> nodeList;
                     get_nodes_in_concat(eqList[i].get(), nodeList);
                     zstring constPartTmp = "";
-                    for (unsigned j = 0; j < nodeList.size(); ++j) {
+                    for (unsigned j = 0; j < (unsigned)nodeList.size(); ++j) {
                         zstring valueStr;
                         bool has_eqc_value = false;
                         expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
@@ -14020,13 +14018,13 @@ namespace smt {
                         }
                     }
 
-                    if (constPartTmp.length() > constPartLen) {
+                    if ((int)constPartTmp.length() > constPartLen) {
                         constParts.clear();
                         constParts.push_back(constPartTmp);
                         constPartLen = (int)constPartTmp.length();
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << constPartTmp << std::endl;);
                     }
-                    else if (constPartTmp.length() == constPartLen) {
+                    else if ((int)constPartTmp.length() == constPartLen) {
                         constParts.push_back(constPartTmp);
                     }
                 }
@@ -17022,7 +17020,7 @@ namespace smt {
 
     static zstring str2RegexStr(zstring str) {
         zstring res("");
-        int len = str.length();
+        unsigned len = str.length();
         for (unsigned i = 0; i < len; i++) {
             char nc = str[i];
             // 12 special chars
@@ -17730,7 +17728,7 @@ namespace smt {
                     }
                     else if (all_vars.contains(eq) && eq != v){
                         if (!core.contains(createEqualOP(v, eq)))
-                            if (get_assign_lvl(v, eq) < m_scope_level)
+                            if (get_assign_lvl(v, eq) < (int)m_scope_level)
                                 core.push_back(createEqualOP(v, eq));
                     }
             }
@@ -17809,7 +17807,7 @@ namespace smt {
 
         int pos = 0;
         expr *arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
-        while (pos < ret.size()){
+        while (pos < (int)ret.size()){
             expr* tmp = ret[pos].get();
             pos++;
 
@@ -18072,8 +18070,8 @@ namespace smt {
         vector<zstring> elements = collect_alternative_components(regex);
         if (th.u.re.is_union(regex)) {
             SASSERT(elements.size() > 0);
-            for (int i = 0; i < elements.size(); ++i) {
-                if (elements[i].length() == len_int){
+            for ((unsigned) i = 0; i < elements.size(); ++i) {
+                if (elements[i].length() == (unsigned)len_int){
                     str_value = elements[i];
                     return true;
                 }
@@ -18108,7 +18106,7 @@ namespace smt {
             return true;
 
         for (const auto& s : elements) {
-            if (s.length() <= remain_length) {
+            if (s.length() <= (unsigned)remain_length) {
                 int x = remain_length / s.length();
                 int bak_len = current_str.length();
                 for (int j = 0; j < x; ++j)
