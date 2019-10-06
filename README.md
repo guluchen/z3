@@ -14,9 +14,9 @@ See the [release notes](RELEASE_NOTES) for notes on various stable releases of Z
 
 ## Build status
 
-| Azure Pipelines | TravisCI |
-| --------------- | -------- |
-[![Build Status](https://z3build.visualstudio.com/Z3Build/_apis/build/status/Z3Build-CI?branchName=master)](https://z3build.visualstudio.com/Z3Build/_build/latest?definitionId=10) | [![Build Status](https://travis-ci.org/Z3Prover/z3.svg?branch=master)](https://travis-ci.org/Z3Prover/z3)
+| TravisCI |
+| -------- |
+|[![Build Status](https://travis-ci.org/guluchen/z3.svg?branch=new_trau)](https://travis-ci.org/guluchen/z3)
 
 [1]: #building-z3-on-windows-using-visual-studio-command-prompt
 [2]: #building-z3-using-make-and-gccclang
