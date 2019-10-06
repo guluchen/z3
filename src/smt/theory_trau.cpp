@@ -142,8 +142,8 @@ namespace smt {
     }
 
     theory_var theory_trau::mk_var(enode *const n) {
-        
-        if (!(m.get_sort(n->get_owner()) == u.str.mk_string_sort())) {
+        if (!u.is_seq(n->get_owner()) &&
+            !u.is_re(n->get_owner())) {
             return null_theory_var;
         }
         if (is_attached_to_var(n)) {
@@ -234,9 +234,45 @@ namespace smt {
 
         rational vLen;
         if (get_len_value(n->get_owner(), vLen)) {
-            if (vLen.get_int64() == 0)
-                return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
-        } 
+
+            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
+        }
+        else {
+            vLen.reset();
+            ptr_vector<expr> leafNodes;
+            if (u.str.is_concat(owner)) {
+                get_nodes_in_concat(n->get_owner(), leafNodes);
+            }
+            else
+                leafNodes.push_back(n->get_owner());
+
+            for (unsigned i = 0; i < leafNodes.size(); ++i) {
+                STRACE("str", tout << __LINE__ << " get len value :  " << mk_pp(leafNodes[i], m) << std::endl;);
+                zstring valueStr;
+                if (u.str.is_string(leafNodes[i], valueStr)) {
+                    vLen = vLen + valueStr.length();
+                }
+                else {
+                    expr *value = query_theory_arith_core(mk_strlen(leafNodes[i]), mg);
+                    if (value != nullptr) {
+                        rational tmp;
+                        if (m_autil.is_numeral(value, tmp))
+                            vLen = vLen + tmp;
+                        STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": "
+                                           << mk_pp(value, m) << " --> " << vLen
+                                           << std::endl;);
+                    } else {
+                        vLen = rational(-1);
+                        break;
+                    }
+                }
+            }
+
+            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
+        }
+
+        if (vLen.get_int64() == 0)
+            return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
 
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
@@ -251,21 +287,12 @@ namespace smt {
             is_regex_var(owner.get(), regex);
             expr* arr_var = get_var_flat_array(owner.get());
             if (is_non_fresh(owner.get()) && arr_var != nullptr) {
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                                   << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 expr* arr_expr = get_var_flat_array(owner.get());
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                                   << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 if (arr_expr != nullptr) {
-                    STRACE("str", tout << __LINE__ << "arr_expr of: " << mk_ismt2_pp(arr_expr, m) << " (sort "
-                                       << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
-
-                    STRACE("str", tout << __LINE__ << "arr_expr of: " << mk_ismt2_pp(arr_expr, m) << " (sort "
-                                       << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                     if (ctx.e_internalized(arr_expr)) {
                         enode *arrNode = ctx.get_enode(arr_expr);
-                        result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex,
-                                       vLen.get_int64());
+                        result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
                     }
                     else
                         return alloc(expr_wrapper_proc, owner);
@@ -275,8 +302,7 @@ namespace smt {
                     return alloc(expr_wrapper_proc, owner);
             }
             else {
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                                   << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 bool found = false;
                 expr_ref_vector eqSet(m);
                 collect_eq_nodes(owner.get(), eqSet);
@@ -1702,7 +1728,7 @@ namespace smt {
                        litems.push_back(ctx.mk_eq_atom(lhs, rhs));
                        if (rhs != ts0)
                            litems.push_back(ctx.mk_eq_atom(rhs, ts0));
-                        expr * new_concat = u.str.mk_concat(lhs, ts1);
+                        expr * new_concat = mk_concat(lhs, ts1);
                        m_trail.push_back(new_concat);
 
                        // check if it is feasible or not
@@ -1760,7 +1786,7 @@ namespace smt {
                         litems.push_back(ctx.mk_eq_atom(lhs, rhs));
                         if (rhs != ts1)
                             litems.push_back(ctx.mk_eq_atom(rhs, ts1));
-                        expr * new_concat = u.str.mk_concat(ts0, lhs);
+                        expr * new_concat = mk_concat(ts0, lhs);
                         m_trail.push_back(new_concat);
 
                         // check if it is feasible or not
@@ -13245,7 +13271,7 @@ namespace smt {
 
         expr* ret = v[v.size() - 1];
         for (int i = v.size() - 2; i > from_pos; --i) {
-            ret = u.str.mk_concat(v[i], ret);
+            ret = mk_concat(v[i], ret);
         }
         ensure_enode(ret);
         return ret;
@@ -14787,11 +14813,11 @@ namespace smt {
         if (u.str.is_concat(n1, arg0, arg1) && u.str.is_concat(n2, arg2, arg3)){
             zstring v1, v2;
             if (u.str.is_string(arg1, v1) && u.str.is_string(arg2, v2)){
-                return u.str.mk_concat(arg0, mk_concat(u.str.mk_string(v1 + v2), arg3));
+                return mk_concat(arg0, mk_concat(u.str.mk_string(v1 + v2), arg3));
             }
         }
 
-        return u.str.mk_concat(n1, n2);
+        return mk_concat(n1, n2);
     }
 
     expr* theory_trau::create_concat_with_str(expr* n, zstring str){
@@ -14804,12 +14830,12 @@ namespace smt {
             v = v + str;
             ends = u.str.mk_string(v);
             for (int i = (int)l.size() - 2; i >= 0; --i){
-                ends = u.str.mk_concat(l[i], ends);
+                ends = mk_concat(l[i], ends);
             }
             return ends;
         }
         else
-            return u.str.mk_concat(n, u.str.mk_string(str));
+            return mk_concat(n, u.str.mk_string(str));
     }
 
     expr* theory_trau::create_concat_with_str(zstring str, expr* n){
@@ -14824,12 +14850,12 @@ namespace smt {
 
             expr* tmp = l[l.size() - 1];
             for (int i = (int)l.size() - 2; i >= 1; --i){
-                tmp = u.str.mk_concat(l[i], tmp);
+                tmp = mk_concat(l[i], tmp);
             }
-            return u.str.mk_concat(starts, tmp);
+            return mk_concat(starts, tmp);
         }
         else
-            return u.str.mk_concat(u.str.mk_string(str), n);
+            return mk_concat(u.str.mk_string(str), n);
     }
 
     expr* theory_trau::ends_with_str(expr* n){
@@ -16133,7 +16159,7 @@ namespace smt {
         }
         else if (needle == mk_string("")){
             if (u.str.is_replace(ex))
-                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(ex->get_arg(2), haystack)));
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_concat(ex->get_arg(2), haystack)));
             else if (u.str.is_contains(ex)){
                 m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
             }
@@ -16161,15 +16187,15 @@ namespace smt {
                         expr* new_haystack_0_str = nullptr;
                         if (u.str.is_string(ex->get_arg(2), replacement)){
                             new_haystack_0_str = u.str.mk_string(haystack_0_str.replace(needle_str, replacement));
-                            m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(new_haystack_0_str, create_concat_from_vector(nodes, pos))));
+                            m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_concat(new_haystack_0_str, create_concat_from_vector(nodes, pos))));
                         }
                         else {
                             zstring pre = haystack_0_str.extract(0, at);
                             zstring post = haystack_0_str.extract(at + needle_str.length(), haystack_0_str.length() - at - needle_str.length());
 
-                            expr* tmp0 = u.str.mk_concat(mk_string(post), create_concat_from_vector(nodes, pos));
-                            expr* tmp1 = u.str.mk_concat(ex->get_arg(2), tmp0);
-                            expr* tmp2 = u.str.mk_concat(mk_string(pre), tmp1);
+                            expr* tmp0 = mk_concat(mk_string(post), create_concat_from_vector(nodes, pos));
+                            expr* tmp1 = mk_concat(ex->get_arg(2), tmp0);
+                            expr* tmp2 = mk_concat(mk_string(pre), tmp1);
                             m_delayed_assertions_todo.push_back(createEqualOP(ex, tmp2));
                         }
                     }
@@ -16184,7 +16210,7 @@ namespace smt {
                 else if (needle == nodes[pos]){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
                     if (u.str.is_replace(ex)) {
-                        m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(ex->get_arg(2), create_concat_from_vector(nodes, pos))));
+                        m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_concat(ex->get_arg(2), create_concat_from_vector(nodes, pos))));
                     }
                     else if (u.str.is_contains(ex)){
                         m_delayed_assertions_todo.push_back(createEqualOP(ex, m.mk_true()));
@@ -16227,7 +16253,7 @@ namespace smt {
             expr* tmp = create_concat_from_vector(nodes, pos);
             if (u.str.is_replace(ex)) {
                 expr_ref replace(mk_replace(tmp, needle.get(), a->get_arg(2)), m);
-                m_delayed_assertions_todo.push_back(createEqualOP(ex, u.str.mk_concat(nodes[pos], replace)));
+                m_delayed_assertions_todo.push_back(createEqualOP(ex, mk_concat(nodes[pos], replace)));
                 instantiate_axiom_replace(get_context().get_enode(replace));
             }
             else if (u.str.is_contains(ex)){
@@ -16255,7 +16281,7 @@ namespace smt {
                     if (u.str.is_replace(ex)) {
                         expr_ref replace(mk_replace(tmp, needle.get(), a->get_arg(2)), m);
                         m_delayed_assertions_todo.push_back(
-                                createEqualOP(ex, u.str.mk_concat(replace, last)));
+                                createEqualOP(ex, mk_concat(replace, last)));
                         instantiate_axiom_replace(get_context().get_enode(replace));
                     } else if (u.str.is_contains(ex)) {
                         expr_ref contains(u.str.mk_contains(tmp, needle.get()), m);
@@ -17304,18 +17330,21 @@ namespace smt {
         do {
             theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, n);
             if (tha) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
             }
             theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, n);
             if (thi) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
             }
             theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, n);
             if (thr) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
@@ -17466,7 +17495,7 @@ namespace smt {
         if (!ctx.b_internalized(ex)) {
             ctx.internalize(ex, false);
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
         ctx.mk_th_axiom(get_id(), 1, &lit);
