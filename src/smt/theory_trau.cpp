@@ -275,8 +275,6 @@ namespace smt {
             return alloc(expr_wrapper_proc, val);
         } else {
 //            return alloc(expr_wrapper_proc, owner);
-            theory_var v       = n->get_th_var(get_id());
-            SASSERT(v != null_theory_var);
             sort * s           = m.get_sort(n->get_owner());
             string_value_proc * result = nullptr;
 
@@ -886,10 +884,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " cannot find zero start"  << std::endl;);
             return negate_equality(lhs, rhs);
         }
-
-        for (const auto& e : ret){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-        }
         return ret;
     }
 
@@ -930,9 +924,6 @@ namespace smt {
             return negate_equality(lhs, rhs);
         }
 
-        for (const auto& e : ret){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-        }
         return ret;
     }
 
@@ -1611,7 +1602,6 @@ namespace smt {
      * Then add an assertion: (y2 == (Concat ce m2)) AND ("str3" == (Concat abc x2)) -> (y2 != "str3")
      */
     bool theory_trau::new_eq_check(expr * lhs, expr * rhs) {
-        clock_t t = clock();
         context & ctx = get_context();
         
         TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << " == " << mk_ismt2_pp(rhs, m) << std::endl;);
@@ -1665,8 +1655,6 @@ namespace smt {
             if (str.length() > 0)
                 propagate_const_str(rhs, lhs, str);
         }
-        // okay, all checks here passed
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return true;
     }
 
@@ -4339,14 +4327,6 @@ namespace smt {
             else {
                 get_parikh_from_strs(val, parikh_n);
             }
-
-        // only const left
-        for (const auto& e : nnodes)
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lhs: " << mk_pp(e, m) << std::endl;);
-
-        for (const auto& e : remain_vector)
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " rhs: " << mk_pp(e, m) << std::endl;);
-
         // check two parikhs
         if (!eq_parikh(parikh_n, parikh_nn))
             return false;
@@ -4615,8 +4595,6 @@ namespace smt {
                     if (guessed_diseqs.contains(not_e))
                         diff.push_back(not_e);
                     STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
-                    for (const auto& s: eqs)
-                        STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(lhs, m) << " " << mk_pp(s, m) << std::endl;);
                     return false;
                 }
                 else
@@ -4821,8 +4799,6 @@ namespace smt {
                 charDomain.insert('0' + i);
         }
 
-        for (const auto& ch : charDomain)
-            STRACE("str", tout << __LINE__ <<  " sigma_domain: " << ch << std::endl;);
         return charDomain;
     }
 
@@ -7413,7 +7389,6 @@ namespace smt {
             expr_ref tmp(createAndOP(asserted_constraints), m);
             uState.add_asserting_constraints(tmp);
         }
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
         return axiomAdded;
     }
 
@@ -7766,9 +7741,6 @@ namespace smt {
         expr_ref_vector result(m);
         ensure_enode(reg);
         expr_ref_vector components = collect_alternative_components(reg);
-        for (const auto& e : components)
-            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << std::endl;);
-
         unsigned cnt = 0;
         if (components.size() > 1){
             for (const auto& c : components) {
@@ -10916,9 +10888,6 @@ namespace smt {
             int pMax,
             int pos){
         // handling regex vs const && regex vs regex
-        
-        expr* reg = nullptr;
-        SASSERT(is_internal_regex_var(a.first, reg));
         zstring val;
         expr *to_assert = nullptr;
         STRACE("str", tout << __LINE__
@@ -12556,15 +12525,13 @@ namespace smt {
             }
             else {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(list[i], eqs); 
-
+                collect_eq_nodes(list[i], eqs);
                 for (unsigned j = 0; j < eqs.size(); ++j) {
                     if (is_internal_regex_var(eqs[j].get(), reg)) {
                         l.push_back(eqs[j].get()); 
                         break;
                     }
                 }
-                SASSERT(found);
             }
         return create_equality_final(l);
     }
@@ -13384,8 +13351,7 @@ namespace smt {
 
                 if (imp)
                     for (const auto& eq : eqs) {
-                        STRACE("str",
-                               tout << __LINE__ << "\t \t" << mk_pp(nn, m) << " == " << mk_pp(eq, m) << std::endl;);
+                        STRACE("str",tout << __LINE__ << "\t \t" << mk_pp(nn, m) << " == " << mk_pp(eq, m) << std::endl;);
                         tmp_result.insert(eq, maxLen);
                     }
             }
@@ -13647,7 +13613,7 @@ namespace smt {
                 }
             }
 
-            if ((len > constPart.length() || (len == constPart.length() && allEqual)))
+            if ((len > (int)constPart.length() || (len == (int)constPart.length() && allEqual)))
                 return true;
         }
 
@@ -14569,11 +14535,6 @@ namespace smt {
         
         context& ctx = get_context();
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
-        if (parents.size() > 0) {
-            for (const auto &p : parents)
-                STRACE("str", tout << " --> " << mk_pp(p, m););
-            STRACE("str", tout << std::endl;);
-        }
 
         ptr_vector<expr> result = {};
         expr_ref_vector eqNodeSet(m);
@@ -17723,12 +17684,12 @@ namespace smt {
                 collect_eq_nodes(v, eqs);
                 for (const auto& eq : eqs)
                     if (u.str.is_concat(eq)) {
-                        if (get_assign_lvl(v, eq) < m_scope_level)
+                        if ((int)get_assign_lvl(v, eq) < m_scope_level)
                             core.push_back(createEqualOP(v, eq));
                     }
                     else if (all_vars.contains(eq) && eq != v){
                         if (!core.contains(createEqualOP(v, eq)))
-                            if (get_assign_lvl(v, eq) < (int)m_scope_level)
+                            if ((int)get_assign_lvl(v, eq) < m_scope_level)
                                 core.push_back(createEqualOP(v, eq));
                     }
             }
@@ -18197,7 +18158,6 @@ namespace smt {
     }
 
     bool theory_trau::string_value_proc::construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue){
-        clock_t start_clock = clock(); 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager())  << ": NOT important" << std::endl;);
         if (len_int != -1) {
             // non root var
@@ -18205,7 +18165,6 @@ namespace smt {
             if (!th.dependency_graph.contains(node))
                 th.dependency_graph.insert(node, {});
             bool constraint02 = th.dependency_graph[node].size() > 0;
-            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (constraint01 || constraint02) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                 if (!constraint02) {
@@ -18227,16 +18186,12 @@ namespace smt {
             for (int i = 0; i < len_int; ++i)
                 val.push_back(-1);
 
-            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (th.u.str.is_concat(node))
                 construct_string(mg, node, m_root2value, val);
-            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             if (th.uState.eq_combination.contains(node))
                 for (const auto &eq : th.uState.eq_combination[node]) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(eq, m) << std::endl;);
                     construct_string(mg, eq, m_root2value, val);
                 }
-            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             std::string ret = "";
             for (int i = 0; i < len_int; ++i)
                 if (val[i] == -1) {
@@ -18244,7 +18199,6 @@ namespace smt {
                 } else
                     ret = ret + (char)val[i];
             strValue = zstring(ret.c_str());
-            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
             return to_app(th.mk_string(strValue));
 
