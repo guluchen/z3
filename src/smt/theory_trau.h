@@ -340,11 +340,11 @@ namespace smt {
                 rational string_to_int(zstring str, bool &valid);
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
-            void init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
+            bool init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
                 bool analyze_upper_bound_str_int();
                 rational log_10(rational n);
                 rational ten_power(rational n);
-            void refined_init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
+            bool refined_init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
                 void refine_not_contain_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
                 bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
@@ -1003,6 +1003,8 @@ namespace smt {
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(expr* n, zstring s);
                 bool collect_not_contains(expr* nn);
+                    bool is_haystack(expr* nn);
+                    bool is_needle(expr* nn);
                 bool more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences);
                 bool is_non_fresh_occurrences(expr *nn, obj_map<expr, int> const &occurrences, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
@@ -1011,10 +1013,8 @@ namespace smt {
                     obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
-            obj_map<expr, ptr_vector<expr>> normalize_eq(expr_ref_vector &subNodes, obj_map<expr, int> &non_fresh_vars);
+            obj_map<expr, ptr_vector<expr>> normalize_eq(expr_ref_vector &subNodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);
             obj_map<expr, ptr_vector<expr>> refine_eq_combination(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& combinations, expr_ref_vector const& subNodes);
-
-                obj_map<expr, ptr_vector<expr>> refine_eq_combination(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> combinations, expr_ref_vector subNodes, expr_ref_vector notnon_fresh_vars);
 
                 bool can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations);
                     bool concat_in_set(expr* n, ptr_vector<expr> const& s);

@@ -318,8 +318,7 @@ namespace smt {
                         expr* arr_expr = get_var_flat_array(owner.get());
                         if (arr_expr != nullptr && ctx.e_internalized(arr_expr)) {
                             enode* arrNode = ctx.get_enode(arr_expr);
-                            result = alloc(string_value_proc, *this, s, n->get_owner(), true,
-                                           arrNode, regex, vLen.get_int64());
+                            result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
                             found = true;
                             importantNode = eqSet[i].get();
                             break;
@@ -373,14 +372,14 @@ namespace smt {
                 // normal node
                 STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
                                    << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
-                // all all lens
-                expr_ref_vector addedNodes(m);
+                // all lens
+                expr_ref_vector added_nodes(m);
                 for (const auto& nn : dep)
                     if (ctx.e_internalized(nn)){
                         STRACE("str", tout << __LINE__ << " " << mk_pp(nn, m) << std::endl;);
                         if (is_non_fresh(nn) || is_regex_var(nn)) {
                             result->add_entry(ctx.get_enode(nn));
-                            addedNodes.push_back(nn);
+                            added_nodes.push_back(nn);
                         }
                         // add sublen
 //                        if (ctx.e_internalized(mk_strlen(nn)))
@@ -390,7 +389,7 @@ namespace smt {
                 // add its ancestors
                 if (dependency_graph.contains(owner))
                     for (const auto& nn : dependency_graph[owner])
-                        if (ctx.e_internalized(nn) && !addedNodes.contains(nn)){
+                        if (ctx.e_internalized(nn) && !added_nodes.contains(nn)){
                             result->add_entry(ctx.get_enode(nn));
                         }
 
@@ -3319,17 +3318,23 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_map<expr, int> non_fresh_vars;
         obj_map<expr, ptr_vector<expr>> eq_combination;
-        init_chain_free(non_fresh_vars, eq_combination);
+        if (init_chain_free(non_fresh_vars, eq_combination)){
+            return FC_CONTINUE;
+        }
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (!review_starting_ending_combination(eq_combination)){
             negate_equalities();
             return FC_CONTINUE;
         }
+
         if (!review_disequalities_not_contain(eq_combination)){
+            TRACE("str", tout << "Resuming search due to axioms added by review_disequalities_not_contain." << std::endl;);
             print_eq_combination(eq_combination);
             negate_context();
             return FC_CONTINUE;
         }
+
         if (!is_notContain_consistent(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by is_notContain_consistent check." << std::endl;);
             update_state();
@@ -3365,7 +3370,10 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        refined_init_chain_free(non_fresh_vars, eq_combination);
+        if (refined_init_chain_free(non_fresh_vars, eq_combination)){
+            return FC_CONTINUE;
+        }
+
         if (can_merge_combination(eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
             update_state();
@@ -3707,17 +3715,17 @@ namespace smt {
      * eq_combination: all equalities over variable
      */
 
-    void theory_trau::init_chain_free(
+    bool theory_trau::init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
 
         sigma_domain = collect_char_domain_from_concat();
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         non_fresh_vars = collect_non_fresh_vars();
         analyze_upper_bound_str_int();
         expr_ref_vector subNodes(m);
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
-        eq_combination = normalize_eq(subNodes, non_fresh_vars);
+        bool axiom_added = false;
+        eq_combination = normalize_eq(subNodes, non_fresh_vars, axiom_added);
+        return axiom_added;
     }
 
     bool theory_trau::analyze_upper_bound_str_int(){
@@ -3778,7 +3786,7 @@ namespace smt {
      * non_fresh_var: variables in disequalities: x != y, x does not contain y
      * eq_combination: all equalities over variable
      */
-    void theory_trau::refined_init_chain_free(
+    bool theory_trau::refined_init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
         sigma_domain = collect_char_domain_from_eqmap(eq_combination);
@@ -3788,8 +3796,12 @@ namespace smt {
         print_eq_combination(eq_combination);
 
         expr_ref_vector subNodes(m);
-        eq_combination = normalize_eq(subNodes, non_fresh_vars);
+        bool axiom_added = false;
+        eq_combination = normalize_eq(subNodes, non_fresh_vars, axiom_added);
+        if (axiom_added)
+            return axiom_added;
         refine_not_contain_vars(non_fresh_vars, eq_combination);
+        return false;
     }
 
     void theory_trau::refine_not_contain_vars(
@@ -6324,21 +6336,18 @@ namespace smt {
                 expr* contain = nullptr;
                 if (is_contain_equality(lhs, contain)){
                     if (!review_not_contain(rhs, contain, eq_combination)){
-                        
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
                 else if (is_contain_equality(rhs, contain)){
                     if (!review_not_contain(lhs, contain, eq_combination)){
-                        
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
                 else {
                     if (!review_disequality(lhs, rhs, eq_combination)) {
-                        
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
@@ -13902,10 +13911,21 @@ namespace smt {
     }
 
     bool theory_trau::collect_not_contains(expr* nn){
-        vector<zstring> maxDiffStrs;
+        if (is_haystack(nn))
+            return true;
+
+        bool has_const_eq = false;
+        get_eqc_value(nn, has_const_eq);
+        if (!has_const_eq){
+            if (is_needle(nn))
+                return true;
+        }
+        return false;
+    }
+
+    bool theory_trau::is_haystack(expr* nn){
         for (const auto& we : m_wi_expr_memo){
             if (we.first.get() == nn){
-
                 if (u.str.is_concat(we.second.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.second.get(), tmp)){
@@ -13924,7 +13944,6 @@ namespace smt {
                 }
             }
             else if (we.second.get() == nn){
-
                 if (u.str.is_concat(we.first.get())){
                     expr* tmp = nullptr;
                     if (is_contain_equality(we.first.get(), tmp)){
@@ -13940,6 +13959,27 @@ namespace smt {
                             return true;
                         }
                     }
+                }
+            }
+        }
+        return false;
+    }
+
+    bool theory_trau::is_needle(expr* nn){
+        for (const auto& we : m_wi_expr_memo){
+            if (u.str.is_concat(we.second.get())){
+                expr* tmp = nullptr;
+                if (is_contain_equality(we.second.get(), tmp)){
+                    if (are_equal_exprs(tmp, nn))
+                        return true;
+                }
+            }
+
+            if (u.str.is_concat(we.first.get())){
+                expr* tmp = nullptr;
+                if (is_contain_equality(we.first.get(), tmp)){
+                    if (are_equal_exprs(tmp, nn))
+                        return true;
                 }
             }
         }
@@ -14064,7 +14104,8 @@ namespace smt {
 
     obj_map<expr, ptr_vector<expr>> theory_trau::normalize_eq(
             expr_ref_vector &subNodes,
-            obj_map<expr, int> &non_fresh_vars){
+            obj_map<expr, int> &non_fresh_vars,
+            bool &axiom_added){
         clock_t t = clock();
 
         context& ctx = get_context();
@@ -14091,6 +14132,8 @@ namespace smt {
         if (!review_disequalities_not_contain(combinations)){
             print_eq_combination(combinations);
             negate_context();
+            axiom_added = true;
+            return combinations;
         }
         return refine_eq_combination(non_fresh_vars, combinations, subNodes);
     }
@@ -14098,8 +14141,7 @@ namespace smt {
     obj_map<expr, ptr_vector<expr>> theory_trau::refine_eq_combination(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> const& combinations,
-            expr_ref_vector const& subNodes
-            ){
+            expr_ref_vector const& subNodes){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
         obj_map<expr, ptr_vector<expr>> ret;
         expr* reg = nullptr;
@@ -18168,10 +18210,20 @@ namespace smt {
             if (constraint01 || constraint02) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                 if (!constraint02) {
-                    // free var
-                    std::string ret = strValue.encode();
+                    int_vector val;
                     for (int i = 0; i < len_int; ++i)
-                        ret = ret + th.default_char;
+                        val.push_back(-1);
+
+                    if (th.u.str.is_concat(node))
+                        construct_string(mg, node, m_root2value, val);
+
+                    std::string ret = "";
+                    for (int i = 0; i < len_int; ++i)
+                        if (val[i] == -1) {
+                            ret = ret + th.default_char;
+                        } else
+                            ret = ret + (char)val[i];
+
                     strValue = zstring(ret.c_str());
                     return to_app(th.mk_string(strValue));
                 } else {
@@ -18372,7 +18424,6 @@ namespace smt {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sum = "  << sum << std::endl;);
                     }
                     else {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get len: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
                         SASSERT(false);
                     }
                 }
