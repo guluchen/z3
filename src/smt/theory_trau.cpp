@@ -234,41 +234,9 @@ namespace smt {
 
         rational vLen;
         if (get_len_value(n->get_owner(), vLen)) {
-        }
-        else {
-            vLen.reset();
-            ptr_vector<expr> leafNodes;
-            if (u.str.is_concat(owner)) {
-                get_nodes_in_concat(n->get_owner(), leafNodes);
-            }
-            else
-                leafNodes.push_back(n->get_owner());
-
-            for (unsigned i = 0; i < leafNodes.size(); ++i) {
-                STRACE("str", tout << __LINE__ << " get len value :  " << mk_pp(leafNodes[i], m) << std::endl;);
-                zstring valueStr;
-                if (u.str.is_string(leafNodes[i], valueStr)) {
-                    vLen = vLen + valueStr.length();
-                }
-                else {
-                    expr *value = query_theory_arith_core(mk_strlen(leafNodes[i]), mg);
-                    if (value != nullptr) {
-                        rational tmp;
-                        if (m_autil.is_numeral(value, tmp))
-                            vLen = vLen + tmp;
-                        STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": "
-                                           << mk_pp(value, m) << " --> " << vLen
-                                           << std::endl;);
-                    } else {
-                        vLen = -1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (vLen.get_int64() == 0)
-            return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
+            if (vLen.get_int64() == 0)
+                return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
+        } 
 
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
