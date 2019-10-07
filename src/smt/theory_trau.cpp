@@ -6793,6 +6793,9 @@ namespace smt {
                         all_str_exprs.push_back(v.m_key);
                 }
                 else {
+                    if (is_non_fresh(v.m_key, non_fresh_vars))
+                        if (!all_str_exprs.contains(v.m_key))
+                            all_str_exprs.push_back(v.m_key);
                     ptr_vector<expr> nodes;
                     get_nodes_in_concat(v.m_key, nodes);
                     for (unsigned i = 0; i < nodes.size(); ++i) {
@@ -7427,7 +7430,7 @@ namespace smt {
 
     expr* theory_trau::convert_long_equalities(expr* var, ptr_vector<expr> const& eqs, obj_map<expr, int> & non_fresh_vars){
         /* add an eq = flat . flat . flat, then other equalities will compare with it */
-        
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
         expr_ref_vector ands(m);
         pair_expr_vector lhs_elements = create_equality(var, false);
         uState.non_fresh_vars.insert(var, connectingSize);
@@ -7462,8 +7465,8 @@ namespace smt {
             ptr_vector<expr> lhs;
             ptr_vector<expr> rhs;
             optimize_equality(root_tmp, element, lhs, rhs);
-            pair_expr_vector lhs_elements = create_equality(lhs);
-            pair_expr_vector rhs_elements = create_equality(rhs);
+            pair_expr_vector lhs_elements = create_equality(var, false);
+            pair_expr_vector rhs_elements = create_equality(element);
             expr* containKey = nullptr;
             rational lenVal;
             zstring rootStr;
@@ -18051,9 +18054,11 @@ namespace smt {
                 if (regex != nullptr) {
                     zstring strValue;
                     if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     if (construct_string_from_regex(mg, len_int, m_root2value, strValue)) {
@@ -18065,6 +18070,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
                 construct_normally(mg, len_int, m_root2value, strValue);
                 STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                 return to_app(th.mk_string(strValue));
             }
             else {
@@ -18445,10 +18451,7 @@ namespace smt {
     bool theory_trau::string_value_proc::fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len, zstring &value){
         // component var
         for (const auto &ancestor : th.dependency_graph[node]) {
-            STRACE("str",
-                   tout << __LINE__ << " " << __FUNCTION__ << " "
-                        << mk_pp(ancestor, mg.get_manager())
-                        << std::endl;);
+            STRACE("str",tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ancestor, mg.get_manager()) << std::endl;);
             zstring ancestorValue;
             if (get_str_value(th.get_context().get_enode(ancestor), m_root2value, ancestorValue)) {
                 if (th.u.str.is_concat(ancestor)) {
