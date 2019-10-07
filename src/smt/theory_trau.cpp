@@ -575,7 +575,6 @@ namespace smt {
         sort * str_sort = u.str.mk_string_sort();
 
         if (lhs_sort != str_sort || rhs_sort != str_sort) {
-            STRACE("str", tout << "skip equality: not String sort" << std::endl;);
             return;
         }
 
@@ -603,6 +602,9 @@ namespace smt {
                 STRACE("str", tout << "skip: lhs arg1 == rhs arg1" << std::endl;);
                 return;
             }
+
+            if (are_equal_concat(lhs, rhs))
+                return;
         }
 
         // newEqCheck() -- check consistency wrt. existing equivalence classes
@@ -617,18 +619,24 @@ namespace smt {
         if (is_contain_equality(simplifiedLhs, containKey)) {
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
-            if (u.str.is_string(containKey, keyStr))
-                if (new_eq_check_wrt_disequalities(rhs, keyStr, conclusion)){
+            if (u.str.is_string(containKey, keyStr)) {
+                obj_hashtable<expr> checked_nodes;
+                checked_nodes.insert(lhs);
+                if (new_eq_check_wrt_disequalities(rhs, keyStr, conclusion, checked_nodes)) {
                     return;
                 }
+            }
         }
         else if (is_contain_equality(simplifiedRhs, containKey)){
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
-            if (u.str.is_string(containKey, keyStr))
-                if (new_eq_check_wrt_disequalities(lhs, keyStr, conclusion)){
+            if (u.str.is_string(containKey, keyStr)) {
+                obj_hashtable<expr> checked_nodes;
+                checked_nodes.insert(lhs);
+                if (new_eq_check_wrt_disequalities(lhs, keyStr, conclusion, checked_nodes)) {
                     return;
                 }
+            }
         }
 
         // BEGIN new_eq_handler() in strTheory
@@ -653,28 +661,12 @@ namespace smt {
 
         TRACE("str",
               tout << "lhs eqc:" << std::endl;
-                      tout << "Concats:" << std::endl;
-                      for (const auto& ex : eqc_concat_lhs) {
-                          tout << mk_ismt2_pp(ex, m) << std::endl;
-                      }
-                      tout << "Variables:" << std::endl;
-                      for (const auto& ex : eqc_var_lhs) {
-                          tout << mk_ismt2_pp(ex, m) << std::endl;
-                      }
                       tout << "Constants:" << std::endl;
                       for (const auto& ex : eqc_const_lhs) {
                           tout << mk_ismt2_pp(ex, m) << std::endl;
                       }
 
                       tout << "rhs eqc:" << std::endl;
-                      tout << "Concats:" << std::endl;
-                      for (const auto& ex : eqc_concat_rhs) {
-                          tout << mk_ismt2_pp(ex, m) << std::endl;
-                      }
-                      tout << "Variables:" << std::endl;
-                      for (const auto& ex : eqc_var_rhs) {
-                          tout << mk_ismt2_pp(ex, m) << std::endl;
-                      }
                       tout << "Constants:" << std::endl;
                       for (const auto& ex : eqc_const_rhs) {
                           tout << mk_ismt2_pp(ex, m) << std::endl;
@@ -754,7 +746,7 @@ namespace smt {
         special_assertion_for_contain_vs_substr(rhs, lhs);
     }
 
-    bool theory_trau::new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion){
+    bool theory_trau::new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes){
         
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(n, m) << std::endl;);
         expr_ref_vector eqs(m);
@@ -787,8 +779,11 @@ namespace smt {
                     // propagate
                     if (ts0 == eq || ts1 == eq) {
                         // check if it is feasible or not
-                        if (!new_eq_check_wrt_disequalities(it.get_value(), containKey, conclusion))
-                            return false;
+                        if (!checked_nodes.contains(it.get_value())) {
+                            checked_nodes.insert(it.get_value());
+                            if (!new_eq_check_wrt_disequalities(it.get_value(), containKey, conclusion, checked_nodes))
+                                return false;
+                        }
                     }
                 }
         }
@@ -1626,7 +1621,8 @@ namespace smt {
         } while (eqc_nn1 != lhs);
 
         if (!contains_map.empty()) {
-            propagate_contain_in_new_eq(lhs, rhs);
+            if (are_equal_exprs(lhs, mk_string("")) && are_equal_exprs(rhs, mk_string("")))
+                propagate_contain_in_new_eq(lhs, rhs);
         }
 
         if (!regex_in_bool_map.empty()) {
@@ -2726,7 +2722,7 @@ namespace smt {
 
 
     void theory_trau::new_diseq_eh(theory_var x, theory_var y) {
-        
+        clock_t t = clock();
 
         expr *const n1 = get_enode(x)->get_owner();
         expr *const n2 = get_enode(y)->get_owner();
@@ -2782,6 +2778,7 @@ namespace smt {
             newConstraintTriggered = true;
             STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
         }
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
     /*
@@ -3073,11 +3070,11 @@ namespace smt {
                         input_var_in_len.insert(var);
                     }
                 } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
-                    m_library_aware_axiom_todo.push_back(n);
+                    m_library_aware_axiom_todo.insert(n);
                 } else if (u.str.is_itos(ap)) {
                     TRACE("str", tout << __LINE__ << " found string-integer conversion term: " << mk_pp(ex, m) << std::endl;);
                     string_int_conversion_terms.push_back(ap);
-                    m_library_aware_axiom_todo.push_back(n);
+                    m_library_aware_axiom_todo.insert(n);
                     if (str_int_bound_expr == nullptr)
                         str_int_bound_expr = mk_int_var("StrIntBound");
                 } else if (ap->get_num_args() == 0 && !u.str.is_string(ap)) {
@@ -3100,7 +3097,7 @@ namespace smt {
                 if (is_app(ex)) {
                     app *ap = to_app(ex);
                     if (u.str.is_prefix(ap) || u.str.is_suffix(ap) || u.str.is_contains(ap) || u.str.is_in_re(ap)) {
-                        m_library_aware_axiom_todo.push_back(n);
+                        m_library_aware_axiom_todo.insert(n);
                     }
                 }
             } else {
@@ -3116,10 +3113,10 @@ namespace smt {
             if (is_app(ex)) {
                 app *ap = to_app(ex);
                 if (u.str.is_index(ap)) {
-                    m_library_aware_axiom_todo.push_back(n);
+                    m_library_aware_axiom_todo.insert(n);
                 } else if (u.str.is_stoi(ap)) {
                     string_int_conversion_terms.push_back(ap);
-                    m_library_aware_axiom_todo.push_back(n);
+                    m_library_aware_axiom_todo.insert(n);
                     if (str_int_bound_expr == nullptr)
                         str_int_bound_expr = mk_int_var("StrIntBound");
                 }
@@ -3332,10 +3329,6 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         print_eq_combination(eq_combination);
 
-        if (!parikh_image_check(eq_combination)){
-            negate_context();
-            return FC_CONTINUE;
-        }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (handle_contain_family(eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
@@ -3364,6 +3357,12 @@ namespace smt {
             print_eq_combination(eq_combination);
             return FC_CONTINUE;
         }
+
+        if (!parikh_image_check(eq_combination)){
+            negate_context();
+            return FC_CONTINUE;
+        }
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
@@ -3414,9 +3413,8 @@ namespace smt {
     }
 
     bool theory_trau::eval_disequal_str_int(){
-        
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
-        bool addedAxioms = false;
+        bool added_axioms = false;
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -3443,7 +3441,7 @@ namespace smt {
                             premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
 
                             assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
-                            addedAxioms = true;
+                            added_axioms = true;
                         }
                         else {
                             STRACE("str",
@@ -3451,7 +3449,7 @@ namespace smt {
                                         << std::endl;);
                             if (rational_val == val) {
                                 negate_context();
-                                addedAxioms = true;
+                                added_axioms = true;
                             }
                         }
                     }
@@ -3473,19 +3471,19 @@ namespace smt {
                             premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
 
                             assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
-                            addedAxioms = true;
+                            added_axioms = true;
                         }
                         else {
                             if (rational_val == val) {
                                 negate_context();
-                                addedAxioms = true;
+                                added_axioms = true;
                             }
                         }
                     }
                 }
             }
         }
-        return addedAxioms;
+        return added_axioms;
     }
 
     bool theory_trau::eq_to_i2s(expr* n, expr* &i2s){
@@ -3507,20 +3505,17 @@ namespace smt {
         SASSERT(u.str.is_stoi(a));
         bool axiomAdd = false;
         context & ctx = get_context();
-        
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
+
         expr * S = a->get_arg(0);
 
         // check integer theory
-        rational Ival;
-        bool Ival_exists = get_arith_value(a, Ival);
-        if (Ival_exists) {
-            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << Ival.to_string() << std::endl;);
-            // if that value is not -1, we can assert (str.to.int S) = Ival --> S = "Ival"
-            if (!Ival.is_minus_one()) {
+        rational i_val;
+        bool i_val_exists = get_arith_value(a, i_val);
+        if (i_val_exists) {
+            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << std::endl;);
+            // if that value is not -1, we can assert (str.to.int S) = i_val --> S = "i_val"
+            if (!i_val.is_minus_one()) {
             }
-        } else {
-            STRACE("str", tout << "integer theory has no assignment for " << mk_pp(a, m) << std::endl;);
         }
 
         bool S_hasEqcValue;
@@ -3530,17 +3525,19 @@ namespace smt {
             u.str.is_string(S_str, str);
             bool valid = true;
 
-            rational convertedRepresentation = string_to_int(str, valid);
-
+            rational converted_representation = string_to_int(str, valid);
+            if (i_val_exists && converted_representation == i_val)
+                return false;
             // TODO this duplicates code a bit, we can simplify the branch on "conclusion" only
             if (valid) {
                 // return actuan value
                 expr_ref premise(ctx.mk_eq_atom(S, mk_string(str)), m);
-                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(convertedRepresentation, true)), m);
+                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(converted_representation, true)), m);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
+                    implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
@@ -3553,6 +3550,7 @@ namespace smt {
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
+                    implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
@@ -3569,6 +3567,7 @@ namespace smt {
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
+                    implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
@@ -3579,10 +3578,11 @@ namespace smt {
     }
 
     rational theory_trau::string_to_int(zstring str, bool &valid){
-        rational convertedRepresentation(0);
+        rational converted_representation(0);
         rational ten(10);
         if (str.length() == 0) {
             valid = false;
+            converted_representation = rational(-1);
         } else {
             for (unsigned i = 0; i < str.length(); ++i) {
                 if (!('0' <= str[i] && str[i] <= '9')) {
@@ -3593,18 +3593,16 @@ namespace smt {
                     char digit = (int)str[i];
                     std::string sDigit(1, digit);
                     int val = atoi(sDigit.c_str());
-                    convertedRepresentation = (ten * convertedRepresentation) + rational(val);
+                    converted_representation = (ten * converted_representation) + rational(val);
                 }
             }
         }
-        return convertedRepresentation;
+        return converted_representation;
     }
 
     int theory_trau::eval_invalid_str2int(expr* e, expr* &eq_node){
-        
         expr_ref_vector eqs(m);
         collect_eq_nodes(e, eqs);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         for (const auto& n : eqs){
             if (u.str.is_concat(n)) {
                 ptr_vector<expr> nodes;
@@ -3666,6 +3664,7 @@ namespace smt {
                     if (!string_int_axioms.contains(axiom)) {
                         string_int_axioms.insert(axiom);
                         assert_axiom(axiom);
+                        implied_facts.push_back(axiom.get());
                         m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                         axiomAdd = true;
                     }
@@ -3686,6 +3685,7 @@ namespace smt {
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
+                    implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
@@ -4214,12 +4214,12 @@ namespace smt {
                         if (!equal_parikh(e, ee))
                             return false;
                     }
-
-                for (const auto& ee : v.get_value())
-                    if (e != ee){
-                        if (!same_prefix_same_parikh(e, ee))
-                            return false;
-                    }
+                if (v.get_value().size() < 5)
+                    for (const auto& ee : v.get_value())
+                        if (e != ee){
+                            if (!same_prefix_same_parikh(e, ee))
+                                return false;
+                        }
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(v.m_key, m) << std::endl;);
             }
         }
@@ -14641,18 +14641,25 @@ namespace smt {
             expr* object,
             obj_map<expr, ptr_vector<expr>> &combinations,
             expr_ref_vector &subNodes,
-            expr_ref_vector parents,
-            obj_map<expr, int> non_fresh_vars){
-        if (combinations.contains(object))
-            return combinations[object];
+            expr_ref_vector const& parents,
+            obj_map<expr, int> const& non_fresh_vars){
+        expr_ref_vector eqNodeSet(m);
+        expr* constValue = collect_eq_nodes(object, eqNodeSet);
 
-        
+        for (const auto& o : eqNodeSet)
+            if (combinations.contains(o))
+                return combinations[o];
+
+        if (parents.size() > 0) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+            for (const auto &p : parents)
+                STRACE("str", tout << " \t--> " << mk_pp(p, m) ;);
+            STRACE("str", tout << std::endl;);
+        }
         context& ctx = get_context();
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
 
         ptr_vector<expr> result = {};
-        expr_ref_vector eqNodeSet(m);
-        expr* constValue = collect_eq_nodes(object, eqNodeSet);
         object = ctx.get_enode(object)->get_root()->get_owner();
 
 
@@ -15026,7 +15033,7 @@ namespace smt {
                 // TODO we really only need to check the new ones on each pass
                 unsigned start_count = m_library_aware_axiom_todo.size();
                 STRACE("str", tout << __LINE__ << " m_library_aware_axiom_todo: size " << start_count << std::endl;);
-                ptr_vector<enode> axioms_tmp(m_library_aware_axiom_todo);
+                obj_hashtable<enode> axioms_tmp = m_library_aware_axiom_todo;
                 for (auto const& e : axioms_tmp) {
                     app * a = e->get_owner();
                     if (a == nullptr || a->get_num_args() == 0) {
@@ -16629,12 +16636,13 @@ namespace smt {
 
         // let expr = (str.to-int S)
         // axiom 1: expr >= -1
-        // axiom 2: expr = 0 <==> S = "0"
+        // axiom 2: S = "" --> expr = -1
 
         {
             expr_ref axiom1(m_autil.mk_ge(ex, m_autil.mk_numeral(rational::minus_one(), true)), m);
-            SASSERT(axiom1);
             assert_axiom(axiom1);
+
+            assert_axiom(rewrite_implication(createEqualOP(to_app(ex)->get_arg(0), mk_string("")), createEqualOP(ex, mk_int(-1))));
         }
 
 
@@ -17566,7 +17574,7 @@ namespace smt {
         if (!ctx.b_internalized(ex)) {
             ctx.internalize(ex, false);
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
         ctx.mk_th_axiom(get_id(), 1, &lit);

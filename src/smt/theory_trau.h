@@ -1035,7 +1035,7 @@ namespace smt {
                     ptr_vector<expr> refine_eq_set(ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
-                ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, expr_ref_vector &subNodes, expr_ref_vector parents, obj_map<expr, int> non_fresh_vars);
+                ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, expr_ref_vector &subNodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
                     expr* create_concat_with_concat(expr* n1, expr* n2);
                     expr* create_concat_with_str(expr* n, zstring str);
                     expr* create_concat_with_str(zstring str, expr* n);
@@ -1050,7 +1050,7 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
-            bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion);
+            bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes);
             void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
@@ -1251,7 +1251,7 @@ namespace smt {
         expr_ref_vector                                     m_delayed_assertions_todo;
 
         // enode lists for library-aware/high-level string terms (e.g. substr, contains)
-        ptr_vector<enode>                                   m_library_aware_axiom_todo;
+        obj_hashtable<enode>                                m_library_aware_axiom_todo;
         obj_hashtable<expr>                                 input_var_in_len;
         expr_ref_vector                                     string_int_conversion_terms;
         obj_hashtable<expr>                                 string_int_axioms;
