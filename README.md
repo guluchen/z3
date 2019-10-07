@@ -1,6 +1,7 @@
 # Z3-Trau
 
-Z3-Trau, which is a new version of [Trau](https://github.com/diepbp/Trau), is a SMT solver focuses on string theory. It builds on top of the Z3 solver. 
+Z3-Trau, which is a new version of [Trau](https://github.com/diepbp/Trau), is a SMT solver focuses on string theory. It builds on top of the Z3 solver.
+
 It is licensed under the [MIT license](LICENSE.txt).
 
 ## Build status
@@ -30,12 +31,11 @@ Try
 
 A successful execution should give you the following result:
 sat
-(model 
+(model
   (define-fun b () String
     "")
   (define-fun a () String
     " ")
 )
-
 
 

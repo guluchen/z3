@@ -3264,6 +3264,7 @@ namespace smt {
         m_basicstr_axiom_todo.reset();
         m_str_eq_todo.reset();
         m_concat_axiom_todo.reset();
+        completed_branches.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
 
@@ -14930,10 +14931,8 @@ namespace smt {
             assert_cached_diseq_state();
 
         context & ctx = get_context();
-        while (can_propagate()) {
-
-
-            while(true) {
+        while (can_propagate() && !ctx.inconsistent()) {
+            while(!ctx.inconsistent()) {
                 // this can potentially recursively activate itself
                 unsigned start_count = m_basicstr_axiom_todo.size();
                 ptr_vector<enode> axioms_tmp(m_basicstr_axiom_todo);
@@ -14957,7 +14956,7 @@ namespace smt {
             m_concat_axiom_todo.reset();
             m_concat_eval_todo.reset();
 
-            while(true) {
+            while(!ctx.inconsistent()) {
                 // Special handling: terms can recursively set up other terms
                 // (e.g. indexof can instantiate other indexof terms).
                 // - Copy the list so it can potentially be modified during setup.
@@ -15076,15 +15075,12 @@ namespace smt {
                 // build LHS
                 expr_ref len_str(m);
                 len_str = mk_strlen(a_str);
-                SASSERT(len_str);
                 // build RHS
                 expr_ref zero(m);
                 zero = m_autil.mk_numeral(rational(0), true);
-                SASSERT(zero);
                 // build LHS >= RHS and assert
                 app * lhs_ge_rhs = m_autil.mk_ge(len_str, zero);
-                SASSERT(lhs_ge_rhs);
-                assert_axiom(lhs_ge_rhs);
+                m_delayed_assertions_todo.push_back(lhs_ge_rhs);
             }
 
             // build axiom 2: Length(a_str) == 0 <=> a_str == ""
@@ -15107,9 +15103,7 @@ namespace smt {
                 rhs = ctx.mk_eq_atom(a_str, empty_str);
                 SASSERT(rhs);
                 // build LHS <=> RHS and assert
-                literal l(mk_eq(lhs, rhs, true));
-                ctx.mark_as_relevant(l);
-                ctx.mk_th_axiom(get_id(), 1, &l);
+                m_delayed_assertions_todo.push_back(createEqualOP(lhs, rhs)); 
             }
 
         }
@@ -18101,7 +18095,6 @@ namespace smt {
         }
         else if (th.u.re.is_to_re(regex)) {
             SASSERT(elements.size() == 1);
-            SASSERT(elements[0].length() == len_int);
             str_value = elements[0];
             return true;
         }
