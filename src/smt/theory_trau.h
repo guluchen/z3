@@ -992,6 +992,8 @@ namespace smt {
                 bool propagate_equality_left_2_right(expr* lhs, expr* rhs, int &prefix, expr_ref_vector &and_lhs, expr_ref_vector &to_assert);
 
             obj_map<expr, int> collect_non_fresh_vars();
+            expr_set collect_non_ineq_vars();
+            expr_set collect_needles();
             void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
             void add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len);
             void update_string_int_vars(expr* v, obj_hashtable<expr> &s);
@@ -1003,11 +1005,11 @@ namespace smt {
                     bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
                     bool is_trivial_inequality(expr* n, zstring s);
-                bool collect_not_contains(expr* nn);
+                bool collect_not_contains(expr* nn, expr_set const& ineq_vars, expr_set const& needles);
                     bool is_haystack(expr* nn);
                     bool is_needle(expr* nn);
                 bool more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences);
-                bool is_non_fresh_occurrences(expr *nn, obj_map<expr, int> const &occurrences, int &len);
+                bool is_non_fresh_occurrence(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
                 obj_map<expr, int> count_occurrences_from_root();
                         bool is_replace_var(expr* x);
