@@ -725,7 +725,7 @@ namespace smt {
 
     void setup::setup_QF_S() {
         if (m_params.m_string_solver == "z3str3") {
-            setup_trau();
+            setup_str();
         }
         else if (m_params.m_string_solver == "trau") {      
             setup_trau();
@@ -903,7 +903,7 @@ namespace smt {
     void setup::setup_seq_str(static_features const & st) {
         // check params for what to do here when it's ambiguous
         if (m_params.m_string_solver == "z3str3") {
-            setup_trau();
+            setup_str();
         } 
         else if (m_params.m_string_solver == "trau") {      
             setup_trau();

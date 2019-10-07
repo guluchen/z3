@@ -473,6 +473,7 @@ namespace smt {
                 expr* find_equivalent_variable(expr* e);
                 bool is_internal_var(expr* e);
                 bool is_internal_regex_var(expr* e, expr* &regex);
+                bool is_internal_regex_var(expr* e);
                 /*
                 * (abc)*__XXX -> abc
                 */
