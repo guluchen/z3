@@ -8801,6 +8801,7 @@ namespace smt {
             obj_map<expr, int> const& non_fresh_variables,
             bool optimizing,
             expr_ref_vector &result){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
         if (non_fresh_variables.contains(b.first)){
             pair_expr_vector elements;
             if (optimizing) {
@@ -8818,8 +8819,7 @@ namespace smt {
             bool optimizing,
             expr *nameA,
             expr_ref_vector &result){
-
-        
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << mk_pp(b.first, m)<< std::endl;);
         if ((p_bound.get_int64() == 1 || optimizing) && a.first != b.first) /* const = const */ {
             result.push_back(m.mk_false());
             return;
@@ -8835,6 +8835,9 @@ namespace smt {
         expr* tmp = nullptr;
         if (a.second <= REGEX_CODE && b.second <= REGEX_CODE && reg_a != reg_b) {
             tmp = gen_constraint01_regex_regex(a, b, nameA);
+        }
+        if (a.second <= REGEX_CODE && b.second <= REGEX_CODE && reg_a == reg_b) {
+            tmp = m.mk_true();
         }
         else if (a.second <= REGEX_CODE && b.second % p_bound.get_int64() == -1){
             tmp = gen_constraint01_regex_head(a, b, nameA);
@@ -9035,6 +9038,7 @@ namespace smt {
                 }
             }
             else {
+                STRACE("str", tout << __LINE__ <<  " generateConstraint01: non_fresh_Var " << mk_pp(a.first, m) << " == non_fresh_Var " << mk_pp(b.first, m) << std::endl;);
                 if (!flat_enabled) {
                     expr *arrA = get_var_flat_array(a);
                     expr *arrB = get_var_flat_array(b);
