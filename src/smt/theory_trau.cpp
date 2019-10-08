@@ -3347,6 +3347,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (propagate_eq_combination(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by eq_combination propagation." << std::endl;);
+            print_eq_combination(eq_combination);
             update_state();
             return FC_CONTINUE;
         }
@@ -13046,26 +13047,26 @@ namespace smt {
                         to_assert.push_back(tmp);
                 }
         }
-        else if (prefix >= 0 && prefix == (int)lhs_nodes.size() - 2 && prefix <= (int)rhs_nodes.size() - 3){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
-            // only 1 var left
-            expr* concatTmp = create_concat_from_vector(rhs_nodes, prefix);
-            if (!are_equal_exprs(lhs_nodes[prefix + 1], concatTmp)) {
-                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[prefix + 1], concatTmp));
-                if (!to_assert.contains(tmp))
-                    to_assert.push_back(tmp);
-            }
-        }
-        else if (prefix >= 0 && prefix <= (int)lhs_nodes.size() - 3 && prefix == (int)rhs_nodes.size() - 2){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
-            // only 1 var left
-            expr* concatTmp = create_concat_from_vector(lhs_nodes, prefix);
-            if (!are_equal_exprs(rhs_nodes[prefix + 1], concatTmp)) {
-                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(rhs_nodes[prefix + 1], concatTmp));
-                if (!to_assert.contains(tmp))
-                    to_assert.push_back(tmp);
-            }
-        }
+//        else if (prefix >= 0 && prefix == (int)lhs_nodes.size() - 2 && prefix <= (int)rhs_nodes.size() - 3){
+//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
+//            // only 1 var left
+//            expr* concatTmp = create_concat_from_vector(rhs_nodes, prefix);
+//            if (!are_equal_exprs(lhs_nodes[prefix + 1], concatTmp)) {
+//                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[prefix + 1], concatTmp));
+//                if (!to_assert.contains(tmp))
+//                    to_assert.push_back(tmp);
+//            }
+//        }
+//        else if (prefix >= 0 && prefix <= (int)lhs_nodes.size() - 3 && prefix == (int)rhs_nodes.size() - 2){
+//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
+//            // only 1 var left
+//            expr* concatTmp = create_concat_from_vector(lhs_nodes, prefix);
+//            if (!are_equal_exprs(rhs_nodes[prefix + 1], concatTmp)) {
+//                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(rhs_nodes[prefix + 1], concatTmp));
+//                if (!to_assert.contains(tmp))
+//                    to_assert.push_back(tmp);
+//            }
+//        }
         return true;
     }
 
@@ -14847,13 +14848,13 @@ namespace smt {
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
                 if (tmp.size() != 0 && !concat_in_set(nn, result)) {
-                    if (!result.contains(nn))
+                    if (!concat_in_set(nn, result))
                         result.push_back(nn);
                 }
                 else {
                     get_important_asts_in_node(nn, non_fresh_vars, tmp, true);
                     if (tmp.size() != 0 && !concat_in_set(nn, result)) {
-                        if (!result.contains(nn))
+                        if (!concat_in_set(nn, result))
                             result.push_back(nn);
                     }
                 }
@@ -14874,7 +14875,7 @@ namespace smt {
                 ){
                 for (const auto& nn : eqNodeSet)
                     if (!u.str.is_concat(nn) && to_app(nn)->get_num_args() < 2) {
-                        if (!result.contains(nn))
+                        if (!concat_in_set(nn, result))
                             result.push_back(nn);
                     }
             }
@@ -14898,19 +14899,18 @@ namespace smt {
     }
 
     expr* theory_trau::create_concat_with_concat(expr* n1, expr* n2){
-        expr* arg0 = nullptr;
-        expr* arg1 = nullptr;
-        expr* arg2 = nullptr;
-        expr* arg3 = nullptr;
-
-        if (u.str.is_concat(n1, arg0, arg1) && u.str.is_concat(n2, arg2, arg3)){
-            zstring v1, v2;
-            if (u.str.is_string(arg1, v1) && u.str.is_string(arg2, v2)){
-                return mk_concat(arg0, mk_concat(u.str.mk_string(v1 + v2), arg3));
-            }
+        ptr_vector <expr> tmp0;
+        get_nodes_in_concat(n1, tmp0);
+        ptr_vector <expr> tmp1;
+        get_nodes_in_concat(n2, tmp1);
+        zstring v1, v2;
+        if (u.str.is_string(tmp0[tmp0.size() - 1], v1) && u.str.is_string(tmp1[0], v2)){
+            tmp0.pop_back();
+            tmp1.erase(tmp1.begin());
+            tmp0.push_back(u.str.mk_string(v1 + v2));
         }
-
-        return mk_concat(n1, n2);
+        tmp0.append(tmp1);
+        return create_concat_from_vector(tmp0);
     }
 
     expr* theory_trau::create_concat_with_str(expr* n, zstring str){
