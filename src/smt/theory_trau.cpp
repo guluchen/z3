@@ -2739,14 +2739,18 @@ namespace smt {
             if (u.str.is_string(n1, value)) {
                 if (value.length() != 0 || m_scope_level == 0) {
                 }
-                else
+                else {
+                    STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << value << " " << mk_pp(n1, m)<< std::endl;);
                     skip = true;
+                }
             }
             else if (u.str.is_string(n2, value)) {
                 if (value.length() != 0 || m_scope_level == 0) {
                 }
-                else
+                else {
+                    STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << value << " " << mk_pp(n2, m)<< std::endl;);
                     skip = true;
+                }
             }
 
             expr *a0 = nullptr, *a1 = nullptr;
@@ -2777,6 +2781,7 @@ namespace smt {
         else {
             newConstraintTriggered = true;
             STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
+            STRACE("str", tout << __FUNCTION__ << ": not to m_wi_expr_memo: " << skip << "; " << is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m}) << std::endl;);
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
@@ -2951,7 +2956,6 @@ namespace smt {
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
                 assert_axiom(createEqualOP(conclusion01, extraAssert));
-                skip = true;
             }
         }
         else if (u.str.is_string(rhs, value)) {
@@ -2959,7 +2963,6 @@ namespace smt {
             if (extraAssert != nullptr) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
                 assert_axiom(createEqualOP(conclusion01, extraAssert));
-                skip = true;
             }
         }
 
@@ -7662,6 +7665,18 @@ namespace smt {
                     }
             }
         }
+        return false;
+    }
+
+    bool theory_trau::is_splitable_regex(expr* e){
+        if (u.re.is_concat(e) || u.re.is_union(e))
+            return true;
+        else if (u.re.is_plus(e) || u.re.is_star(e))
+            return is_splitable_regex(to_app(e)->get_arg(0));
+        else if (u.re.is_full_seq(e) || u.re.is_range(e))
+            return true;
+        else if (u.re.is_to_re(e))
+            return false;
         return false;
     }
 
@@ -12567,10 +12582,8 @@ namespace smt {
                     for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                         elements.push_back(std::make_pair(list[k], -(j + 1)));
                     }
-                    if (!found ||
-                            (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
+                    if (!found || (curr_var_pieces_counter[l_k] + p_bound.get_int64() > var_pieces_counter[l_k] )){
                         create_internal_int_vars(l_k);
-
                         if (!found)
                             var_pieces_counter.insert(l_k, 0);
                         var_pieces_counter[l_k] += p_bound.get_int64();
@@ -12583,13 +12596,10 @@ namespace smt {
                 else if (content.length() == 1)
                     elements.push_back(std::make_pair(list[k], -1));
             }
-            else if (u.re.is_star(l_k) || u.re.is_plus(l_k) || u.re.is_union(l_k) ||
-                (is_internal_regex_var(l_k, reg))){
+            else if (is_internal_regex_var(l_k, reg)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << std::endl;);
-                if (!found ||
-                    (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])){
+                if (!found || (curr_var_pieces_counter[l_k] + 1 > var_pieces_counter[l_k])){
                     create_internal_int_vars(l_k);
-
                     if (!found)
                         var_pieces_counter.insert(l_k, 0);
                     var_pieces_counter[l_k] += 1;
@@ -12602,20 +12612,18 @@ namespace smt {
             }
             else {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << "; bound = " << p_bound.get_int64() << std::endl;);
-                // check if it is a regex var
                 for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                     elements.push_back(std::make_pair(list[k], j));
                 }
 
-                if (!found ||
-                    (curr_var_pieces_counter[l_k] >= var_pieces_counter[l_k])) {
+                if (!found || (curr_var_pieces_counter[l_k] + p_bound.get_int64() > var_pieces_counter[l_k] )) {
                     create_internal_int_vars(l_k);
-
                     if (!found)
                         var_pieces_counter.insert(l_k, 0);
                     var_pieces_counter[l_k] += p_bound.get_int64();
                 }
                 else {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << curr_var_pieces_counter[l_k] << " " << p_bound.get_int64() << std::endl;);
                     reuse_internal_int_vars(l_k);
                 }
                 curr_var_pieces_counter[l_k] += p_bound.get_int64();
@@ -17574,7 +17582,7 @@ namespace smt {
         if (!ctx.b_internalized(ex)) {
             ctx.internalize(ex, false);
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
         ctx.mk_th_axiom(get_id(), 1, &lit);

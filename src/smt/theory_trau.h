@@ -474,6 +474,7 @@ namespace smt {
                 bool is_internal_var(expr* e);
                 bool is_internal_regex_var(expr* e, expr* &regex);
                 bool is_internal_regex_var(expr* e);
+                bool is_splitable_regex(expr* e);
                 /*
                 * (abc)*__XXX -> abc
                 */
