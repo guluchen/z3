@@ -1253,7 +1253,7 @@ namespace smt {
         // enode lists for library-aware/high-level string terms (e.g. substr, contains)
         obj_hashtable<enode>                                m_library_aware_axiom_todo;
         obj_hashtable<expr>                                 input_var_in_len;
-        expr_ref_vector                                     string_int_conversion_terms;
+        obj_hashtable<expr>                                 string_int_conversion_terms;
         obj_hashtable<expr>                                 string_int_axioms;
         obj_hashtable<expr>                                 string_int_vars;
         obj_hashtable<expr>                                 int_string_vars;

@@ -64,7 +64,6 @@ namespace smt {
               m_trail_stack(*this),
               m_delayed_axiom_setup_terms(m),
               m_delayed_assertions_todo(m),
-              string_int_conversion_terms(m),
               m_persisted_axiom_todo(m),
               contains_map(m),
               m_fresh_id(0),
@@ -1836,23 +1835,21 @@ namespace smt {
         else {
 
             expr_ref_vector litems_lhs(m);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(new_concat, m) << std::endl;);
             expr* lhs = construct_overapprox(new_concat, litems_lhs);
             if (lhs == nullptr)
                 return;
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(new_concat, m) << " == " << mk_ismt2_pp(lhs, m) << std::endl;);
-            for (expr_ref_vector::iterator itor = eqConcatList.begin(); itor != eqConcatList.end(); itor++) {
+            for (const auto& e: eqConcatList) {
                 expr_ref_vector litems_rhs(m);
 
-                expr* rhs = construct_overapprox(*itor, litems_rhs);
+                expr* rhs = construct_overapprox(e, litems_rhs);
                 if (rhs == nullptr)
                     return;
                 bool matchRes = match_regex(rhs, lhs);
-                STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(rhs, m) << " : "
-                                   << (matchRes ? "yes: " : "no: ") << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(rhs, m) << " : " << (matchRes ? "yes: " : "no: ") << std::endl;);
                 if (!matchRes) {
-                    if (*itor != concat)
-                        litems_lhs.push_back(ctx.mk_eq_atom(concat, *itor));
+                    if (e != concat)
+                        litems_lhs.push_back(ctx.mk_eq_atom(concat, e));
 
                     for (unsigned i = 0; i < litems_lhs.size(); ++i)
                         litems_rhs.push_back(litems_lhs[i].get());
@@ -1895,15 +1892,17 @@ namespace smt {
             STRACE("str", tout << __LINE__ << __FUNCTION__ << ": " << mk_pp(nn1, m)  << std::endl;);
             // check string vs regex
             expr* lhs = u.re.mk_to_re(constStr);
-            for (expr_ref_vector::iterator itor = eqNodeSet.begin(); itor != eqNodeSet.end(); itor++) {
-                if (regex_in_var_reg_str_map.contains(*itor)) {
+            ensure_enode(lhs);
+            m_trail.push_back(lhs);
+            for (const auto& e: eqNodeSet) {
+                if (regex_in_var_reg_str_map.contains(e)) {
                     expr_ref_vector litems(m);
-                    expr* rhs = construct_overapprox(*itor, litems);
+                    expr* rhs = construct_overapprox(e, litems);
                     STRACE("str", tout << __LINE__ << __FUNCTION__ << ": " << mk_pp(rhs, m)  << std::endl;);
                     if (rhs == nullptr)
                         return;
                     bool matchRes = match_regex(rhs, lhs);
-                    expr_ref implyL(ctx.mk_eq_atom(*itor, constStr), m);
+                    expr_ref implyL(ctx.mk_eq_atom(e, constStr), m);
                     if (!matchRes) {
                         assert_implication(mk_and(litems), mk_not(implyL));
                     }
@@ -1937,10 +1936,10 @@ namespace smt {
         collect_eq_nodes(nn2, eqNodeSet02);
 
         // check all LHS concat vs RHS regex
-        for (expr_ref_vector::iterator itor01 = eqNodeSet01.begin(); itor01 != eqNodeSet01.end(); itor01++) {
+        for (const auto& e: eqNodeSet01) {
             // check if concat has any const/regex
             expr_ref_vector litems(m);
-            expr* lhs = construct_overapprox(*itor01, litems);
+            expr* lhs = construct_overapprox(e, litems);
             if (lhs == nullptr)
                 return;
             TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
@@ -1952,8 +1951,8 @@ namespace smt {
                         return;
                     bool matchRes = match_regex(rhs_over, lhs);
                     if (!matchRes) {
-                        if (*itor01 != nn1)
-                            litems_rhs.push_back(ctx.mk_eq_atom(nn1, *itor01));
+                        if (e!= nn1)
+                            litems_rhs.push_back(ctx.mk_eq_atom(nn1, e));
 
                         for (unsigned i = 0; i < litems.size(); ++i)
                             litems_rhs.push_back(litems[i].get());
@@ -1966,6 +1965,7 @@ namespace smt {
     }
 
     expr* theory_trau::construct_overapprox(expr* nn, expr_ref_vector & litems){
+
         context &ctx = get_context();
         
 
@@ -1982,12 +1982,12 @@ namespace smt {
 
         if (regex_sort == nullptr)
             return nullptr;
-
         ptr_vector<expr> childrenVector;
         get_nodes_in_concat(nn, childrenVector);
         zstring emptyConst("");
         expr* emptyReg = u.re.mk_to_re(u.str.mk_string(emptyConst));
         app *lhs = to_app(emptyReg);
+        ensure_enode(lhs);
         m_trail.push_back(lhs);
 
         // list of constraints
@@ -2013,6 +2013,7 @@ namespace smt {
                     u.str.is_string(childValue, constStrValue);
                     if (constStrValue.length() > 0) {
                         lhs = u.re.mk_concat(lhs, u.re.mk_to_re(childValue));
+                        ensure_enode(lhs);
                         m_trail.push_back(lhs);
                         lastIsSigmaStar = false;
                     }
@@ -2051,7 +2052,7 @@ namespace smt {
                             for (unsigned i = 0; i < tmpList.size(); ++i)
                                 litems.push_back(tmpList[i].get());
                             lhs = u.re.mk_concat(lhs, tmp);
-                            STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
+                            ensure_enode(lhs);
                             m_trail.push_back(lhs);
                             lastIsSigmaStar = false;
                         }
@@ -2061,6 +2062,7 @@ namespace smt {
                                 lhs = u.re.mk_concat(lhs, u.re.mk_full_seq(regex_sort));
                             else
                                 lhs = u.re.mk_full_seq(regex_sort);
+                            ensure_enode(lhs);
                             m_trail.push_back(lhs);
                         }
                         lastIsSigmaStar = true;
@@ -2068,8 +2070,9 @@ namespace smt {
                 }
             }
         }
-
-        STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(nn, m) << " --> " << mk_ismt2_pp(lhs, m) << std::endl;);
+        ensure_enode(lhs);
+        m_trail.push_back(lhs);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(nn, m) << " --> " << mk_ismt2_pp(lhs, m) << std::endl;);
 
         return lhs;
     }
@@ -3067,7 +3070,7 @@ namespace smt {
                     m_library_aware_axiom_todo.insert(n);
                 } else if (u.str.is_itos(ap)) {
                     TRACE("str", tout << __LINE__ << " found string-integer conversion term: " << mk_pp(ex, m) << std::endl;);
-                    string_int_conversion_terms.push_back(ap);
+                    string_int_conversion_terms.insert(ap);
                     m_library_aware_axiom_todo.insert(n);
                     if (str_int_bound_expr == nullptr)
                         str_int_bound_expr = mk_int_var("StrIntBound");
@@ -3109,7 +3112,7 @@ namespace smt {
                 if (u.str.is_index(ap)) {
                     m_library_aware_axiom_todo.insert(n);
                 } else if (u.str.is_stoi(ap)) {
-                    string_int_conversion_terms.push_back(ap);
+                    string_int_conversion_terms.insert(ap);
                     m_library_aware_axiom_todo.insert(n);
                     if (str_int_bound_expr == nullptr)
                         str_int_bound_expr = mk_int_var("StrIntBound");
@@ -3256,6 +3259,7 @@ namespace smt {
         m_str_eq_todo.reset();
         m_concat_axiom_todo.reset();
         completed_branches.reset();
+        string_int_conversion_terms.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
 
@@ -3371,8 +3375,8 @@ namespace smt {
     bool theory_trau::eval_str_int(){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
         bool addedAxioms = false;
-        for (unsigned i = 0; i < string_int_conversion_terms.size(); ++i) {
-            app * ex = to_app(string_int_conversion_terms[i].get());
+        for (const auto& e: string_int_conversion_terms) {
+            app * ex = to_app(e);
             if (u.str.is_stoi(ex)) {
                 if (eval_str2int(ex)) {
                     addedAxioms = true;
@@ -3627,7 +3631,7 @@ namespace smt {
     }
 
     bool theory_trau::eval_int2str(app * a) {
-        bool axiomAdd = false;
+        bool axiom_added = false;
         context & ctx = get_context();
         
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
@@ -3668,16 +3672,18 @@ namespace smt {
                     expr_ref axiom(rewrite_implication(premise, conclusion), m);
                     if (!string_int_axioms.contains(axiom)) {
                         string_int_axioms.insert(axiom);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(axiom, m) << "\n";);
                         assert_axiom(axiom);
                         implied_facts.push_back(axiom.get());
                         m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
-                        axiomAdd = true;
+                        axiom_added = true;
                     }
                 } else {
                     expr_ref axiom(m.mk_not(ctx.mk_eq_atom(a, mk_string(Sval))), m);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(axiom, m) << "\n";);
                     // always assert this axiom because this is a conflict clause
                     assert_axiom(axiom);
-                    axiomAdd = true;
+                    axiom_added = true;
                 }
             }
         } else {
@@ -3692,11 +3698,11 @@ namespace smt {
                     assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
-                    axiomAdd = true;
+                    axiom_added = true;
                 }
             }
         }
-        return axiomAdd;
+        return axiom_added;
     }
 
     /*
@@ -5680,7 +5686,9 @@ namespace smt {
         
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
-            assert_axiom(rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1))));
+            expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
+            m_trail.push_back(to_assert);
+            assert_axiom(to_assert);
             return;
         }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
@@ -5757,7 +5765,9 @@ namespace smt {
         
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
-            assert_axiom(rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1))));
+            expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
+            m_trail.push_back(to_assert);
+            assert_axiom(to_assert);
             return;
         }
 
@@ -5783,8 +5793,8 @@ namespace smt {
         expr_ref_vector premises(m);
         premises.push_back(boundConstraint);
         premises.push_back(createEqualOP(str, u.str.mk_itos(num)));
-
         expr* to_assert = rewrite_implication(createAndOP(premises), createAndOP(conclusions));
+        m_trail.push_back(to_assert);
         assert_axiom(to_assert);
         implied_facts.push_back(to_assert);
     }
@@ -5798,6 +5808,7 @@ namespace smt {
         if (u.str.is_stoi(num, arg0)){
             if (u.str.is_itos(arg0)) {
                 expr *to_assert = rewrite_implication(createEqualOP(str, u.str.mk_itos(num)), createEqualOP(str, arg0));
+                m_trail.push_back(to_assert);
                 assert_axiom(to_assert);
                 if (cached)
                     implied_facts.push_back(to_assert);
@@ -5813,6 +5824,7 @@ namespace smt {
                             return false;
                     }
                     expr *to_assert = rewrite_implication(createEqualOP(str, u.str.mk_itos(num)), createEqualOP(str, nodes[nodes.size() - 1]));
+                    m_trail.push_back(to_assert);
                     assert_axiom(to_assert);
                     if (cached)
                         implied_facts.push_back(to_assert);
