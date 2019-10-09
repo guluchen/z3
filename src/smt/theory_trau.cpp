@@ -4606,13 +4606,15 @@ namespace smt {
                 collect_eq_nodes(lhs, eqs);
                 if (eq != m.mk_true() && !eqs.contains(rhs)) {
                     expr* not_e = mk_not(m, e);
+                    m_trail.push_back(not_e);
                     if (guessed_diseqs.contains(not_e))
                         diff.push_back(not_e);
-                    STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
+                    // STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
                     return false;
                 }
-                else
-                    STRACE("str", tout << __LINE__ << " does contain expr at_same_state " << mk_pp(e, m) << " --> " << mk_pp(eq, m)<< std::endl;);
+                else {
+                    // STRACE("str", tout << __LINE__ << " does contain expr at_same_state " << mk_pp(e, m) << " --> " << mk_pp(eq, m) << std::endl;);
+                }
             }
         }
 
@@ -4628,7 +4630,7 @@ namespace smt {
             if (is_empty_comparison(e))
                 continue;
             if (!curr_diseq.contains(e) && curr_eq.contains(e)) {
-                STRACE("str", tout << __LINE__ <<  " not at_same_state  " << mk_pp(e, m) << std::endl;);
+                //STRACE("str", tout << __LINE__ <<  " not at_same_state  " << mk_pp(e, m) << std::endl;);
                 return false;
             }
         }
@@ -7001,6 +7003,7 @@ namespace smt {
         expr* to_assert = createAndOP(ands);
         if (premise != nullptr) {
             expr* tmp = rewrite_implication(premise, to_assert);
+            m_trail.push_back(tmp);
             assert_axiom(tmp);
             implied_facts.push_back(tmp);
         }
@@ -13546,14 +13549,12 @@ namespace smt {
             expr_ref_vector eqs(m);
             collect_eq_nodes(v, eqs);
             for (const auto &n : eqs) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << " = "
-                                   << mk_pp(n, m) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << " = " << mk_pp(n, m) << std::endl;);
                 s.insert(n);
             }
         }
         else {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m)
-                               << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << std::endl;);
         }
     }
 
