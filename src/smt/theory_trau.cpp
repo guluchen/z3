@@ -142,8 +142,7 @@ namespace smt {
     }
 
     theory_var theory_trau::mk_var(enode *const n) {
-        if (!u.is_seq(n->get_owner()) &&
-            !u.is_re(n->get_owner())) {
+        if (!u.is_seq(n->get_owner()) && !u.is_re(n->get_owner())) {
             return null_theory_var;
         }
         if (is_attached_to_var(n)) {
@@ -229,13 +228,16 @@ namespace smt {
         context & ctx = get_context();
         app_ref owner{m};
         owner = n->get_owner();
+        if (!u.is_string(m.get_sort(n->get_owner())))
+            return alloc(expr_wrapper_proc, owner);
+
         // if the owner is not internalized, it doesn't have an e-node associated.
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         rational vLen(-1);
-        if (u.is_seq(owner) && get_len_value(n->get_owner(), vLen)) {
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
+        if (u.is_string(m.get_sort(n->get_owner())) && get_len_value(n->get_owner(), vLen)) {
+            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
         }
-        else if (u.is_seq(owner)){
+        else if (u.is_string(m.get_sort(n->get_owner()))){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
             vLen.reset();
             ptr_vector<expr> leafNodes;
@@ -257,9 +259,7 @@ namespace smt {
                         rational tmp;
                         if (m_autil.is_numeral(value, tmp))
                             vLen = vLen + tmp;
-                        STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": "
-                                           << mk_pp(value, m) << " --> " << vLen
-                                           << std::endl;);
+                        STRACE("str", tout << __LINE__ << " len value :  " << mk_pp(mk_strlen(leafNodes[i]), m) << ": " << mk_pp(value, m) << " --> " << vLen << std::endl;);
                     } else {
                         vLen = rational(-1);
                         break;
@@ -267,18 +267,16 @@ namespace smt {
                 }
             }
 
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
+            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         if (vLen.get_int64() == 0)
             return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
             return alloc(expr_wrapper_proc, val);
-        } else if (u.is_seq(owner)){
+        } else if (ctx.is_relevant(owner.get())){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
-//            return alloc(expr_wrapper_proc, owner);
             sort * s           = m.get_sort(n->get_owner());
             string_value_proc * result = nullptr;
 
@@ -287,7 +285,7 @@ namespace smt {
             is_regex_var(owner.get(), regex);
             expr* arr_var = get_var_flat_array(owner.get());
             if (is_non_fresh(owner.get()) && arr_var != nullptr) {
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 expr* arr_expr = get_var_flat_array(owner.get());
                 if (arr_expr != nullptr) {
                     if (ctx.e_internalized(arr_expr)) {
@@ -302,7 +300,7 @@ namespace smt {
                     return alloc(expr_wrapper_proc, owner);
             }
             else {
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 bool found = false;
                 expr_ref_vector eqSet(m);
                 collect_eq_nodes(owner.get(), eqSet);
@@ -328,7 +326,7 @@ namespace smt {
             }
 
             SASSERT(result != 0);
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
             expr_ref_vector dep = get_dependencies(owner);
             expr* reg = nullptr;
             if (non_fresh_var != nullptr) {
@@ -336,9 +334,9 @@ namespace smt {
                 expr* tmp_arr = get_var_flat_array(non_fresh_var);
                 if (tmp_arr && ctx.e_internalized(tmp_arr))
                     result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var)));
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 expr_ref_vector depImp = get_dependencies(non_fresh_var);
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 dep.append(depImp);
 
                 // add its ancestors
@@ -361,13 +359,11 @@ namespace smt {
             }
             else {
                 // normal node
-                STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort "
-                                   << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 // all lens
                 expr_ref_vector added_nodes(m);
                 for (const auto& nn : dep)
                     if (ctx.e_internalized(nn)){
-                        STRACE("str", tout << __LINE__ << " " << mk_pp(nn, m) << std::endl;);
                         if (is_non_fresh(nn) || is_regex_var(nn)) {
                             result->add_entry(ctx.get_enode(nn));
                             added_nodes.push_back(nn);
@@ -384,12 +380,7 @@ namespace smt {
                 if (expr_array_linkers.contains(owner))
                     result->set_linker(expr_array_linkers[owner]);
             }
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
-            if (!u.str.is_concat(owner)) {
-                if (ctx.e_internalized(mk_strlen(owner)))
-                    result->add_entry(ctx.get_enode(mk_strlen(owner)));
-            }
-            STRACE("str", tout << __LINE__ << "mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
             return result;
         }
         return alloc(expr_wrapper_proc, owner);
@@ -771,7 +762,7 @@ namespace smt {
             }
 
             // upward propagation
-            for (const auto & it : concat_astNode_map)
+            for (const auto & it : concat_node_map)
                 if (!eqs.contains(it.get_value())){ // this to break the case: "" . x = x
                     expr *ts0 = it.get_key1();
                     expr *ts1 = it.get_key2();
@@ -1664,7 +1655,7 @@ namespace smt {
         expr_ref_vector eqRhsList(m);
         collect_eq_nodes(rhs, eqRhsList);
 
-        for (const auto & it : concat_astNode_map){
+        for (const auto & it : concat_node_map){
             expr* ts0 = it.get_key1();
             expr* ts1 = it.get_key2();
             expr* concat = it.get_value();
@@ -3436,16 +3427,21 @@ namespace smt {
                         u.str.is_string(const_val, str_val);
                         bool valid = false;
                         rational rational_val = string_to_int(str_val, valid);
-
+                        if (rational_val.get_int64() <= 0)
+                            continue;
                         rational val;
                         if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
 
                             expr_ref_vector premise(m);
                             premise.push_back(createEqualOP(lhs, const_val));
                             premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-
-                            assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
-                            added_axioms = true;
+                            premise.push_back(createEqualOP(rhs, i2s));
+                            expr* to_assert = rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
+                            if (!implied_facts.contains(to_assert)) {
+                                assert_axiom(to_assert);
+                                implied_facts.push_back(to_assert);
+                                added_axioms = true;
+                            }
                         }
                         else {
                             STRACE("str",
@@ -3466,16 +3462,21 @@ namespace smt {
                         u.str.is_string(const_val, str_val);
                         bool valid = false;
                         rational rational_val = string_to_int(str_val, valid);
-
+                        if (rational_val.get_int64() <= 0)
+                            continue;
                         rational val;
                         if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
 
                             expr_ref_vector premise(m);
                             premise.push_back(createEqualOP(rhs, const_val));
                             premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-
-                            assert_axiom(rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val)))));
-                            added_axioms = true;
+                            premise.push_back(createEqualOP(lhs, i2s));
+                            expr* to_assert = rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
+                            if (!implied_facts.contains(to_assert)) {
+                                assert_axiom(to_assert);
+                                implied_facts.push_back(to_assert);
+                                added_axioms = true;
+                            }
                         }
                         else {
                             if (rational_val == val) {
@@ -3563,7 +3564,7 @@ namespace smt {
         else {
             expr* eq_node = nullptr;
             int val = eval_invalid_str2int(S, eq_node);
-            if (val == -1) {
+            if (val == -1 && i_val.get_int64() != -1) {
                 expr_ref premise(ctx.mk_eq_atom(S, eq_node), m);
                 expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(conclusion.get(), m) << std::endl;);
@@ -3646,7 +3647,7 @@ namespace smt {
                 // nonempty string --> convert to correct integer value, or disallow it
                 rational convertedRepresentation(0);
                 rational ten(10);
-                bool conversionOK = true;
+                bool valid_conversion = true;
                 for (unsigned i = 0; i < Sval.length(); ++i) {
                     char digit = (int)Sval[i];
                     if (isdigit((int)digit)) {
@@ -3656,12 +3657,12 @@ namespace smt {
                     } else {
                         // not a digit, invalid
                         TRACE("str", tout << "str.to-int argument contains non-digit character '" << digit << "'" << std::endl;);
-                        conversionOK = false;
+                        valid_conversion = false;
                         break;
                     }
                 }
 
-                if (conversionOK) {
+                if (valid_conversion) {
                     expr_ref premise(ctx.mk_eq_atom(a, mk_string(Sval)), m);
                     expr_ref conclusion(ctx.mk_eq_atom(N, m_autil.mk_numeral(convertedRepresentation, true)), m);
                     expr_ref axiom(rewrite_implication(premise, conclusion), m);
@@ -13718,7 +13719,7 @@ namespace smt {
 
     obj_map<expr, int> theory_trau::count_occurrences_from_root(){
         obj_map<expr, int> ret;
-        for (const auto& n : concat_astNode_map){
+        for (const auto& n : concat_node_map){
             expr* arg0 = n.get_key1();
             expr* arg1 = n.get_key2();
             if (arg0 == arg1)
@@ -15206,7 +15207,7 @@ namespace smt {
         // build RHS: start by extracting x and y from Concat(x, y)
         app * a_x = to_app(a_cat->get_arg(0));
         app * a_y = to_app(a_cat->get_arg(1));
-        concat_astNode_map.insert(a_x, a_y, a_cat);
+        concat_node_map.insert(a_x, a_y, a_cat);
         expr_ref len_x(m);
         len_x = mk_strlen(a_x);
 
@@ -16805,10 +16806,10 @@ namespace smt {
         //-------------------------------------------------------
         expr *concatAst = nullptr;
 
-        if (!concat_astNode_map.find(n1, n2, concatAst)) {
+        if (!concat_node_map.find(n1, n2, concatAst)) {
             concatAst = u.str.mk_concat(n1, n2);
             m_trail.push_back(concatAst);
-            concat_astNode_map.insert(n1, n2, concatAst);
+            concat_node_map.insert(n1, n2, concatAst);
 
             expr_ref concat_length(mk_strlen(concatAst), m);
 
@@ -17421,21 +17422,18 @@ namespace smt {
         do {
             theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, n);
             if (tha) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
             }
             theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, n);
             if (thi) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
             }
             theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, n);
             if (thr) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 model_value_proc* tmp = tha->mk_value(ctx.get_enode(n), mg);
                 value = tmp->mk_value(mg, values);
                 break;
@@ -17471,8 +17469,7 @@ namespace smt {
                         if (!dependency_graph.contains(tmp)){
                             dependency_graph.insert(tmp, {});
                         }
-                        dependency_graph[tmp].insert(
-                                ctx.get_enode(nn)->get_root()->get_owner());
+                        dependency_graph[tmp].insert(ctx.get_enode(nn)->get_root()->get_owner());
                     }
                     if (!included_nodes.contains(ctx.get_enode(nn)->get_root()->get_owner()))
                         included_nodes.push_back(ctx.get_enode(nn)->get_root()->get_owner());
@@ -17481,7 +17478,7 @@ namespace smt {
         }
 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        for (const auto& c : concat_astNode_map) {
+        for (const auto& c : concat_node_map) {
             if (!ctx.is_relevant(c.get_value()) || !ctx.is_relevant(c.get_key1()) || !ctx.is_relevant(c.get_key2()))
                 continue;
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << std::endl;);
@@ -17542,7 +17539,6 @@ namespace smt {
             else if (!included_nodes.contains(key1_root)) {
                 if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key1(), c.get_value()))
                     continue;
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                 if (!dependency_graph.contains(key1_root)){
                     dependency_graph.insert(key1_root, {});
                 }
@@ -17579,7 +17575,6 @@ namespace smt {
     void theory_trau::assert_axiom(expr *const e) {
         if (e == nullptr || m.is_true(e)) return;
 
-        
         context& ctx = get_context();
         expr_ref ex{e, m};
 

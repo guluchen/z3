@@ -205,7 +205,7 @@ namespace smt {
         };
 
         class string_value_proc : public model_value_proc {
-            theory_trau&                     th;
+            theory_trau&                    th;
             sort*                           m_sort;
             svector<model_value_dependency> m_dependencies;
             app*                            node;
@@ -233,7 +233,6 @@ namespace smt {
                 m_dependencies.push_back(model_value_dependency(value));
             }
             void add_entry(enode * value){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, th.get_manager()) << " --> " << mk_pp(value->get_owner(), th.get_manager()) << std::endl;);
                 m_dependencies.push_back(model_value_dependency(value));
             }
             void set_linker(expr * link){
@@ -1225,7 +1224,7 @@ namespace smt {
         th_union_find                                       m_find;
         th_trail_stack                                      m_trail_stack;
 
-        obj_pair_map<expr, expr, expr*>                     concat_astNode_map;
+        obj_pair_map<expr, expr, expr*>                     concat_node_map;
 
         obj_map<expr, expr*>                                 regex_in_bool_map;
         obj_map<expr, string_set >                          regex_in_var_reg_str_map;
