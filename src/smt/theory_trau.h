@@ -435,10 +435,10 @@ namespace smt {
                 void handle_disequalities();
                 void handle_disequalities_cached();
 
-            bool review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination);
+            bool review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause);
                 expr* remove_empty_in_concat(expr* s);
-                bool review_notcontain_trivial(expr* lhs, expr* needle);
-            bool review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+                bool review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause);
+            bool review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause);
                 bool review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool review_disequality_trivial(expr* lhs, expr* rhs);
                     void handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars);
@@ -910,7 +910,9 @@ namespace smt {
             app* createGreaterOP(expr* x, expr* y);
             app* createGreaterEqOP(expr* x, expr* y);
             app* createAndOP(expr_ref_vector ands);
+            app* createAndOP(expr* a, expr* b, expr* c = nullptr, expr* d = nullptr);
             app* createOrOP(expr_ref_vector ors);
+            app* createOrOP(expr* a, expr* b, expr* c = nullptr, expr* d = nullptr);
             app* createSelectOP(expr* x, expr* y);
 
             int optimized_lhs(
@@ -1368,7 +1370,6 @@ namespace smt {
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;
         void set_up_axioms(expr * ex);
-
         enum {
             NONE = 0,
             LEFT_EMPTY = 1,

@@ -1641,7 +1641,6 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(nn), mk_int(0)));
             }
         }
-
         return createAndOP(ands);
     }
 
@@ -3313,10 +3312,14 @@ namespace smt {
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
-        if (!review_disequalities_not_contain(eq_combination)){
+        expr* cause = nullptr;
+        if (!review_disequalities_not_contain(eq_combination, cause)){
             TRACE("str", tout << "Resuming search due to axioms added by review_disequalities_not_contain." << std::endl;);
             print_eq_combination(eq_combination);
-            negate_context();
+            if (cause == nullptr)
+                negate_context();
+            else
+                negate_context(cause);
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
@@ -3436,12 +3439,8 @@ namespace smt {
                             continue;
                         rational val;
                         if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
-
-                            expr_ref_vector premise(m);
-                            premise.push_back(createEqualOP(lhs, const_val));
-                            premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-                            premise.push_back(createEqualOP(rhs, i2s));
-                            expr* to_assert = rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
+                            expr* premise = createAndOP(createEqualOP(lhs, const_val), mk_not(m, createEqualOP(lhs, rhs)), createEqualOP(rhs, i2s));
+                            expr* to_assert = rewrite_implication(premise, mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
                             if (!implied_facts.contains(to_assert)) {
                                 assert_axiom(to_assert);
                                 implied_facts.push_back(to_assert);
@@ -3471,12 +3470,8 @@ namespace smt {
                             continue;
                         rational val;
                         if (!get_arith_value(to_app(i2s)->get_arg(0), val)){
-
-                            expr_ref_vector premise(m);
-                            premise.push_back(createEqualOP(rhs, const_val));
-                            premise.push_back(mk_not(m, createEqualOP(lhs, rhs)));
-                            premise.push_back(createEqualOP(lhs, i2s));
-                            expr* to_assert = rewrite_implication(createAndOP(premise), mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
+                            expr* premise = createAndOP(createEqualOP(rhs, const_val), mk_not(m, createEqualOP(lhs, rhs)), createEqualOP(lhs, i2s));
+                            expr* to_assert = rewrite_implication(premise, mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
                             if (!implied_facts.contains(to_assert)) {
                                 assert_axiom(to_assert);
                                 implied_facts.push_back(to_assert);
@@ -4844,9 +4839,10 @@ namespace smt {
             expr_ref_vector eqcores(m), diseqcores(m);
             fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
             fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
-            expr_ref toAssert(createAndOP(ands), m);
+            expr_ref toAssert(rewrite_implication(createAndOP(eqcores), createAndOP(ands)), m);
+            m_trail.push_back(toAssert.get());
             assert_axiom(toAssert.get());
-            implied_facts.push_back(toAssert.get());
+            // implied_facts.push_back(toAssert.get());
             return true;
         }
         else
@@ -5704,18 +5700,10 @@ namespace smt {
         expr* boundConstraint = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
         rational max_value = get_max_s2i(str);
-        expr_ref_vector conclusions(m);
 
-//        conclusions.push_back(lenConstraint);
-        conclusions.push_back(unrollConstraint);
-        conclusions.push_back(createLessEqOP(num, mk_int(max_value)));
-        conclusions.push_back(fill_0);
-
-        expr_ref_vector premises(m);
-        premises.push_back(boundConstraint);
-        premises.push_back(createEqualOP(num, u.str.mk_stoi(str)));
-
-        expr* to_assert = rewrite_implication(createAndOP(premises), createAndOP(conclusions));
+        expr* conclusion = createAndOP(unrollConstraint, createLessEqOP(num, mk_int(max_value)), fill_0);
+        expr* premise = createAndOP(boundConstraint, createEqualOP(num, u.str.mk_stoi(str)));
+        expr* to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
         implied_facts.push_back(to_assert);
     }
@@ -5785,18 +5773,9 @@ namespace smt {
         expr* fill_0 = fill_0_1st_loop(num, str);
 
         rational max_value = get_max_s2i(str);
-
-        expr_ref_vector conclusions(m);
-
-        conclusions.push_back(lenConstraint);
-        conclusions.push_back(unrollConstraint);
-        conclusions.push_back(createLessEqOP(num, mk_int(max_value)));
-        conclusions.push_back(fill_0);
-
-        expr_ref_vector premises(m);
-        premises.push_back(boundConstraint);
-        premises.push_back(createEqualOP(str, u.str.mk_itos(num)));
-        expr* to_assert = rewrite_implication(createAndOP(premises), createAndOP(conclusions));
+        expr* conclusion = createAndOP(lenConstraint, unrollConstraint, createLessEqOP(num, mk_int(max_value)), fill_0);
+        expr* premise = createAndOP(boundConstraint, createEqualOP(str, u.str.mk_itos(num)));
+        expr* to_assert = rewrite_implication(premise, conclusion);
         m_trail.push_back(to_assert);
         assert_axiom(to_assert);
         implied_facts.push_back(to_assert);
@@ -5921,7 +5900,6 @@ namespace smt {
 
     expr* theory_trau::valid_str_int(expr* str){
         if (is_char_at(str)){
-            
             expr *arr = get_var_flat_array(str);
             expr_ref_vector conclusions(m);
             conclusions.push_back(createGreaterEqOP(
@@ -6035,11 +6013,9 @@ namespace smt {
             rational len_minus_one = len - one;
 
             // positive number
-            expr_ref_vector tmpAnds(m);
-            tmpAnds.push_back(createGreaterEqOP(num, mk_int(prePower)));
-            tmpAnds.push_back(createLessEqOP(num, mk_int(powerOf_minus_one)));
+            expr* premise = createAndOP(createGreaterEqOP(num, mk_int(prePower)), createLessEqOP(num, mk_int(powerOf_minus_one)));
             ands.push_back(rewrite_implication(
-                    createAndOP(tmpAnds),
+                    premise,
                     createEqualOP(mk_strlen(str), mk_int(len_minus_one))));
             prePower = powerOf;
         }
@@ -6327,20 +6303,22 @@ namespace smt {
         }
     }
 
-    bool theory_trau::review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination){
+    bool theory_trau::review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
                 if (is_contain_equality(lhs, contain)){
-                    if (!review_not_contain(rhs, contain, eq_combination)){
+                    if (!review_not_contain(rhs, contain, eq_combination, cause)){
+                        cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
                 else if (is_contain_equality(rhs, contain)){
-                    if (!review_not_contain(lhs, contain, eq_combination)){
+                    if (!review_not_contain(lhs, contain, eq_combination, cause)){
+                        cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
@@ -6356,11 +6334,11 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination){
+    bool theory_trau::review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
         
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
-        if (!review_notcontain_trivial(lhs, new_needle)){
+        if (!review_notcontain_trivial(lhs, new_needle, cause)){
             return false;
         }
         context & ctx = get_context();
@@ -6399,8 +6377,7 @@ namespace smt {
         return create_concat_from_vector(new_nodes);
     }
 
-    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle){
-
+    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause){
         expr_ref_vector eqs(m);
         collect_eq_nodes(lhs, eqs);
         for (const auto& eq: eqs) {
@@ -6408,8 +6385,8 @@ namespace smt {
             get_nodes_in_concat(eq, nodes);
             for (const auto &nn : nodes)
                 if (in_same_eqc(nn, needle)) {
-                    
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+                    cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
                     return false;
                 }
         }
@@ -6490,6 +6467,8 @@ namespace smt {
         if (is_non_fresh(lhs,  non_fresh_vars, len1) && is_non_fresh(rhs, non_fresh_vars, len2) && is_var_var_inequality(lhs, rhs)) {
             rational len_lhs;
             rational len_rhs;
+            len1 = len1 >= 0 ? len1 : connectingSize;
+            len2 = len2 >= 0 ? len2 : connectingSize;
             int bound = std::min(len1, len2);
             if (get_len_value(lhs, len_lhs) && get_len_value(rhs, len_rhs)) {
                 if (len_lhs != len_rhs)
@@ -12136,7 +12115,6 @@ namespace smt {
      *
      */
     app* theory_trau::createAndOP(expr_ref_vector ands){
-        
         context & ctx   = get_context();
         if (ands.size() == 0)
             return m.mk_true();
@@ -12151,6 +12129,21 @@ namespace smt {
         app* tmp = m.mk_and(ands.size(), ands.c_ptr());
         ctx.internalize(tmp, false);
         return tmp;
+    }
+
+    app* theory_trau::createAndOP(expr* a, expr* b, expr* c, expr* d){
+        expr_ref_vector v(m);
+        if (m.is_false(a) || m.is_false(b) || m.is_false(c) || m.is_false(d))
+            return m.mk_false();
+        if (a != nullptr && !m.is_true(a))
+            v.push_back(a);
+        if (b != nullptr && !m.is_true(b))
+            v.push_back(b);
+        if (c != nullptr && !m.is_true(c))
+            v.push_back(c);
+        if (d != nullptr && !m.is_true(d))
+            v.push_back(d);
+        return createAndOP(v);
     }
 
     /*
@@ -12169,6 +12162,24 @@ namespace smt {
         app* tmp = m.mk_or(ors.size(), ors.c_ptr());
         ctx.internalize(tmp, false);
         return tmp;
+    }
+
+    app* theory_trau::createOrOP(expr* a, expr* b, expr* c, expr* d){
+        expr_ref_vector v(m);
+        if ((a != nullptr && m.is_true(a)) ||
+                (b != nullptr && m.is_true(b)) ||
+                (c != nullptr && m.is_true(c)) ||
+                (d != nullptr && m.is_true(d)))
+            return m.mk_true();
+        if (a != nullptr && !m.is_false(a))
+            v.push_back(a);
+        if (b != nullptr && !m.is_false(b))
+            v.push_back(b);
+        if (c != nullptr && !m.is_false(c))
+            v.push_back(c);
+        if (d != nullptr && !m.is_false(d))
+            v.push_back(d);
+        return createAndOP(v);
     }
 
     /*
@@ -14211,9 +14222,13 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
 
-        if (!review_disequalities_not_contain(combinations)){
+        expr* cause = nullptr;
+        if (!review_disequalities_not_contain(combinations, cause)){
             print_eq_combination(combinations);
-            negate_context();
+            if (cause == nullptr)
+                negate_context();
+            else
+                negate_context(cause);
             axiom_added = true;
             return combinations;
         }
@@ -15783,10 +15798,8 @@ namespace smt {
 
         {
             // arg1 == arg0 && arg2 == 0 --> e = 0
-            expr_ref_vector ands(m);
-            ands.push_back(createEqualOP(arg0, arg1));
-            ands.push_back(createEqualOP(startIndex, mk_int(0)));
-            assert_axiom(rewrite_implication(createAndOP(ands), createEqualOP(e, mk_int(0))));
+            expr* premise = createAndOP(createEqualOP(arg0, arg1), createEqualOP(startIndex, mk_int(0)));
+            assert_axiom(rewrite_implication(premise, createEqualOP(e, mk_int(0))));
         }
         // case split
 
@@ -15986,11 +15999,8 @@ namespace smt {
         case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
 
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
-        expr_ref_vector premises(m);
-        premises.push_back(argumentsValid);
-        premises.push_back(lenOutOfBounds);
         expr_ref premise_expr(m);
-        premise_expr = createAndOP(premises);
+        premise_expr = createAndOP(argumentsValid, lenOutOfBounds);
         expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
