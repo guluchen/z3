@@ -3358,6 +3358,7 @@ namespace smt {
         if (can_merge_combination(eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
             print_eq_combination(eq_combination);
+            newConstraintTriggered = true;
             return FC_CONTINUE;
         }
 
