@@ -3444,6 +3444,7 @@ namespace smt {
                             expr* to_assert = rewrite_implication(premise, mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
                             if (!implied_facts.contains(to_assert)) {
                                 assert_axiom(to_assert);
+                                m_trail.push_back(to_assert);
                                 implied_facts.push_back(to_assert);
                                 added_axioms = true;
                             }
@@ -3475,6 +3476,7 @@ namespace smt {
                             expr* to_assert = rewrite_implication(premise, mk_not(m, createEqualOP(to_app(i2s)->get_arg(0), mk_int(rational_val))));
                             if (!implied_facts.contains(to_assert)) {
                                 assert_axiom(to_assert);
+                                m_trail.push_back(to_assert);
                                 implied_facts.push_back(to_assert);
                                 added_axioms = true;
                             }
@@ -3544,6 +3546,7 @@ namespace smt {
                     string_int_axioms.insert(axiom);
                     assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
+                    m_trail.push_back(axiom);
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
@@ -3555,6 +3558,7 @@ namespace smt {
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
+                    m_trail.push_back(axiom);
                     assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
@@ -3572,6 +3576,7 @@ namespace smt {
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
+                    m_trail.push_back(axiom);
                     assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
@@ -3672,6 +3677,7 @@ namespace smt {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(axiom, m) << "\n";);
                         assert_axiom(axiom);
                         implied_facts.push_back(axiom.get());
+                        m_trail.push_back(axiom);
                         m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                         axiom_added = true;
                     }
@@ -3692,6 +3698,7 @@ namespace smt {
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
+                    m_trail.push_back(axiom);
                     assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
@@ -4079,6 +4086,7 @@ namespace smt {
             expr* tmp = createAndOP(to_assert);
             expr* assertingExpr = rewrite_implication(coreExpr, tmp);
             assert_axiom(tmp);
+            m_trail.push_back(assertingExpr);
             implied_facts.push_back(assertingExpr);
             return true;
         }
@@ -4160,6 +4168,7 @@ namespace smt {
             // implies that x contains A if needed, means negating the context
             expr_ref toAssert(rewrite_implication(createAndOP(eqs), conclusion), m);
             assert_axiom(toAssert);
+            m_trail.push_back(toAssert);
             implied_facts.push_back(toAssert);
             return false;
         }
@@ -4211,6 +4220,7 @@ namespace smt {
                         if (!can_match(value, nn)) {
                             expr_ref tmp(mk_not(m, createEqualOP(e, nn)), m);
                             implied_facts.push_back(tmp.get());
+                            m_trail.push_back(tmp);
                             assert_axiom(tmp);
                             return false;
                         }
@@ -4984,6 +4994,7 @@ namespace smt {
             fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
             expr_ref toAssert(rewrite_implication(createAndOP(eqcores), createAndOP(ands)), m);
             assert_axiom(toAssert.get());
+            m_trail.push_back(toAssert);
             implied_facts.push_back(toAssert.get());
             return true;
         }
@@ -5706,6 +5717,7 @@ namespace smt {
         expr* premise = createAndOP(boundConstraint, createEqualOP(num, u.str.mk_stoi(str)));
         expr* to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
+        m_trail.push_back(to_assert);
         implied_facts.push_back(to_assert);
     }
 
@@ -7564,6 +7576,7 @@ namespace smt {
 
         expr_ref tmp(mk_not(m, createAndOP(guessed_eqs)), m);
         assert_axiom(tmp.get());
+        m_trail.push_back(tmp.get());
         implied_facts.push_back(tmp.get());
     }
 
@@ -7576,6 +7589,7 @@ namespace smt {
 
         expr_ref tmp(mk_not(m, createAndOP(guessed_eqs)), m);
         assert_axiom(tmp.get());
+        m_trail.push_back(tmp.get());
         implied_facts.push_back(tmp.get());
     }
 
@@ -7584,6 +7598,7 @@ namespace smt {
         
         expr_ref tmp(mk_not(m,premise), m);
         assert_axiom(tmp.get());
+        m_trail.push_back(tmp.get());
         implied_facts.push_back(tmp.get());
     }
 
