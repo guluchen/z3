@@ -441,9 +441,9 @@ namespace smt {
             bool review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool review_disequality_trivial(expr* lhs, expr* rhs);
-                    void handle_disequality(expr *lhs, expr *rhs);
-                    void handle_disequality_const(expr *lhs, zstring rhs);
-                    void handle_disequality_var(expr *lhs, expr *rhs);
+                    void handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars);
+                    void handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars);
+                    void handle_disequality_var(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars);
                 void handle_not_contain();
                 void handle_not_contain_cached();
                     void handle_not_contain(expr *lhs, expr *rhs, bool cached = false);

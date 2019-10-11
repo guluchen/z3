@@ -3291,6 +3291,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         bool addAxiom;
         expr_ref_vector diff(m);
+        dump_assignments();
         if (is_completed_branch(addAxiom, diff)){
             if (addAxiom)
                 return FC_CONTINUE;
@@ -3298,7 +3299,7 @@ namespace smt {
                 return FC_DONE;
         }
 
-        dump_assignments();
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_map<expr, int> non_fresh_vars;
         obj_map<expr, ptr_vector<expr>> eq_combination;
@@ -6227,8 +6228,6 @@ namespace smt {
     }
 
     bool theory_trau::underapproximation_cached(){
-        
-
         expr_ref_vector guessed_exprs(m);
         fetch_guessed_exprs_from_cache(uState, guessed_exprs);
         expr* causexpr = createAndOP(guessed_exprs);
@@ -6237,17 +6236,6 @@ namespace smt {
         if (uState.asserting_constraints.size() > 0)
             init_underapprox_cached();
         bool axiomAdded = false;
-
-//        for (const auto& a : uState.asserting_constraints){
-//            axiomAdded = true;
-//            ensure_enode(a);
-//
-//            if (m.is_and(a)) {
-//                assert_axiom(rewrite_implication(causexpr, a));
-//            }
-//            else
-//                assert_axiom(a);
-//        }
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** completed_branches" << completed_branches.size() << std::endl;);
         for (const auto& b : completed_branches){
@@ -6288,7 +6276,7 @@ namespace smt {
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
                 if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
-                    handle_disequality(lhs, rhs);
+                    handle_disequality(lhs, rhs, uState.non_fresh_vars);
                 }
             }
         }
@@ -6297,23 +6285,24 @@ namespace smt {
     void theory_trau::handle_disequalities_cached(){
         for (const auto& b : completed_branches) {
             for (const auto &wi : b.disequalities) {
-                SASSERT(to_app(wi)->get_num_args() == 1);
                 expr *equality = to_app(wi)->get_arg(0);
 
-                SASSERT(to_app(equality)->get_num_args() == 2);
                 expr *lhs = to_app(equality)->get_arg(0);
                 expr *rhs = to_app(equality)->get_arg(1);
-                if (!u.str.is_empty(lhs) && !u.str.is_empty(lhs)) {
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                if (!u.str.is_empty(lhs) && !u.str.is_empty(rhs)) {
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                     expr *contain = nullptr;
                     if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
-                        handle_disequality(lhs, rhs);
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                        handle_disequality(lhs, rhs, b.non_fresh_vars);
                     }
                 }
             }
         }
     }
 
-    void theory_trau::handle_disequality(expr *lhs, expr *rhs){
+    void theory_trau::handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars){
         expr* contain = nullptr;
         if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
             
@@ -6327,13 +6316,13 @@ namespace smt {
                 return;
             }
             zstring value;
-
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
             if (constLhs != nullptr && u.str.is_string(constLhs, value))
-                handle_disequality_const(rhs, value);
+                handle_disequality_const(rhs, value, non_fresh_vars);
             else if (constRhs != nullptr && u.str.is_string(constRhs, value))
-                handle_disequality_const(lhs, value);
+                handle_disequality_const(lhs, value, non_fresh_vars);
             else
-                handle_disequality_var(lhs, rhs);
+                handle_disequality_var(lhs, rhs, non_fresh_vars);
 
         }
     }
@@ -6487,7 +6476,7 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::handle_disequality_var(expr *lhs, expr *rhs){
+    void theory_trau::handle_disequality_var(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars){
         
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
 
@@ -6498,7 +6487,7 @@ namespace smt {
         cases.push_back(mk_not(m, eqref));
 
         int len1, len2;
-        if (is_non_fresh(lhs, len1) && is_non_fresh(rhs, len2) && is_var_var_inequality(lhs, rhs)) {
+        if (is_non_fresh(lhs,  non_fresh_vars, len1) && is_non_fresh(rhs, non_fresh_vars, len2) && is_var_var_inequality(lhs, rhs)) {
             rational len_lhs;
             rational len_rhs;
             int bound = std::min(len1, len2);
@@ -6516,12 +6505,8 @@ namespace smt {
                 for (int i = 0; i < bound; ++i) {
                     expr_ref_vector subcases(m);
                     subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
-                    STRACE("str", tout << __LINE__ << "  " << mk_pp(subcases[0].get(), m) << ")\n";);
                     subcases.push_back(createGreaterEqOP(lenRhs.get(), m_autil.mk_int(i + 1)));
-                    STRACE("str", tout << __LINE__ << "  " << mk_pp(arrLhs, m) << "  " << mk_pp(arrRhs, m) << ")\n";);
-                    expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)),
-                                               createSelectOP(arrRhs, m_autil.mk_int(i))), m);
-                    STRACE("str", tout << __LINE__ << "  " << mk_pp(tmp.get(), m) << ")\n";);
+                    expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)),createSelectOP(arrRhs, m_autil.mk_int(i))), m);
                     subcases.push_back(mk_not(m, tmp.get()));
                     cases.push_back(createAndOP(subcases));
                 }
@@ -6534,17 +6519,16 @@ namespace smt {
 
     }
 
-    void theory_trau::handle_disequality_const(expr *lhs, zstring rhs){
+    void theory_trau::handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars){
         
         expr_ref_vector cases(m);
         expr_ref lenLhs(mk_strlen(lhs), m);
         expr_ref lenRhs(mk_int(rhs.length()), m);
         expr_ref eqref(createEqualOP(lenLhs.get(),lenRhs.get()), m);
         expr_ref notLenEq(mk_not(m, eqref.get()), m);
-
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
         cases.push_back(notLenEq);
-        int val = -1;
-        if (is_non_fresh(lhs, val) && !is_trivial_inequality(lhs, rhs)) {
+        if (is_non_fresh(lhs, non_fresh_vars) && !is_trivial_inequality(lhs, rhs)) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = get_var_flat_array(lhs);
             if (arrLhs == nullptr)
