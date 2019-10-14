@@ -1600,8 +1600,7 @@ namespace smt {
 
                     litems.push_back(collect_empty_node_in_concat(lhs));
                     litems.push_back(collect_empty_node_in_concat(rhs));
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(lhs, rhs)));
+                    assert_axiom(rewrite_implication(createAndOP(litems), mk_not(m, ctx.mk_eq_atom(lhs, rhs))));
                     // this shouldn't use the integer theory at all, so we don't allow the option of quick-return
                     return false;
                 }
@@ -1645,144 +1644,91 @@ namespace smt {
     }
 
     void theory_trau::propagate_const_str(expr * lhs, expr * rhs, zstring value){
-        context & ctx = get_context();
-        
-
         TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
-
-        expr_ref_vector eqRhsList(m);
-        collect_eq_nodes(rhs, eqRhsList);
+        expr_ref_vector eq_rhs(m);
+        collect_eq_nodes(rhs, eq_rhs);
 
         for (const auto & it : concat_node_map){
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+            if (it.get_key1() && it.get_key2() && it.get_value() && u.str.is_concat(it.get_value())) {
+                if (it.get_key1())
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(it.get_key1(), m) << std::endl;);
+                if (it.get_key2())
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(it.get_key2(), m) << std::endl;);
+                if (it.get_value())
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(it.get_value(), m) << std::endl;);
+                continue;
+            }
+
             expr* ts0 = it.get_key1();
             expr* ts1 = it.get_key2();
             expr* concat = it.get_value();
-
-           if (eqRhsList.contains(ts0)){
+           if (eq_rhs.contains(ts0)){
                // x . y where x is const, then: lhs = rhs ==> concat = const
-               TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(concat, m) << std::endl;);
-               zstring value01;
-               // if y is const also
-               if (u.str.is_string(ts1, value01)) {
-                   // list of constraints
-                   expr_ref_vector litems(m);
-                   litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                   if (rhs != ts0)
-                       litems.push_back(ctx.mk_eq_atom(rhs, ts0));
-
-                   expr * sumValue = u.str.mk_string(value + value01);
-                   m_trail.push_back(sumValue);
-
-                   expr_ref implyL(mk_and(litems), m);
-                   assert_implication(implyL, ctx.mk_eq_atom(concat, sumValue));
-
+               bool eq_const = false;
+               expr *const_val = get_eqc_value(ts1, eq_const);
+               if (eq_const) {
+                   zstring str;
+                   u.str.is_string(const_val, str);
+                   expr* premise = createAndOP(createEqualOP(lhs, rhs), createEqualOP(rhs, ts0), createEqualOP(ts1, const_val));
+                   expr * sumValue = u.str.mk_string(value + str);
+                   expr* to_assert = rewrite_implication(premise, createEqualOP(concat, sumValue));
+                   m_trail.push_back(to_assert);
+                   assert_axiom(to_assert);
                    // TODO continue propagation?
                }
 
-               // if y is equal to a const, then: lhs = rhs && y = const ==> concat = const
-               else {
-                   expr_ref_vector tmpEqNodeSet(m);
-                   expr *childValue = collect_eq_nodes(ts1, tmpEqNodeSet);
-                   if (childValue != nullptr) {
-                       expr_ref_vector litems(m);
-
-                       litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                       if (rhs != ts0)
-                           litems.push_back(ctx.mk_eq_atom(rhs, ts0));
-                       litems.push_back(ctx.mk_eq_atom(ts1, childValue));
-
-                       zstring str;
-                       u.str.is_string(childValue, str);
-                       expr * sumValue = u.str.mk_string(value + str);
-                       m_trail.push_back(sumValue);
-                       expr_ref implyL(mk_and(litems), m);
-                       assert_implication(implyL, ctx.mk_eq_atom(concat, sumValue));
-
-                       // TODO continue propagation?
-                   }
-
                    // if y is not either const or equal to a const, then if concat = var \in regex ==> check the feasibility
-                   else {
-                       expr_ref_vector litems(m);
-                       litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                       if (rhs != ts0)
-                           litems.push_back(ctx.mk_eq_atom(rhs, ts0));
-                        expr * new_concat = mk_concat(lhs, ts1);
-                       m_trail.push_back(new_concat);
+               else {
+                   expr_ref_vector litems(m);
+                   litems.push_back(createEqualOP(lhs, rhs));
+                   if (rhs != ts0)
+                       litems.push_back(createEqualOP(rhs, ts0));
+                   expr * new_concat = mk_concat(lhs, ts1);
+                   m_trail.push_back(new_concat);
 
-                       // check if it is feasible or not
-                       propagate_non_const(litems, concat, new_concat);
-                   }
+                   // check if it is feasible or not
+                   propagate_non_const(litems, concat, new_concat);
                }
            }
 
-            if (eqRhsList.contains(ts1)){
+            if (eq_rhs.contains(ts1)){
                 // x . y where x is const, then: lhs = rhs ==> concat = const
-                TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(concat, m) << std::endl;);
-                zstring value01;
-                // if y is const also
-                if (u.str.is_string(ts0, value01)) {
-                    // list of constraints
-                    expr_ref_vector litems(m);
-                    litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                    if (rhs != ts1)
-                        litems.push_back(ctx.mk_eq_atom(rhs, ts1));
-
-                    expr * sumValue = u.str.mk_string(value01 + value);
-                    m_trail.push_back(sumValue);
-
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, ctx.mk_eq_atom(concat, sumValue));
-
+                bool eq_const = false;
+                expr *const_val = get_eqc_value(ts0, eq_const);
+                if (eq_const) {
+                    expr* premise = createAndOP(createEqualOP(lhs, rhs), createEqualOP(rhs, ts1), createEqualOP(ts0, const_val));
+                    zstring str;
+                    u.str.is_string(const_val, str);
+                    expr * sumValue = u.str.mk_string(str + value);
+                    expr* to_assert = rewrite_implication(premise, createEqualOP(concat, sumValue));
+                    m_trail.push_back(to_assert);
+                    assert_axiom(to_assert);
                     // TODO continue propagation?
                 }
 
-                // if y is equal to a const, then: lhs = rhs && y = const ==> concat = const
-                else {
-                    expr_ref_vector tmpEqNodeSet(m);
-                    expr *childValue = collect_eq_nodes(ts0, tmpEqNodeSet);
-                    if (childValue != nullptr) {
-                        expr_ref_vector litems(m);
-
-                        litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                        if (rhs != ts1)
-                            litems.push_back(ctx.mk_eq_atom(rhs, ts1));
-                        litems.push_back(ctx.mk_eq_atom(ts1, childValue));
-
-                        zstring str;
-                        u.str.is_string(childValue, str);
-                        expr * sumValue = u.str.mk_string(str + value);
-                        m_trail.push_back(sumValue);
-                        expr_ref implyL(mk_and(litems), m);
-                        assert_implication(implyL, ctx.mk_eq_atom(concat, sumValue));
-
-                        // TODO continue propagation?
-                    }
-
                     // if y is not either const or equal to a const, then if concat = var \in regex ==> check the feasibility
-                    else {
-                        expr_ref_vector litems(m);
-                        litems.push_back(ctx.mk_eq_atom(lhs, rhs));
-                        if (rhs != ts1)
-                            litems.push_back(ctx.mk_eq_atom(rhs, ts1));
-                        expr * new_concat = mk_concat(ts0, lhs);
-                        m_trail.push_back(new_concat);
+                else {
+                    expr_ref_vector litems(m);
+                    litems.push_back(createEqualOP(lhs, rhs));
+                    if (rhs != ts1)
+                        litems.push_back(createEqualOP(rhs, ts1));
+                    expr * new_concat = mk_concat(ts0, lhs);
+                    m_trail.push_back(new_concat);
 
-                        // check if it is feasible or not
-                        propagate_non_const(litems, concat, new_concat);
-                    }
+                    // check if it is feasible or not
+                    propagate_non_const(litems, concat, new_concat);
                 }
             }
-        }
+        } 
     }
 
     void theory_trau::propagate_non_const(expr_ref_vector litems, expr * concat, expr* new_concat){
-        context & ctx = get_context();
-        
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(concat, m) << " --- " << mk_pp(new_concat, m) << std::endl;);
 
-        expr_ref_vector eqConcatList(m);
-        expr *value = collect_eq_nodes(concat, eqConcatList);
+        expr_ref_vector eq_concat(m);
+        expr *value = collect_eq_nodes(concat, eq_concat);
         if (value != nullptr){
             // get the value
             zstring sumValue;
@@ -1798,17 +1744,14 @@ namespace smt {
                 zstring verifingValue = sumValue.extract(0, ts0Value.length());
                 if (verifingValue == ts0Value) {
                     ts1Value = sumValue.extract(ts0Value.length(), sumValue.length() - ts0Value.length());
-                    litems.push_back(ctx.mk_eq_atom(concat, value));
+                    litems.push_back(createEqualOP(concat, value));
                     expr *ts1exprValue = u.str.mk_string(ts1Value);
                     m_trail.push_back(ts1exprValue);
-
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, ctx.mk_eq_atom(ts01, ts1exprValue));
+                    assert_axiom(createAndOP(litems), createEqualOP(ts01, ts1exprValue));
                 }
                 else {
                     expr* conclusion = mk_not(m, createEqualOP(concat, value));
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, conclusion);
+                    assert_axiom(rewrite_implication(createAndOP(litems), conclusion));
                 }
             }
 
@@ -1816,57 +1759,49 @@ namespace smt {
                 zstring verifingValue = sumValue.extract(sumValue.length() - ts1Value.length(), ts1Value.length());
                 if (verifingValue == ts1Value) {
                     ts0Value = sumValue.extract(0, sumValue.length() - ts1Value.length());
-                    litems.push_back(ctx.mk_eq_atom(concat, value));
+                    litems.push_back(createEqualOP(concat, value));
                     expr *ts0exprValue = u.str.mk_string(ts0Value);
                     m_trail.push_back(ts0exprValue);
-
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, ctx.mk_eq_atom(ts00, ts0exprValue));
+                    assert_axiom(rewrite_implication(createAndOP(litems), createEqualOP(ts00, ts0exprValue)));
                 }
                 else {
                     expr* conclusion = mk_not(m, createEqualOP(concat, value));
-                    expr_ref implyL(mk_and(litems), m);
-                    assert_implication(implyL, conclusion);
+                    assert_axiom(rewrite_implication(createAndOP(litems), conclusion));
                 }
             }
 
         }
         else {
-
             expr_ref_vector litems_lhs(m);
             expr* lhs = construct_overapprox(new_concat, litems_lhs);
             if (lhs == nullptr)
                 return;
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(new_concat, m) << " == " << mk_ismt2_pp(lhs, m) << std::endl;);
-            for (const auto& e: eqConcatList) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(new_concat, m) << " == " << mk_pp(lhs, m) << std::endl;);
+            for (const auto& e: eq_concat) {
                 expr_ref_vector litems_rhs(m);
 
                 expr* rhs = construct_overapprox(e, litems_rhs);
                 if (rhs == nullptr)
                     return;
                 bool matchRes = match_regex(rhs, lhs);
-                STRACE("str", tout << __LINE__ << " " << mk_ismt2_pp(new_concat, m) << " = " << mk_ismt2_pp(rhs, m) << " : " << (matchRes ? "yes: " : "no: ") << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << mk_pp(new_concat, m) << " = " << mk_pp(rhs, m) << " : " << (matchRes ? "yes: " : "no: ") << std::endl;);
                 if (!matchRes) {
                     if (e != concat)
-                        litems_lhs.push_back(ctx.mk_eq_atom(concat, e));
+                        litems_lhs.push_back(createEqualOP(concat, e));
 
                     for (unsigned i = 0; i < litems_lhs.size(); ++i)
                         litems_rhs.push_back(litems_lhs[i].get());
 
                     for (unsigned i = 0; i < litems.size(); ++i)
                         litems_rhs.push_back(litems[i].get());
-                    expr_ref implyL(mk_and(litems_rhs), m);
-                    assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(concat, new_concat)));
+                    assert_axiom(rewrite_implication(createAndOP(litems_rhs), mk_not(m, createAndOP(concat, new_concat))));
                 }
             }
         }
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
     }
 
     void theory_trau::check_regex_in(expr * nn1, expr * nn2) {
-        context & ctx = get_context();
-        
-        TRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(nn1, m) << " == " << mk_ismt2_pp(nn2, m) << std::endl;);
-
         // how to get regex_sort?
         sort * regex_sort = nullptr;
         if (regex_in_bool_map.size() > 0){
@@ -1901,9 +1836,8 @@ namespace smt {
                     if (rhs == nullptr)
                         return;
                     bool matchRes = match_regex(rhs, lhs);
-                    expr_ref implyL(ctx.mk_eq_atom(e, constStr), m);
                     if (!matchRes) {
-                        assert_implication(mk_and(litems), mk_not(implyL));
+                        assert_axiom(rewrite_implication(createAndOP(litems), mk_not(m, createEqualOP(e, constStr))));
                     }
                 }
             }
@@ -1928,24 +1862,24 @@ namespace smt {
             return;
 
         // check concat vs regex: x . "abc" --> regexAll . "abc"
-        expr_ref_vector eqNodeSet01(m);
-        collect_eq_nodes(nn1, eqNodeSet01);
+        expr_ref_vector eq_nn1(m);
+        collect_eq_nodes(nn1, eq_nn1);
 
-        expr_ref_vector eqNodeSet02(m);
-        collect_eq_nodes(nn2, eqNodeSet02);
+        expr_ref_vector eq_nn2(m);
+        collect_eq_nodes(nn2, eq_nn2);
 
         // check all LHS concat vs RHS regex
-        for (const auto& e: eqNodeSet01) {
+        for (const auto& e: eq_nn1) {
             // check if concat has any const/regex
             expr_ref_vector litems(m);
             expr* lhs = construct_overapprox(e, litems);
             if (lhs == nullptr)
                 return;
             TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(lhs, m) << std::endl;);
-            for (expr_ref_vector::iterator itor02 = eqNodeSet02.begin(); itor02 != eqNodeSet02.end(); itor02++)
-                if (regex_in_var_reg_str_map.contains(*itor02)) {
+            for (const auto& ex : eq_nn2)
+                if (regex_in_var_reg_str_map.contains(ex)) {
                     expr_ref_vector litems_rhs(m);
-                    expr* rhs_over = construct_overapprox(*itor02, litems_rhs);
+                    expr* rhs_over = construct_overapprox(ex, litems_rhs);
                     if (rhs_over == nullptr)
                         return;
                     bool matchRes = match_regex(rhs_over, lhs);
@@ -1956,8 +1890,7 @@ namespace smt {
                         for (unsigned i = 0; i < litems.size(); ++i)
                             litems_rhs.push_back(litems[i].get());
 
-                        expr_ref implyL(mk_and(litems_rhs), m);
-                        assert_implication(implyL, mk_not(m, ctx.mk_eq_atom(nn1, nn2)));
+                        assert_implication(createAndOP(litems_rhs), mk_not(m, ctx.mk_eq_atom(nn1, nn2)));
                     }
                 }
         }
@@ -2043,8 +1976,7 @@ namespace smt {
                         bool empty = au01->is_empty();
 
                         if (empty) {
-                            expr_ref implyL(mk_and(tmpList), m);
-                            assert_implication(implyL, m.mk_false());
+                            assert_implication(createAndOP(tmpList), m.mk_false());
                             return nullptr;
                         }
                         else {
@@ -2071,7 +2003,7 @@ namespace smt {
         }
         ensure_enode(lhs);
         m_trail.push_back(lhs);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_ismt2_pp(nn, m) << " --> " << mk_ismt2_pp(lhs, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " --> " << mk_pp(lhs, m) << std::endl;);
 
         return lhs;
     }
@@ -15235,6 +15167,7 @@ namespace smt {
         // build RHS: start by extracting x and y from Concat(x, y)
         app * a_x = to_app(a_cat->get_arg(0));
         app * a_y = to_app(a_cat->get_arg(1));
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(a_cat, m) << std::endl;);
         concat_node_map.insert(a_x, a_y, a_cat);
         expr_ref len_x(m);
         len_x = mk_strlen(a_x);
@@ -16832,6 +16765,7 @@ namespace smt {
         if (!concat_node_map.find(n1, n2, concatAst)) {
             concatAst = u.str.mk_concat(n1, n2);
             m_trail.push_back(concatAst);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(n1, m) << " " << mk_pp(n2, m) << " " << mk_pp(concatAst, m) << std::endl;);
             concat_node_map.insert(n1, n2, concatAst);
 
             expr_ref concat_length(mk_strlen(concatAst), m);
