@@ -10038,17 +10038,17 @@ namespace smt {
                                             m_autil.mk_int(v[i - 1])));
                             oneCase.push_back(createOrOP(locationConstraint));
                         }
-                    else
-                        for (int i = 1; i <= std::min(LOCALSPLITMAX, (int)v.length()); ++i) {
+                    else {
+                        bool minus_one = false;
+                        for (int i = 1; i <= std::min(LOCALSPLITMAX, (int) v.length()); ++i) {
                             if (is_str_int && (v[i - 1] < '0' || v[i - 1] > '9')) {
-                                oneCase.reset();
-                                break;
+                                minus_one = true;
                             }
                             expr_ref_vector locationConstraint(m);
                             /*length = i*/
                             locationConstraint.push_back(
                                     createLessEqOP(get_var_flat_size(elements[constPos]),
-                                                         m_autil.mk_int(i - 1)));
+                                                   m_autil.mk_int(i - 1)));
                             unrollMode ?
                             locationConstraint.push_back(
                                     createEqualOP(
@@ -10058,13 +10058,17 @@ namespace smt {
                             locationConstraint.push_back(
                                     createEqualOP(
                                             createSelectOP(flatArrayName,
-                                                                   createModOP(
-                                                                           createAddOP(m_autil.mk_int(i - 1), startPos),
-                                                                           m_autil.mk_int(pMax))),
+                                                           createModOP(
+                                                                   createAddOP(m_autil.mk_int(i - 1), startPos),
+                                                                   m_autil.mk_int(pMax))),
                                             m_autil.mk_int(v[i - 1]))) /* direct value */;
 
                             oneCase.push_back(createOrOP(locationConstraint));
                         }
+
+                        if (minus_one && is_str_int)
+                            oneCase.push_back(createEqualOP(string_int_vars[a.first], mk_int(-1)));
+                    }
                     possibleCases.push_back(createAndOP(oneCase));
                 }
                 else {
@@ -14473,15 +14477,15 @@ namespace smt {
                     break;
                 }
                 else if ((is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1)){
-                    if (u.str.is_string(var)){
-                        shouldKeep = true;
-                        break;
-                    }
+                    shouldKeep = true;
+                    break;
                 }
             }
 
-            if (!shouldKeep)
+            if (!shouldKeep) {
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": reset " << mk_pp(var, m) << std::endl;);
                 ret.reset();
+            }
         }
         return ret;
     }
