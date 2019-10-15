@@ -6861,6 +6861,7 @@ namespace smt {
                 int bound = non_fresh_vars[v] == -1 ? connectingSize : non_fresh_vars[v];
                 expr *to_assert = setup_regex_var(v, rexpr, v1, rational(bound), mk_int(0));
                 assert_axiom(to_assert);
+                implied_facts.push_back(to_assert);
             }
             else if (is_str_int_var(v)){
                 // setup_str_int_arr
