@@ -1038,6 +1038,7 @@ namespace smt {
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
                 ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, expr_ref_vector &subNodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
+                    expr* find_representation(expr* e);
                     expr* create_concat_with_concat(expr* n1, expr* n2);
                     expr* create_concat_with_str(expr* n, zstring str);
                     expr* create_concat_with_str(zstring str, expr* n);
