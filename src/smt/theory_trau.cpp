@@ -7306,7 +7306,7 @@ namespace smt {
                     return true;
             }
             else {
-                STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " work as usual " << mk_pp(vareq.m_key, m) << std::endl;);
                 expr* result = convert_other_equalities(vareq.get_value(), non_fresh_vars);
                 assert_breakdown_combination(result, premise, asserted_constraints, axiomAdded);
                 if (result == nullptr)
@@ -7327,8 +7327,6 @@ namespace smt {
     }
 
     expr* theory_trau::convert_other_equalities(ptr_vector<expr> const& eqs, obj_map<expr, int> const& non_fresh_vars){
-        
-        STRACE("str", tout << __LINE__ <<  " work as usual " << std::endl;);
         expr_ref_vector ands(m);
         /* work as usual */
         for (unsigned i = 0; i < eqs.size(); ++i)
@@ -14236,6 +14234,8 @@ namespace smt {
                                     tmp.push_back(cc);
                                 }
 
+                            if (concat_with_const(c.m_key))
+                                tmp.push_back(c.m_key);
                             if (tmp.size() >= 1) {
                                 ret.insert(c.m_key, tmp);
                             }
@@ -14259,6 +14259,17 @@ namespace smt {
             }
         }
         return ret;
+    }
+
+    bool theory_trau::concat_with_const(expr* c){
+        if (u.str.is_concat(c)){
+            ptr_vector <expr> nodes;
+            get_nodes_in_concat(c, nodes);
+            for (const auto& n : nodes)
+                if (u.str.is_string(n))
+                    return true;
+        }
+        return false;
     }
 
     bool theory_trau::can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations){
@@ -18357,7 +18368,7 @@ namespace smt {
                         return to_app(th.mk_string(strValue));
                 }
             }
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root" << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << len_int<< std::endl;);
             // root var
             int_vector val;
             for (int i = 0; i < len_int; ++i)
@@ -18492,7 +18503,7 @@ namespace smt {
     }
 
     zstring theory_trau::string_value_proc::fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed){
-        std::string value;
+        zstring value;
 
         for (unsigned i = 0; i < vValue.size(); ++i) {
             if (char_set.size() > 0){
@@ -18510,7 +18521,8 @@ namespace smt {
                     value = value + (char) vValue[i];
             }
         }
-        return zstring(value.c_str());
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << value << " " << value.length() << std::endl;);
+        return value;
     }
 
     void theory_trau::string_value_proc::construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val){
@@ -18532,7 +18544,7 @@ namespace smt {
                                 val[j] = leafVal[j - sum];
                             } else {
                                 if (val[j] != (int) leafVal[j - sum]) {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \"" << leafVal << "\" " << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << leafVal << "\" " << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
                                 }
                             }
                         }
@@ -18544,10 +18556,9 @@ namespace smt {
                 }
                 else {
                     int len_int = -1;
-                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value,
-                                      len_int)){
+                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value,len_int)){
                         sum += len_int;
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sum = "  << sum << std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(leafNodes[i], th.get_manager()) << ": sum = "  << sum << std::endl;);
                     }
                     else {
                         SASSERT(false);
