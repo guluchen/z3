@@ -3668,9 +3668,9 @@ namespace smt {
         rational bound = str_int_bound;
         bool all_upper_bounds = true;
         for (const auto& num : int_string_vars){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << mk_pp(num, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << mk_pp(num.m_key, m) << std::endl;);
             rational ub, lb;
-            if (upper_num_bound(num, ub)){
+            if (upper_num_bound(num.m_key, ub)){
                 rational log10 = log_10(ub);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << ub << " log10 " << log10 << std::endl;);
                 if (log10 > bound)
@@ -3678,7 +3678,7 @@ namespace smt {
             }
             else {
                 all_upper_bounds = false;
-                if (lower_num_bound(num, lb)){
+                if (lower_num_bound(num.m_key, lb)){
                     rational log10 = log_10(lb);
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lower_num_bound " << ub << " log10 " << log10 << std::endl;);
                     if (log10 > bound)
@@ -8209,6 +8209,7 @@ namespace smt {
             if (tmp != nullptr) {
                 cases.push_back(tmp);
                 arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Correct case");
+                STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " " <<  std::endl;);
             }
             else {
             }
@@ -8958,8 +8959,8 @@ namespace smt {
                 if (!flat_enabled)
                     result.push_back(unroll_non_fresh_variable(b, init_expr_vector(a), non_fresh_variables, optimizing, pMax));
                 else {
-                    if ((string_int_vars.find(a.first) != string_int_vars.end() && a.second % p_bound.get_int64() == 1) ||
-                        (string_int_vars.find(b.first) != string_int_vars.end() && b.second % p_bound.get_int64() == 1))
+                    if ((string_int_vars.contains(a.first) && a.second % p_bound.get_int64() == 1) ||
+                        (string_int_vars.contains(b.first) && b.second % p_bound.get_int64() == 1))
                         result.push_back(gen_constraint_flat_flat(a, init_expr_vector(b), 0, pMax, str_int_bound));
                     else
                         result.push_back(gen_constraint_flat_flat(a, init_expr_vector(b), 0, pMax, p_bound));
@@ -8996,7 +8997,7 @@ namespace smt {
         a.second = 0;
         b.second = 0;
         for (int i = 1; i <= p_bound.get_int64(); i = i + 1) {
-            if (i == 2 && (string_int_vars.find(a.first) != string_int_vars.end() || string_int_vars.find(b.first) != string_int_vars.end()))
+            if (i == 2 && (string_int_vars.contains(a.first) || string_int_vars.contains(b.first)))
                 ands.push_back(gen_constraint_flat_flat(a, init_expr_vector(b), 0, pMax, str_int_bound));
             else
                 ands.push_back(gen_constraint_flat_flat(a, init_expr_vector(b), 0, pMax, bound));
@@ -9016,7 +9017,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " = " << mk_pp(elements[pos].first, m) << std::endl;);
         expr_ref_vector ands(m);
         for (int i = 1; i <= p_bound.get_int64(); i = i + 1) {
-            if (i == 2 && (string_int_vars.find(a.first) != string_int_vars.end() || string_int_vars.find(elements[pos].first) != string_int_vars.end()))
+            if (i == 2 && (string_int_vars.contains(a.first) || string_int_vars.contains(elements[pos].first)))
                 ands.push_back(gen_constraint_flat_flat(a, elements, pos, pMax, str_int_bound));
             else
                 ands.push_back(gen_constraint_flat_flat(a, elements, pos, pMax, bound));
@@ -10007,11 +10008,7 @@ namespace smt {
                 collect_alternative_components(elements[constPos].first, components);
             }
 
-
-            bool is_str_int = false;
-            if (string_int_vars.find(a.first) != string_int_vars.end()){
-                is_str_int = true;
-            }
+            bool is_str_int = string_int_vars.contains(a.first);
 
             for (const auto& v : components) {
                 if (elements[constPos].second % p_bound.get_int64() == -1 || elements[constPos].second <= REGEX_CODE) {
@@ -10381,9 +10378,7 @@ namespace smt {
         }
 
         expr_ref_vector orConstraints(m);
-        bool is_str_int = false;
-        if (string_int_vars.find(a.first) != string_int_vars.end())
-            is_str_int = true;
+        bool is_str_int = string_int_vars.contains(a.first);
         for (const auto &v : components) {
             if (components.size() != 1)
                 for (int i = start; i < finish; ++i) {
@@ -10400,24 +10395,29 @@ namespace smt {
                                                          m_autil.mk_int(pMax))),
                             createSelectOP(tmp02, m_autil.mk_int(i))));
                 }
-            else
+            else {
+                bool minus_one = false;
                 for (int i = start; i < finish; ++i) {
                     if (is_str_int && (v[i] < '0' || v[i] > '9')) {
-                        locationConstraint.reset();
-                        break;
+                        minus_one = true;
                     }
                     unrollMode ?
                     locationConstraint.push_back(createEqualOP(
                             createSelectOP(tmp01,
-                                                 createAddOP(m_autil.mk_int(i - start), startPos)),
+                                           createAddOP(m_autil.mk_int(i - start), startPos)),
                             m_autil.mk_int(v[i]))) :
                     locationConstraint.push_back(createEqualOP(
                             createSelectOP(tmp01,
-                                                 createModOP(
-                                                         createAddOP(m_autil.mk_int(i - start), startPos),
-                                                         m_autil.mk_int(pMax))),
+                                           createModOP(
+                                                   createAddOP(m_autil.mk_int(i - start), startPos),
+                                                   m_autil.mk_int(pMax))),
                             m_autil.mk_int(v[i])));
                 }
+
+                if (minus_one && is_str_int){
+                    locationConstraint.push_back(createEqualOP(string_int_vars[a.first], mk_int(-1)));
+                }
+            }
             orConstraints.push_back(createAndOP(locationConstraint));
         }
 
@@ -12714,7 +12714,7 @@ namespace smt {
             assert_axiom(sumConstraint.get());
             implied_facts.push_back(sumConstraint);
 
-            if (string_int_vars.find(v) != string_int_vars.end()){
+            if (string_int_vars.contains(v)){
                 setup_str_int_len(v, start);
             }
         }
@@ -12836,7 +12836,7 @@ namespace smt {
             expr_ref sumConstraint(createEqualOP(createAddOP(adds), u.str.mk_length(v)), m);
             assert_axiom(sumConstraint.get());
             implied_facts.push_back(sumConstraint);
-            if (string_int_vars.find(v) != string_int_vars.end()){
+            if (string_int_vars.contains(v)){
                 setup_str_int_len(v, start);
             }
         }
@@ -13424,23 +13424,23 @@ namespace smt {
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0), a0)){
                     add_non_fresh_var(a0, vars, str_int_bound.get_int64());
-                    update_string_int_vars(a0, string_int_vars);
-                    update_string_int_vars(a->get_arg(1), int_string_vars);
+                    update_string_int_vars(a0, a->get_arg(0),string_int_vars);
+                    update_string_int_vars(a->get_arg(1), a0,int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0), a0)){
                     add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
-                    update_string_int_vars(a->get_arg(1), string_int_vars);
-                    update_string_int_vars(a0, int_string_vars);
+                    update_string_int_vars(a->get_arg(1), a0,string_int_vars);
+                    update_string_int_vars(a0, a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1), a0)){
                     add_non_fresh_var(a0, vars, str_int_bound.get_int64());
-                    update_string_int_vars(a0, string_int_vars);
-                    update_string_int_vars(a->get_arg(0), int_string_vars);
+                    update_string_int_vars(a0, a->get_arg(1), string_int_vars);
+                    update_string_int_vars(a->get_arg(0), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1), a0)){
                     add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
-                    update_string_int_vars(a->get_arg(0), string_int_vars);
-                    update_string_int_vars(a0, int_string_vars);
+                    update_string_int_vars(a->get_arg(0), a0, string_int_vars);
+                    update_string_int_vars(a0, a->get_arg(1), int_string_vars);
                 }
             }
 
@@ -13450,23 +13450,23 @@ namespace smt {
                 app* a = to_app(to_app(e)->get_arg(0));
                 if (u.str.is_stoi(a->get_arg(0), a0)){
                     add_non_fresh_var(a0, vars, str_int_bound.get_int64());
-                    update_string_int_vars(a0, string_int_vars);
-                    update_string_int_vars(a->get_arg(1), int_string_vars);
+                    update_string_int_vars(a0, a->get_arg(0), string_int_vars);
+                    update_string_int_vars(a->get_arg(1), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0), a0)){
                     add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
-                    update_string_int_vars(a->get_arg(1), string_int_vars);
-                    update_string_int_vars(a0, int_string_vars);
+                    update_string_int_vars(a->get_arg(1), a0, string_int_vars);
+                    update_string_int_vars(a0, a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1), a0)){
                     add_non_fresh_var(a0, vars, str_int_bound.get_int64());
-                    update_string_int_vars(a0, string_int_vars);
-                    update_string_int_vars(a->get_arg(0), int_string_vars);
+                    update_string_int_vars(a0, a->get_arg(0), string_int_vars);
+                    update_string_int_vars(a->get_arg(0), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1), a0)){
                     add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
-                    update_string_int_vars(a->get_arg(0), string_int_vars);
-                    update_string_int_vars(a0, int_string_vars);
+                    update_string_int_vars(a->get_arg(0), a0, string_int_vars);
+                    update_string_int_vars(a0, a->get_arg(0), int_string_vars);
                 }
             }
         }
@@ -13487,14 +13487,14 @@ namespace smt {
 
     }
 
-    void theory_trau::update_string_int_vars(expr* v, obj_hashtable<expr> &s){
+    void theory_trau::update_string_int_vars(expr* v, expr* e, obj_map<expr, expr*> &s){
         rational len_val;
         if (!(u.str.is_string_term(v) && get_len_value(v, len_val) && len_val == rational(0))) {
             expr_ref_vector eqs(m);
             collect_eq_nodes(v, eqs);
             for (const auto &n : eqs) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << " = " << mk_pp(n, m) << std::endl;);
-                s.insert(n);
+                s.insert(n, e);
             }
         }
         else {
