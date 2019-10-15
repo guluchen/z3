@@ -1721,7 +1721,7 @@ namespace smt {
                     propagate_non_const(litems, concat, new_concat);
                 }
             }
-        } 
+        }
     }
 
     void theory_trau::propagate_non_const(expr_ref_vector litems, expr * concat, expr* new_concat){
@@ -6204,6 +6204,7 @@ namespace smt {
     }
 
     void theory_trau::handle_disequalities_cached(){
+        expr_set disequalities;
         for (const auto& b : completed_branches) {
             for (const auto &wi : b.disequalities) {
                 expr *equality = to_app(wi)->get_arg(0);
@@ -6211,11 +6212,12 @@ namespace smt {
                 expr *lhs = to_app(equality)->get_arg(0);
                 expr *rhs = to_app(equality)->get_arg(1);
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
-                if (!u.str.is_empty(lhs) && !u.str.is_empty(rhs)) {
+                if (!disequalities.contains(equality) && !u.str.is_empty(lhs) && !u.str.is_empty(rhs)) {
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                     expr *contain = nullptr;
                     if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
+                        disequalities.insert(equality);
                         handle_disequality(lhs, rhs, b.non_fresh_vars);
                     }
                 }
@@ -6481,7 +6483,7 @@ namespace smt {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
-
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
                 handle_not_contain(lhs, rhs);
             }
         }
@@ -6493,7 +6495,7 @@ namespace smt {
 
             expr* lhs = to_app(equality)->get_arg(0);
             expr* rhs = to_app(equality)->get_arg(1);
-
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain(lhs, rhs, true);
         }
     }
@@ -14192,17 +14194,20 @@ namespace smt {
         obj_map<expr, ptr_vector<expr>> ret;
         expr* reg = nullptr;
         for (const auto& c : combinations){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
             ptr_vector<expr> c_second = refine_eq_set(c.m_key, c.get_value(), non_fresh_vars);
             if (c_second.size() == 0 && !u.str.is_string(c.m_key))
                 continue;
             bool important = is_non_fresh(c.m_key, non_fresh_vars);
             if (!important) {
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
                 // the var is too complicated
                 if (c_second.size() > 20) {
                     non_fresh_vars.insert(c.m_key, -1);
                     ret.insert(c.m_key, c_second);
                 }
                 else if (!subNodes.contains(c.m_key) || u.str.is_string(c.m_key) || is_internal_regex_var(c.m_key, reg)) {
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
                     if (u.str.is_concat(c.m_key)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root concat node  " << mk_pp(c.m_key, m) << std::endl;);
                         // check if it is an important concat
@@ -14456,7 +14461,7 @@ namespace smt {
                     ret.push_back(n);
             }
         }
-
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << ret.size() << std::endl;);
         if (ret.size() == 1 && !is_non_fresh(var, non_fresh_vars)) {
             // check if none of variable is really important
             ptr_vector<expr> v;
@@ -14464,7 +14469,11 @@ namespace smt {
             bool shouldKeep = false;
             for (const auto& nn : v) {
                 int tmp;
-                if (is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1){
+                if (u.str.is_string(nn)){
+                    shouldKeep = true;
+                    break;
+                }
+                else if ((is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1)){
                     if (u.str.is_string(var)){
                         shouldKeep = true;
                         break;
@@ -17452,6 +17461,34 @@ namespace smt {
             if (!dependency_graph.contains(c_root)){
                 dependency_graph.insert(c_root, {});
             }
+//            expr_ref_vector eqs(m);
+//            collect_eq_nodes(c_root, eqs);
+//            for (const auto& e : eqs){
+//                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+//                if (u.str.is_string(e) || is_non_fresh(e) || is_internal_regex_var(e, reg) || is_regex_concat(e)){
+//                    if (e != c_root){
+//                        dependency_graph[c_root].insert(e);
+//                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " add " << mk_pp(e, m) << std::endl;);
+//                    }
+//
+//                }
+//                else if (u.str.is_concat(e) && e != c_root){
+//                    ptr_vector<expr> nodes;
+//                    get_nodes_in_concat(e, nodes);
+//                    bool found = false;
+//                    for (const auto& ex : nodes){
+//                        if (u.str.is_string(ex)) {
+//                            found = true;
+//                            break;
+//                        }
+//                    }
+//                    if (found){
+//                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " add " << mk_pp(e, m) << std::endl;);
+//                        dependency_graph[c_root].insert(e);
+//                    }
+//                }
+//            }
+
 
             // arg1
             if (u.str.is_string(key2_root) || is_non_fresh(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
@@ -17575,7 +17612,7 @@ namespace smt {
                 for (unsigned i = 0; i < mful_scope_levels.size(); ++i){
                     literal tmp = ctx.get_literal(mful_scope_levels[i].get());
                     int assignLvl = ctx.get_assign_level(tmp);
-                    STRACE("str", tout << __LINE__ << " assigned expr " << mk_pp(mful_scope_levels[i].get(), m) << ", assignLevel = " << assignLvl << std::endl;);
+                    STRACE("str", tout << __LINE__ << " assigned expr " << mk_pp(mful_scope_levels[i].get(), m) << std::endl;);
                 }
 
 
@@ -18038,6 +18075,7 @@ namespace smt {
     }
 
     app * theory_trau::string_value_proc::mk_value(model_generator & mg, expr_ref_vector const &  values) {
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         clock_t start_clock = clock();
         ast_manager & m = mg.get_manager();
         obj_map<enode, app *> m_root2value = mg.get_root2value();
@@ -18072,22 +18110,17 @@ namespace smt {
                 if (regex != nullptr) {
                     zstring strValue;
                     if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                     if (construct_string_from_regex(mg, len_int, m_root2value, strValue)) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": regex value = \"" << strValue << "\"" << std::endl;);
                         return to_app(th.mk_string(strValue));
                     }
                 }
                 zstring strValue;
-                STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
                 construct_normally(mg, len_int, m_root2value, strValue);
-                STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - start_clock))/CLOCKS_PER_SEC << std::endl;);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
                 return to_app(th.mk_string(strValue));
             }
@@ -18242,8 +18275,8 @@ namespace smt {
                 th.dependency_graph.insert(node, {});
             bool constraint02 = th.dependency_graph[node].size() > 0;
             if (constraint01 || constraint02) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                 if (!constraint02) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
                     int_vector val;
                     for (int i = 0; i < len_int; ++i)
                         val.push_back(-1);
