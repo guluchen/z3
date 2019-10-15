@@ -6848,9 +6848,6 @@ namespace smt {
                     array_map.insert(vv, v1);
             }
 
-
-            STRACE("str", tout << __LINE__ << " arr: " << flat_arr << " : " << mk_pp(v1, m) << std::endl;);
-
             zstring val;
             expr* rexpr = nullptr;
             if (u.str.is_string(v, val)){
@@ -6861,14 +6858,14 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " arr: " << flat_arr << " : " << mk_pp(v, m) << std::endl;);
                     SASSERT(false);
                 }
-                expr *to_assert = setup_regex_var(v, rexpr, v1, rational(non_fresh_vars[v]), mk_int(0));
+                int bound = non_fresh_vars[v] == -1 ? connectingSize : non_fresh_vars[v];
+                expr *to_assert = setup_regex_var(v, rexpr, v1, rational(bound), mk_int(0));
                 assert_axiom(to_assert);
             }
             else if (is_str_int_var(v)){
                 // setup_str_int_arr
             }
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
     }
 
     void theory_trau::setup_str_int_arr(expr* v, int start){
@@ -6928,7 +6925,6 @@ namespace smt {
         if (ret != nullptr) {
         }
         else {
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(var, m) << std::endl;);
             vector<zstring> elements;
             expr_ref_vector ors(m);
             collect_alternative_components(rexpr, elements);
@@ -6941,7 +6937,6 @@ namespace smt {
 
                 expr_ref tmp01(m_autil.mk_mod(mk_strlen(var), mk_int(elements[i].length())), m);
                 m_rewrite(tmp01);
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(tmp01, m) << " " << elements[i] << " " << bound << std::endl;);
 
                 ands.push_back(createEqualOP(tmp01, mk_int(0)));
                 ors.push_back(createAndOP(ands));
@@ -6956,7 +6951,7 @@ namespace smt {
         vector<std::pair<int, int>> charRange = collect_char_range(e);
         if (charRange[0].first != -1) {
             expr_ref_vector ret(m);
-
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(e, m) << std::endl;);
             for (unsigned i = 0; i < bound.get_int64(); ++i) {
                 expr_ref_vector ors(m);
                 expr_ref_vector ors_range(m);
@@ -6973,6 +6968,9 @@ namespace smt {
                 ret.push_back(createOrOP(ors_range));
             }
             return createAndOP(ret);
+        }
+        else {
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(e, m) << std::endl;);
         }
         return nullptr;
     }
@@ -17417,6 +17415,24 @@ namespace smt {
         STRACE("str", tout << "initializing model..." << std::endl;);
         expr_ref_vector included_nodes(m);
 
+        for (const auto& e : string_int_conversion_terms){
+            if (m_autil.is_int_expr(e)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+                rational val;
+                if (get_arith_value(e, val)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " = " << val << std::endl;);
+                }
+                else {
+                    expr *value = query_theory_arith_core(e, mg);
+                    if (value != nullptr) {
+                        m_autil.is_numeral(value, val);
+                        STRACE("str", tout << __LINE__ << " value :  " << mk_pp(e, m) << ": " << mk_pp(value, m) << " --> " << val << std::endl;);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
         // prepare dependency_graph
         for (const auto& n : uState.eq_combination) {
             if (!ctx.is_relevant(n.m_key))
@@ -17564,6 +17580,24 @@ namespace smt {
 
     void theory_trau::finalize_model(model_generator& mg) {
         STRACE("str", tout << "finalizing model..." << std::endl;);
+        for (const auto& e : string_int_conversion_terms){
+            if (m_autil.is_int_expr(e)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+                rational val;
+                if (get_arith_value(e, val)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " = " << val << std::endl;);
+                }
+                else {
+                    expr *value = query_theory_arith_core(e, mg);
+                    if (value != nullptr) {
+                        m_autil.is_numeral(value, val);
+                        STRACE("str", tout << __LINE__ << " value :  " << mk_pp(e, m) << ": " << mk_pp(value, m) << " --> " << val << std::endl;);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     void theory_trau::assert_axiom(expr *const e) {
@@ -18364,9 +18398,8 @@ namespace smt {
             unsigned_set char_set;
             get_char_range(char_set);
             value = fill_chars(vValue, char_set, completed);
- ;
             val = value;
-
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << val << std::endl;);
             // revise string basing on regex
             if (char_set.size() == 0) {
                 if (regex != nullptr) {
