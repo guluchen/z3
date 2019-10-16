@@ -13951,7 +13951,6 @@ namespace smt {
             if (is_haystack(nn))
                 return true;
 
-
         if (needles.contains(nn)) {
             bool has_const_eq = false;
             get_eqc_value(nn, has_const_eq);
@@ -13980,6 +13979,9 @@ namespace smt {
                             }
                             return true;
                         }
+                        else if (!u.str.is_string(tmp)){
+                            return true;
+                        }
                     }
                 }
             }
@@ -13996,6 +13998,9 @@ namespace smt {
                                     continue;
                                 }
                             }
+                            return true;
+                        }
+                        else if (!u.str.is_string(tmp)){
                             return true;
                         }
                     }
