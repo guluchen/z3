@@ -487,8 +487,7 @@ namespace smt {
         enode *const n1 = get_enode(x);
         enode *const n2 = get_enode(y);
 
-        TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(n1->get_owner(), m) << " = "
-                           << mk_ismt2_pp(n2->get_owner(), m) << "@lvl " << m_scope_level << std::endl;);
+        TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(n1->get_owner(), m) << " = " << mk_ismt2_pp(n2->get_owner(), m) << "@lvl " << m_scope_level << std::endl;);
 
         handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
 
@@ -4823,33 +4822,39 @@ namespace smt {
             zstring tmp01;
             zstring tmp02;
             if (is_pre_contain_x && is_pre_contain_y) {
-                if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1])) {
+                if (are_equal_exprs(nodes_x[pos + 1], nodes_y[pos + 1]) && !are_equal_exprs(nodes_x[pos], nodes_y[pos])) {
                     return createEqualOP(nodes_x[pos], nodes_y[pos]);
                 }
                 else {
                     zstring tmp00;
                     zstring tmp01;
                     if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
-                        if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00))
-                            return createEqualOP(nodes_x[pos], nodes_y[pos]);
+                        if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00)) {
+                            if (!are_equal_exprs(nodes_x[pos], nodes_y[pos]))
+                                return createEqualOP(nodes_x[pos], nodes_y[pos]);
+                        }
                     }
                 }
             }
             else if (is_pre_contain_x && pos + 1 < nodes_x.size() && are_equal_exprs(nodes_x[pos + 1], nodes_y[pos])){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                return createEqualOP(nodes_x[pos], mk_string(""));
+                if (!are_equal_exprs(nodes_x[pos], mk_string("")))
+                    return createEqualOP(nodes_x[pos], mk_string(""));
             }
             else if (is_pre_contain_y && pos + 1 < nodes_y.size() && are_equal_exprs(nodes_y[pos + 1], nodes_x[pos])){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                return createEqualOP(nodes_y[pos], mk_string(""));
+                if (!are_equal_exprs(nodes_y[pos], mk_string("")))
+                    return createEqualOP(nodes_y[pos], mk_string(""));
             }
             else if (is_pre_contain_x && pos + 1 < nodes_x.size() && u.str.is_string(nodes_x[pos + 1], tmp01) && u.str.is_string(nodes_y[pos], tmp02) && tmp01.prefixof(tmp02)){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                return createEqualOP(nodes_x[pos], mk_string(""));
+                if (!are_equal_exprs(nodes_x[pos], mk_string("")))
+                    return createEqualOP(nodes_x[pos], mk_string(""));
             }
             else if (is_pre_contain_y && pos + 1 < nodes_y.size() && u.str.is_string(nodes_y[pos + 1], tmp01) && u.str.is_string(nodes_x[pos], tmp02) && tmp01.prefixof(tmp02)){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                return createEqualOP(nodes_y[pos], mk_string(""));
+                if (!are_equal_exprs(nodes_y[pos], mk_string("")))
+                    return createEqualOP(nodes_y[pos], mk_string(""));
             }
         }
         return nullptr;
