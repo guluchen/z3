@@ -1151,6 +1151,7 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
+        void sync_indexof(expr* e);
         bool can_solve_contain_family(enode * e);
         bool can_reduce_contain_family(expr* ex);
         app* mk_replace(expr* a, expr* b, expr* c) const;
@@ -1268,6 +1269,7 @@ namespace smt {
         obj_pair_map<expr, expr, expr*>                     contain_pair_bool_map;
         obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
+        obj_hashtable<expr>                                index_set;
         obj_map<expr, expr*>                                index_head;
         obj_map<expr, std::pair<expr*, expr*>>              index_tail;
         str::expr_pair_set                                  length_relation;

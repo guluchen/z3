@@ -15565,6 +15565,7 @@ namespace smt {
             return;
         }
 
+        sync_indexof(ex);
         SASSERT(ex->get_num_args() == 3);
 
         // if the third argument is exactly the integer 0, we can use this "simple" indexof;
@@ -15629,6 +15630,7 @@ namespace smt {
         expr_ref x1(value.first, m);
         expr_ref x2(value.second, m);
         expr_ref index_node(mk_int_var("index"), m);
+
         expr* contain_constraint = mk_contains(haystack, needle);
         expr_ref condition(contain_constraint, m);
         if (index_tail.contains(ex)) {
@@ -15735,6 +15737,37 @@ namespace smt {
         }
     }
 
+    void theory_trau::sync_indexof(expr* e){
+        expr * arg0 = nullptr; // "haystack"
+        expr * arg1 = nullptr; // "needle"
+        expr * start_index = nullptr; // start index
+        u.str.is_index(e, arg0, arg1, start_index);
+        expr* minus_one = mk_int(-1);
+        expr* zero = mk_int(0);
+        for (const auto& ex : index_set){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << " " << mk_pp(e, m) << std::endl;);
+            expr * haystack = nullptr; // "haystack"
+            expr * needle = nullptr; // "needle"
+            expr * index = nullptr; // start index
+            u.str.is_index(ex, haystack, needle, index);
+            if (haystack == arg0 && arg1 == needle){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
+                expr* premise = createAndOP(createGreaterEqOP(index, zero), createLessEqOP(index, start_index), createEqualOP(ex, minus_one));
+                assert_axiom(rewrite_implication(premise, createEqualOP(e, minus_one)));
+
+                premise = createAndOP(createGreaterEqOP(index, zero), createLessEqOP(index, start_index), createGreaterEqOP(e, zero));
+                assert_axiom(rewrite_implication(premise, createGreaterEqOP(ex, zero)));
+
+                premise = createAndOP(createGreaterEqOP(start_index, zero), createLessEqOP(start_index, index), createEqualOP(e, minus_one));
+                assert_axiom(rewrite_implication(premise, createEqualOP(ex, minus_one)));
+
+                premise = createAndOP(createGreaterEqOP(start_index, zero), createLessEqOP(start_index, index), createEqualOP(ex, minus_one));
+                assert_axiom(rewrite_implication(premise, createGreaterEqOP(e, zero)));
+            }
+        }
+        index_set.insert(ex);
+    }
+
     /*
      * arg2 != 0,
      *      arg0 = hd . tl
@@ -15777,7 +15810,6 @@ namespace smt {
         expr * arg1 = nullptr; // "needle"
         expr * startIndex = nullptr; // start index
         u.str.is_index(e, arg0, arg1, startIndex);
-
         expr_ref minus_one(m_autil.mk_numeral(rational::minus_one(), true), m);
         expr_ref zero(m_autil.mk_numeral(rational::zero(), true), m);
 
@@ -15792,7 +15824,7 @@ namespace smt {
         {
             expr_ref premise(m_autil.mk_le(startIndex, minus_one), m);
             if (premise != m.mk_false()) {
-                expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
+                expr_ref conclusion(createEqualOP(e, minus_one), m);
                 assert_implication(premise, conclusion);
             }
         }
@@ -15807,7 +15839,7 @@ namespace smt {
             //rw(premise);
             expr_ref premise(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), mk_int(1)), m);
             if (premise != m.mk_false()) {
-                expr_ref conclusion(ctx.mk_eq_atom(e, minus_one), m);
+                expr_ref conclusion(createEqualOP(e, minus_one), m);
                 assert_implication(premise, conclusion);
             }
         }
@@ -15835,14 +15867,14 @@ namespace smt {
             expr* tlIndexOf = mk_indexof(tl, arg1);
             conclusion_terms.push_back(createITEOP(
                     createGreaterEqOP(tlIndexOf, mk_int(0)),
-                    ctx.mk_eq_atom(e, createAddOP(tlIndexOf, mk_strlen(hd))),
-                    ctx.mk_eq_atom(e, mk_int(-1))));
+                    createEqualOP(e, createAddOP(tlIndexOf, mk_strlen(hd))),
+                    createEqualOP(e, mk_int(-1))));
 
             expr_ref conclusion(mk_and(conclusion_terms), m);
             assert_implication(premise, conclusion);
 
             // | arg1 | = 0 --> indexOf = hd
-            assert_implication(premise, rewrite_implication(ctx.mk_eq_atom(mk_strlen(arg1), mk_int(0)), ctx.mk_eq_atom(e, mk_strlen(hd))));
+            assert_implication(premise, rewrite_implication(createEqualOP(mk_strlen(arg1), mk_int(0)), createEqualOP(e, mk_strlen(hd))));
         }
 
         {
