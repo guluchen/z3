@@ -15765,7 +15765,7 @@ namespace smt {
                 assert_axiom(rewrite_implication(premise, createGreaterEqOP(e, zero)));
             }
         }
-        index_set.insert(ex);
+        index_set.insert(e);
     }
 
     /*
