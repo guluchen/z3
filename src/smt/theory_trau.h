@@ -1269,7 +1269,8 @@ namespace smt {
         obj_pair_map<expr, expr, expr*>                     contain_pair_bool_map;
         obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
-        obj_hashtable<expr>                                index_set;
+        obj_hashtable<expr>                                 index_set;
+        obj_hashtable<expr>                                 replace_set;
         obj_map<expr, expr*>                                index_head;
         obj_map<expr, std::pair<expr*, expr*>>              index_tail;
         str::expr_pair_set                                  length_relation;
