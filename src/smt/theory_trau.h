@@ -997,6 +997,7 @@ namespace smt {
             expr_set collect_non_ineq_vars();
             expr_set collect_needles();
             void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
+            int find_fixed_len(expr* e);
             void add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len);
             void update_string_int_vars(expr* v, expr* e, obj_map<expr, expr*> &s);
             bool is_str_int_var(expr* e);
@@ -1211,7 +1212,7 @@ namespace smt {
         /*
          * Collect important vars in AST node
          */
-        void get_important_asts_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector & astList, bool consider_itself = false);
+        void get_non_fresh_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, obj_hashtable<expr> & ret, bool consider_itself = false);
         eautomaton* get_automaton(expr* re);
 
         expr * rewrite_implication(expr * premise, expr * conclusion);

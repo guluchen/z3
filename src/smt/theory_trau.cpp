@@ -7422,6 +7422,8 @@ namespace smt {
             ptr_vector<expr> lhs;
             ptr_vector<expr> rhs;
             optimize_equality(root_tmp, element, lhs, rhs);
+            if (lhs.size() == 0 || rhs.size() == 0)
+                return m.mk_true();
             pair_expr_vector lhs_elements = create_equality(var, false);
             pair_expr_vector rhs_elements = create_equality(element);
             expr* containKey = nullptr;
@@ -13537,7 +13539,18 @@ namespace smt {
             flat_enabled = true;
     }
 
+    int theory_trau::find_fixed_len(expr* e){
+        rational len_val;
+        if (get_len_value(e, len_val) && get_assign_lvl(mk_strlen(e), mk_int(len_val)) == 0){
+            return len_val.get_int64();
+        }
+        return -1;
+    }
+
     void theory_trau::add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len){
+        int tmp = find_fixed_len(e);
+        if (tmp != -1)
+            len = tmp;
         if (vars.contains(e)){
             if (!(vars[e] == -1 || vars[e] > len))
                 vars[e] = len;
@@ -14901,14 +14914,14 @@ namespace smt {
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
                 if (tmp.size() != 0 && !concat_in_set(nn, result)) {
-                    if (!concat_in_set(nn, result))
-                        result.push_back(nn);
+                    result.push_back(nn);
+
                 }
                 else {
-                    get_important_asts_in_node(nn, non_fresh_vars, tmp, true);
-                    if (tmp.size() != 0 && !concat_in_set(nn, result)) {
-                        if (!concat_in_set(nn, result))
-                            result.push_back(nn);
+                    obj_hashtable<expr> ret;
+                    get_non_fresh_in_node(nn, non_fresh_vars, ret, true);
+                    if ((!ret.contains(nn) || ret.size() >= 2) && !concat_in_set(nn, result)) {
+                        result.push_back(nn);
                     }
                 }
             }
@@ -17476,17 +17489,17 @@ namespace smt {
     /*
      * Collect important vars in AST node
      */
-    void theory_trau::get_important_asts_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector & astList, bool consider_itself) {
+    void theory_trau::get_non_fresh_in_node(expr * node, obj_map<expr, int> const& non_fresh_vars, obj_hashtable<expr> & ret, bool consider_itself) {
         if (consider_itself)
             if (non_fresh_vars.contains(node))
-                astList.push_back(node);
+                ret.insert(node);
 
         if (is_app(node)) {
             app * func_app = to_app(node);
             unsigned int argCount = func_app->get_num_args();
             for (unsigned int i = 0; i < argCount; i++) {
                 expr * argAst = func_app->get_arg(i);
-                get_important_asts_in_node(argAst, non_fresh_vars, astList, true);
+                get_non_fresh_in_node(argAst, non_fresh_vars, ret, true);
             }
         }
     }
