@@ -461,6 +461,8 @@ namespace smt {
                 expr* convert_other_equalities(ptr_vector<expr> const& eqs, obj_map<expr, int> const& non_fresh_vars);
                 expr* convert_long_equalities(expr* var, ptr_vector<expr> const& eqs, obj_map<expr, int> &non_fresh_vars);
                 expr* convert_const_nonfresh_equalities(expr* var, ptr_vector<expr> const& eqs, obj_map<expr, int> const& non_fresh_vars);
+                bool try_solve(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+                expr* try_solve(expr* a, expr* b);
                 void convert_regex_equalities(expr* regexExpr, expr* var, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded);
                 expr* const_contains_key(zstring c, expr* pre_contain, expr* key, rational len);
                 void assert_breakdown_combination(expr* e, expr* premise, expr_ref_vector &assertedConstraints, bool &axiomAdded);

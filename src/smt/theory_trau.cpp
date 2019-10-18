@@ -3238,6 +3238,13 @@ namespace smt {
         }
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        if (try_solve(eq_combination)){
+            TRACE("str", tout << "Resuming search due to axioms added by try_solve." << std::endl;);
+            newConstraintTriggered = true;
+            return FC_CONTINUE;
+        }
+
+        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (!review_starting_ending_combination(eq_combination)){
             negate_equalities();
             return FC_CONTINUE;
@@ -7437,7 +7444,9 @@ namespace smt {
                     ands.push_back(tmp);
             }
             else {
-                expr* tmp = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
+                expr* tmp = try_solve(var, element);
+                if (tmp == nullptr)
+                    tmp = equality_to_arith(lhs_elements, rhs_elements, non_fresh_vars);
                 if (tmp == nullptr)
                     return nullptr;
                 else
@@ -7445,6 +7454,86 @@ namespace smt {
             }
         }
         return createAndOP(ands);
+    }
+
+    bool theory_trau::try_solve(obj_map<expr, ptr_vector<expr>> const& eq_combination){
+        expr_ref_vector to_assert(m);
+        for (const auto& vareq: eq_combination){
+            if (u.str.is_string(vareq.m_key)){
+                for (const auto& ex : vareq.m_value){
+                    expr* tmp = try_solve(vareq.m_key, ex);
+                    if (tmp != nullptr){
+                        if (tmp == m.mk_false()){
+                            negate_context();
+                            return true;
+                        }
+                        else {
+                            to_assert.push_back(tmp);
+                        }
+                    }
+                }
+            }
+        }
+        if (to_assert.size() > 0){
+            expr_ref_vector eqcores(m), diseqcores(m);
+            fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
+            expr_ref toAssert(rewrite_implication(createAndOP(eqcores), createAndOP(to_assert)), m);
+            m_trail.push_back(toAssert.get());
+            assert_axiom(toAssert.get());
+            return true;
+        }
+        return false;
+    }
+
+    expr* theory_trau::try_solve(expr* a, expr* b){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(a, m) << " " << mk_pp(b, m) << std::endl;);
+        zstring val_a;
+        expr* ret = nullptr;
+        if (u.str.is_string(a, val_a)) {
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(b, nodes);
+            int i = 0;
+            for (i = 0; i < nodes.size(); ++i){
+                bool has_val;
+                expr* val_expr = get_eqc_value(nodes[i], has_val);
+                zstring tmp;
+                if (has_val){
+                    u.str.is_string(val_expr, tmp);
+                    if (!tmp.prefixof(val_a)){
+                        ret = m.mk_false();
+                    }
+                    else
+                        val_a = val_a.extract(tmp.length(), val_a.length() - tmp.length());
+
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << val_a << " " << tmp << std::endl;);
+                }
+                else
+                    break;
+            }
+
+            int j = 0;
+            for (j = nodes.size() - 1; j > i; --j){
+                bool has_val;
+                expr* val_expr = get_eqc_value(nodes[j], has_val);
+                zstring tmp;
+                if (has_val){
+                    u.str.is_string(val_expr, tmp);
+                    if (!tmp.suffixof(val_a)){
+                        ret = m.mk_false();
+                    }
+                    else
+                        val_a = val_a.extract(0, val_a.length() - tmp.length());
+                }
+                else
+                    break;
+            }
+
+            if (i == j)
+                ret = createEqualOP(nodes[i], mk_string(val_a));
+        }
+
+        return ret;
+
     }
 
     void theory_trau::convert_regex_equalities(expr* regexExpr, expr* var, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector &assertedConstraints, bool &axiomAdded){
@@ -13061,8 +13150,8 @@ namespace smt {
                         to_assert.push_back(tmp);
                 }
         }
-//        else if (prefix >= 0 && prefix == (int)lhs_nodes.size() - 2 && prefix <= (int)rhs_nodes.size() - 3){
-//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
+        else if (prefix >= 0 && prefix == (int)lhs_nodes.size() - 2 && prefix <= (int)rhs_nodes.size() - 3){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
 //            // only 1 var left
 //            expr* concatTmp = create_concat_from_vector(rhs_nodes, prefix);
 //            if (!are_equal_exprs(lhs_nodes[prefix + 1], concatTmp)) {
@@ -13070,9 +13159,9 @@ namespace smt {
 //                if (!to_assert.contains(tmp))
 //                    to_assert.push_back(tmp);
 //            }
-//        }
-//        else if (prefix >= 0 && prefix <= (int)lhs_nodes.size() - 3 && prefix == (int)rhs_nodes.size() - 2){
-//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
+        }
+        else if (prefix >= 0 && prefix <= (int)lhs_nodes.size() - 3 && prefix == (int)rhs_nodes.size() - 2){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " prefix " << prefix << ", suffix " << suffix << ", len " << lhs_nodes.size() << std::endl;);
 //            // only 1 var left
 //            expr* concatTmp = create_concat_from_vector(lhs_nodes, prefix);
 //            if (!are_equal_exprs(rhs_nodes[prefix + 1], concatTmp)) {
@@ -13080,7 +13169,7 @@ namespace smt {
 //                if (!to_assert.contains(tmp))
 //                    to_assert.push_back(tmp);
 //            }
-//        }
+        }
         return true;
     }
 
@@ -14526,25 +14615,18 @@ namespace smt {
         ptr_vector<expr> ret;
         for (const auto& n : s) {
             if (u.str.is_concat(n)) {
-                bool notAdd = false;
-
-                if (are_equal_exprs(var, n)) {
-                    // do not have const or important var
-                    bool found = false;
-                    ptr_vector<expr> v;
-                    get_nodes_in_concat(n, v);
-                    for (const auto& nn : v)
-                        if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)){
-                            found = true;
-                            break;
-                        }
-                    if (found)
-                        notAdd = false;
-                    else
-                        notAdd = true;
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(n, m) << std::endl;);
+                // do not have const or important var
+                bool found = false;
+                ptr_vector<expr> v;
+                get_nodes_in_concat(n, v);
+                for (const auto& nn : v) {
+                    if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)) {
+                        found = true;
+                        break;
+                    }
                 }
-
-                if (!notAdd)
+                if (found)
                     ret.push_back(n);
             }
             else if (is_non_fresh(n, non_fresh_vars)  || u.str.is_string(n)) {
@@ -14846,16 +14928,14 @@ namespace smt {
                         bool specialCase = false;
                         if (hasLhSValue)
                             if (val_lhs.length() == 0) {
-                                STRACE("str", tout << __LINE__ << " " << mk_pp(l, m) << " " << val_lhs << "--> = " << mk_pp(r, m)<< std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << mk_pp(l, m) << " " << val_lhs << "--> = " << mk_pp(valueRhs, m)<< std::endl;);
                                 specialCase = true;
-                                eqConcat.insert(r);
                             }
 
                         if (!specialCase && hasRhSValue)
                             if (val_rhs.length() == 0){
-                                STRACE("str", tout << __LINE__ << " " << mk_pp(r, m) << " " << val_rhs << "--> = " << mk_pp(l, m) << std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << mk_pp(r, m) << " " << val_rhs << "--> = " << mk_pp(valueLhs, m) << std::endl;);
                                 specialCase = true;
-                                eqConcat.insert(l);
                             }
 
                         if (!specialCase) {
@@ -17706,7 +17786,11 @@ namespace smt {
             }
         }
 
-        for (const auto& e: dependency_graph) {
+        for (auto& e: dependency_graph) {
+            bool has_val = false;
+            get_eqc_value(e.m_key, has_val);
+            if (has_val)
+                e.m_value.reset();
             STRACE("str", tout << __LINE__ << " " << mk_pp(e.m_key, m) << std::endl;);
             for (const auto& ee : e.m_value)
                 STRACE("str", tout << __LINE__ << " \t" << mk_pp(ee, m) << std::endl;);
