@@ -10,7 +10,6 @@
 #include "ast/array_decl_plugin.h"
 #include "ast/ast_pp.h"
 #include "smt/params/theory_str_params.h"
-#include "smt/proto_model/value_factory.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 #include "ast/seq_decl_plugin.h"
@@ -1017,8 +1016,9 @@ namespace smt {
                 bool is_non_fresh_occurrence(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
                 obj_map<expr, int> count_occurrences_from_root();
-                        bool is_replace_var(expr* x);
-                    obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
+                bool is_replace_var(expr* x);
+                bool is_substr_var(expr* x);
+                obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
             obj_map<expr, ptr_vector<expr>> normalize_eq(expr_ref_vector &subNodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);

@@ -4964,7 +4964,7 @@ namespace smt {
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
             enode * e = *it;
             enode * root = e->get_root();
-            if ((m.get_sort(root->get_owner()) == string_sort) && eqc_roots.find(root->get_owner()) == eqc_roots.end()) {
+            if ((m.get_sort(root->get_owner()) == string_sort)) {
                 eqc_roots.insert(root->get_owner());
             }
         }
@@ -7430,7 +7430,7 @@ namespace smt {
             ptr_vector<expr> rhs;
             optimize_equality(root_tmp, element, lhs, rhs);
             if (lhs.size() == 0 || rhs.size() == 0)
-                return m.mk_true();
+                continue;
             pair_expr_vector lhs_elements = create_equality(var, false);
             pair_expr_vector rhs_elements = create_equality(element);
             expr* containKey = nullptr;
@@ -13474,6 +13474,7 @@ namespace smt {
         expr_set ineq_vars = collect_non_ineq_vars();
         expr_set needles = collect_needles();
         for (const auto& nn : eqc_roots) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
             expr_ref_vector eqs(m);
             expr *value = collect_eq_nodes(nn, eqs);
             if (value == nullptr) {
@@ -13824,9 +13825,6 @@ namespace smt {
         }
 
         len = -1;
-        for (const auto& eq : eqs)
-            if (u.str.is_concat(eq))
-                return false;
         // now we know it is a leaf node
         // --> check if their parents are fresh
         if (occurrences.contains(nn))
@@ -13838,20 +13836,30 @@ namespace smt {
     }
 
     obj_map<expr, int> theory_trau::count_occurrences_from_root(){
+        context& ctx = get_context();
         obj_map<expr, int> ret;
         for (const auto& n : concat_node_map){
-            expr* arg0 = n.get_key1();
-            expr* arg1 = n.get_key2();
+            expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
+            expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+            zstring tmp;
+            if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
+                continue;
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
             if (arg0 == arg1)
                 ret.insert(arg0, 2);
             else {
-                if (ret.contains(arg0) && (!is_internal_var(arg0) || is_replace_var(arg0)))
+                if (ret.contains(arg0) && (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0))) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m) << std::endl;);
                     ret[arg0]++;
+                }
                 else
                     ret.insert(arg0, 1);
 
-                if (ret.contains(arg1) && (!is_internal_var(arg1) || is_replace_var(arg1)))
+                if (ret.contains(arg1) && (!is_internal_var(arg1) || is_replace_var(arg1)|| is_substr_var(arg1))) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg1, m) << std::endl;);
                     ret[arg1]++;
+                }
                 else
                     ret.insert(arg1, 1);
             }
@@ -13859,19 +13867,40 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& p : ret)
             if (p.m_value >= 2)
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(p.m_key, m) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(p.m_key, m) << std::endl;);
 
         return ret;
     }
 
     bool theory_trau::is_replace_var(expr* x){
-        if (u.str.is_concat(x) || u.str.is_at(x) || u.str.is_extract(x) || u.str.is_replace(x) || u.str.is_itos(x))
+        if (u.str.is_at(x) || u.str.is_extract(x) || u.str.is_replace(x) || u.str.is_itos(x))
             return false;
-        std::string s = expr2str(x);
-        if (s.find("replace1!") == 0 || s.find("replace2!") == 0)
-            return true;
-        else
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(x, eqs);
+
+        for (const auto& ex : eqs) {
+            std::string s = expr2str(ex);
+            if (s.find("replace1!") == 0 || s.find("replace2!") == 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    bool theory_trau::is_substr_var(expr* x){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << std::endl;);
+        if (u.str.is_at(x) || u.str.is_replace(x) || u.str.is_itos(x))
             return false;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << std::endl;);
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(x, eqs);
+
+        for (const auto& ex : eqs) {
+            if (u.str.is_extract(ex))
+                return true;
+        }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << std::endl;);
+        return false;
     }
 
     obj_map<expr, int> theory_trau::count_occurrences_from_combination(
@@ -14986,8 +15015,7 @@ namespace smt {
                  (!u.str.is_itos(nn)) &&
                  (!u.str.is_nth_i(nn)) &&
                  (!u.str.is_nth_u(nn))) ||
-                 u.str.is_concat(nn))
-            {
+                 u.str.is_concat(nn)){
                 if (has_empty_vars(nn))
                     continue;
                 STRACE("str", tout << __LINE__ << mk_pp(object, m) << " = " << mk_pp(nn, m) << std::endl;);

@@ -1920,13 +1920,23 @@ namespace smt {
             u.str.is_string(range2, range2val);
             return zstring("[") + range1val + zstring("-") + range2val + zstring("]");
         } else if (u.re.is_loop(a_regex)) {
-        	expr * body;
-        	unsigned lo, hi;
-        	u.re.is_loop(a_regex, body, lo, hi);
-        	rational rLo(lo);
-        	rational rHi(hi);
-        	zstring bodyStr = get_std_regex_str(body);
-        	return zstring("(") + bodyStr + zstring("{") + zstring(rLo.to_string().c_str()) + zstring(",") + zstring(rHi.to_string().c_str()) + zstring("})");
+            expr * body;
+            unsigned lo, hi;
+            // There are two variants of loop: a 2-argument version and a 3-argument version.
+            if (u.re.is_loop(a_regex, body, lo, hi)) {
+                rational rLo(lo);
+                rational rHi(hi);
+                zstring bodyStr = get_std_regex_str(body);
+                return zstring("(") + bodyStr + zstring("{") + zstring(rLo.to_string().c_str()) + zstring(",") + zstring(rHi.to_string().c_str()) + zstring("})");
+            } else if (u.re.is_loop(a_regex, body, lo)) {
+                rational rLo(lo);
+                zstring bodyStr = get_std_regex_str(body);
+                return zstring("(") + bodyStr + zstring("{") + zstring(rLo.to_string().c_str()) + zstring("+") + zstring("})");
+            }
+            else {
+                TRACE("str", tout << "BUG: unrecognized regex term " << mk_pp(regex, get_manager()) << std::endl;);
+                UNREACHABLE(); return zstring("");
+            }
         } else if (u.re.is_full_seq(a_regex)) {
             return zstring("(.*)");
         } else if (u.re.is_full_char(a_regex)) {
@@ -1935,6 +1945,7 @@ namespace smt {
             TRACE("str", tout << "BUG: unrecognized regex term " << mk_pp(regex, get_manager()) << std::endl;);
             UNREACHABLE(); return zstring("");
         }
+        
     }
 
     void theory_str::instantiate_axiom_RegexIn(enode * e) {
@@ -6732,7 +6743,7 @@ namespace smt {
         } else if (u.re.is_star(re, sub1) || u.re.is_plus(re, sub1)) {
             unsigned cx = estimate_regex_complexity(sub1);
             return _qmul(2, cx);
-        } else if (u.re.is_loop(re, sub1, lo, hi)) {
+        } else if (u.re.is_loop(re, sub1, lo, hi) || u.re.is_loop(re, sub1, lo)) {
         	unsigned cx = estimate_regex_complexity(sub1);
         	return _qadd(lo, cx);
         } else if (u.re.is_range(re, sub1, sub2)) {
@@ -6775,7 +6786,7 @@ namespace smt {
             unsigned cx1 = estimate_regex_complexity_under_complement(sub1);
             unsigned cx2 = estimate_regex_complexity_under_complement(sub2);
             return _qmul(cx1, cx2);
-        } else if (u.re.is_star(re, sub1) || u.re.is_plus(re, sub1) || u.re.is_loop(re, sub1, lo, hi)) {
+        } else if (u.re.is_star(re, sub1) || u.re.is_plus(re, sub1) || u.re.is_loop(re, sub1, lo, hi) || u.re.is_loop(re, sub1, lo)) {
             unsigned cx = estimate_regex_complexity_under_complement(sub1);
             return _qmul(2, cx);
         } else if (u.re.is_range(re, sub1, sub2)) {
@@ -6831,7 +6842,7 @@ namespace smt {
         } else if (u.re.is_complement(re)) {
             // TODO can we do better?
             return false;
-        } else if (u.re.is_loop(re, sub1, lo, hi)) {
+        } else if (u.re.is_loop(re, sub1, lo, hi) || u.re.is_loop(re, sub1, lo)) {
         	return check_regex_length_linearity_helper(sub1, already_star);
         } else {
             TRACE("str", tout << "WARNING: unknown regex term " << mk_pp(re, get_manager()) << std::endl;);
@@ -9915,6 +9926,12 @@ namespace smt {
             expr * str = nullptr;
             expr * re = nullptr;
             u.str.is_in_re(str_in_re, str, re);
+            if (!ctx.b_internalized(str_in_re)) {
+                TRACE("str", tout << "regex term " << mk_pp(str_in_re, m) << " not internalized; fixing and continuing" << std::endl;);
+                ctx.internalize(str_in_re, false);
+                finalCheckProgressIndicator = true;
+                continue;
+            }
             lbool current_assignment = ctx.get_assignment(str_in_re);
             TRACE("str", tout << "regex term: " << mk_pp(str, m) << " in " << mk_pp(re, m) << " : " << current_assignment << std::endl;);
             if (current_assignment == l_undef) {

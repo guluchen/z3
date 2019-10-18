@@ -226,7 +226,8 @@ void solver::assert_expr(expr* f, expr* t) {
 
 
 void solver::collect_param_descrs(param_descrs & r) {
-    r.insert("solver.enforce_model_conversion", CPK_BOOL, "(default: false) enforce model conversion when asserting formulas");
+    solver_params sp(m_params);
+    sp.collect_param_descrs(r);
     insert_timeout(r);
     insert_rlimit(r);
     insert_max_memory(r);

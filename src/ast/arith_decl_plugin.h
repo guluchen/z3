@@ -379,6 +379,7 @@ public:
     app * mk_ge(expr * arg1, expr * arg2) const { return m_manager.mk_app(m_afid, OP_GE, arg1, arg2); }
     app * mk_lt(expr * arg1, expr * arg2) const { return m_manager.mk_app(m_afid, OP_LT, arg1, arg2); }
     app * mk_gt(expr * arg1, expr * arg2) const { return m_manager.mk_app(m_afid, OP_GT, arg1, arg2); }
+    app * mk_divides(expr* arg1, expr* arg2) { return m_manager.mk_app(m_afid, OP_IDIVIDES, arg1, arg2); }
 
     app * mk_add(unsigned num_args, expr * const * args) const { return num_args == 1 && is_app(args[0]) ? to_app(args[0]) : m_manager.mk_app(m_afid, OP_ADD, num_args, args); }
     app * mk_add(expr * arg1, expr * arg2) const { return m_manager.mk_app(m_afid, OP_ADD, arg1, arg2); }
@@ -442,6 +443,9 @@ public:
 
     expr_ref mk_add_simplify(expr_ref_vector const& args);
     expr_ref mk_add_simplify(unsigned sz, expr* const* args);
+
+    bool is_considered_uninterpreted(func_decl* f, unsigned n, expr* const* args);
+
 };
 
 
