@@ -13838,32 +13838,33 @@ namespace smt {
     obj_map<expr, int> theory_trau::count_occurrences_from_root(){
         context& ctx = get_context();
         obj_map<expr, int> ret;
-        for (const auto& n : concat_node_map){
-            expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
-            expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
-            zstring tmp;
-            if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
-                continue;
+        for (const auto& n : concat_node_map)
+            if (ctx.is_relevant(n.get_value())){
+                expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
+                expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+                zstring tmp;
+                if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
+                    continue;
 
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
-            if (arg0 == arg1)
-                ret.insert(arg0, 2);
-            else {
-                if (ret.contains(arg0) && (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0))) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m) << std::endl;);
-                    ret[arg0]++;
-                }
-                else
-                    ret.insert(arg0, 1);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
+                if (arg0 == arg1)
+                    ret.insert(arg0, 2);
+                else {
+                    if (ret.contains(arg0) && (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m) << std::endl;);
+                        ret[arg0]++;
+                    }
+                    else
+                        ret.insert(arg0, 1);
 
-                if (ret.contains(arg1) && (!is_internal_var(arg1) || is_replace_var(arg1)|| is_substr_var(arg1))) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg1, m) << std::endl;);
-                    ret[arg1]++;
+                    if (ret.contains(arg1) && (!is_internal_var(arg1) || is_replace_var(arg1)|| is_substr_var(arg1))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg1, m) << std::endl;);
+                        ret[arg1]++;
+                    }
+                    else
+                        ret.insert(arg1, 1);
                 }
-                else
-                    ret.insert(arg1, 1);
             }
-        }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& p : ret)
             if (p.m_value >= 2)
