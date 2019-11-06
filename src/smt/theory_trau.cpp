@@ -14960,12 +14960,14 @@ namespace smt {
                             if (val_lhs.length() == 0) {
                                 STRACE("str", tout << __LINE__ << " " << mk_pp(l, m) << " " << val_lhs << "--> = " << mk_pp(valueRhs, m)<< std::endl;);
                                 specialCase = true;
+                                eqConcat.insert(rewrite_concat(valueRhs));
                             }
 
                         if (!specialCase && hasRhSValue)
                             if (val_rhs.length() == 0){
                                 STRACE("str", tout << __LINE__ << " " << mk_pp(r, m) << " " << val_rhs << "--> = " << mk_pp(valueLhs, m) << std::endl;);
                                 specialCase = true;
+                                eqConcat.insert(rewrite_concat(valueLhs));
                             }
 
                         if (!specialCase) {
@@ -15104,6 +15106,15 @@ namespace smt {
         }
         tmp0.append(tmp1);
         return create_concat_from_vector(tmp0);
+    }
+
+    expr* theory_trau::rewrite_concat(expr* n1){
+        ptr_vector <expr> tmp0;
+        get_nodes_in_concat(n1, tmp0);
+        expr* tmp = create_concat_from_vector(tmp0);
+        if (tmp != n1)
+            m_trail.push_back(tmp);
+        return tmp;
     }
 
     expr* theory_trau::create_concat_with_str(expr* n, zstring str){
