@@ -167,8 +167,9 @@ namespace smt {
      */
     app * theory_trau::mk_value_helper(app * n, model_generator& mg) {
         expr* a0 = nullptr, *a1 = nullptr;
-        if (u.str.is_string(n)) {
-            return n;
+        zstring val;
+        if (u.str.is_string(n, val)) {
+            return to_app(mk_string(val));
         } else if (u.str.is_concat(n, a0, a1)) {
             app * a0_conststr = mk_value_helper(to_app(a0), mg);
             app * a1_conststr = mk_value_helper(to_app(a1), mg);
@@ -273,9 +274,12 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
-            return alloc(expr_wrapper_proc, val);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m)  << " " << mk_ismt2_pp(val, m) << std::endl;);
+            zstring value;
+            u.str.is_string(val, value);
+            return alloc(expr_wrapper_proc, u.str.mk_string(value));
         }
-        else if (carry_on_results.contains(owner)){
+        else if (carry_on_results.contains(owner)){ 
             return alloc(expr_wrapper_proc, u.str.mk_string(carry_on_results[owner]));
         }
         else if (ctx.is_relevant(owner.get())){
@@ -17763,12 +17767,14 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 rational val;
                 rational len;
-                if (get_arith_value(e, val) && get_arith_value(mk_strlen(e), len)){
+                if (get_arith_value(e, val) && get_arith_value(mk_strlen(to_app(e)->get_arg(0)), len)){
                     str2int_map.insert(e, std::make_pair(val, len));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " = " << val << std::endl;);
                 }
                 else {
+                    STRACE("str", tout << "initializing model..." << std::endl;);
                     expr *value = query_theory_arith_core(e, mg);
+                    STRACE("str", tout << "initializing model..." << std::endl;);
                     expr *length = query_theory_arith_core(mk_strlen(to_app(e)->get_arg(0)), mg);
                     if (value && length) {
                         m_autil.is_numeral(value, val);
@@ -17781,7 +17787,7 @@ namespace smt {
                 }
             }
         }
-
+        STRACE("str", tout << "initializing model..." << std::endl;);
         carry_on_results.reset();
         eval_str_int(str2int_map);
 
