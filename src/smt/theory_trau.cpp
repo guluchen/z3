@@ -2977,7 +2977,6 @@ namespace smt {
         sort *int_sort = m.mk_sort(m_arith_fid, INT_SORT);
 
         create_pq();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
         if (ex_sort == str_sort) {
             // set up basic string axioms
             enode *n = ctx.get_enode(ex);
@@ -3543,16 +3542,20 @@ namespace smt {
             rational len_s;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << std::endl;);
             if (i_val_exists && (get_len_value(S, len_s) || val_len.second != rational(-10))){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
                 std::string tmp = std::to_string(i_val.get_int64());
                 if (val_len.second != rational(-10))
                     len_s = val_len.second;
-                for (int i = 0; i < len_s.get_int64() - tmp.length(); ++i)
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
+                while (tmp.length() < len_s.get_int64()) {
                     tmp = '0' + tmp;
-
+                }
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
                 expr_ref premise(createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))), m);
                 expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
                     string_int_axioms.insert(axiom);
                     m_trail.push_back(axiom);
                     assert_axiom(axiom);
@@ -12353,7 +12356,7 @@ namespace smt {
             v.push_back(c);
         if (d != nullptr && !m.is_false(d))
             v.push_back(d);
-        return createAndOP(v);
+        return createOrOP(v);
     }
 
     /*
@@ -15560,8 +15563,8 @@ namespace smt {
         expr_ref ts1(mk_str_var("post_suffix"), m);
 
         expr_ref_vector innerItems(m);
-        innerItems.push_back(ctx.mk_eq_atom(expr->get_arg(1), mk_concat(ts0, ts1)));
-        innerItems.push_back(ctx.mk_eq_atom(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
+        innerItems.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
+        innerItems.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
         innerItems.push_back(m.mk_ite(ctx.mk_eq_atom(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
         expr_ref then1(m.mk_and(innerItems.size(), innerItems.c_ptr()), m);
 
@@ -15775,9 +15778,9 @@ namespace smt {
             }
         }
 
-        expr_ref breakdownAssert(ctx.mk_eq_atom(ex, ctx.mk_eq_atom(ex->get_arg(0), mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))), m);
+        expr_ref breakdownAssert(createEqualOP(ex, createEqualOP(ex->get_arg(0), mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))), m);
         SASSERT(breakdownAssert);
-        assert_axiom(mk_not(m, u.str.mk_contains(value.first, needle.get())));
+        assert_axiom(createOrOP(mk_not(m, u.str.mk_contains(value.first, needle.get())), createEqualOP(needle, mk_string(""))));
         assert_axiom(breakdownAssert);
     }
 
@@ -15944,6 +15947,7 @@ namespace smt {
         then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
         //  index_node = |x1|
         then_items.push_back(createEqualOP(index_node, mk_strlen(x1)));
+        then_items.push_back(createOrOP(mk_not(m, mk_contains(x1, needle)), createEqualOP(needle, mk_string(""))));
 
         // expr->get_arg(1) == 0 --> x1 = ""
         if (!u.str.is_string(needle)){
@@ -15959,7 +15963,6 @@ namespace smt {
             }
         }
 
-        assert_axiom(mk_not(m, mk_contains(x1, needle)));
         if (!oneCharCase){
             //     args[0]  = x3 . x4
             //  /\ |x3| = |x1| + |args[1]| - 1
@@ -15976,7 +15979,7 @@ namespace smt {
 
             curr_conclusion.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
             curr_conclusion.push_back(createEqualOP(mk_strlen(x3), tmpLen));
-            curr_conclusion.push_back(mk_not(m, mk_contains(x3, needle)));
+            curr_conclusion.push_back(createOrOP(mk_not(m, mk_contains(x3, needle)), createEqualOP(needle, mk_string(""))));
             then_items.push_back(rewrite_implication(curr_premise, createAndOP(curr_conclusion)));
         }
         expr_ref thenBranch(m.mk_and(then_items.size(), then_items.c_ptr()), m);
@@ -16157,9 +16160,9 @@ namespace smt {
             assert_implication(premise, conclusion);
 
             // | arg1 | = 0 --> indexOf = hd
-            assert_implication(premise, rewrite_implication(createEqualOP(mk_strlen(arg1), mk_int(0)), createEqualOP(e, mk_strlen(hd))));
+            assert_implication(premise, rewrite_implication(createEqualOP(mk_strlen(arg1), mk_int(0)), createEqualOP(e, startIndex)));
         }
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         {
             // heuristic: integrate with str.contains information
             // (but don't introduce it if it isn't already in the instance)
@@ -16484,53 +16487,51 @@ namespace smt {
         expr_ref result(mk_str_var("result"), m);
 
         // condAst = Contains(args[0], args[1])
-        expr_ref condAst(mk_contains(expr->get_arg(0), expr->get_arg(1)), m);
+        expr_ref condAst(mk_contains(haystack, needle), m);
         // -----------------------
         // true branch
-        expr_ref_vector thenItems(m);
+        expr_ref_vector then_items(m);
         //  args[0] = x1 . args[1] . x2
-        thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x1, mk_concat(expr->get_arg(1), x2))));
+        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
 
         // expr->get_arg(1) == 0 --> x1 = ""
         if (!u.str.is_string(expr->get_arg(1))){
-            thenItems.push_back(rewrite_implication(createEqualOP(mk_strlen(expr->get_arg(1)), mk_int(0)),
-                                                    createEqualOP(mk_strlen(x1), mk_int(0))));
+            then_items.push_back(rewrite_implication(createEqualOP(mk_strlen(needle), mk_int(0)),
+                                                     createEqualOP(mk_strlen(x1), mk_int(0))));
         }
 
         bool singleCharCase = false;
         zstring needleStr;
-        if (u.str.is_string(expr->get_arg(1), needleStr)) {
+        if (u.str.is_string(needle, needleStr)) {
             if (needleStr.length() == 1) {
                 singleCharCase = true;
             }
         }
 
         if (singleCharCase) {
-            assert_axiom(mk_not(m, mk_contains(x1, expr->get_arg(1))));
-//            thenItems.push_back(mk_not(m, mk_contains(x1, expr->get_arg(1))));
+            assert_axiom(mk_not(m, mk_contains(x1, needle)));
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(x1, m) << std::endl;);
         }
-        else {
+        else if (haystack != mk_string("")){
             //  args[0]  = x3 . x4 /\ |x3| = |x1| + |args[1]| - 1 /\ ! contains(x3, args[1])
-
             expr_ref x3(mk_str_var("replace3"), m);
             expr_ref x4(mk_str_var("replace4"), m);
-            expr_ref tmpLen(m_autil.mk_add(mk_strlen(x1), mk_strlen(expr->get_arg(1)), mk_int(-1)), m);
-            thenItems.push_back(ctx.mk_eq_atom(expr->get_arg(0), mk_concat(x3, x4)));
-            thenItems.push_back(ctx.mk_eq_atom(mk_strlen(x3), tmpLen));
-            thenItems.push_back(mk_not(m, mk_contains(x3, expr->get_arg(1))));
+            expr_ref tmpLen(m_autil.mk_add(mk_strlen(x1), mk_strlen(needle), mk_int(-1)), m);
+            then_items.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
+            then_items.push_back(createEqualOP(mk_strlen(x3), tmpLen));
+            then_items.push_back(createOrOP(mk_not(m, mk_contains(x3, needle)), createEqualOP(x3, mk_string(""))));
         }
-        thenItems.push_back(ctx.mk_eq_atom(result, mk_concat(x1, mk_concat(expr->get_arg(2), x2))));
-
+        then_items.push_back(createEqualOP(result, mk_concat(x1, mk_concat(expr->get_arg(2), x2))));
         // -----------------------
         // false branch
-        expr_ref elseBranch(ctx.mk_eq_atom(result, expr->get_arg(0)), m);
+        expr_ref elseBranch(createEqualOP(result, haystack), m);
 
-        expr_ref breakdownAssert(m.mk_ite(condAst, m.mk_and(thenItems.size(), thenItems.c_ptr()), elseBranch), m);
+        expr_ref breakdownAssert(m.mk_ite(condAst, m.mk_and(then_items.size(), then_items.c_ptr()), elseBranch), m);
         expr_ref breakdownAssert_rw(breakdownAssert, m);
         m_rewrite(breakdownAssert_rw);
         assert_axiom(breakdownAssert_rw);
 
-        expr_ref reduceToResult(ctx.mk_eq_atom(expr, result), m);
+        expr_ref reduceToResult(createEqualOP(expr, result), m);
         expr_ref reduceToResult_rw(reduceToResult, m);
         m_rewrite(reduceToResult_rw);
         assert_axiom(reduceToResult_rw);
@@ -17768,12 +17769,12 @@ namespace smt {
                 }
                 else {
                     expr *value = query_theory_arith_core(e, mg);
-                    expr *length = query_theory_arith_core(e, mg);
+                    expr *length = query_theory_arith_core(mk_strlen(to_app(e)->get_arg(0)), mg);
                     if (value && length) {
                         m_autil.is_numeral(value, val);
                         m_autil.is_numeral(length, len);
                         str2int_map.insert(e, std::make_pair(val, len));
-                        STRACE("str", tout << __LINE__ << " value :  " << mk_pp(e, m) << ": " << mk_pp(value, m) << " --> " << val << std::endl;);
+                        STRACE("str", tout << __LINE__ << " value :  " << mk_pp(e, m) << ": " << mk_pp(value, m) << " --> " << val << " len: " << len << std::endl;);
                     } else {
                         break;
                     }
