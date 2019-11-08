@@ -326,6 +326,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
+            bool eval_str_int(obj_map<expr, std::pair<rational, rational>>);
             bool eval_str_int();
             bool eval_disequal_str_int();
                 bool eq_to_i2s(expr* n, expr* &i2s);
@@ -334,7 +335,7 @@ namespace smt {
              * Check agreement between integer and string theories for the term a = (str.to-int S).
              * Returns true if axioms were added, and false otherwise.
              */
-            bool eval_str2int(app * a);
+            bool eval_str2int(app * a, std::pair<rational, rational> val_len = std::make_pair(rational(-10), rational(-10)));
                 rational string_to_int(zstring str, bool &valid);
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
@@ -406,6 +407,7 @@ namespace smt {
                         expr* unroll_str_int(expr* num, expr* str);
                         expr* valid_str_int(expr* str);
                         expr* lower_bound_str_int(expr* num, expr* str);
+                        expr* lower_bound_str_int(expr* num, expr* str, rational bound);
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_1st_loop(expr* num, expr* str);
                             bool is_char_at(expr* str);
@@ -1340,6 +1342,7 @@ namespace smt {
         obj_map<expr, expr_set>                             dependency_graph;
         obj_map<expr, expr*>                                expr_array_linkers;
         obj_map<expr, expr*>                                array_map;
+        obj_map<expr, zstring>                              carry_on_results;
         string_map                                          array_map_reverse;
         obj_map<expr, expr*>                                arr_linker;
         int                                                 connectingSize;
