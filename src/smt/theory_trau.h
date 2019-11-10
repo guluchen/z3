@@ -344,6 +344,7 @@ namespace smt {
                 rational log_10(rational n);
                 rational ten_power(rational n);
             bool refined_init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
+                void find_remaining_non_fresh_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const &eq_combination);
                 void refine_not_contain_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
                 bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
@@ -1033,7 +1034,7 @@ namespace smt {
                 */
                 bool appear_in_eqs(ptr_vector<expr> const& s, expr* var);
 
-                bool is_important_concat(expr* e, obj_map<expr, int> const& non_fresh_vars);
+                bool is_non_fresh_concat(expr* e, obj_map<expr, int> const& non_fresh_vars);
                 bool is_trivial_combination(expr* v, ptr_vector<expr> const& eq, obj_map<expr, int> const& non_fresh_vars);
                 ptr_vector<expr> refine_eq_set(expr* var, ptr_vector<expr> s, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector const& notnon_fresh_vars);
                 ptr_vector<expr> refine_eq_set(expr* var, ptr_vector<expr> s, obj_map<expr, int> const& non_fresh_vars);

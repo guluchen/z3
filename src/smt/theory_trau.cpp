@@ -228,9 +228,11 @@ namespace smt {
         context & ctx = get_context();
         app_ref owner{m};
         owner = n->get_owner();
-        if (!u.is_string(m.get_sort(n->get_owner())))
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
+        if (!ctx.is_relevant(owner.get()) || !u.is_string(m.get_sort(owner))) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
             return alloc(expr_wrapper_proc, owner);
-
+        }
         // if the owner is not internalized, it doesn't have an e-node associated.
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         rational vLen(-1);
@@ -3812,8 +3814,43 @@ namespace smt {
         if (axiom_added)
             return axiom_added;
         refine_not_contain_vars(non_fresh_vars, eq_combination);
+
+        find_remaining_non_fresh_vars(non_fresh_vars, eq_combination);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         return false;
+    }
+
+    void theory_trau::find_remaining_non_fresh_vars(obj_map<expr, int> &non_fresh_vars,
+                                                    obj_map<expr, ptr_vector<expr>> const &eq_combination){
+        // collect all vars in eq_combination
+        obj_hashtable<expr> vars;
+        for (const auto& eq : eq_combination){
+            for (const auto& e : eq.get_value()) {
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(e, nodes);
+                for (const auto& n : nodes)
+                    if (!u.str.is_string(n))
+                        vars.insert(n);
+            }
+        }
+
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << vars.size() << std::endl;);
+        // check all concats in non_fresh_vars
+        for (const auto& n : non_fresh_vars)
+            if (u.str.is_concat(n.m_key)){
+                ptr_vector<expr> nodes;
+                get_nodes_in_concat(n.m_key, nodes);
+                for (const auto& e : nodes)
+                    if (!in_same_eqc(e, n.m_key) && !u.str.is_string(e))
+                        if (vars.contains(e)){
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << mk_pp(e, m) << std::endl;);
+                            non_fresh_vars.insert(e, -1);
+                        }
+            }
+
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        for (const auto& nn : non_fresh_vars)
+            STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
     }
 
     void theory_trau::refine_not_contain_vars(
@@ -7512,15 +7549,29 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
         expr_ref_vector ands(m);
         expr* root_tmp = find_equivalent_variable(var);
-        for (const auto& element: eqs) {
-            if (element == var && !u.str.is_concat(element)){
+
+        ptr_vector<expr> eq_tmp = eqs;
+        // eq to itself
+        // if one of elements is non fresh
+        if (is_non_fresh_concat(root_tmp, non_fresh_vars)){
+            eq_tmp.push_back(root_tmp);
+        }
+
+        if (root_tmp != var){
+            if (is_non_fresh_concat(var, non_fresh_vars)){
+                eq_tmp.push_back(var);
+            }
+        }
+        // eq to its set
+        for (const auto& element: eq_tmp) {
+            if (!u.str.is_concat(element)){
                 continue;
             }
-            ptr_vector<expr> lhs;
-            ptr_vector<expr> rhs;
-            optimize_equality(root_tmp, element, lhs, rhs);
-            if (lhs.size() == 0 || rhs.size() == 0)
-                continue;
+//            ptr_vector<expr> lhs;
+//            ptr_vector<expr> rhs;
+//            optimize_equality(root_tmp, element, lhs, rhs);
+//            if (lhs.size() == 0 || rhs.size() == 0)
+//                continue;
             pair_expr_vector lhs_elements = create_equality(var, false);
             pair_expr_vector rhs_elements = create_equality(element);
             expr* containKey = nullptr;
@@ -7755,11 +7806,11 @@ namespace smt {
     expr* theory_trau::find_equivalent_variable(expr* e){
         if (u.str.is_concat(e)) {
             // change from concat to variable if it is possible
-            expr_ref_vector eqNodeSet(m);
-            collect_eq_nodes(e, eqNodeSet);
-            for (unsigned i = 0; i < eqNodeSet.size(); ++i)
-                if (!u.str.is_concat(eqNodeSet[i].get())) {
-                    return eqNodeSet[i].get();
+            expr_ref_vector eq(m);
+            collect_eq_nodes(e, eq);
+            for (unsigned i = 0; i < eq.size(); ++i)
+                if (!u.str.is_concat(eq[i].get())) {
+                    return eq[i].get();
                 }
         }
         return e;
@@ -14608,11 +14659,11 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_important_concat(expr* e, obj_map<expr, int> const& non_fresh_vars){
+    bool theory_trau::is_non_fresh_concat(expr* e, obj_map<expr, int> const& non_fresh_vars){
         ptr_vector<expr> nodes;
-        get_all_nodes_in_concat(e, nodes);
+        get_nodes_in_concat(e, nodes);
         for (const auto& v : non_fresh_vars)
-            if (nodes.contains(v.m_key)) {
+            if (nodes.contains(v.m_key) && !in_same_eqc(v.m_key, e)) {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.m_key, m) << std::endl;);
                 return true;
             }
