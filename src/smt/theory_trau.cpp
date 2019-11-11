@@ -3333,7 +3333,7 @@ namespace smt {
         for (const auto& e: string_int_conversion_terms) {
             app * ex = to_app(e);
             if (u.str.is_stoi(ex)) {
-                if (eval_str2int(ex)) {
+                if (eval_str2int(ex, true)) {
                     addedAxioms = true;
                 }
             } else if (u.str.is_itos(ex)) {
@@ -3366,14 +3366,14 @@ namespace smt {
         return addedAxioms;
     }
 
-    bool theory_trau::eval_str_int(obj_map<expr, std::pair<rational, rational>> val){
+    bool theory_trau::eval_str_int(obj_map<expr, std::pair<rational, rational>> val, bool to_assert){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
         bool addedAxioms = false;
         for (const auto& e: string_int_conversion_terms) {
             app * ex = to_app(e);
             if (u.str.is_stoi(ex)) {
                 if (val.contains(e)){
-                    if (eval_str2int(ex, val[e])) {
+                    if (eval_str2int(ex, to_assert, val[e])) {
                         addedAxioms = true;
                     }
                 }
@@ -3483,7 +3483,7 @@ namespace smt {
      * Check agreement between integer and string theories for the term a = (str.to-int S).
      * Returns true if axioms were added, and false otherwise.
      */
-    bool theory_trau::eval_str2int(app * a, std::pair<rational, rational> val_len) {
+    bool theory_trau::eval_str2int(app * a, bool to_assert, std::pair<rational, rational> val_len) {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << val_len.second << std::endl;);
         bool axiomAdd = false;
         context & ctx = get_context();
@@ -3522,7 +3522,8 @@ namespace smt {
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
-                    assert_axiom(axiom);
+                    if (to_assert)
+                        assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail.push_back(axiom);
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
@@ -3537,7 +3538,8 @@ namespace smt {
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     m_trail.push_back(axiom);
-                    assert_axiom(axiom);
+                    if (to_assert)
+                        assert_axiom(axiom);
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
@@ -3557,19 +3559,27 @@ namespace smt {
                     tmp = '0' + tmp;
                 }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
-                expr_ref premise(createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))), m);
-                expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
-                expr_ref axiom(rewrite_implication(premise, conclusion), m);
-                if (!string_int_axioms.contains(axiom)) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
-                    string_int_axioms.insert(axiom);
-                    m_trail.push_back(axiom);
-                    assert_axiom(axiom);
-                    implied_facts.push_back(axiom.get());
-                    m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
-                    axiomAdd = true;
-                    carry_on_results.insert(S, zstring(tmp.c_str()));
+                if (to_assert) {
+                    expr_ref premise(
+                            createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
+                            m);
+                    expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
+                    expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                    if (!string_int_axioms.contains(axiom)) {
+                        STRACE("str",
+                               tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first
+                                    << " " << len_s << " " << tmp << std::endl;);
+                        string_int_axioms.insert(axiom);
+                        m_trail.push_back(axiom);
+
+                        assert_axiom(axiom);
+                        implied_facts.push_back(axiom.get());
+                        m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
+                        axiomAdd = true;
+
+                    }
                 }
+                carry_on_results.insert(S, zstring(tmp.c_str()));
             }
             else {
                 expr *eq_node = nullptr;
@@ -3583,7 +3593,8 @@ namespace smt {
                     if (!string_int_axioms.contains(axiom)) {
                         string_int_axioms.insert(axiom);
                         m_trail.push_back(axiom);
-                        assert_axiom(axiom);
+                        if (to_assert)
+                            assert_axiom(axiom);
                         implied_facts.push_back(axiom.get());
                         m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
 
@@ -18028,7 +18039,7 @@ namespace smt {
         }
         STRACE("str", tout << "initializing model..." << std::endl;);
         carry_on_results.reset();
-        eval_str_int(str2int_map);
+        eval_str_int(str2int_map, false);
 
         // prepare dependency_graph
         for (const auto& n : uState.eq_combination) {

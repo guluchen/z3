@@ -326,7 +326,7 @@ namespace smt {
         void pop_scope_eh(unsigned num_scopes) override;
         void reset_eh() override;
         final_check_status final_check_eh() override;
-            bool eval_str_int(obj_map<expr, std::pair<rational, rational>>);
+            bool eval_str_int(obj_map<expr, std::pair<rational, rational>>, bool to_assert = true);
             bool eval_str_int();
             bool eval_disequal_str_int();
                 bool eq_to_i2s(expr* n, expr* &i2s);
@@ -335,7 +335,7 @@ namespace smt {
              * Check agreement between integer and string theories for the term a = (str.to-int S).
              * Returns true if axioms were added, and false otherwise.
              */
-            bool eval_str2int(app * a, std::pair<rational, rational> val_len = std::make_pair(rational(-10), rational(-10)));
+            bool eval_str2int(app * a, bool to_assert, std::pair<rational, rational> val_len = std::make_pair(rational(-10), rational(-10)));
                 rational string_to_int(zstring str, bool &valid);
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
