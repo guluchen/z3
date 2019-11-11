@@ -8057,7 +8057,7 @@ namespace smt {
 
     bool theory_trau::collect_alternative_components(expr* v, expr_ref_vector& ret){
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(v, m) << std::endl;);
-        expr *arg0 = nullptr, *arg1 = nullptr;
+        expr *arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
         if (u.re.is_to_re(v)){
             ret.push_back(v);
         }
@@ -8080,11 +8080,20 @@ namespace smt {
                 expr_ref_vector rhs(m);
                 collect_alternative_components(arg0, lhs);
                 collect_alternative_components(arg1, rhs);
-
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(v, m) << " " << lhs.size() << " " << rhs.size() << std::endl;);
                 for (const auto &l : lhs) {
                     for (const auto &r: rhs) {
-                        expr *tmp = u.re.mk_concat(l, r);
-                        ret.push_back(tmp);
+                        expr* arg0 = nullptr, * arg1 = nullptr;
+                        if (u.re.is_to_re(r, arg0) && u.re.is_to_re(l, arg1)){
+                            zstring tmp0, tmp1;
+                            u.str.is_string(arg0, tmp0);
+                            u.str.is_string(arg1, tmp1);
+                            ret.push_back(u.re.mk_to_re(mk_string(tmp1 + tmp0)));
+                        }
+                        else {
+                            expr *tmp = u.re.mk_concat(l, r);
+                            ret.push_back(tmp);
+                        }
                     }
                 }
             }
@@ -8095,7 +8104,19 @@ namespace smt {
             u.str.is_string(arg1, finish);
 
             for (unsigned i = start[0]; i <= finish[0]; ++i){
-                ret.push_back(mk_string(i));
+                ret.push_back(u.re.mk_to_re(mk_string(i)));
+            }
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(v, m) << " " << ret.size() << std::endl;);
+        }
+        else if (u.re.is_loop(v)){
+            expr_ref_vector lhs(m);
+            if (!collect_alternative_components(to_app(v)->get_arg(0), lhs)) {
+                return false;
+            }
+            else {
+                for (const auto& e : lhs){
+                    ret.push_back(u.re.mk_star(e));
+                }
             }
         }
         else {
@@ -8139,7 +8160,7 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v, get_manager()) << std::endl;);
-            SASSERT(false);
+            NOT_IMPLEMENTED_YET();
         }
         return true;
     }
@@ -8178,6 +8199,9 @@ namespace smt {
             for (unsigned i = start[0]; i <= finish[0]; ++i) {
                 ret.insert(zstring(i));
             }
+        }
+        else if (u.re.is_loop(v)){
+            collect_strs_in_membership(to_app(v)->get_arg(0), ret);
         }
         else
             NOT_IMPLEMENTED_YET();
