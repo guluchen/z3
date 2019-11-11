@@ -487,7 +487,7 @@ namespace smt {
                     bool isRegexStr(zstring str);
                     bool isUnionStr(zstring str);
 
-                expr_ref_vector parse_regex_components(expr* reg);
+                expr_ref_vector parse_regex(expr* reg);
 
                     /*
                     * (a) | (b) --> {a, b}
@@ -985,6 +985,7 @@ namespace smt {
             void optimize_equality(expr* lhs, expr* rhs, ptr_vector<expr> &new_lhs, ptr_vector<expr> &new_rhs);
                 expr* create_concat_from_vector(ptr_vector<expr> const& v, int from_pos);
                 expr* create_concat_from_vector(ptr_vector<expr> const& v);
+                expr* create_reg_concat_from_vector(ptr_vector<expr> const& v);
                 bool have_same_len(expr* lhs, expr* rhs);
             /*
              * cut the same prefix and suffix
@@ -1268,7 +1269,6 @@ namespace smt {
         obj_hashtable<expr>                                 string_int_axioms;
         obj_map<expr, expr*>                                string_int_vars;
         obj_map<expr, expr*>                                int_string_vars;
-
         expr_ref_vector                                     m_persisted_axiom_todo;
 
         expr_ref_vector                                     contains_map;
