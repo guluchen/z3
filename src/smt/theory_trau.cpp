@@ -3550,15 +3550,13 @@ namespace smt {
             rational len_s;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << std::endl;);
             if (i_val_exists && (get_len_value(S, len_s) || val_len.second != rational(-10))){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
                 std::string tmp = std::to_string(i_val.get_int64());
                 if (val_len.second != rational(-10))
                     len_s = val_len.second;
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
                 while (tmp.length() < len_s.get_int64()) {
                     tmp = '0' + tmp;
                 }
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << len_s << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
                 if (to_assert) {
                     expr_ref premise(
                             createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
