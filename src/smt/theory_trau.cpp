@@ -3549,7 +3549,7 @@ namespace smt {
         else {
             rational len_s;
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << std::endl;);
-            if (i_val_exists && (get_len_value(S, len_s) || val_len.second != rational(-10))){
+            if (i_val_exists && (get_len_value(S, len_s) || val_len.second != rational(-10)) && i_val.get_int64() >= 0){
                 std::string tmp = std::to_string(i_val.get_int64());
                 if (val_len.second != rational(-10))
                     len_s = val_len.second;
