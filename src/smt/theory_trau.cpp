@@ -13607,6 +13607,7 @@ namespace smt {
             }
             else if (u.str.is_string(rhs_nodes[i], l_value) && get_len_value(lhs_nodes[i], len_tmp) && get_assign_lvl(mk_strlen(lhs_nodes[i]), mk_int(len_tmp)) == 0 && len_tmp.get_int64() > 0){
                 if (l_value.length() == len_tmp.get_int64()){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << l_value << " " << mk_pp(lhs_nodes[i], m) << std::endl;);
                     SASSERT(false);
                 }
                 else {
@@ -13680,9 +13681,9 @@ namespace smt {
 
     bool theory_trau::have_same_len(expr* lhs, expr* rhs){
         rational lhsLen;
-        if (get_len_value(lhs, lhsLen) && get_assign_lvl(mk_strlen(lhs), mk_int(lhsLen)) == 0) {
+        if (get_len_value(lhs, lhsLen) && (get_assign_lvl(mk_strlen(lhs), mk_int(lhsLen)) == 0 || u.str.is_string(lhs))) {
             rational rhsLen;
-            if (get_len_value(rhs, rhsLen) && get_assign_lvl(mk_strlen(rhs), mk_int(rhsLen)) == 0)
+            if (get_len_value(rhs, rhsLen) && (get_assign_lvl(mk_strlen(rhs), mk_int(rhsLen)) == 0 || u.str.is_string(rhs)))
                 if (rhsLen == lhsLen) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
                     return true;
@@ -19032,10 +19033,13 @@ namespace smt {
                                         break;
                                     }
 
+                                while (err_pos < (int)value.length() && value[err_pos] == 32)
+                                    ++err_pos;
+
                                 zstring working_str("");
                                 if (i > 0)
                                     working_str = val.extract(0, i - 1);
-
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << working_str << std::endl;);
                                 zstring new_str("");
                                 if (create_string_with_length(elements, new_str, err_pos - i + 1)) {
                                     val = working_str + new_str + value.extract(i + new_str.length() - 1, value.length() - (i + new_str.length() - 1));
