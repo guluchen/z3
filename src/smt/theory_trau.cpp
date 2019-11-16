@@ -6889,8 +6889,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
-    void theory_trau::init_underapprox(
-            obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars){
+    void theory_trau::init_underapprox(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars){
         static_analysis(eq_combination);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         
@@ -6970,14 +6969,53 @@ namespace smt {
         init_connecting_size(eq_combination, non_fresh_vars, false);
         init_connecting_size(eq_combination, non_fresh_vars);
         create_appearance_map(eq_combination);
+        sync_substr(non_fresh_vars);
     }
 
-    void theory_trau::mk_and_setup_arr(
-            expr* v,
-            obj_map<expr, int> &non_fresh_vars){
-        
+    void theory_trau::sync_substr(obj_map<expr, int> const &non_fresh_vars){
         context & ctx = get_context();
+        for (const auto& p : substr_map){
+            expr *arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
+            if (ctx.is_relevant(p.m_key) && u.str.is_extract(p.m_key, arg0, arg1, arg2)){
+                if (non_fresh_vars.contains(p.m_key) && non_fresh_vars.contains(arg0)){
+                    rational len;
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(p.m_key, m) << std::endl;);
+                    if (m_autil.is_numeral(arg2, len)){
+                        expr* to_assert = sync_2_vars(arg0, p.m_key, len.get_int64(), arg1);
+                        assert_axiom(to_assert);
+                        m_trail.push_back(to_assert);
+                        implied_facts.push_back(to_assert);
+                    }
+                    else {
+                        int len_int = non_fresh_vars[p.m_key];
+                        if (len_int < 0)
+                            len_int = connectingSize;
+                        expr* to_assert = sync_2_vars(arg0, p.m_key, len_int, arg1);
+                        assert_axiom(to_assert);
+                        m_trail.push_back(to_assert);
+                        implied_facts.push_back(to_assert);
+                    }
+                }
+            }
+        }
+    }
 
+    expr* theory_trau::sync_2_vars(expr* a, expr* b, int len, expr* start){
+        expr* arr_a = get_var_flat_array(a);
+        expr* arr_b = get_var_flat_array(b);
+
+        SASSERT(arr_a);
+        SASSERT(arr_b);
+
+        expr_ref_vector ands(m);
+        for (int i = 0; i < len; ++i){
+            ands.push_back(createEqualOP(createSelectOP(arr_a, createAddOP(start, mk_int(i))), createSelectOP(arr_b, mk_int(i))));
+        }
+        return createAndOP(ands);
+    }
+    void theory_trau::mk_and_setup_arr(expr* v, obj_map<expr, int> &non_fresh_vars){
+        context & ctx = get_context();
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(v, m) << std::endl;);
         expr* arr_var = get_var_flat_array(v);
         if (arr_var != nullptr) {
             // check if we can use that: cannot use if two nodes are not equal
@@ -16445,7 +16483,7 @@ namespace smt {
         // Case 1: pos < 0 or pos >= strlen(base) or len < 0
         // ==> (Substr ...) = ""
         expr_ref case1_premise(m.mk_not(argumentsValid), m);
-        expr_ref case1_conclusion(ctx.mk_eq_atom(expr, mk_string("")), m);
+        expr_ref case1_conclusion(createEqualOP(expr, mk_string("")), m);
         expr_ref case1(m.mk_implies(case1_premise, case1_conclusion), m);
 
         bool startFromHead = false;
@@ -16464,23 +16502,23 @@ namespace smt {
         expr_ref t4(mk_str_var("substr4"), m);
 
         if (!startFromHead) {
-            case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
-            case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
+            case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
+            case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), pos));
 
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t0, mk_concat(t3, t4))));
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t0), pos));
+            case3_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
+            case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), pos));
 
             sync_index_head(pos, base, t0, mk_concat(t3, t4));
         }
         else {
-            case2_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
-            case3_conclusion_terms.push_back(ctx.mk_eq_atom(base, mk_concat(t3, t4)));
+            case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t3, t4)));
+            case3_conclusion_terms.push_back(createEqualOP(base, mk_concat(t3, t4)));
 
             sync_index_head(len, base, t3, t4);
         }
 
-        case2_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
-        case2_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t4), mk_int(0)));
+        case2_conclusion_terms.push_back(createEqualOP(expr, t3));
+        case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t4), mk_int(0)));
 
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref premise_expr(m);
@@ -16491,14 +16529,14 @@ namespace smt {
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
 
-        case3_conclusion_terms.push_back(ctx.mk_eq_atom(mk_strlen(t3), len));
-        case3_conclusion_terms.push_back(ctx.mk_eq_atom(expr, t3));
+        case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t3), len));
+        case3_conclusion_terms.push_back(createEqualOP(expr, t3));
 
         expr_ref case3_conclusion(mk_and(case3_conclusion_terms), m);
         expr_ref case3(m.mk_implies(m.mk_and(argumentsValid, m.mk_not(lenOutOfBounds)), case3_conclusion), m);
 
         {
-
+            substr_map.insert(expr, t3.get());
             expr_ref case1_rw(case1, m);
             m_rewrite(case1_rw);
             m_delayed_assertions_todo.push_back(case1_rw);

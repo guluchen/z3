@@ -418,6 +418,8 @@ namespace smt {
                 bool is_equal(expr_ref_vector const& corePrev, expr_ref_vector const& coreCurr);
             bool underapproximation_cached();
             void init_underapprox(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars);
+                void sync_substr(obj_map<expr, int> const &non_fresh_vars);
+                expr* sync_2_vars(expr* a, expr* b, int len, expr* start);
                 void mk_and_setup_arr(expr* v, obj_map<expr, int> &non_fresh_vars);
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr, expr* premise = nullptr);
@@ -1273,6 +1275,7 @@ namespace smt {
 
         expr_ref_vector                                     contains_map;
 
+        obj_map<expr, expr*>                                 substr_map;
         obj_pair_map<expr, expr, expr*>                     contain_pair_bool_map;
         obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
