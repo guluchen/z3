@@ -3851,8 +3851,8 @@ namespace smt {
                 get_nodes_in_concat(n.m_key, nodes);
                 for (const auto& e : nodes)
                     if (!in_same_eqc(e, n.m_key) && !u.str.is_string(e))
-                        if (vars.contains(e)){
-                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << mk_pp(e, m) << std::endl;);
+                        if (vars.contains(e) && !non_fresh_vars.contains(e)){
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << mk_pp(e, m) << " " << non_fresh_vars.contains(e) << std::endl;);
                             non_fresh_vars.insert(e, -1);
                         }
             }
