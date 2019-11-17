@@ -3845,18 +3845,26 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << vars.size() << std::endl;);
         // check all concats in non_fresh_vars
-        for (const auto& n : non_fresh_vars)
-            if (u.str.is_concat(n.m_key)){
+        for (const auto& n : non_fresh_vars) {
+            if (u.str.is_concat(n.m_key)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(n.m_key, m) << std::endl;);
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(n.m_key, nodes);
-                for (const auto& e : nodes)
-                    if (!in_same_eqc(e, n.m_key) && !u.str.is_string(e))
-                        if (vars.contains(e) && !non_fresh_vars.contains(e)){
-                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << mk_pp(e, m) << " " << non_fresh_vars.contains(e) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << vars.size() << std::endl;);
+                for (const auto &e : nodes) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(e, m) << std::endl;);
+                    if (!u.str.is_string(e) && !are_equal_exprs(e, n.m_key))
+                        if (vars.contains(e) && !non_fresh_vars.contains(e)) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(e, m) << " "
+                                               << non_fresh_vars.contains(e) << std::endl;);
                             non_fresh_vars.insert(e, -1);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(e, m) << " "
+                                               << non_fresh_vars.contains(e) << std::endl;);
                         }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << vars.size() << std::endl;);
+                }
             }
-
+        }
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& nn : non_fresh_vars)
             STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
@@ -6894,29 +6902,29 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
         
         context & ctx = get_context();
-        expr_ref_vector all_str_exprs(m);
+        obj_hashtable<expr> all_str_exprs;
         flat_var_counter = 0;
         for (const auto& v : eq_combination){
             if (is_app(v.m_key)) {
                 app *ap = to_app(v.m_key);
                 if (!u.str.is_concat(ap)) {
                     if (!all_str_exprs.contains(v.m_key))
-                        all_str_exprs.push_back(v.m_key);
+                        all_str_exprs.insert(v.m_key);
                 }
                 else {
                     if (is_non_fresh(v.m_key, non_fresh_vars))
                         if (!all_str_exprs.contains(v.m_key))
-                            all_str_exprs.push_back(v.m_key);
+                            all_str_exprs.insert(v.m_key);
                     ptr_vector<expr> nodes;
                     get_nodes_in_concat(v.m_key, nodes);
                     for (unsigned i = 0; i < nodes.size(); ++i) {
                         if (!all_str_exprs.contains(nodes[i]))
-                            all_str_exprs.push_back(nodes[i]);
+                            all_str_exprs.insert(nodes[i]);
                     }
                     expr* tmp = ctx.get_enode(v.m_key)->get_root()->get_owner();
                     if (!u.str.is_concat(tmp)) {
                         if (!all_str_exprs.contains(tmp))
-                            all_str_exprs.push_back(tmp);
+                            all_str_exprs.insert(tmp);
                     }
                     else {
                         expr_ref_vector eqs(m);
@@ -6924,7 +6932,7 @@ namespace smt {
                         for (unsigned i = 0; i < eqs.size(); ++i)
                             if (!u.str.is_concat(eqs[i].get())) {
                                 if (!all_str_exprs.contains(eqs[i].get()))
-                                    all_str_exprs.push_back(eqs[i].get());
+                                    all_str_exprs.insert(eqs[i].get());
                                 break;
                             }
                     }
@@ -6938,24 +6946,28 @@ namespace smt {
                     get_nodes_in_concat(eq, nodes);
                     for (unsigned i = 0; i < nodes.size(); ++i)
                         if (!all_str_exprs.contains(nodes[i]))
-                            all_str_exprs.push_back(nodes[i]);
+                            all_str_exprs.insert(nodes[i]);
                 }
             }
         }
 
         for (const auto& we: non_membership_memo) {
-            all_str_exprs.push_back(we.first);
+            all_str_exprs.insert(we.first);
         }
 
-        for (const auto& we: membership_memo) {
-            all_str_exprs.push_back(we.first);
+        for (const auto& we: non_fresh_vars) {
+            all_str_exprs.insert(we.m_key);
         }
 
         obj_map<expr, int> str_int_vars;
         collect_non_fresh_vars_str_int(str_int_vars);
         setup_flats();
         for (const auto& we: str_int_vars) {
-            all_str_exprs.push_back(we.m_key);
+            all_str_exprs.insert(we.m_key);
+        }
+
+        for (const auto& we: str_int_vars) {
+            all_str_exprs.insert(we.m_key);
         }
 
         // create all tmp vars
@@ -14135,6 +14147,11 @@ namespace smt {
         // --> check if their parents are fresh
         if (occurrences.contains(nn))
             if (occurrences[nn] >= 2) {
+                rational len_val;
+                if (is_char_at(nn))
+                    len = 1;
+                else if (get_len_value(nn, len_val) && get_assign_lvl(mk_strlen(nn), mk_int(len_val)) == 0)
+                    len = len_val.get_int64();
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
                 return true;
             }
