@@ -1001,6 +1001,7 @@ namespace smt {
                 bool propagate_equality_left_2_right(expr* lhs, expr* rhs, int &prefix, expr_ref_vector &and_lhs, expr_ref_vector &to_assert);
 
             obj_map<expr, int> collect_non_fresh_vars();
+            bool is_fixed_len_var(expr* nn, int& len);
             expr_set collect_non_ineq_vars();
             expr_set collect_needles();
             void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
@@ -1024,6 +1025,7 @@ namespace smt {
                 obj_map<expr, int> count_occurrences_from_root();
                 bool is_replace_var(expr* x);
                 bool is_substr_var(expr* x);
+                bool is_substr_var(expr* x, expr*& substr);
                 obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
@@ -1059,6 +1061,9 @@ namespace smt {
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
+        void correct_underapproximation_model(model_generator& mg);
+        bool correct_underapproximation_model(model_generator& mg, obj_map<expr, ptr_vector<expr>> const& eq_combination);
+        rational get_concat_len(expr* e);
         void finalize_model(model_generator& mg) override;
 
         void assert_cached_eq_state();
