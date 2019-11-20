@@ -18318,6 +18318,7 @@ namespace smt {
         // check the current branch
         if (correct_underapproximation_model(mg, uState.eq_combination))
             return;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& s : completed_branches){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             if (correct_underapproximation_model(mg, s.eq_combination)){
@@ -18340,9 +18341,13 @@ namespace smt {
             }
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(eq.m_key, m) << " " << root_len << std::endl;);
             for (const auto& e : eq.m_value){
+                if (are_equal_exprs(eq.m_key, e))
+                    continue;
                 rational tmp = get_concat_len(e);
-                if ((tmp.get_int64() >= 0 && tmp != root_len) || tmp.get_int64() < 0)
+                if ((tmp.get_int64() >= 0 && tmp != root_len) || tmp.get_int64() < 0){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(eq.m_key, m) << " " << mk_pp(e, m) << " " << tmp << std::endl;);
                     return false;
+                }
                 else {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(eq.m_key, m) << " " << mk_pp(e, m) << " " << tmp << std::endl;);
                 }
@@ -18352,9 +18357,12 @@ namespace smt {
     }
 
     rational theory_trau::get_concat_len(expr* e){
+        rational sum(0);
+        if (get_len_value(e, sum))
+            return sum;
         ptr_vector<expr> nodes;
         get_nodes_in_concat(e, nodes);
-        rational sum(0);
+
         for (const auto& n : nodes){
             rational tmp(0);
             if (get_len_value(n, tmp)){
