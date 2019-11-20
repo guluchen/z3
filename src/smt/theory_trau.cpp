@@ -14297,7 +14297,7 @@ namespace smt {
 
         for (const auto& v : eq_combination){
             // inside one variable
-            obj_map<expr, expr*> occurrenceLocation;
+            obj_map<expr, expr*> occurrence_location;
             if (!(v.get_value().size() >= 2 || u.str.is_string(v.m_key) || (v.get_value().size() == 1 &&
                     is_non_fresh(v.m_key, non_fresh_vars))))
                 continue;
@@ -14308,7 +14308,8 @@ namespace smt {
                     for (const auto& nn : nodes)
                         if (!u.str.is_string(nn)){
                             if (ret.contains(nn)){
-                                if (!occurrenceLocation.contains(nn)) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
+                                if (!occurrence_location.contains(nn)) {
                                     ret[nn]++;
                                     if (ret[nn] >= 2){
                                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(e, m) << std::endl;);
@@ -14316,10 +14317,10 @@ namespace smt {
                                 }
                                 else {
                                     // compare two equalities
-                                    if (check_var_after_optimizing(e, occurrenceLocation[nn], nn)){
+                                    if (e == occurrence_location[nn] || check_var_after_optimizing(e, occurrence_location[nn], nn)){
                                         ret[nn]++;
                                         if (ret[nn] >= 2){
-                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) <<  " @ " << mk_pp(occurrenceLocation[nn], m) << " and @ " << mk_pp(e, m) << std::endl;);
+                                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " var: " << mk_pp(nn, m) << " @ " << mk_pp(occurrence_location[nn], m) << " and @ " << mk_pp(e, m) << std::endl;);
                                         }
                                     }
                                 }
@@ -14328,7 +14329,7 @@ namespace smt {
 
                             else {
                                 ret.insert(nn, 1);
-                                occurrenceLocation.insert(nn, e);
+                                occurrence_location.insert(nn, e);
                             }
                         }
                 }
