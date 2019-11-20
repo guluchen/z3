@@ -14250,8 +14250,9 @@ namespace smt {
         vector<str::expr_pair> visited;
         for (const auto& n : concat_node_map)
             if (ctx.is_relevant(n.get_value())){
-                expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
-                expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.get_key1(), m)  << " " << mk_pp(n.get_key2(), m)<< std::endl;);
+                expr* arg0 = n.get_key1();
+                expr* arg1 = n.get_key2();
                 zstring tmp;
                 if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
                     continue;
