@@ -242,6 +242,7 @@ namespace smt {
             }
 
             app * mk_value(model_generator & mg, expr_ref_vector const & values) override ;
+            bool question_return_value(zstring s);
             bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value);
             bool create_string_with_length(vector<zstring> const& elements, zstring &current_str, int remain_length);
             vector<zstring> collect_alternative_components(expr* v);

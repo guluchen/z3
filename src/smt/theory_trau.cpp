@@ -18192,9 +18192,8 @@ namespace smt {
                 continue;
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << std::endl;);
             rational len;
-//            if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) ||
-//                (get_len_value(c.get_key1(), len) && len.get_int64() == 0))
-//                continue;
+            if (are_equal_exprs(c.get_key1(), c.get_value()) || are_equal_exprs(c.get_key2(), c.get_value()))
+                continue;
 
             expr* key1_root = ctx.get_enode(c.get_key1())->get_root()->get_owner();
             expr* key2_root = ctx.get_enode(c.get_key2())->get_root()->get_owner();
@@ -18235,9 +18234,10 @@ namespace smt {
 
             // arg1
             if (u.str.is_string(key2_root) || is_non_fresh(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
-                if (!are_equal_exprs(c_root, key2_root)) {
+                if (!are_equal_exprs(c_root, key2_root) && (get_len_value(key2_root, len) && len.get_int64() != 0)) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                    dependency_graph[c_root].insert(c.get_key2());
+                    if (c_root != c.get_key2())
+                        dependency_graph[c_root].insert(c.get_key2());
                     if (key2_root != c.get_value())
                         dependency_graph[c_root].insert(key2_root);
                 }
@@ -18251,8 +18251,9 @@ namespace smt {
                     if (!dependency_graph.contains(key2_root)){
                         dependency_graph.insert(key2_root, {});
                     }
-                    dependency_graph[key2_root].insert(c.get_value());
                 }
+                if (key2_root != c.get_value())
+                    dependency_graph[key2_root].insert(c.get_value());
                 if (!dependency_graph.contains(c.get_key2())){
                     dependency_graph.insert(c.get_key2(), {});
                 }
@@ -18268,21 +18269,21 @@ namespace smt {
             // arg0
             if (u.str.is_string(key1_root) || is_non_fresh(key1_root) || is_internal_regex_var(key1_root, reg) || is_regex_concat(key1_root)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                if (!are_equal_exprs(c_root, key1_root)) {
-                    dependency_graph[c_root].insert(c.get_key1());
+                if (!are_equal_exprs(c_root, key1_root) && (get_len_value(key1_root, len) && len.get_int64() != 0)) {
+                    if (c_root != c.get_key1())
+                        dependency_graph[c_root].insert(c.get_key1());
                     if (key1_root != c.get_value())
                         dependency_graph[c_root].insert(key1_root);
                 }
             }
             else if (!included_nodes.contains(key1_root)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-//                if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key1(), c.get_value()))
-//                    continue;
                 if (!dependency_graph.contains(key1_root)){
                     dependency_graph.insert(key1_root, {});
                 }
 
-                dependency_graph[key1_root].insert(c.get_value());
+                if (key1_root != c.get_value())
+                    dependency_graph[key1_root].insert(c.get_value());
 
                 if (!dependency_graph.contains(c.get_key1())){
                     dependency_graph.insert(c.get_key1(), {});
@@ -18295,6 +18296,7 @@ namespace smt {
                     }
                     expr_array_linkers[key1_root] = c.get_key1();
                 }
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << dependency_graph[c.get_key1()].size() << std::endl;);
             }
         }
 
@@ -18957,6 +18959,13 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
         return node;
+    }
+
+    bool theory_trau::string_value_proc::question_return_value(zstring s){
+        for (unsigned i = 0; i < s.length(); ++i)
+            if (s[i] != th.default_char)
+                return false;
+        return true;
     }
 
     bool theory_trau::string_value_proc::construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value){
