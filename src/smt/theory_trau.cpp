@@ -18191,9 +18191,9 @@ namespace smt {
                 continue;
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << std::endl;);
             rational len;
-            if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) ||
-                (get_len_value(c.get_key1(), len) && len.get_int64() == 0))
-                continue;
+//            if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) ||
+//                (get_len_value(c.get_key1(), len) && len.get_int64() == 0))
+//                continue;
 
             expr* key1_root = ctx.get_enode(c.get_key1())->get_root()->get_owner();
             expr* key2_root = ctx.get_enode(c.get_key2())->get_root()->get_owner();
@@ -18242,8 +18242,9 @@ namespace smt {
                 }
             }
             else if (!included_nodes.contains(key2_root)) {
-                if ((get_len_value(c.get_key1(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key2(), c.get_value()))
-                    continue;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
+//                if ((get_len_value(c.get_key1(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key2(), c.get_value()))
+//                    continue;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                 if (key2_root != c.get_value()) {
                     if (!dependency_graph.contains(key2_root)){
@@ -18265,16 +18266,17 @@ namespace smt {
 
             // arg0
             if (u.str.is_string(key1_root) || is_non_fresh(key1_root) || is_internal_regex_var(key1_root, reg) || is_regex_concat(key1_root)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                 if (!are_equal_exprs(c_root, key1_root)) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                     dependency_graph[c_root].insert(c.get_key1());
                     if (key1_root != c.get_value())
                         dependency_graph[c_root].insert(key1_root);
                 }
             }
             else if (!included_nodes.contains(key1_root)) {
-                if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key1(), c.get_value()))
-                    continue;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
+//                if ((get_len_value(c.get_key2(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key1(), c.get_value()))
+//                    continue;
                 if (!dependency_graph.contains(key1_root)){
                     dependency_graph.insert(key1_root, {});
                 }
