@@ -14253,12 +14253,14 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.get_key1(), m)  << " " << mk_pp(n.get_key2(), m)<< std::endl;);
                 expr* arg0 = n.get_key1();
                 expr* arg1 = n.get_key2();
+                expr* arg0_r = ctx.get_enode(n.get_key1())->get_root()->get_owner();
+                expr* arg1_r = ctx.get_enode(n.get_key2())->get_root()->get_owner();
                 zstring tmp;
                 if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
                     continue;
 
-                expr_ref arg0_ref(arg0, m);
-                expr_ref arg1_ref(arg1, m);
+                expr_ref arg0_ref(arg0_r, m);
+                expr_ref arg1_ref(arg1_r, m);
                 if (visited.contains(std::make_pair(arg0_ref, arg1_ref)))
                     continue;
                 else
