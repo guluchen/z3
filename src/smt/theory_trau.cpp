@@ -3840,6 +3840,8 @@ namespace smt {
 
         obj_hashtable<expr> vars;
         for (const auto& eq : eq_combination){
+            if (!u.str.is_string(eq.m_key))
+                vars.insert(eq.m_key);
             for (const auto& e : eq.get_value()) {
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(e, nodes);
@@ -3855,7 +3857,8 @@ namespace smt {
         for (const auto& n : non_fresh_vars) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << n.m_value << std::endl;);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
-            if (u.str.is_concat(n.m_key)) {
+//            if (u.str.is_concat(n.m_key))
+            {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(n.m_key, m) << std::endl;);
                 ptr_vector<expr> nodes;
                 get_nodes_in_concat(n.m_key, nodes);
@@ -6723,7 +6726,26 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
+        int len_rhs = connectingSize;
+        is_fixed_len_var(rhs, len_rhs);
+        expr_ref_vector ands(m);
+        ands.push_back(createLessEqOP(mk_strlen(rhs), mk_int(len_rhs)));
 
+        int len_lhs = connectingSize;
+        is_fixed_len_var(lhs, len_lhs);
+        ands.push_back(createLessEqOP(mk_strlen(lhs), mk_int(len_lhs)));
+        expr* arr_lhs = get_var_flat_array(lhs);
+        expr* arr_rhs = get_var_flat_array(rhs);
+        if (arr_lhs && arr_rhs) {
+            for (int i = 0; i < len_lhs; ++i) {
+                for (int j = 0; j < len_rhs; ++j) {
+                    ands.push_back(mk_not(m, createEqualOP(createSelectOP(arr_lhs, mk_int(i)),
+                                                           createSelectOP(arr_rhs, mk_int(j)))));
+                }
+            }
+            expr_ref axiom(createAndOP(ands), m);
+            assert_axiom(createEqualOP(premise, axiom.get()));
+        }
     }
 
     void theory_trau::handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached){
@@ -7039,6 +7061,7 @@ namespace smt {
         for (int i = 0; i < len; ++i){
             ands.push_back(createEqualOP(createSelectOP(arr_a, createAddOP(start, mk_int(i))), createSelectOP(arr_b, mk_int(i))));
         }
+        ands.push_back(createLessEqOP(mk_strlen(b), mk_int(len)));
         return createAndOP(ands);
     }
     void theory_trau::mk_and_setup_arr(expr* v, obj_map<expr, int> &non_fresh_vars){
@@ -7108,6 +7131,7 @@ namespace smt {
                 }
                 int bound = non_fresh_vars[v] == -1 ? connectingSize : non_fresh_vars[v];
                 expr *to_assert = setup_regex_var(v, rexpr, v1, rational(bound), mk_int(0));
+                to_assert = createAndOP(createLessEqOP(mk_strlen(v), mk_int(bound)), to_assert);
                 assert_axiom(to_assert);
                 implied_facts.push_back(to_assert);
             }
@@ -13832,6 +13856,9 @@ namespace smt {
             }
         }
 
+        for (const auto& nn : tmp_result)
+        STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
+
         collect_non_fresh_vars_str_int(tmp_result);
 
         for (const auto& nn : tmp_result)
@@ -13850,6 +13877,15 @@ namespace smt {
         else if (get_len_value(nn, len_val) && get_assign_lvl(mk_strlen(nn), mk_int(len_val)) == 0) {
             len = len_val.get_int64();
             return true;
+        }
+        else {
+            expr_ref_vector eqs(m);
+            collect_eq_nodes(nn, eqs);
+            for (const auto& n : eqs)
+                if (is_char_at(n)) {
+                    len = 1;
+                    return true;
+                }
         }
         return false;
     }
@@ -13978,6 +14014,9 @@ namespace smt {
     }
 
     int theory_trau::find_fixed_len(expr* e){
+        if (is_char_at(e)) {
+            return 1;
+        }
         rational len_val;
         if (get_len_value(e, len_val) && get_assign_lvl(mk_strlen(e), mk_int(len_val)) == 0){
             return len_val.get_int64();
