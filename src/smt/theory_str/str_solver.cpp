@@ -1630,7 +1630,7 @@ namespace smt {
                 const state& curr_s = m_pending.top();
                 m_pending.pop();
 
-                string action_type_string[5] = {"TO_EMPTY","TO_CONST","TO_VAR","TO_VAR_VAR","TO_CHAR_VAR"};
+                std::string action_type_string[5] = {"TO_EMPTY","TO_CONST","TO_VAR","TO_VAR_VAR","TO_CHAR_VAR"};
 
                 STRACE("strg", tout << "from:\n" << curr_s << '\n';);
                 for (auto& action : transform(curr_s)) {
@@ -1802,8 +1802,8 @@ namespace smt {
         }
 
 
-        string element::abbreviation_to_fullname(){
-            string ret;
+        std::string element::abbreviation_to_fullname(){
+            std::string ret;
             for(auto& var:element::variables){
                 ret+=var.shortname();
                 ret+=" <=> ";

@@ -227,12 +227,12 @@ namespace smt {
             sort * int_sort = m.mk_sort(m_util_a.get_family_id(), INT_SORT);
             SASSERT(is_dag());
             std::map<cs_state, unsigned> num_of_incoming_transition;
-            std::map<cs_state, std::map<string,unsigned>> variable_version_at_state;
+            std::map<cs_state, std::map<std::string,unsigned>> variable_version_at_state;
 
 
             std::set<cs_state> worklist;
             std::set<cs_state> processed;
-            std::set<string> var_names;
+            std::set<std::string> var_names;
             for(auto& s:this->init) worklist.insert(s);
 
             //initialize num_of_incoming_transition
@@ -243,7 +243,7 @@ namespace smt {
                 for(auto&tr:relation[from]){
                     cs_assign assignment=tr.first;
 
-                    string var_name = (*assignment.vars.begin());
+                    std::string var_name = (*assignment.vars.begin());
                     var_names.insert(var_name);
 
                     cs_state to=tr.second;
@@ -294,7 +294,7 @@ namespace smt {
                         worklist.insert(to);
                     }
                     cs_assign assignment=tr.first;
-                    string lhs_var_name = (*assignment.vars.begin());
+                    std::string lhs_var_name = (*assignment.vars.begin());
 
                     expr_ref index_update_original{nullptr,m};
                     expr_ref index_update_new_branch{nullptr,m};
@@ -364,7 +364,7 @@ namespace smt {
                         case counter_system::assign_type::VAR:{
                             if(on_screen) std::cout << "[ label = \""<<var_expr.find(*(assignment.vars.begin()))->second.second << ":=" <<
                                       var_expr.find(*(std::next(assignment.vars.begin())))->second.second<<"\"];\n";
-                            string rhs_var_name = (*(std::next(assignment.vars.begin())));
+                            std::string rhs_var_name = (*(std::next(assignment.vars.begin())));
                             std::stringstream old_rhs_var_name;
                             old_rhs_var_name << rhs_var_name << variable_version_at_state[from][rhs_var_name];;
 
@@ -389,7 +389,7 @@ namespace smt {
                             if(on_screen) std::cout << "[ label = \""<< var_expr.find(*(assignment.vars.begin()))->second.second << ":=" <<
                                                     var_expr.find(*(assignment.vars.begin()))->second.second << "+" <<
                                                     var_expr.find(*(std::next(assignment.vars.begin())))->second.second << "\"];\n";
-                            string rhs_var_name = (*(std::next(assignment.vars.begin())));
+                            std::string rhs_var_name = (*(std::next(assignment.vars.begin())));
                             std::stringstream old_lhs_var_name;
                             old_lhs_var_name << lhs_var_name << variable_version_at_state[from][lhs_var_name];;
                             app *old_lhs_var = m_util_s.mk_skolem(symbol(old_lhs_var_name.str().c_str()), 0, nullptr, int_sort);

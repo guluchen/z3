@@ -202,7 +202,7 @@ namespace smt {
             std::set<len_constraint> length_constraints() override;
             std::ostream& display_timbuk(std::ostream& os);
             std::ostream& display(std::ostream& os) override;
-            std::ostream& display(std::ostream& os, const string& description);
+            std::ostream& display(std::ostream& os, const std::string& description);
             bool operator==(const automaton& other) override;
             friend class oaut_adaptor;
         private:

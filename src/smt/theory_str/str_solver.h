@@ -49,7 +49,7 @@ namespace smt {
             element::t m_type;
             zstring m_value;
             std::list<expr*> m_expr;
-            string m_shortname;
+            std::string m_shortname;
         public:
             element(const element::t& t, const zstring& v, expr* e) : m_type{t}, m_value{v} {
                 m_expr.push_back(e);
@@ -66,7 +66,7 @@ namespace smt {
             element(const std::list<element>&);
             const element::t& type() const { return m_type; }
             const zstring& value() const { return m_value; }
-            const string& shortname() const { return m_shortname; }
+            const std::string& shortname() const { return m_shortname; }
             const std::list<expr*>& origin_expr() const { return m_expr; }
             const expr_ref length_expr(ast_manager& m) const;
 
@@ -76,7 +76,7 @@ namespace smt {
             bool operator<(const element& other) const;
             explicit operator bool() const { return *this != null(); }
             friend std::ostream& operator<<(std::ostream& os, const element& e);
-            static string abbreviation_to_fullname();
+            static std::string abbreviation_to_fullname();
         };
 
         class word_term {

@@ -17,7 +17,7 @@ std::shared_ptr<TO> static_shared_pointer_cast(std::unique_ptr<FROM>&& old) {
     return std::shared_ptr<TO>{static_cast<TO*>(old.release())};
 }
 
-void show_fst(fst::StdVectorFst m_imp, const string& description="") {//YFC:I will remove this function later
+void show_fst(fst::StdVectorFst m_imp, const std::string& description="") {//YFC:I will remove this function later
     const float Zero = std::numeric_limits<float>::infinity();
 
     std::cout<<description<<std::endl;
@@ -768,7 +768,7 @@ namespace smt {
             return os;
         }
 
-        std::ostream& oaut::display(std::ostream& os, const string& description) {
+        std::ostream& oaut::display(std::ostream& os, const std::string& description) {
             os << description << std::endl;
             return display(os);
         }
@@ -795,7 +795,7 @@ namespace smt {
             oaut *const other = static_cast<oaut *>(o.get());
 
             std::map<state,state> state_map;
-            set<state> my_finals=get_finals();
+            std::set<state> my_finals=get_finals();
 
             for(StateIterator<StdVectorFst> st_itr(other->m_imp);!st_itr.Done(); st_itr.Next()){
                 StateId s=result->add_state();
