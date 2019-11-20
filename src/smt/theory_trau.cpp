@@ -3855,8 +3855,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ":  " << vars.size() << std::endl;);
         // check all concats in non_fresh_vars
         for (const auto& n : non_fresh_vars) {
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << n.m_value << std::endl;);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
+            if ((eq_combination.contains(n.m_key) && eq_combination[n.m_key].size() >= 2))
 //            if (u.str.is_concat(n.m_key))
             {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(n.m_key, m) << std::endl;);
@@ -3867,9 +3866,11 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(e, m) << std::endl;);
                     if (!u.str.is_string(e) && !are_equal_exprs(e, n.m_key))
                         if (vars.contains(e) && !non_fresh_vars.contains(e) && !new_non_fresh.contains(e)) {
+                            std::string name = expr2str(e);
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":  " << mk_pp(e, m) << " "
                                                << non_fresh_vars.contains(e) << std::endl;);
-                            new_non_fresh.insert(e, -1);
+                            if (name.find("post_contain") != 0)
+                                new_non_fresh.insert(e, -1);
                         }
                 }
             }
@@ -19331,15 +19332,38 @@ namespace smt {
                     value = value + (char) vValue[i];
             }
             else {
-                if (vValue[i] <= 0 || vValue[i] >= 255) {
+                if (vValue[i] >= 255) {
+                    if (th.value_map.contains(vValue[i]))
+                        value = value + th.value_map[vValue[i]];
+                    else {
+                        int val = find_alternative_value(vValue[i]);
+                        th.value_map.insert(vValue[i], val);
+                        th.value_set.insert(val);
+                        value = value + val;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << vValue[i] << " -> " << val << std::endl;);
+                    }
+                }
+                else if (vValue[i] < 0){
                     value = value + th.default_char;
-                    completed = false;
-                } else
+                }
+                else {
                     value = value + (char) vValue[i];
+                }
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << value << " " << value.length() << std::endl;);
         return value;
+    }
+
+    int theory_trau::string_value_proc::find_alternative_value(int val){
+        for (int i = 1; i < 32; ++i)
+            if (!th.value_set.contains(i))
+                return i;
+        for (int i = 129; i < 255; ++i)
+            if (!th.value_set.contains(i))
+                return i;
+
+        return th.default_char;
     }
 
     void theory_trau::string_value_proc::construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val){

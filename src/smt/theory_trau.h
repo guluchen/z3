@@ -61,6 +61,7 @@ namespace smt {
         };
         typedef map<zstring, expr*, zstring_hash_proc, default_eq<zstring> >    string_map;
         typedef hashtable<zstring, zstring_hash_proc,default_eq<zstring> >      string_set;
+        typedef map<int, int, int_hash, default_eq<int> >                       int_map;
         typedef hashtable<int, int_hash, default_eq<int> >                      int_set;
         typedef hashtable<char, unsigned_hash, default_eq<char> >               unsigned_set;
         typedef hashtable<expr*, obj_ptr_hash<expr>, ptr_eq<expr> >             expr_set;
@@ -252,6 +253,7 @@ namespace smt {
             bool construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val);
             bool get_char_range(unsigned_set & char_set);
             zstring fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed);
+            int find_alternative_value(int val);
             void construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val);
             bool fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len, zstring &value);
             bool fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue, obj_map<enode, app *> const& m_root2value, int len, zstring &value);
@@ -1359,7 +1361,8 @@ namespace smt {
         char                                                default_char = 'a';
         UnderApproxState                                    uState;
         vector<UnderApproxState>                            completed_branches;
-
+        int_map                                             value_map;
+        int_set                                             value_set;
         expr_ref_vector                                     implied_facts;
     private:
         clock_t                                             startClock;
