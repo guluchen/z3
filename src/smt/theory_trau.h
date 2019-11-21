@@ -914,14 +914,14 @@ namespace smt {
             app* createModOP(expr* x, expr* y);
             app* createMinusOP(expr* x, expr* y);
             app* createAddOP(expr* x, expr* y);
-            app* createAddOP(expr_ref_vector adds);
+            app* createAddOP(expr_ref_vector const& adds);
             app* createLessOP(expr* x, expr* y);
             app* createLessEqOP(expr* x, expr* y);
             app* createGreaterOP(expr* x, expr* y);
             app* createGreaterEqOP(expr* x, expr* y);
-            app* createAndOP(expr_ref_vector ands);
+            app* createAndOP(expr_ref_vector const&ands);
             app* createAndOP(expr* a, expr* b, expr* c = nullptr, expr* d = nullptr);
-            app* createOrOP(expr_ref_vector ors);
+            app* createOrOP(expr_ref_vector const& ors);
             app* createOrOP(expr* a, expr* b, expr* c = nullptr, expr* d = nullptr);
             app* createSelectOP(expr* x, expr* y);
 

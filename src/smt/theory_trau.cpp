@@ -2668,9 +2668,9 @@ namespace smt {
 
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << " @ lvl " << m_scope_level << std::endl;);
-//        if (is_inconsistent_inequality(n1, n2)){
-//            return;
-//        }
+        if (is_inconsistent_inequality(n1, n2)){
+            return;
+        }
         bool skip = false;
         {
             zstring value;
@@ -2703,7 +2703,7 @@ namespace smt {
             }
         }
 
-        //instantiate_str_diseq_length_axiom(n1, n2, skip);
+        instantiate_str_diseq_length_axiom(n1, n2, skip);
 
         if (!skip && is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m})) {
             STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
@@ -6725,7 +6725,6 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain(expr *lhs, expr *rhs, bool cached){
-        
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
         if (is_contain_equality(lhs, contain)) {
@@ -6822,7 +6821,7 @@ namespace smt {
 
             for (int i = (int)rhs.length(); i <= bound; ++i){
                 expr_ref_vector subcases(m);
-//                subcases.push_back(createLessEqOP(lenExpr, mk_int(i - 1)));
+                subcases.push_back(createLessEqOP(lenExpr, mk_int(i - 1)));
                 for (unsigned k = 0; k < rhs.length(); ++k) {
                     unsigned pos = k + i - rhs.length();
                     subcases.push_back(mk_not(m, createEqualOP(
@@ -12491,7 +12490,7 @@ namespace smt {
     /*
      *
      */
-    app* theory_trau::createAddOP(expr_ref_vector adds){
+    app* theory_trau::createAddOP(expr_ref_vector const& adds){
 
         if (adds.size() == 0)
             return m_autil.mk_int(0);
@@ -12601,8 +12600,20 @@ namespace smt {
     /*
      *
      */
-    app* theory_trau::createAndOP(expr_ref_vector ands){
+    app* theory_trau::createAndOP(expr_ref_vector const& _ands){
         context & ctx   = get_context();
+        expr_ref_vector ands(m);
+        for (const auto& e : _ands)
+            if (!m.is_true(e)){
+                if (m.is_false(e)){
+                    return m.mk_false();
+                }
+                else {
+                    ands.push_back(e);
+                }
+            }
+
+
         if (ands.size() == 0)
             return m.mk_true();
         else if (ands.size() == 1) {
@@ -12636,8 +12647,17 @@ namespace smt {
     /*
      *
      */
-    app* theory_trau::createOrOP(expr_ref_vector ors){
-        
+    app* theory_trau::createOrOP(expr_ref_vector const& _ors){
+        expr_ref_vector ors(m);
+        for (const auto& e : _ors)
+            if (!m.is_false(e)){
+                if (m.is_true(e)){
+                    return m.mk_true();
+                }
+                else {
+                    ors.push_back(e);
+                }
+            }
         context & ctx   = get_context();
         if (ors.size() == 0)
             return m.mk_false();
