@@ -7064,7 +7064,7 @@ namespace smt {
         for (int i = 0; i < len; ++i){
             ands.push_back(createEqualOP(createSelectOP(arr_a, createAddOP(start, mk_int(i))), createSelectOP(arr_b, mk_int(i))));
         }
-        ands.push_back(createLessEqOP(mk_strlen(b), mk_int(len)));
+//        ands.push_back(createLessEqOP(mk_strlen(b), mk_int(len)));
         return createAndOP(ands);
     }
     void theory_trau::mk_and_setup_arr(expr* v, obj_map<expr, int> &non_fresh_vars){
@@ -7680,6 +7680,7 @@ namespace smt {
             rational lenVal;
             zstring rootStr;
             if (u.str.is_string(root_tmp, rootStr) && is_contain_equality(element, containKey) && get_len_value(containKey, lenVal)){
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
                 expr* tmp = const_contains_key(rootStr, getMostLeftNodeInConcat(element), containKey, lenVal);
                 if (tmp == nullptr)
                     return nullptr;
@@ -7810,6 +7811,7 @@ namespace smt {
     }
 
     expr* theory_trau::const_contains_key(zstring c, expr* pre_contain, expr* key, rational len){
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(key, m) << std::endl;);
         zstring constKey;
         int lenInt = len.get_int32();
 
@@ -10751,8 +10753,20 @@ namespace smt {
             else {
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << std::endl;);
                 int bound = std::min(connectingSize, 50);
+                int tmp_len = -1;
                 if (flat_enabled)
                     bound = q_bound.get_int64();
+                if (is_fixed_len_var(elements[regexPos].first, tmp_len)) {
+                    bound = tmp_len;
+                }
+                expr* arr = get_var_flat_array(elements[regexPos].first);
+                if (arr)
+                    for (int i = 0; i < bound; ++i){
+                        expr_ref_vector ors(m);
+                        ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
+                        ors.push_back(createEqualOP(createSelectOP(arr, mk_int(i)), createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs))));
+                        andConstraints.push_back(createOrOP(ors));
+                    }
                 for (int i = 0; i < bound; ++i) {
                     expr_ref_vector ors(m);
                     expr_ref_vector ors_range(m);
@@ -14271,26 +14285,37 @@ namespace smt {
                     continue;
                 }
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
-                if (arg0 == arg1)
+                if (arg0 == arg1) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
                     ret.insert(arg0, 2);
+                }
                 else {
-                    if (!u.str.is_concat(arg0)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
+                    if (!u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
                         if (ret.contains(arg0) &&
-                            (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0))) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m)
+                            (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0) || is_char_at(arg0))) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << " " << ret[arg0]
                                                << std::endl;);
                             ret[arg0]++;
-                        } else
+                        } else {
                             ret.insert(arg0, 1);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " to 1 " << mk_pp(arg0, m)
+                                               << std::endl;);
+                        }
                     }
-                    if (u.str.is_concat(arg1)) {
+                    if (!u.str.is_concat(arg1) && !u.str.is_string(arg1)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "  " << mk_pp(arg0, m) << " " << ret.contains(arg1)
+                                           << std::endl;);
                         if (ret.contains(arg1) &&
-                            (!is_internal_var(arg1) || is_replace_var(arg1) || is_substr_var(arg1))) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg1, m)
+                            (!is_internal_var(arg1) || is_replace_var(arg1) || is_substr_var(arg1) || is_char_at(arg1))) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " increase " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << " " << ret[arg1]
                                                << std::endl;);
                             ret[arg1]++;
-                        } else
+                        } else {
                             ret.insert(arg1, 1);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " to 1 " << mk_pp(arg0, m)
+                                               << std::endl;);
+                        }
                     }
                 }
             }
@@ -15405,13 +15430,13 @@ namespace smt {
                 }
 
                 // to avoid the exponential growth
-                if (eqLhs.size() > 20){
+                if (eqLhs.size() >= 6){
                     eqLhs.reset();
                     eqLhs.push_back(find_equivalent_variable(arg0));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
                 }
 
-                if (eqRhs.size() > 20){
+                if (eqRhs.size() >= 6){
                     eqRhs.reset();
                     eqRhs.push_back(find_equivalent_variable(arg1));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
