@@ -2728,6 +2728,20 @@ namespace smt {
      * replace vs contain
      */
     bool theory_trau::is_inconsistent_inequality(expr* lhs, expr* rhs){
+        expr* needle = nullptr;
+        if (is_contain_equality(lhs, needle)){
+            if (are_equal_exprs(rhs, needle)) {
+                assert_axiom(createEqualOP(lhs, rhs));
+                return true;
+            }
+        }
+
+        if (is_contain_equality(rhs, needle)){
+            if (are_equal_exprs(lhs, needle)) {
+                assert_axiom(createEqualOP(lhs, rhs));
+                return true;
+            }
+        }
         expr* str;
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
@@ -6433,14 +6447,14 @@ namespace smt {
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
                 if (is_contain_equality(lhs, contain)){
-                    if (!review_not_contain(rhs, contain, eq_combination, cause)){
+                    if (!review_not_contain(rhs, lhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
                 else if (is_contain_equality(rhs, contain)){
-                    if (!review_not_contain(lhs, contain, eq_combination, cause)){
+                    if (!review_not_contain(lhs, rhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
@@ -6457,11 +6471,11 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
+    bool theory_trau::review_not_contain(expr* lhs, expr* rhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
         
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
-        if (!review_notcontain_trivial(lhs, new_needle, cause)){
+        if (!review_notcontain_trivial(lhs, rhs, new_needle, cause)){
             return false;
         }
         context & ctx = get_context();
@@ -6529,16 +6543,17 @@ namespace smt {
         return create_concat_from_vector(new_nodes);
     }
 
-    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause){
+    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* rhs, expr* needle, expr* &cause){
         expr_ref_vector eqs(m);
         collect_eq_nodes(lhs, eqs);
         for (const auto& eq: eqs) {
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
             for (const auto &nn : nodes)
-                if (in_same_eqc(nn, needle)) {
+                if (are_equal_exprs(nn, needle)) {
                     cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
+                    assert_axiom(rewrite_implication(createEqualOP(lhs, eq), createEqualOP(lhs, rhs)));
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
                     return false;
                 }
         }
@@ -6746,23 +6761,27 @@ namespace smt {
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
         int len_rhs = connectingSize;
         is_fixed_len_var(rhs, len_rhs);
-        expr_ref_vector ands(m);
-        ands.push_back(createLessEqOP(mk_strlen(rhs), mk_int(len_rhs)));
+        expr_ref_vector ors(m);
+//        ands.push_back(createLessEqOP(mk_strlen(rhs), mk_int(len_rhs)));
 
         int len_lhs = connectingSize;
         is_fixed_len_var(lhs, len_lhs);
-        ands.push_back(createLessEqOP(mk_strlen(lhs), mk_int(len_lhs)));
+//        ands.push_back(createLessEqOP(mk_strlen(lhs), mk_int(len_lhs)));
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
+        expr_ref cond(createGreaterOP(mk_strlen(rhs), mk_strlen(lhs)), m);
+        m_rewrite(cond);
+        ors.push_back(cond);
         if (arr_lhs && arr_rhs) {
-            for (int i = 0; i < len_lhs; ++i) {
-                for (int j = 0; j < len_rhs; ++j) {
+            for (int j = 0; j < len_rhs; ++j){
+                expr_ref_vector ands(m);
+                for (int i = 0; i < len_lhs; ++i) {
                     ands.push_back(mk_not(m, createEqualOP(createSelectOP(arr_lhs, mk_int(i)),
                                                            createSelectOP(arr_rhs, mk_int(j)))));
                 }
+                ors.push_back(createAndOP(ands));
             }
-            expr_ref axiom(createAndOP(ands), m);
-            assert_axiom(createEqualOP(premise, axiom.get()));
+            assert_axiom(createEqualOP(premise, createOrOP(ors)));
         }
     }
 

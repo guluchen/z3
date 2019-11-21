@@ -442,9 +442,9 @@ namespace smt {
                 void handle_disequalities();
                 void handle_disequalities_cached();
 
-            bool review_not_contain(expr* lhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause);
+            bool review_not_contain(expr* lhs, expr* rhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause);
                 expr* remove_empty_in_concat(expr* s);
-                bool review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause);
+                bool review_notcontain_trivial(expr* lhs, expr* rhs, expr* needle, expr* &cause);
             bool review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause);
                 bool review_disequality(expr* lhs, expr* rhs, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool review_disequality_trivial(expr* lhs, expr* rhs);
