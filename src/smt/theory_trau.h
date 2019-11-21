@@ -454,6 +454,7 @@ namespace smt {
                 void handle_not_contain();
                 void handle_not_contain_cached();
                     void handle_not_contain(expr *lhs, expr *rhs, bool cached = false);
+                    void handle_not_contain_substr_index(expr *lhs, expr *rhs);
                     void handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached = false);
                     void handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached = false);
                     bool is_contain_equality(expr* n);

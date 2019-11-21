@@ -6713,6 +6713,7 @@ namespace smt {
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
         if (is_contain_equality(lhs, contain)) {
+            handle_not_contain_substr_index(rhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
                 handle_not_contain_const(rhs, value, premise, cached);
@@ -6720,11 +6721,25 @@ namespace smt {
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_equality(rhs, contain)) {
+            handle_not_contain_substr_index(lhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
                 handle_not_contain_const(lhs, value, premise, cached);
             else
                 handle_not_contain_var(lhs, contain, premise, cached);
+        }
+    }
+
+    void theory_trau::handle_not_contain_substr_index(expr *lhs, expr *rhs){
+        expr* arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
+        if (u.str.is_extract(lhs, arg0, arg1, arg2)){
+            expr* arg1_0 = nullptr, *arg1_1 = nullptr, *arg1_2 = nullptr;
+            if (u.str.is_index(arg1, arg1_0, arg1_1, arg1_2)){
+                if (are_equal_exprs(arg0, arg1_0) && are_equal_exprs(arg1_1, rhs)){
+                    expr* premise = createAndOP(createGreaterEqOP(arg1, mk_int(0)), createGreaterEqOP(arg2, mk_int(1)));
+                    assert_axiom(mk_not(m, createAndOP(createGreaterEqOP(arg1, mk_int(0)), createGreaterEqOP(arg2, mk_int(1)))));
+                }
+            }
         }
     }
 
