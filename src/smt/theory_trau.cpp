@@ -14184,8 +14184,10 @@ namespace smt {
             return false;
         if (check_union_membership(nn, len))
             return true;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         if (collect_not_contains(nn, ineq_vars, needles))
             return true;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         vector<zstring> max_diseq_strs;
         if (ineq_vars.contains(nn))
             max_diseq_strs = collect_all_inequalities(nn);
@@ -14251,21 +14253,23 @@ namespace smt {
         for (const auto& n : concat_node_map)
             if (ctx.is_relevant(n.get_value())){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.get_key1(), m)  << " " << mk_pp(n.get_key2(), m)<< std::endl;);
-                expr* arg0 = n.get_key1();
-                expr* arg1 = n.get_key2();
-                expr* arg0_r = ctx.get_enode(n.get_key1())->get_root()->get_owner();
-                expr* arg1_r = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+                expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
+                expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
                 zstring tmp;
                 if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
                     continue;
 
-                expr_ref arg0_ref(arg0_r, m);
-                expr_ref arg1_ref(arg1_r, m);
+                expr_ref arg0_ref(arg0, m);
+                expr_ref arg1_ref(arg1, m);
                 if (visited.contains(std::make_pair(arg0_ref, arg1_ref)))
                     continue;
                 else
                     visited.push_back(std::make_pair(arg0_ref, arg1_ref));
 
+                if (ret.contains(arg0) && check_existing_occurence(arg0, arg1, visited)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " do not count " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
+                    continue;
+                }
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arg0, m)  << " " << mk_pp(arg1, m)<< std::endl;);
                 if (arg0 == arg1)
                     ret.insert(arg0, 2);
@@ -14296,6 +14300,31 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(p.m_key, m) << std::endl;);
 
         return ret;
+    }
+
+    bool theory_trau::check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> v){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << std::endl;);
+        for (const auto& p : v)
+            if (p.first.get() == lhs){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << " " << mk_pp(p.second.get(), m) << std::endl;);
+                // e is a part of p
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(p.second.get(), eqs);
+                for (const auto& n : eqs)
+                    if (u.str.is_concat(n)){
+                        if (are_equal_exprs(rhs, getMostLeftNodeInConcat(n)))
+                            return true;
+                    }
+
+                eqs.reset();
+                collect_eq_nodes(rhs, eqs);
+                for (const auto& n : eqs)
+                    if (u.str.is_concat(n)){
+                        if (are_equal_exprs(p.second.get(), getMostLeftNodeInConcat(n)))
+                            return true;
+                    }
+            }
+        return false;
     }
 
     bool theory_trau::is_replace_var(expr* x){

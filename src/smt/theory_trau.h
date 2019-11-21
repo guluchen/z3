@@ -1026,6 +1026,7 @@ namespace smt {
                 bool is_non_fresh_occurrence(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
                 obj_map<expr, int> count_occurrences_from_root();
+                bool check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> v);
                 bool is_replace_var(expr* x);
                 bool is_substr_var(expr* x);
                 bool is_substr_var(expr* x, expr*& substr);
