@@ -2668,9 +2668,9 @@ namespace smt {
 
         STRACE("str", tout << __FUNCTION__ << ": " << mk_ismt2_pp(n1, m) << " != "
                            << mk_ismt2_pp(n2, m) << " @ lvl " << m_scope_level << std::endl;);
-        if (is_inconsistent_inequality(n1, n2)){
-            return;
-        }
+//        if (is_inconsistent_inequality(n1, n2)){
+//            return;
+//        }
         bool skip = false;
         {
             zstring value;
@@ -2703,7 +2703,7 @@ namespace smt {
             }
         }
 
-        instantiate_str_diseq_length_axiom(n1, n2, skip);
+        //instantiate_str_diseq_length_axiom(n1, n2, skip);
 
         if (!skip && is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m})) {
             STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
@@ -3318,6 +3318,7 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (refined_init_chain_free(non_fresh_vars, eq_combination)){
+            TRACE("str", tout << "Resuming search due to axioms added by refined_init_chain_free." << std::endl;);
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
@@ -6552,7 +6553,7 @@ namespace smt {
             for (const auto &nn : nodes)
                 if (are_equal_exprs(nn, needle)) {
                     cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
-                    assert_axiom(rewrite_implication(createEqualOP(lhs, eq), createEqualOP(lhs, rhs)));
+                    assert_axiom(createEqualOP(lhs, rhs));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
                     return false;
                 }
@@ -6759,6 +6760,7 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << std::endl;);
         int len_rhs = connectingSize;
         is_fixed_len_var(rhs, len_rhs);
         expr_ref_vector ors(m);
@@ -6766,10 +6768,11 @@ namespace smt {
 
         int len_lhs = connectingSize;
         is_fixed_len_var(lhs, len_lhs);
+        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << std::endl;);
 //        ands.push_back(createLessEqOP(mk_strlen(lhs), mk_int(len_lhs)));
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
-        expr_ref cond(createGreaterOP(mk_strlen(rhs), mk_strlen(lhs)), m);
+        expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
         m_rewrite(cond);
         ors.push_back(cond);
         if (arr_lhs && arr_rhs) {
