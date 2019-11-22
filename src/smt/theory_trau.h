@@ -1074,6 +1074,7 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
+            bool is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs);
             bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes);
             void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
             expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);

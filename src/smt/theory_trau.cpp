@@ -682,9 +682,16 @@ namespace smt {
             if (wrongStart || wrongEnd){
                 negate_equality(lhs, rhs);
             }
-
             return;
         }
+
+        if (is_inconsisten_wrt_disequalities(lhs, rhs)){
+            STRACE("str", tout << __LINE__ << " is_inconsisten_wrt_disequalities " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+            assert_axiom(mk_not(m, createAndOP(negate_equality(lhs, rhs))));
+            return;
+        }
+
+
 
         // step 1: Concat == Constant
         /*
@@ -747,6 +754,22 @@ namespace smt {
 
         special_assertion_for_contain_vs_substr(lhs, rhs);
         special_assertion_for_contain_vs_substr(rhs, lhs);
+    }
+
+    bool theory_trau::is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs){
+        for (const auto& eq : m_wi_expr_memo) {
+            expr *needle = nullptr;
+            if (is_contain_equality(eq.first, needle) && (are_equal_exprs(lhs, eq.second) || are_equal_exprs(rhs, eq.second))) {
+                if (are_equal_exprs(needle, lhs) || are_equal_exprs(needle, rhs))
+                    return true;
+            }
+
+            if (is_contain_equality(eq.second, needle) && (are_equal_exprs(lhs, eq.first) || are_equal_exprs(rhs, eq.first))) {
+                if (are_equal_exprs(needle, lhs) || are_equal_exprs(needle, rhs))
+                    return true;
+            }
+        }
+        return false;
     }
 
     bool theory_trau::new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes){
