@@ -348,6 +348,7 @@ namespace smt {
                 rational ten_power(rational n);
             bool refined_init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
                 void find_remaining_non_fresh_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const &eq_combination);
+                void find_remaining_non_fresh_substr_vars(obj_map<expr, int> &non_fresh_vars);
                 void refine_not_contain_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
                 bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);

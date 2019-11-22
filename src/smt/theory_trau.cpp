@@ -3899,9 +3899,38 @@ namespace smt {
             for (const auto& n : eqs)
                 non_fresh_vars.insert(n, nn.m_value);
         }
+
+        find_remaining_non_fresh_substr_vars(non_fresh_vars);
+
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& nn : non_fresh_vars)
             STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
+    }
+
+    void theory_trau::find_remaining_non_fresh_substr_vars(obj_map<expr, int> &non_fresh_vars){
+        expr* arg0 = nullptr, * arg1 = nullptr, * arg2 = nullptr;
+        for (const auto& substr : substr_map)
+            if (u.str.is_extract(substr.m_key, arg0, arg1, arg2) && non_fresh_vars.contains(arg0)){
+                rational len;
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(substr.m_value, eqs);
+                if (m_autil.is_numeral(arg2, len)){
+                    if (!non_fresh_vars.contains(substr.m_value)){
+                        for (const auto& e : eqs)
+                            non_fresh_vars.insert(e, len.get_int64());
+                    }
+                    else if (non_fresh_vars[substr.m_value] == -1){
+                        for (const auto& e : eqs)
+                            non_fresh_vars[e] = len.get_int64();
+                    }
+                }
+                else {
+                    if (!non_fresh_vars.contains(substr.m_value)){
+                        for (const auto& e : eqs)
+                            non_fresh_vars.insert(e, -1);
+                    }
+                }
+            }
     }
 
     void theory_trau::refine_not_contain_vars(
