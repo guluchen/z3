@@ -1035,8 +1035,8 @@ namespace smt {
                 obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
-            obj_map<expr, ptr_vector<expr>> normalize_eq(expr_ref_vector &subNodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);
-            obj_map<expr, ptr_vector<expr>> refine_eq_combination(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& combinations, expr_ref_vector const& subNodes);
+            obj_map<expr, ptr_vector<expr>> normalize_eq(obj_hashtable<expr> &non_root_nodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);
+            obj_map<expr, ptr_vector<expr>> refine_eq_combination(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& combinations, obj_hashtable<expr> const& non_root_nodes);
             bool concat_with_const(expr* c);
                 bool can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations);
                     bool concat_in_set(expr* n, ptr_vector<expr> const& s);
@@ -1054,7 +1054,7 @@ namespace smt {
                     ptr_vector<expr> refine_eq_set(ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
-                ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, expr_ref_vector &subNodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
+                ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
                 expr* find_representation(expr* e);
                 expr* create_concat_with_concat(expr* n1, expr* n2);
                 expr* rewrite_concat(expr* n1);
@@ -1062,7 +1062,7 @@ namespace smt {
                 expr* create_concat_with_str(zstring str, expr* n);
                 expr* ends_with_str(expr* n);
                 expr* starts_with_str(expr* n);
-                void add_subnodes(expr* concatL, expr* concatR, expr_ref_vector &subNodes);
+                void add_non_root_vars(expr* concatL, expr* concatR, obj_hashtable<expr> &non_root_vars);
         bool can_propagate() override;
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
