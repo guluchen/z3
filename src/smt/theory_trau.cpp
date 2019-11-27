@@ -9121,7 +9121,7 @@ namespace smt {
                     /* select optimization mode */
                     int optimizing = NONE;
                     if (!flat_enabled)
-                        optimized_rhs(j, startPos, i, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements),
+                        optimizing = optimized_rhs(j, startPos, i, left_arr, right_arr, vectorExpr2vectorStr(lhs_elements),
                                       vectorExpr2vectorStr(rhs_elements));
                     STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
                     switch (optimizing) {
@@ -11133,7 +11133,7 @@ namespace smt {
                         }
                         else {
 
-                            STRACE("str", tout << __LINE__ << " const|regex = non_fresh_var + ...: " << content << " " << mk_pp(subLen, m) << std::endl;);
+                            STRACE("str", tout << __LINE__ << " const|regex = non_fresh_var + ...: " << content << " " << mk_pp(subLen, m) << " " << mk_pp(prefix_lhs, m) << " " << mk_pp(prefix_rhs, m) << std::endl;);
                             int localSplit = non_fresh_variables[elements[i].first];
                             expr_ref_vector ors(m); /* sublen = 0 || sublen = 1 || .. */
                             if (!unrollMode) {
@@ -11215,7 +11215,7 @@ namespace smt {
             int pMax,
             int pos,
             int part_cnt){
-        
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(a.first, m) << " " << a.second << std::endl;);
         expr_ref_vector ands(m);
         ands.push_back(gen_constraint_flat_flat(a, elements, pos, pMax, q_bound));
         if (part_cnt == 2) {
@@ -12938,8 +12938,7 @@ namespace smt {
 
                     else if (i + 1 < (int) lhs_elements.size()) {
                         if (left_arr[i + 1] == j + 1 &&
-                            right_arr[j + 1] == i + 1 &&
-                            rhs_elements[j + 1].first.compare(rhs_elements[j].first) == 0) {
+                            right_arr[j + 1] == i + 1) {
                             return RIGHT_EQUAL;
                         }
                     }
@@ -12954,9 +12953,7 @@ namespace smt {
                     else if (right_arr[j - 1] == SUMFLAT)
                         return LEFT_SUM;
                     else if (startPos > 0){
-                        if (left_arr[startPos - 1] == j - 1 &&
-                            right_arr[j - 1] == startPos - 1 &&
-                            rhs_elements[j - 1].first.compare(rhs_elements[j].first) == 0){
+                        if (left_arr[startPos - 1] == j - 1 && right_arr[j - 1] == startPos - 1){
                             return LEFT_EQUAL;
                         }
                     }
@@ -14364,7 +14361,7 @@ namespace smt {
                 }
             }
         for (const auto& v : eq_combination)
-            if (v.get_value().size() >= 6) {
+            if (v.get_value().size() >= 10) {
                 expr_ref_vector eqs(m);
                 collect_eq_nodes(v.m_key, eqs);
                 for (unsigned i = 0; i < eqs.size(); ++i)
@@ -15658,13 +15655,13 @@ namespace smt {
                 }
 
                 // to avoid the exponential growth
-                if (eq_lhs.size() >= 6){
+                if (eq_lhs.size() >= 10){
                     eq_lhs.reset();
                     eq_lhs.push_back(find_equivalent_variable(arg0));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
                 }
 
-                if (eq_rhs.size() >= 6){
+                if (eq_rhs.size() >= 10){
                     eq_rhs.reset();
                     eq_rhs.push_back(find_equivalent_variable(arg1));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
@@ -16470,14 +16467,14 @@ namespace smt {
                 m_autil.mk_lt(arg1, mk_strlen(arg0))), m);
 
         expr_ref_vector and_item(m);
-        and_item.push_back(ctx.mk_eq_atom(arg0, mk_concat(ts0, mk_concat(ts1, ts2))));
-        and_item.push_back(ctx.mk_eq_atom(arg1, mk_strlen(ts0)));
-        and_item.push_back(ctx.mk_eq_atom(mk_strlen(ts1), mk_int(1)));
+        and_item.push_back(createEqualOP(arg0, mk_concat(ts0, mk_concat(ts1, ts2))));
+        and_item.push_back(createEqualOP(arg1, mk_strlen(ts0)));
+        and_item.push_back(createEqualOP(mk_strlen(ts1), mk_int(1)));
 
         expr_ref thenBranch(::mk_and(and_item));
-        expr_ref elseBranch(ctx.mk_eq_atom(ts1, mk_string("")), m);
+        expr_ref elseBranch(createEqualOP(ts1, mk_string("")), m);
         expr_ref axiom(m.mk_ite(cond, thenBranch, elseBranch), m);
-        expr_ref reductionVar(ctx.mk_eq_atom(expr, ts1), m);
+        expr_ref reductionVar(createEqualOP(expr, ts1), m);
         expr_ref finalAxiom(m.mk_and(axiom, reductionVar), m);
         get_context().get_rewriter()(finalAxiom);
         assert_axiom(finalAxiom);
