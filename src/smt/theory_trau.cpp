@@ -619,7 +619,7 @@ namespace smt {
         expr* containKey;
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
-        if (is_contain_equality(simplifiedLhs, containKey)) {
+        if (is_contain_family_equality(simplifiedLhs, containKey)) {
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -630,7 +630,7 @@ namespace smt {
                 }
             }
         }
-        else if (is_contain_equality(simplifiedRhs, containKey)){
+        else if (is_contain_family_equality(simplifiedRhs, containKey)){
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -759,12 +759,12 @@ namespace smt {
     bool theory_trau::is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs){
         for (const auto& eq : m_wi_expr_memo) {
             expr *needle = nullptr;
-            if (is_contain_equality(eq.first, needle) && (are_equal_exprs(lhs, eq.second) || are_equal_exprs(rhs, eq.second))) {
+            if (is_contain_family_equality(eq.first, needle) && (are_equal_exprs(lhs, eq.second) || are_equal_exprs(rhs, eq.second))) {
                 if (are_equal_exprs(needle, lhs) || are_equal_exprs(needle, rhs))
                     return true;
             }
 
-            if (is_contain_equality(eq.second, needle) && (are_equal_exprs(lhs, eq.first) || are_equal_exprs(rhs, eq.first))) {
+            if (is_contain_family_equality(eq.second, needle) && (are_equal_exprs(lhs, eq.first) || are_equal_exprs(rhs, eq.first))) {
                 if (are_equal_exprs(needle, lhs) || are_equal_exprs(needle, rhs))
                     return true;
             }
@@ -816,14 +816,14 @@ namespace smt {
         for (const auto& eq : eqs) {
             for (const auto& nn : m_wi_expr_memo) {
                 expr* key;
-                if (eq == nn.second.get() && is_contain_equality(nn.first.get(), key)){ // itor not contain key
+                if (eq == nn.second.get() && is_contain_family_equality(nn.first.get(), key)){ // itor not contain key
                     zstring keyStr;
                     if (u.str.is_string(key, keyStr) && containKey.contains(keyStr)){ // containKey contains key
                         assert_axiom(conclusion.get());
                         return false;
                     }
                 }
-                else if (eq == nn.first.get() && is_contain_equality(nn.second.get(), key)){
+                else if (eq == nn.first.get() && is_contain_family_equality(nn.second.get(), key)){
                     zstring keyStr;
                     if (u.str.is_string(key, keyStr) && containKey.contains(keyStr)){
                         assert_axiom(conclusion.get());
@@ -856,7 +856,7 @@ namespace smt {
         
         // (str.++ replace1!tmp0 (str.++ "A" replace2!tmp1)) == (str.substr url 0 (+ 1 (str.indexof url "A" 0)))
         expr* contain = nullptr;
-        if (is_contain_equality(lhs, contain)) {
+        if (is_contain_family_equality(lhs, contain)) {
             expr* arg0 = nullptr, *arg1 = nullptr, *arg2 = nullptr;
             if (u.str.is_extract(rhs, arg0, arg1, arg2)) {
                 rational value;
@@ -2836,7 +2836,7 @@ namespace smt {
         expr* str;
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
-        if (is_contain_equality(simplifiedLhs, str)){
+        if (is_contain_family_equality(simplifiedLhs, str)){
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(m);
@@ -2872,7 +2872,7 @@ namespace smt {
             }
         }
 
-        if (is_contain_equality(simplifiedRhs, str)){
+        if (is_contain_family_equality(simplifiedRhs, str)){
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(m);
@@ -3506,7 +3506,7 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
-                if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+                if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
 
                     // lhs
                     bool is_const;
@@ -4040,7 +4040,7 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 zstring needle;
-                if (is_contain_equality(lhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
+                if (is_contain_family_equality(lhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(rhs, vec);
                     if (is_not_important(rhs, needle, eq_combination, non_fresh_vars)){
@@ -4055,7 +4055,7 @@ namespace smt {
                         }
                     }
                 }
-                else if (is_contain_equality(rhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
+                else if (is_contain_family_equality(rhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(lhs, vec);
                     if (is_not_important(lhs, needle, eq_combination, non_fresh_vars)){
@@ -4349,12 +4349,12 @@ namespace smt {
         expr_ref conclusion(createEqualOP(lhs, rhs), m);
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
-        if (is_contain_equality(simplifiedLhs, contain)) {
+        if (is_contain_family_equality(simplifiedLhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
                 return is_notContain_const_consistent(rhs, value, conclusion);
         }
-        else if (is_contain_equality(simplifiedRhs, contain)) {
+        else if (is_contain_family_equality(simplifiedRhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
                 return is_notContain_const_consistent(lhs, value, conclusion);
@@ -6507,7 +6507,7 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
-                if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+                if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
                     handle_disequality(lhs, rhs, uState.non_fresh_vars);
                 }
             }
@@ -6526,7 +6526,7 @@ namespace smt {
                 if (!disequalities.contains(equality) && !u.str.is_empty(lhs) && !u.str.is_empty(rhs)) {
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                     expr *contain = nullptr;
-                    if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+                    if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         disequalities.insert(equality);
                         handle_disequality(lhs, rhs, b.non_fresh_vars);
@@ -6538,7 +6538,7 @@ namespace smt {
 
     void theory_trau::handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars){
         expr* contain = nullptr;
-        if (!is_contain_equality(lhs, contain) && !is_contain_equality(rhs, contain)) {
+        if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
             
             expr_ref_vector eqLhs(m);
             expr_ref_vector eqRhs(m);
@@ -6567,14 +6567,14 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
-                if (is_contain_equality(lhs, contain)){
+                if (is_contain_family_equality(lhs, contain)){
                     if (!review_not_contain(rhs, lhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
-                else if (is_contain_equality(rhs, contain)){
+                else if (is_contain_family_equality(rhs, contain)){
                     if (!review_not_contain(lhs, rhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
@@ -6855,7 +6855,7 @@ namespace smt {
     void theory_trau::handle_not_contain(expr *lhs, expr *rhs, bool cached){
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
-        if (is_contain_equality(lhs, contain)) {
+        if (is_contain_family_equality(lhs, contain)) {
             handle_not_contain_substr_index(rhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
@@ -6863,7 +6863,7 @@ namespace smt {
             else
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
-        else if (is_contain_equality(rhs, contain)) {
+        else if (is_contain_family_equality(rhs, contain)) {
             handle_not_contain_substr_index(lhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
@@ -6979,7 +6979,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_contain_equality(expr* n){
+    bool theory_trau::is_contain_family_equality(expr* n){
         expr_ref_vector eqs(m);
         collect_eq_nodes(n, eqs);
         for  (const auto& nn : eqs) {
@@ -7010,7 +7010,7 @@ namespace smt {
         return false;
     }
 
-    bool theory_trau::is_contain_equality(expr* n, expr* &contain){
+    bool theory_trau::is_contain_family_equality(expr* n, expr* &contain){
         if (u.str.is_concat(n)){
             ptr_vector<expr> nodes;
             get_nodes_in_concat(n, nodes);
@@ -7033,6 +7033,37 @@ namespace smt {
                      n3.find("indexOf2!tmp") != std::string::npos) ||
                         (n1.find("replace1!tmp") != std::string::npos &&
                          n3.find("replace2!tmp") != std::string::npos)) {
+                    nodes.pop_back();
+                    contain = create_concat_from_vector(nodes, 0);
+                    return true;
+                }
+            }
+        }
+        contain = nullptr;
+        return false;
+    }
+
+    bool theory_trau::is_contain_equality(expr* n, expr* &contain){
+        if (u.str.is_concat(n)){
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(n, nodes);
+
+            if (nodes.size() >= 3) {
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(n, eqs);
+                for (const auto& eq : eqs)
+                    if (nodes.contains(eq)){
+                        contain = nullptr;
+                        return false;
+                    }
+
+                // check var name
+                std::string n1 = expr2str(nodes[0]);
+                std::string n3 = expr2str(nodes[nodes.size() - 1]);
+                if ((n1.find("pre_contain!tmp") != std::string::npos &&
+                     n3.find("post_contain!tmp") != std::string::npos) ||
+                    (n1.find("indexOf1!tmp") != std::string::npos &&
+                     n3.find("indexOf2!tmp") != std::string::npos)) {
                     nodes.pop_back();
                     contain = create_concat_from_vector(nodes, 0);
                     return true;
@@ -7854,7 +7885,7 @@ namespace smt {
             expr* containKey = nullptr;
             rational lenVal;
             zstring rootStr;
-            if (u.str.is_string(root_tmp, rootStr) && is_contain_equality(element, containKey) && get_len_value(containKey, lenVal)){
+            if (u.str.is_string(root_tmp, rootStr) && is_contain_family_equality(element, containKey) && get_len_value(containKey, lenVal)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(var, m) << std::endl;);
                 expr* tmp = const_contains_key(rootStr, getMostLeftNodeInConcat(element), containKey, lenVal);
                 if (tmp == nullptr)
@@ -14139,14 +14170,14 @@ namespace smt {
         expr_set ret;
         for (const auto& we : m_wi_expr_memo){
             expr* needle = nullptr;
-            if (is_contain_equality(we.second, needle)){
+            if (is_contain_family_equality(we.second, needle)){
                 bool has_eq = false;
                 get_eqc_value(needle, has_eq);
                 if (!has_eq)
                     ret.insert(needle);
             }
 
-            if (is_contain_equality(we.first, needle)){
+            if (is_contain_family_equality(we.first, needle)){
                 bool has_eq = false;
                 get_eqc_value(needle, has_eq);
                 if (!has_eq)
@@ -14316,12 +14347,12 @@ namespace smt {
                 if (v.m_value == -1) {
                     expr* rootTmp = ctx.get_enode(v.m_key)->get_root()->get_owner();
                     if (!more_than_two_occurrences(rootTmp, occurrences) &&
-                            !more_than_two_occurrences(v.m_key, occurrences) &&
-                            ((eq_combination.contains(rootTmp) && eq_combination[rootTmp].size() <= 20) || !eq_combination.contains(rootTmp)) &&
-                            !is_contain_equality(v.m_key) &&
-                            !str_int_vars.contains(v.m_key) &&
-                            !belong_to_var_var_inequality(v.m_key) &&
-                            !is_internal_regex_var(v.m_key)) {
+                        !more_than_two_occurrences(v.m_key, occurrences) &&
+                        ((eq_combination.contains(rootTmp) && eq_combination[rootTmp].size() <= 20) || !eq_combination.contains(rootTmp)) &&
+                        !is_contain_family_equality(v.m_key) &&
+                        !str_int_vars.contains(v.m_key) &&
+                        !belong_to_var_var_inequality(v.m_key) &&
+                        !is_internal_regex_var(v.m_key)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.m_key, m) << std::endl;);
                         expr_ref_vector eqs(m);
                         collect_eq_nodes(v.m_key, eqs);
@@ -14853,7 +14884,7 @@ namespace smt {
             if (we.first.get() == nn){
                 if (u.str.is_concat(we.second.get())){
                     expr* tmp = nullptr;
-                    if (is_contain_equality(we.second.get(), tmp)){
+                    if (is_contain_family_equality(we.second.get(), tmp)){
                         zstring key;
                         if (u.str.is_string(tmp, key) && !is_trivial_contain(key)) {
                             expr* reg = nullptr;
@@ -14874,7 +14905,7 @@ namespace smt {
             else if (we.second.get() == nn){
                 if (u.str.is_concat(we.first.get())){
                     expr* tmp = nullptr;
-                    if (is_contain_equality(we.first.get(), tmp)){
+                    if (is_contain_family_equality(we.first.get(), tmp)){
                         zstring key;
                         if (u.str.is_string(tmp, key) && !is_trivial_contain(key)) {
                             expr* reg = nullptr;
@@ -14900,7 +14931,7 @@ namespace smt {
         for (const auto& we : m_wi_expr_memo){
             if (u.str.is_concat(we.second.get())){
                 expr* tmp = nullptr;
-                if (is_contain_equality(we.second.get(), tmp)){
+                if (is_contain_family_equality(we.second.get(), tmp)){
                     if (are_equal_exprs(tmp, nn))
                         return true;
                 }
@@ -14908,7 +14939,7 @@ namespace smt {
 
             if (u.str.is_concat(we.first.get())){
                 expr* tmp = nullptr;
-                if (is_contain_equality(we.first.get(), tmp)){
+                if (is_contain_family_equality(we.first.get(), tmp)){
                     if (are_equal_exprs(tmp, nn))
                         return true;
                 }
@@ -15071,6 +15102,15 @@ namespace smt {
             axiom_added = true;
             return combinations;
         }
+
+        if (handle_contain_family(combinations)){
+            TRACE("str", tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
+            print_eq_combination(combinations);
+            update_state();
+            axiom_added = true;
+            return combinations;
+        }
+
         return refine_eq_combination(non_fresh_vars, combinations, non_root_nodes);
     }
 
@@ -15258,80 +15298,6 @@ namespace smt {
     ptr_vector<expr> theory_trau::refine_eq_set(
             expr* var,
             ptr_vector<expr> s,
-            obj_map<expr, int> const& non_fresh_vars,
-            expr_ref_vector const& notnon_fresh_vars){
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
-        
-        refine_all_duplications(s);
-        ptr_vector<expr> ret;
-        for (const auto& n : s) {
-            if (u.str.is_concat(n)) {
-                ptr_vector<expr> childrenVector;
-                get_all_nodes_in_concat(n, childrenVector);
-
-                bool notAdd = false;
-
-                if (are_equal_exprs(var, n)) {
-                    // do not have const or important var
-                    bool found = false;
-                    ptr_vector<expr> v;
-                    get_nodes_in_concat(n, v);
-                    for (const auto& nn : v)
-                        if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)){
-                            found = true;
-                            break;
-                        }
-                    if (found)
-                        notAdd = false;
-                    else
-                        notAdd = true;
-                }
-                // check if it contains a nonimportantVar
-                if (!notAdd) {
-                    for (const auto &notimp : notnon_fresh_vars)
-                        if (childrenVector.contains(notimp)) {
-                            notAdd = true;
-                            if (!appear_in_eqs(ret, notimp)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": add " << mk_pp(n, m) << " because of " << mk_pp(notimp, m) << std::endl;);
-                                notAdd = false;
-                                break;
-                            }
-                        }
-                }
-
-                if (!notAdd && !ret.contains(n))
-                    ret.push_back(n);
-            }
-            else if (is_non_fresh(n, non_fresh_vars)  || u.str.is_string(n)) {
-                if (!ret.contains(n))
-                    ret.push_back(n);
-            }
-        }
-
-        if (ret.size() == 1 && !is_non_fresh(var, non_fresh_vars)) {
-            // check if none of variable is really important
-            ptr_vector<expr> v;
-            get_all_nodes_in_concat(*ret.begin(), v);
-            bool shouldKeep = false;
-            for (const auto& nn : v) {
-                int tmp;
-                if (is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1){
-                    if (u.str.is_string(var)){
-                        shouldKeep = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!shouldKeep)
-                ret.reset();
-        }
-        return ret;
-    }
-
-    ptr_vector<expr> theory_trau::refine_eq_set(
-            expr* var,
-            ptr_vector<expr> s,
             obj_map<expr, int> const& non_fresh_vars){
         refine_all_duplications(s);
         ptr_vector<expr> ret;
@@ -15340,7 +15306,7 @@ namespace smt {
         for (const auto& n : s) {
             if (u.str.is_concat(n)) {
                 expr* needle = nullptr;
-                if (is_contain_equality(n, needle)){
+                if (is_contain_family_equality(n, needle)){
                     waiting_list.insert(n, needle);
                     continue;
                 }
@@ -15464,74 +15430,6 @@ namespace smt {
         else
             return false;
         return true;
-    }
-
-    /*
-     * true if var does appear in eqs
-     */
-    bool theory_trau::appear_in_eqs(ptr_vector<expr> const& s, expr* var){
-        for (const auto& eq : s)
-            if (u.str.is_concat(eq)) {
-                ptr_vector<expr> nodes;
-                get_all_nodes_in_concat(eq, nodes);
-                if (nodes.contains(var))
-                    return true;
-            }
-        return false;
-    }
-
-    ptr_vector<expr> theory_trau::refine_eq_set(
-            ptr_vector<expr> const& s,
-            obj_map<expr, int> const& non_fresh_vars){
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ <<  std::endl;);
-
-        ptr_vector<expr> ret;
-        expr *arg0 = nullptr;
-        expr *arg1 = nullptr;
-        for (const auto& n : s) {
-            if (u.str.is_concat(n, arg0, arg1)) {
-                expr_ref_vector eq0(m);
-                collect_eq_nodes(arg0, eq0);
-                bool imp0 = is_non_fresh(arg0, non_fresh_vars);
-
-                expr_ref_vector eq1(m);
-                collect_eq_nodes(arg1, eq1);
-                bool imp1 = is_non_fresh(arg1, non_fresh_vars);
-                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": checking " << mk_pp(arg0, m) << " " << mk_pp(arg1, m) << std::endl;);
-                bool notAdd = false;
-                if (!imp0 && !u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
-                    expr *arg00 = nullptr;
-                    expr *arg01 = nullptr;
-                    for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i, arg00, arg01) && (*i) != (n)) {
-                            if (arg1 == arg01 && eq0.contains(arg00)) {
-                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg0, m) << " " << mk_pp(arg00, m) << std::endl;);
-                                notAdd = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!imp1 && !u.str.is_concat(arg1) && !u.str.is_string(arg1)){
-                    expr *arg00 = nullptr;
-                    expr *arg01 = nullptr;
-                    for (expr_ref_vector::iterator i = s.begin(); i != s.end(); ++i) {
-                        if (u.str.is_concat(*i, arg00, arg01) && (*i) != (n)) {
-                            if (arg0 == arg00 && eq1.contains(arg01)) {
-                                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": eq with " << mk_pp(arg1, m) << " " << mk_pp(arg01, m) << std::endl;);
-                                notAdd = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (notAdd == false && !ret.contains(n))
-                    ret.push_back(n);
-            }
-        }
-        return ret;
     }
 
     bool theory_trau::is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars) {
@@ -17091,18 +16989,18 @@ namespace smt {
         if (can_solve_contain_family(e)){
             return;
         }
-        std::pair<app*, app*> value;
+        std::pair<app*, app*> contain_split_pair;
         expr_ref haystack(expr->get_arg(0), m), needle(expr->get_arg(1), m);
 
         app* a = mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
         if (contain_split_map.contains(key)) {
             std::pair<enode *, enode *> tmpvalue = contain_split_map[key];
-            value = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
+            contain_split_pair = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
         }
         else {
-            value = std::make_pair<app*, app*>(mk_str_var("replace1"), mk_str_var("replace2"));
-            contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
+            contain_split_pair = std::make_pair<app*, app*>(mk_str_var("replace1"), mk_str_var("replace2"));
+            contain_split_map.insert(key, std::make_pair(ctx.get_enode(contain_split_pair.first), ctx.get_enode(contain_split_pair.second)));
         }
 
         if (u.str.is_extract(haystack.get())){
@@ -17115,7 +17013,7 @@ namespace smt {
                     enode* keynode = ensure_enode(rootContain);
                     SASSERT(contain_split_map.contains(keynode));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
-                    assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
+                    assert_axiom(createEqualOP(contain_split_pair.first, contain_split_map[keynode].first->get_owner()));
                 }
             }
         }
@@ -17131,13 +17029,13 @@ namespace smt {
                     enode* keynode = ensure_enode(rootContain);
                     SASSERT(contain_split_map.contains(keynode));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " trying new assert " << mk_pp(haystack.get(), m) << std::endl;);
-                    assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
+                    assert_axiom(createEqualOP(contain_split_pair.first, contain_split_map[keynode].first->get_owner()));
                 }
             }
         }
 
-        expr_ref x1(value.first, m);
-        expr_ref x2(value.second, m);
+        expr_ref x1(contain_split_pair.first, m);
+        expr_ref x2(contain_split_pair.second, m);
         expr_ref result(mk_str_var("result"), m);
 
         // condAst = Contains(args[0], args[1])
@@ -17168,13 +17066,17 @@ namespace smt {
         }
         else if (haystack != mk_string("")){
             //  args[0]  = x3 . x4 /\ |x3| = |x1| + |args[1]| - 1 /\ ! contains(x3, args[1])
-            expr_ref x3(mk_str_var("replace3"), m);
-            expr_ref x4(mk_str_var("replace4"), m);
-            expr_ref tmpLen(m_autil.mk_add(mk_strlen(x1), mk_strlen(needle), mk_int(-1)), m);
-            then_items.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
-            then_items.push_back(createEqualOP(mk_strlen(x3), tmpLen));
-            then_items.push_back(createOrOP(mk_not(m, mk_contains(x3, needle)), createEqualOP(x3, mk_string(""))));
+            std::pair<app*, app*> notcontain_split_pair;
+            if (!notcontain_split_map.contains(key)){
+                notcontain_split_pair = std::make_pair<app*, app*>(mk_str_var("replace3"), mk_str_var("replace4"));
+                notcontain_split_map.insert(key, std::make_pair(ctx.get_enode(notcontain_split_pair.first), ctx.get_enode(notcontain_split_pair.second)));
+                expr_ref tmpLen(m_autil.mk_add(mk_strlen(x1), mk_strlen(needle), mk_int(-1)), m);
+                then_items.push_back(createEqualOP(haystack, mk_concat(notcontain_split_pair.first, notcontain_split_pair.second)));
+                then_items.push_back(createEqualOP(mk_strlen(notcontain_split_pair.first), tmpLen));
+                then_items.push_back(createOrOP(mk_not(m, mk_contains(notcontain_split_pair.first, needle)), createEqualOP(notcontain_split_pair.first, mk_string(""))));
+            }
         }
+
         then_items.push_back(createEqualOP(result, mk_concat(x1, mk_concat(expr->get_arg(2), x2))));
         // -----------------------
         // false branch
@@ -17855,7 +17757,7 @@ namespace smt {
             expr_ref lenAssert(ctx.mk_eq_atom(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-//            if (!is_contain_equality(concatAst, tmp))
+//            if (!is_contain_family_equality(concatAst, tmp))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(ctx.mk_eq_atom(mk_int(0), mk_strlen(n1)), m);
@@ -18949,14 +18851,14 @@ namespace smt {
                     expr *lhs = to_app(eq)->get_arg(0);
                     expr *rhs = to_app(eq)->get_arg(1);
                     expr* key;
-                    if (is_contain_equality(lhs, key)) {
+                    if (is_contain_family_equality(lhs, key)) {
                         zstring keyStr;
                         if (u.str.is_string(key, keyStr)){
                             if (!is_trivial_contain(keyStr))
                                 core.push_back(e);
                         }
                     }
-                    else if (is_contain_equality(rhs, key)){
+                    else if (is_contain_family_equality(rhs, key)){
                         zstring keyStr;
                         if (u.str.is_string(key, keyStr)){
                             if (!is_trivial_contain(keyStr))

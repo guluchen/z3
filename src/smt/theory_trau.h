@@ -458,7 +458,8 @@ namespace smt {
                     void handle_not_contain_substr_index(expr *lhs, expr *rhs);
                     void handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached = false);
                     void handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached = false);
-                    bool is_contain_equality(expr* n);
+                    bool is_contain_family_equality(expr* n);
+                    bool is_contain_family_equality(expr* n, expr* &contain);
                     bool is_contain_equality(expr* n, expr* &contain);
                     bool is_trivial_contain(zstring s);
                 void  init_connecting_size(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars, bool prep = true);
@@ -1040,18 +1041,11 @@ namespace smt {
             bool concat_with_const(expr* c);
                 bool can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations);
                     bool concat_in_set(expr* n, ptr_vector<expr> const& s);
-                /*
-                * true if var does not appear in eqs
-                */
-                bool appear_in_eqs(ptr_vector<expr> const& s, expr* var);
-
                 bool is_non_fresh_concat(expr* e, obj_map<expr, int> const& non_fresh_vars);
                 bool is_trivial_combination(expr* v, ptr_vector<expr> const& eq, obj_map<expr, int> const& non_fresh_vars);
-                ptr_vector<expr> refine_eq_set(expr* var, ptr_vector<expr> s, obj_map<expr, int> const& non_fresh_vars, expr_ref_vector const& notnon_fresh_vars);
                 ptr_vector<expr> refine_eq_set(expr* var, ptr_vector<expr> s, obj_map<expr, int> const& non_fresh_vars);
                     void refine_all_duplications(ptr_vector<expr> &s);
                     bool are_equal_concat(expr* lhs, expr* rhs);
-                    ptr_vector<expr> refine_eq_set(ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
                 ptr_vector<expr> extend_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
@@ -1291,6 +1285,7 @@ namespace smt {
         obj_pair_map<expr, expr, expr*>                     contain_pair_bool_map;
         obj_map<expr, str::expr_pair_set >                  contain_pair_idx_map;
         obj_map<enode, std::pair<enode*,enode*>>            contain_split_map;
+        obj_map<enode, std::pair<enode*,enode*>>            notcontain_split_map;
         obj_hashtable<expr>                                 index_set;
         obj_map<expr, expr*>                                prefix_set;
         obj_map<expr, expr*>                                suffix_set;
