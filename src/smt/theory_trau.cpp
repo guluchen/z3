@@ -293,10 +293,10 @@ namespace smt {
             expr* regex = nullptr;
             is_regex_var(owner.get(), regex);
             expr* arr_var = get_var_flat_array(owner.get());
-            if (is_non_fresh(owner.get()) && arr_var != nullptr) {
+            if (is_non_fresh(owner.get()) && arr_var) {
                 STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 expr* arr_expr = get_var_flat_array(owner.get());
-                if (arr_expr != nullptr) {
+                if (arr_expr) {
                     if (ctx.e_internalized(arr_expr)) {
                         enode *arrNode = ctx.get_enode(arr_expr);
                         result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
@@ -311,17 +311,17 @@ namespace smt {
             else {
                 STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 bool found = false;
-                expr_ref_vector eqSet(m);
-                collect_eq_nodes(owner.get(), eqSet);
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(owner.get(), eqs);
                 expr* reg = nullptr;
-                for (unsigned i = 0; i < eqSet.size(); ++i) {
-                    if ((is_non_fresh(eqSet[i].get()) && !u.str.is_concat(eqSet[i].get())) || is_internal_regex_var(eqSet[i].get(), reg)) {
-                        expr* arr_expr = get_var_flat_array(owner.get());
-                        if (arr_expr != nullptr && ctx.e_internalized(arr_expr)) {
-                            enode* arrNode = ctx.get_enode(arr_expr);
-                            result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
+                for (unsigned i = 0; i < eqs.size(); ++i) {
+                    if ((is_non_fresh(eqs[i].get()) && !u.str.is_concat(eqs[i].get())) || is_internal_regex_var(eqs[i].get(), reg)) {
+                        expr* arr_expr = get_var_flat_array(eqs[i].get());
+                        if (arr_expr && ctx.e_internalized(arr_expr)) {
+                            enode* arr_node = ctx.get_enode(arr_expr);
+                            result = alloc(string_value_proc, *this, s, n->get_owner(), true, arr_node, regex, vLen.get_int64());
                             found = true;
-                            non_fresh_var = eqSet[i].get();
+                            non_fresh_var = eqs[i].get();
                             break;
                         }
                         else
@@ -342,10 +342,8 @@ namespace smt {
                 // add array
                 expr* tmp_arr = get_var_flat_array(non_fresh_var);
                 if (tmp_arr && ctx.e_internalized(tmp_arr))
-                    result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var)));
-                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
+                    result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var))); 
                 expr_ref_vector depImp = get_dependencies(non_fresh_var);
-                STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 dep.append(depImp);
 
                 // add its ancestors
@@ -373,7 +371,7 @@ namespace smt {
                 expr_ref_vector added_nodes(m);
                 for (const auto& nn : dep)
                     if (ctx.e_internalized(nn)){
-                        if (is_non_fresh(nn) || is_regex_var(nn)) {
+                        if (is_in_non_fresh_family(nn) || is_regex_var(nn)) {
                             result->add_entry(ctx.get_enode(nn));
                             added_nodes.push_back(nn);
                         }
@@ -397,12 +395,20 @@ namespace smt {
 
 
 
-    bool theory_trau::is_non_fresh(expr *n){
+    bool theory_trau::is_in_non_fresh_family(expr *n){
         expr_ref_vector eq(m);
         collect_eq_nodes(n, eq);
         for (const auto& nn : uState.non_fresh_vars)
             if (eq.contains(nn.m_key)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << " " << mk_pp(nn.m_key, m) << std::endl;);
+                return true;
+            }
+        return false;
+    }
+
+    bool theory_trau::is_non_fresh(expr *n){
+        for (const auto& nn : uState.non_fresh_vars)
+            if (nn.m_key == n) {
                 return true;
             }
         return false;
@@ -3305,6 +3311,7 @@ namespace smt {
 
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
+        dump_assignments();
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
@@ -7756,7 +7763,7 @@ namespace smt {
                 continue;
 
             expr* reg = nullptr;
-            if ((is_internal_regex_var(vareq.m_key, reg)) || is_non_fresh(vareq.m_key) || u.str.is_string(vareq.m_key)){
+            if ((is_internal_regex_var(vareq.m_key, reg)) || is_in_non_fresh_family(vareq.m_key) || u.str.is_string(vareq.m_key)){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(vareq.m_key, m) << std::endl;);
                 expr *result = convert_const_nonfresh_equalities(vareq.m_key, vareq.get_value(), non_fresh_vars);
                 assert_breakdown_combination(result, premise, asserted_constraints, axiomAdded);
@@ -15332,7 +15339,7 @@ namespace smt {
             ret.push_back(e.m_key);
         }
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << ret.size() << std::endl;);
-//        if (ret.size() == 1 && !is_non_fresh(var, non_fresh_vars)) {
+//        if (ret.size() == 1 && !is_in_non_fresh_family(var, non_fresh_vars)) {
 //            // check if none of variable is really important
 //            ptr_vector<expr> v;
 //            get_all_nodes_in_concat(*ret.begin(), v);
@@ -15343,7 +15350,7 @@ namespace smt {
 //                    shouldKeep = true;
 //                    break;
 //                }
-//                else if ((is_non_fresh(nn, non_fresh_vars, tmp) && tmp == -1)){
+//                else if ((is_in_non_fresh_family(nn, non_fresh_vars, tmp) && tmp == -1)){
 //                    shouldKeep = true;
 //                    break;
 //                }
@@ -18406,7 +18413,7 @@ namespace smt {
             for (const auto& nn : dep) {
                 if (!ctx.is_relevant(nn))
                     continue;
-                if (u.str.is_string(nn) || is_non_fresh(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
+                if (u.str.is_string(nn) || is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
                     if (!are_equal_exprs(n.m_key, nn)) {
                         expr* tmp = ctx.get_enode(n.m_key)->get_root()->get_owner();
                         if (!dependency_graph.contains(tmp)){
@@ -18441,7 +18448,7 @@ namespace smt {
 //            collect_eq_nodes(c_root, eqs);
 //            for (const auto& e : eqs){
 //                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-//                if (u.str.is_string(e) || is_non_fresh(e) || is_internal_regex_var(e, reg) || is_regex_concat(e)){
+//                if (u.str.is_string(e) || is_in_non_fresh_family(e) || is_internal_regex_var(e, reg) || is_regex_concat(e)){
 //                    if (e != c_root){
 //                        dependency_graph[c_root].insert(e);
 //                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " add " << mk_pp(e, m) << std::endl;);
@@ -18467,7 +18474,7 @@ namespace smt {
 
 
             // arg1
-            if (u.str.is_string(key2_root) || is_non_fresh(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
+            if (u.str.is_string(key2_root) || is_in_non_fresh_family(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
                 if (!are_equal_exprs(c_root, key2_root) && (get_len_value(key2_root, len) && len.get_int64() != 0)) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                     if (c_root != c.get_key2())
@@ -18501,7 +18508,7 @@ namespace smt {
             }
 
             // arg0
-            if (u.str.is_string(key1_root) || is_non_fresh(key1_root) || is_internal_regex_var(key1_root, reg) || is_regex_concat(key1_root)) {
+            if (u.str.is_string(key1_root) || is_in_non_fresh_family(key1_root) || is_internal_regex_var(key1_root, reg) || is_regex_concat(key1_root)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
                 if (!are_equal_exprs(c_root, key1_root) && (get_len_value(key1_root, len) && len.get_int64() != 0)) {
                     if (c_root != c.get_key1())
@@ -18705,22 +18712,6 @@ namespace smt {
                     rational bound;
                     if (lower_num_bound(get_bound_str_int_control_var(), bound)){
                         STRACE("str", tout << __LINE__ << " var " << mk_pp(get_bound_str_int_control_var(), m) << " lower_bound = " << bound << std::endl;);
-                    }
-                }
-        );
-    }
-
-    void theory_trau::dump_literals() {
-        STRACE("str", \
-                
-                context& ctx = get_context();
-                expr_ref_vector tmpExprs(m);
-                ctx.get_relevant_literals(tmpExprs);
-                for (unsigned i = 0; i < tmpExprs.size(); ++i) {
-                    literal tmp = ctx.get_literal(tmpExprs[i].get());
-                    int assignLvl = ctx.get_assign_level(tmp);
-                    if (ctx.get_assignment(tmpExprs[i].get()) == l_true && !m.is_or(tmpExprs[i].get()) && !m.is_and(tmpExprs[i].get()) && !m.is_ite(tmpExprs[i].get())){
-                        STRACE("str", tout << __LINE__ << " guessed literal " << mk_pp(tmpExprs[i].get(), m) << ", assignLevel = " << assignLvl << std::endl;);
                     }
                 }
         );
@@ -19568,7 +19559,7 @@ namespace smt {
 
             int sum = 0;
             for (int i = 0; i < (int)leafNodes.size(); ++i){
-                if (th.is_non_fresh(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
+                if (th.is_in_non_fresh_family(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
                     zstring leafVal;
 
                     if (get_str_value(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){

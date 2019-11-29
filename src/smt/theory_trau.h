@@ -295,6 +295,7 @@ namespace smt {
          */
         app * mk_value_helper(app * n, model_generator& mg);
         model_value_proc *mk_value(enode *n, model_generator& mg) override;
+        bool is_in_non_fresh_family(expr *n);
         bool is_non_fresh(expr *n);
         bool is_non_fresh(expr *n, int &val);
         bool is_regex_var(expr* n, expr* &regexExpr);
@@ -1371,7 +1372,6 @@ namespace smt {
         void assert_axiom(expr *e);
         void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();
-        void dump_literals();
         void fetch_guessed_core_exprs(
                 obj_map<expr, ptr_vector<expr>> const& eq_combination,
                 expr_ref_vector &guessed_exprs,
