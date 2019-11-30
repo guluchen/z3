@@ -19349,11 +19349,11 @@ namespace smt {
 
             int len_eq = -1;
             if (th.uState.eq_combination.contains(node))
-                for (const auto &eq : th.uState.eq_combination[node])
-                    {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << len_eq << std::endl;);
-                        construct_string(mg, eq, m_root2value, val);
-                    }
+                for (const auto &eq : th.uState.eq_combination[node]){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << len_eq << std::endl;);
+                    construct_string(mg, eq, m_root2value, val);
+                }
+
             std::string ret = "";
             for (int i = 0; i < len_int; ++i)
                 if (val[i] == -1) {
@@ -19542,7 +19542,10 @@ namespace smt {
                             val[j] = node_val[j - sum];
                         } else {
                             if (val[j] != (int) node_val[j - sum]) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
+                                if (val[j] == th.default_char)
+                                    val[j] = node_val[j - sum];
+                                else
+                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
                             }
                         }
                     }
