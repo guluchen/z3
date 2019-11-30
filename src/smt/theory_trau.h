@@ -1062,6 +1062,13 @@ namespace smt {
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
         void init_model(model_generator& m) override;
+        obj_map<expr, std::pair<rational, rational>> setup_str2int_map(model_generator& mg);
+        void setup_dependency_graph();
+        void setup_dependency_graph_from_combination(obj_hashtable<expr> &included_nodes);
+        void setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes);
+        void update_dependency_graph(expr* concat, expr* child, bool is_active, bool is_fresh);
+        obj_hashtable<expr> collect_nodes_in_combination();
+        void print_dependency_graph();
         void correct_underapproximation_model(model_generator& mg);
         bool correct_underapproximation_model(model_generator& mg, obj_map<expr, ptr_vector<expr>> const& eq_combination);
         rational get_concat_len(expr* e);

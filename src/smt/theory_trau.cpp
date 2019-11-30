@@ -207,22 +207,6 @@ namespace smt {
         }
     }
 
-    template <class T>
-    static T* get_th_array(context& ctx, theory_id afid, expr* e) {
-        theory* th = ctx.get_theory(afid);
-        if (th && ctx.e_internalized(e)) {
-            return dynamic_cast<T*>(th);
-        }
-        else {
-            if (th) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": not NULL" << std::endl;);
-            }
-            else
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": NULL" << std::endl;);
-            return nullptr;
-        }
-    }
-
     model_value_proc *theory_trau::mk_value(enode *const n, model_generator& mg) {
         
         context & ctx = get_context();
@@ -342,7 +326,7 @@ namespace smt {
                 // add array
                 expr* tmp_arr = get_var_flat_array(non_fresh_var);
                 if (tmp_arr && ctx.e_internalized(tmp_arr))
-                    result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var))); 
+                    result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var)));
                 expr_ref_vector depImp = get_dependencies(non_fresh_var);
                 dep.append(depImp);
 
@@ -457,34 +441,31 @@ namespace smt {
 
     expr_ref_vector theory_trau::get_dependencies(expr *n){
         expr_ref_vector ret(m);
-        expr_ref_vector eq(m);
-        collect_eq_nodes(n, eq);
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(n, eqs);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
         if (u.str.is_concat(n)){
             ptr_vector<expr> nodes;
             get_all_nodes_in_concat(n, nodes);
 
-            for (unsigned i = 0; i < nodes.size(); ++i) {
-                if (!eq.contains(nodes[i]) && !ret.contains(nodes[i]))
-                    ret.push_back(nodes[i]);
-                else {
-                }
+            for (const auto& nn : nodes) {
+                if (!eqs.contains(nn) && !ret.contains(nn))
+                    ret.push_back(nn);
             }
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
-        for (unsigned j = 0; j < eq.size(); ++j) {
-            if (uState.eq_combination.contains(eq[j].get())) {
-                for (const auto &nn : uState.eq_combination[eq[j].get()]) {
+        for (const auto& eq : eqs) {
+            if (uState.eq_combination.contains(eq)) {
+                for (const auto &nn : uState.eq_combination[eq]) {
                     if (u.str.is_concat(nn)) {
                         ptr_vector<expr> nodes;
                         get_all_nodes_in_concat(nn, nodes);
 
-                        for (unsigned i = 0; i < nodes.size(); ++i) {
-                            if (!eq.contains(nodes[i]) && !ret.contains(nodes[i]))
-                                ret.push_back(nodes[i]);
+                        for (const auto& e : nodes) {
+                            if (!eqs.contains(e) && !ret.contains(e))
+                                ret.push_back(e);
                         }
                     } else {
-                        if (!eq.contains(nn) && !ret.contains(nn))
+                        if (!eqs.contains(nn) && !ret.contains(nn))
                             ret.push_back(nn);
                     }
                 }
@@ -18365,12 +18346,15 @@ namespace smt {
     }
 
     void theory_trau::init_model(model_generator& mg) {
-        
-        context& ctx = get_context();
-        STRACE("str", tout << "initializing model..." << std::endl;);
-        expr_ref_vector included_nodes(m);
-        correct_underapproximation_model(mg);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        correct_underapproximation_model(mg);
+        carry_on_results.reset();
+        eval_str_int(setup_str2int_map(mg), false);
+        setup_dependency_graph();
+        default_char = setup_default_char(init_included_char_set(), init_excluded_char_set());
+    }
+
+    obj_map<expr, std::pair<rational, rational>> theory_trau::setup_str2int_map(model_generator& mg){
         obj_map<expr, std::pair<rational, rational>> str2int_map;
         for (const auto& e : string_int_conversion_terms){
             if (m_autil.is_int_expr(e)){
@@ -18397,11 +18381,27 @@ namespace smt {
                 }
             }
         }
-        STRACE("str", tout << "initializing model..." << std::endl;);
-        carry_on_results.reset();
-        eval_str_int(str2int_map, false);
+        return str2int_map;
+    }
 
+    void theory_trau::setup_dependency_graph(){
+        obj_hashtable<expr> included_nodes;
         // prepare dependency_graph
+        setup_dependency_graph_from_combination(included_nodes);
+        print_dependency_graph();
+        setup_dependency_graph_from_concats(included_nodes);
+        for (auto& e: dependency_graph) {
+            bool has_val = false;
+            get_eqc_value(e.m_key, has_val);
+            if (has_val)
+                e.m_value.reset();
+        }
+        print_dependency_graph();
+    }
+
+    void theory_trau::setup_dependency_graph_from_combination(obj_hashtable<expr> &included_nodes){
+        context& ctx = get_context();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& n : uState.eq_combination) {
             if (!ctx.is_relevant(n.m_key))
                 continue;
@@ -18421,137 +18421,112 @@ namespace smt {
                         }
                         dependency_graph[tmp].insert(ctx.get_enode(nn)->get_root()->get_owner());
                     }
-                    if (!included_nodes.contains(ctx.get_enode(nn)->get_root()->get_owner()))
-                        included_nodes.push_back(ctx.get_enode(nn)->get_root()->get_owner());
+                    included_nodes.insert(ctx.get_enode(nn)->get_root()->get_owner());
                 }
             }
         }
+    }
 
+    void theory_trau::setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes){
+        context& ctx = get_context();
+
+        obj_hashtable<expr> all_nodes = collect_nodes_in_combination();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& c : concat_node_map) {
             if (!ctx.is_relevant(c.get_value()) || !ctx.is_relevant(c.get_key1()) || !ctx.is_relevant(c.get_key2()))
                 continue;
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << std::endl;);
+
             rational len;
             if (are_equal_exprs(c.get_key1(), c.get_value()) || are_equal_exprs(c.get_key2(), c.get_value()))
                 continue;
 
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << std::endl;);
             expr* key1_root = ctx.get_enode(c.get_key1())->get_root()->get_owner();
             expr* key2_root = ctx.get_enode(c.get_key2())->get_root()->get_owner();
             expr* c_root = ctx.get_enode(c.get_value())->get_root()->get_owner();
-            expr* reg = nullptr;
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c_root, m) << std::endl;);
-            if (!dependency_graph.contains(c_root)){
-                dependency_graph.insert(c_root, {});
-            }
-//            expr_ref_vector eqs(m);
-//            collect_eq_nodes(c_root, eqs);
-//            for (const auto& e : eqs){
-//                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-//                if (u.str.is_string(e) || is_in_non_fresh_family(e) || is_internal_regex_var(e, reg) || is_regex_concat(e)){
-//                    if (e != c_root){
-//                        dependency_graph[c_root].insert(e);
-//                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " add " << mk_pp(e, m) << std::endl;);
-//                    }
-//
-//                }
-//                else if (u.str.is_concat(e) && e != c_root){
-//                    ptr_vector<expr> nodes;
-//                    get_nodes_in_concat(e, nodes);
-//                    bool found = false;
-//                    for (const auto& ex : nodes){
-//                        if (u.str.is_string(ex)) {
-//                            found = true;
-//                            break;
-//                        }
-//                    }
-//                    if (found){
-//                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " add " << mk_pp(e, m) << std::endl;);
-//                        dependency_graph[c_root].insert(e);
-//                    }
-//                }
-//            }
+            update_dependency_graph(c.get_value(), c.get_key1(), all_nodes.contains(c_root), !included_nodes.contains(key1_root));
+            update_dependency_graph(c.get_value(), c.get_key2(), all_nodes.contains(c_root), !included_nodes.contains(key2_root));
+        }
+    }
 
-
-            // arg1
-            if (u.str.is_string(key2_root) || is_in_non_fresh_family(key2_root) || is_internal_regex_var(key2_root, reg) || is_regex_concat(key2_root)) {
-                if (!are_equal_exprs(c_root, key2_root) && (get_len_value(key2_root, len) && len.get_int64() != 0)) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                    if (c_root != c.get_key2())
-                        dependency_graph[c_root].insert(c.get_key2());
-                    if (key2_root != c.get_value())
-                        dependency_graph[c_root].insert(key2_root);
-                }
-            }
-            else if (!included_nodes.contains(key2_root)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-//                if ((get_len_value(c.get_key1(), len) && len.get_int64() == 0) || are_equal_exprs(c.get_key2(), c.get_value()))
-//                    continue;
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key2(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                if (key2_root != c.get_value()) {
-                    if (!dependency_graph.contains(key2_root)){
-                        dependency_graph.insert(key2_root, {});
-                    }
-                }
-                if (key2_root != c.get_value())
-                    dependency_graph[key2_root].insert(c.get_value());
-                if (!dependency_graph.contains(c.get_key2())){
-                    dependency_graph.insert(c.get_key2(), {});
-                }
-                dependency_graph[c.get_key2()].insert(c.get_value());
-                if (c.get_key2() != key2_root) {
-                    if (!expr_array_linkers.contains(key2_root)){
-                        expr_array_linkers.insert(key2_root, {});
-                    }
-                    expr_array_linkers[key2_root] = c.get_key2();
-                }
-            }
-
-            // arg0
-            if (u.str.is_string(key1_root) || is_in_non_fresh_family(key1_root) || is_internal_regex_var(key1_root, reg) || is_regex_concat(key1_root)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                if (!are_equal_exprs(c_root, key1_root) && (get_len_value(key1_root, len) && len.get_int64() != 0)) {
-                    if (c_root != c.get_key1())
-                        dependency_graph[c_root].insert(c.get_key1());
-                    if (key1_root != c.get_value())
-                        dependency_graph[c_root].insert(key1_root);
-                }
-            }
-            else if (!included_nodes.contains(key1_root)) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << mk_pp(c.get_value(), m) << std::endl;);
-                if (!dependency_graph.contains(key1_root)){
-                    dependency_graph.insert(key1_root, {});
-                }
-
-                if (key1_root != c.get_value())
-                    dependency_graph[key1_root].insert(c.get_value());
-
-                if (!dependency_graph.contains(c.get_key1())){
-                    dependency_graph.insert(c.get_key1(), {});
-                }
-                dependency_graph[c.get_key1()].insert(c.get_value());
-
-                if (c.get_key1() != key1_root) {
-                    if (!expr_array_linkers.contains(key1_root)){
-                        expr_array_linkers.insert(key1_root, {});
-                    }
-                    expr_array_linkers[key1_root] = c.get_key1();
-                }
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(c.get_key1(), m) << " VS " << dependency_graph[c.get_key1()].size() << std::endl;);
-            }
+    void theory_trau::update_dependency_graph(expr* concat, expr* child, bool is_active, bool is_fresh){
+        context& ctx = get_context();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(concat, m) << " " << mk_pp(child, m) << " active: " << is_active << " fresh: " << is_fresh << std::endl;);
+        expr* child_root = ctx.get_enode(child)->get_root()->get_owner();
+        expr* concat_root = ctx.get_enode(concat)->get_root()->get_owner();
+        if (!dependency_graph.contains(concat_root)){
+            dependency_graph.insert(concat_root, {});
         }
 
+        expr* reg = nullptr;
+        rational len;
+        if (u.str.is_string(child_root) || is_in_non_fresh_family(child_root) || is_internal_regex_var(child_root, reg) || is_regex_concat(child_root) || !is_active) {
+            bool got_len = get_len_value(child_root, len);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " len = " << len.get_int64() << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << " " << are_equal_exprs(concat_root, child_root) << " " << (get_len_value(child_root, len) && len.get_int64() != 0) << std::endl;);
+            if (!are_equal_exprs(concat_root, child_root) && ((got_len && len.get_int64() != 0) || !got_len)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << std::endl;);
+                if (concat_root != child)
+                    dependency_graph[concat_root].insert(child);
+                if (child_root != concat)
+                    dependency_graph[concat_root].insert(child_root);
+            }
+        }
+        else if (is_fresh) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << std::endl;);
+            if (child_root != concat) {
+                if (!dependency_graph.contains(child_root)){
+                    dependency_graph.insert(child_root, {});
+                }
+            }
+            if (child_root != concat)
+                dependency_graph[child_root].insert(concat);
+            if (!dependency_graph.contains(child)){
+                dependency_graph.insert(child, {});
+            }
+            dependency_graph[child].insert(concat);
+            if (child != child_root) {
+                if (!expr_array_linkers.contains(child_root)){
+                    expr_array_linkers.insert(child_root, {});
+                }
+                expr_array_linkers[child_root] = child;
+            }
+        }
+    }
+
+    obj_hashtable<expr> theory_trau::collect_nodes_in_combination(){
+        context& ctx = get_context();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+        obj_hashtable<expr> ret;
+        for (const auto& n : uState.eq_combination) {
+            if (!ctx.is_relevant(n.m_key))
+                continue;
+            if ((n.m_value.size() == 1 && n.m_key == n.m_value[0]) || n.m_value.size() == 0)
+                continue;
+            ptr_vector <expr> nodes;
+            get_all_nodes_in_concat(n.m_key, nodes);
+            for (const auto& nn : nodes)
+                ret.insert(nn);
+            nodes.reset();
+            for (const auto& nn : n.m_value){
+                if (!ctx.is_relevant(n.m_key))
+                    continue;
+                get_all_nodes_in_concat(nn, nodes);
+                for (const auto& e : nodes)
+                    ret.insert(e);
+                nodes.reset();
+            }
+        }
+        return ret;
+    }
+
+    void theory_trau::print_dependency_graph(){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (auto& e: dependency_graph) {
-            bool has_val = false;
-            get_eqc_value(e.m_key, has_val);
-            if (has_val)
-                e.m_value.reset();
             STRACE("str", tout << __LINE__ << " " << mk_pp(e.m_key, m) << std::endl;);
             for (const auto& ee : e.m_value)
                 STRACE("str", tout << __LINE__ << " \t" << mk_pp(ee, m) << std::endl;);
         }
-
-        default_char = setup_default_char(init_included_char_set(), init_excluded_char_set());
     }
 
     void theory_trau::correct_underapproximation_model(model_generator& mg){
@@ -18559,9 +18534,7 @@ namespace smt {
         // check the current branch
         if (correct_underapproximation_model(mg, uState.eq_combination))
             return;
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& s : completed_branches){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             if (correct_underapproximation_model(mg, s.eq_combination)){
                 uState.eq_combination = s.eq_combination;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -19554,37 +19527,32 @@ namespace smt {
     void theory_trau::string_value_proc::construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val){
         if (th.u.str.is_concat(eq)){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": sync"  << mk_pp(eq, th.get_manager()) << " " << val.size() << std::endl;);
-            ptr_vector<expr> leafNodes;
-            th.get_nodes_in_concat(eq, leafNodes);
+            ptr_vector<expr> nodes;
+            th.get_nodes_in_concat(eq, nodes);
 
             int sum = 0;
-            for (int i = 0; i < (int)leafNodes.size(); ++i){
-                if (th.is_in_non_fresh_family(leafNodes[i]) || th.u.str.is_string(leafNodes[i]) || th.is_regex_var(leafNodes[i])){
-                    zstring leafVal;
-
-                    if (get_str_value(th.get_context().get_enode(leafNodes[i]), m_root2value, leafVal)){
-                        int len_int = leafVal.length();
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: "  << mk_pp(leafNodes[i], th.get_manager())  << " = " << leafVal << std::endl;);
-                        for (int j = sum; j < sum + len_int; ++j) {
-                            if (val[j] == -1) {
-                                val[j] = leafVal[j - sum];
-                            } else {
-                                if (val[j] != (int) leafVal[j - sum]) {
-                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << leafVal << "\" " << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
-                                }
+            for (int i = 0; i < (int)nodes.size(); ++i){
+                zstring node_val;
+                bool has_val = get_str_value(th.get_context().get_enode(nodes[i]), m_root2value, node_val);
+                if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
+                    int len_int = node_val.length();
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << std::endl;);
+                    for (int j = sum; j < sum + len_int; ++j) {
+                        if (val[j] == -1) {
+                            val[j] = node_val[j - sum];
+                        } else {
+                            if (val[j] != (int) node_val[j - sum]) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
                             }
                         }
-                        sum = sum + len_int;
                     }
-                    else {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": cannot get string: "  << mk_pp(leafNodes[i], th.get_manager()) << std::endl;);
-                    }
+                    sum = sum + len_int;
                 }
                 else {
                     int len_int = -1;
-                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(leafNodes[i])), m_root2value,len_int)){
+                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes[i])), m_root2value, len_int)){
                         sum += len_int;
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(leafNodes[i], th.get_manager()) << ": sum = "  << sum << std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], th.get_manager()) << ": sum = " << sum << std::endl;);
                     }
                     else {
                         SASSERT(false);
