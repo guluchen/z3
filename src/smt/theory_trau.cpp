@@ -2384,7 +2384,7 @@ namespace smt {
                             if (subConst1 == subConst2) {
                                 // key1.first = key2.first /\ key1.second = key2.second
                                 // ==> (containPairBoolMap[key1] = containPairBoolMap[key2])
-                                implyR = ctx.mk_eq_atom(contain_pair_bool_map[key1], contain_pair_bool_map[key2]);
+                                implyR = createEqualOP(contain_pair_bool_map[key1], contain_pair_bool_map[key2]);
                             } else if (subConst1.contains(subConst2)) {
                                 // key1.first = key2.first /\ Contains(key1.second, key2.second)
                                 // ==> (containPairBoolMap[key1] --> containPairBoolMap[key2])
@@ -2420,7 +2420,7 @@ namespace smt {
                                 if (subAst1 != subAst2) {
                                     litems2.push_back(ctx.mk_eq_atom(subAst1, subAst2));
                                 }
-                                expr_ref implyR(ctx.mk_eq_atom(contain_pair_bool_map[key1], contain_pair_bool_map[key2]), m);
+                                expr_ref implyR(createEqualOP(contain_pair_bool_map[key1], contain_pair_bool_map[key2]), m);
                                 if (litems2.empty()) {
                                     assert_axiom(implyR);
                                 } else {
@@ -2534,7 +2534,7 @@ namespace smt {
                             if (const1 == const2) {
                                 // key1.second = key2.second /\ key1.first = key2.first
                                 // ==> (containPairBoolMap[key1] = containPairBoolMap[key2])
-                                implyR = ctx.mk_eq_atom(contain_pair_bool_map[key1], contain_pair_bool_map[key2]);
+                                implyR = createEqualOP(contain_pair_bool_map[key1], contain_pair_bool_map[key2]);
                             } else if (const1.contains(const2)) {
                                 // key1.second = key2.second /\ Contains(key1.first, key2.first)
                                 // ==> (containPairBoolMap[key2] --> containPairBoolMap[key1])
@@ -2572,7 +2572,7 @@ namespace smt {
                                 if (str1 != str2) {
                                     litems2.push_back(ctx.mk_eq_atom(str1, str2));
                                 }
-                                expr_ref implyR(ctx.mk_eq_atom(contain_pair_bool_map[key1], contain_pair_bool_map[key2]), m);
+                                expr_ref implyR(createEqualOP(contain_pair_bool_map[key1], contain_pair_bool_map[key2]), m);
                                 if (litems2.empty()) {
                                     assert_axiom(implyR);
                                 } else {
@@ -6653,7 +6653,7 @@ namespace smt {
             for (const auto &nn : nodes)
                 if (are_equal_exprs(nn, needle)) {
                     cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
-                    assert_axiom(createEqualOP(lhs, rhs));
+                    //assert_axiom(createEqualOP(lhs, rhs));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
                     return false;
                 }
@@ -15060,6 +15060,7 @@ namespace smt {
         expr* cause = nullptr;
         if (!review_disequalities_not_contain(combinations, cause)){
             print_eq_combination(combinations);
+            dump_assignments();
             if (cause == nullptr)
                 negate_context();
             else
@@ -18621,7 +18622,7 @@ namespace smt {
         if (!ctx.b_internalized(ex)) {
             ctx.internalize(ex, false);
         }
-//        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
         ctx.mk_th_axiom(get_id(), 1, &lit);
