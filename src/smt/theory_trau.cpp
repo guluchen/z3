@@ -3646,6 +3646,7 @@ namespace smt {
                 }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
                 if (to_assert) {
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
                     expr_ref premise(
                             createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
                             m);
@@ -18350,6 +18351,7 @@ namespace smt {
         correct_underapproximation_model(mg);
         carry_on_results.reset();
         eval_str_int(setup_str2int_map(mg), false);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         setup_dependency_graph();
         default_char = setup_default_char(init_included_char_set(), init_excluded_char_set());
     }
@@ -18572,6 +18574,7 @@ namespace smt {
     }
 
     void theory_trau::update_roots(){
+        return;
         context& ctx = get_context();
         obj_map<expr, ptr_vector<expr>> eq_combination;
         for (const auto& eq : uState.eq_combination){
@@ -19360,8 +19363,15 @@ namespace smt {
 
             int len_eq = -1;
             expr* root_node = th.get_context().get_enode(node)->get_root()->get_owner();
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << mk_pp(root_node, mg.get_manager()) << len_int<< std::endl;);
+            for (const auto& com : th.uState.eq_combination){
+                if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
+                    continue;
+                STRACE("str", tout << "EQ set of " << mk_pp(com.m_key, mg.get_manager()) << std::endl;);
+                for (const auto& e : com.get_value())
+                    STRACE("str", tout << "\t" << mk_pp(e, mg.get_manager()) << std::endl;);
+            }
             ptr_vector<expr> combination = find_combination(root_node);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << mk_pp(root_node, mg.get_manager()) << " " << combination.size() << std::endl;);
             if (combination.size() > 0)
                 for (const auto &eq : combination){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << mk_pp(node, mg.get_manager()) << " by " << mk_pp(eq, mg.get_manager()) << len_eq << std::endl;);
@@ -19386,11 +19396,14 @@ namespace smt {
     }
 
     ptr_vector<expr> theory_trau::string_value_proc::find_combination(expr*  e){
+        ptr_vector<expr> eqs;
         for (const auto& n : th.uState.eq_combination)
-            if (th.get_context().get_enode(n.m_key)->get_root()->get_owner() == e){
-                return n.m_value;
+            if (th.get_context().is_relevant(n.m_key)) {
+                if (th.get_context().get_enode(n.m_key)->get_root()->get_owner() == e) {
+                    eqs.append(n.m_value);
+                }
             }
-        return {};
+        return eqs;
     }
 
     bool theory_trau::string_value_proc::construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val){
