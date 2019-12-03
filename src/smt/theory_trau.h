@@ -250,6 +250,7 @@ namespace smt {
             void collect_alternative_components(expr* v, vector<zstring>& ret);
             expr* is_regex_plus_breakdown(expr* e);
             bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue);
+            ptr_vector<expr> find_combination(expr*  e);
             bool construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val);
             bool get_char_range(unsigned_set & char_set);
             zstring fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed);
@@ -1071,6 +1072,7 @@ namespace smt {
         void print_dependency_graph();
         void correct_underapproximation_model(model_generator& mg);
         bool correct_underapproximation_model(model_generator& mg, obj_map<expr, ptr_vector<expr>> const& eq_combination);
+        void update_roots();
         rational get_concat_len(expr* e);
         void finalize_model(model_generator& mg) override;
 

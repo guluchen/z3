@@ -457,6 +457,7 @@ namespace smt {
             if (uState.eq_combination.contains(eq)) {
                 for (const auto &nn : uState.eq_combination[eq]) {
                     if (u.str.is_concat(nn)) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
                         ptr_vector<expr> nodes;
                         get_all_nodes_in_concat(nn, nodes);
 
@@ -464,10 +465,8 @@ namespace smt {
                             if (!eqs.contains(e) && !ret.contains(e))
                                 ret.push_back(e);
                         }
-                    } else {
-                        if (!eqs.contains(nn) && !ret.contains(nn))
-                            ret.push_back(nn);
-                    }
+                    } else if (!eqs.contains(nn) && !ret.contains(nn))
+                        ret.push_back(nn);
                 }
             }
         }
@@ -18388,6 +18387,7 @@ namespace smt {
     void theory_trau::setup_dependency_graph(){
         obj_hashtable<expr> included_nodes;
         // prepare dependency_graph
+        update_roots();
         setup_dependency_graph_from_combination(included_nodes);
         print_dependency_graph();
         setup_dependency_graph_from_concats(included_nodes);
@@ -18397,30 +18397,30 @@ namespace smt {
             if (has_val)
                 e.m_value.reset();
         }
+        print_eq_combination(uState.eq_combination);
         print_dependency_graph();
     }
 
     void theory_trau::setup_dependency_graph_from_combination(obj_hashtable<expr> &included_nodes){
         context& ctx = get_context();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+
         for (const auto& n : uState.eq_combination) {
             if (!ctx.is_relevant(n.m_key))
                 continue;
 
             expr_ref_vector dep = get_dependencies(n.m_key);
-            expr_ref_vector tmp(m);
-            collect_eq_nodes(n.m_key, tmp);
             expr* reg = nullptr;
             for (const auto& nn : dep) {
                 if (!ctx.is_relevant(nn))
                     continue;
                 if (u.str.is_string(nn) || is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << mk_pp(n.m_key, m) << std::endl;);
                     if (!are_equal_exprs(n.m_key, nn)) {
-                        expr* tmp = ctx.get_enode(n.m_key)->get_root()->get_owner();
-                        if (!dependency_graph.contains(tmp)){
-                            dependency_graph.insert(tmp, {});
+                        if (!dependency_graph.contains(n.m_key)){
+                            dependency_graph.insert(n.m_key, {});
                         }
-                        dependency_graph[tmp].insert(ctx.get_enode(nn)->get_root()->get_owner());
+                        dependency_graph[n.m_key].insert(ctx.get_enode(nn)->get_root()->get_owner());
                     }
                     included_nodes.insert(ctx.get_enode(nn)->get_root()->get_owner());
                 }
@@ -18569,6 +18569,16 @@ namespace smt {
             }
         }
         return true;
+    }
+
+    void theory_trau::update_roots(){
+        context& ctx = get_context();
+        obj_map<expr, ptr_vector<expr>> eq_combination;
+        for (const auto& eq : uState.eq_combination){
+            eq_combination.insert(ctx.get_enode(eq.m_key)->get_root()->get_owner(), eq.m_value);
+        }
+        uState.eq_combination = uState.eq_combination;
+        print_eq_combination(uState.eq_combination);
     }
 
     rational theory_trau::get_concat_len(expr* e){
@@ -19346,12 +19356,15 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << std::endl;);
             if (th.u.str.is_concat(node))
                 construct_string(mg, node, m_root2value, val);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << len_int<< std::endl;);
+
 
             int len_eq = -1;
-            if (th.uState.eq_combination.contains(node))
-                for (const auto &eq : th.uState.eq_combination[node]){
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << len_eq << std::endl;);
+            expr* root_node = th.get_context().get_enode(node)->get_root()->get_owner();
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << mk_pp(root_node, mg.get_manager()) << len_int<< std::endl;);
+            ptr_vector<expr> combination = find_combination(root_node);
+            if (combination.size() > 0)
+                for (const auto &eq : combination){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << mk_pp(node, mg.get_manager()) << " by " << mk_pp(eq, mg.get_manager()) << len_eq << std::endl;);
                     construct_string(mg, eq, m_root2value, val);
                 }
 
@@ -19370,6 +19383,14 @@ namespace smt {
         }
 
         return false;
+    }
+
+    ptr_vector<expr> theory_trau::string_value_proc::find_combination(expr*  e){
+        for (const auto& n : th.uState.eq_combination)
+            if (th.get_context().get_enode(n.m_key)->get_root()->get_owner() == e){
+                return n.m_value;
+            }
+        return {};
     }
 
     bool theory_trau::string_value_proc::construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val){
