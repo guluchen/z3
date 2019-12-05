@@ -212,16 +212,14 @@ namespace smt {
         context & ctx = get_context();
         app_ref owner{m};
         owner = n->get_owner();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         if (!ctx.is_relevant(owner.get()) || !u.is_string(m.get_sort(owner))) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
             return alloc(expr_wrapper_proc, owner);
         }
         // if the owner is not internalized, it doesn't have an e-node associated.
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
         rational vLen(-1);
         if (u.is_string(m.get_sort(n->get_owner())) && get_len_value(n->get_owner(), vLen)) {
-            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << "  " << vLen << std::endl;);
+            STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " len: " << vLen << std::endl;);
         }
         else if (u.is_string(m.get_sort(n->get_owner()))){
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
@@ -4023,7 +4021,7 @@ namespace smt {
                 if (is_contain_family_equality(lhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(rhs, vec);
-                    if (is_not_important(rhs, needle, eq_combination, non_fresh_vars)){
+                    if (is_fresh(rhs, needle, eq_combination, non_fresh_vars)){
                         if (not_imp.find(rhs) == not_imp.end())
                             for (const auto& e : vec)
                                 not_imp.insert(e);
@@ -4038,7 +4036,7 @@ namespace smt {
                 else if (is_contain_family_equality(rhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
                     collect_eq_nodes(lhs, vec);
-                    if (is_not_important(lhs, needle, eq_combination, non_fresh_vars)){
+                    if (is_fresh(lhs, needle, eq_combination, non_fresh_vars)){
                         if (not_imp.find(rhs) == not_imp.end())
                             for (const auto& e : vec)
                                 not_imp.insert(e);
@@ -4076,7 +4074,7 @@ namespace smt {
             STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
     }
 
-    bool theory_trau::is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars){
+    bool theory_trau::is_fresh(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars){
         
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(haystack, m) << " " << needle << std::endl;);
         for (const auto& eq : eq_combination) {
@@ -9217,11 +9215,11 @@ namespace smt {
                     j--;
                     /* select optimization mode */
                     int optimizing = NONE;
-                    if (!flat_enabled)
+                    if (!flat_enabled || one_var_arrange(lhs_elements))
                         optimizing = optimized_lhs(i, startPos, j, left_arr, right_arr,
                                                    vectorExpr2vectorStr(lhs_elements),
                                                    vectorExpr2vectorStr(rhs_elements));
-                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << std::endl;);
+                    STRACE("str", tout << __LINE__ <<  "  optimizing mode: " << optimizing << " flat_enabled: " << flat_enabled << std::endl;);
 
                     switch (optimizing) {
                         case NONE:
@@ -9284,6 +9282,12 @@ namespace smt {
                 }
             }
         return createAndOP(result);
+    }
+
+    bool theory_trau::one_var_arrange(pair_expr_vector const& elements){
+        if (elements.size() == p_bound.get_int64() && elements[0].first == elements[1].first)
+            return true;
+        return false;
     }
 
     void theory_trau::insert_top(expr_int const& e, pair_expr_vector &v){
@@ -9955,8 +9959,8 @@ namespace smt {
                                                  obj_map<expr, int> const& non_fresh_variables,
                                                  bool optimizing,
                                                  expr_ref_vector &result){
-        
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << " optimizing: " << optimizing << std::endl;);
 
         /* do not need AND */
         /* result = sum (length) */
@@ -10768,7 +10772,7 @@ namespace smt {
 
         expr* iterB = get_flat_iter(elementNames[pos]);
 
-        expr_ref_vector andConstraints(m);
+        expr_ref_vector ands(m);
         expr* lenRhs = nullptr;
         /* combine two parts if it is possible */
         bool can_combine = false;
@@ -10795,8 +10799,8 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         if (!unrollMode){
             for (int i = 1; i <= pMax; ++i){
-                expr_ref_vector orConstraints(m);
-                orConstraints.push_back(
+                expr_ref_vector ors(m);
+                ors.push_back(
                         createEqualOP(
                                 createSelectOP(arrLhs,
                                                        createModOP(
@@ -10808,60 +10812,70 @@ namespace smt {
                                                                createAddOP(m_autil.mk_int(i - 1), startRhs),
                                                                m_autil.mk_int(pMax)))));
 
-                orConstraints.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
-                andConstraints.push_back(createOrOP(orConstraints));
+                ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                ands.push_back(createOrOP(ors));
             }
 
-            andConstraints.push_back(
+            ands.push_back(
                     rewrite_implication(
                             createLessOP(lenB, lenA),
                             createEqualOP(iterB, m_autil.mk_int(1))));
         }
         else {
             int consideredSize = bound;
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << consideredSize << std::endl;);
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; connectingSize size: " << connectingSize << std::endl;);
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << consideredSize << " can_combine:" << can_combine << " elementNames.size(): " << elementNames.size() << std::endl;);
             if (!flat_enabled) {
                 for (int i = 1; i <= consideredSize; ++i) {
-                    expr_ref_vector orConstraints(m);
-                    orConstraints.push_back(createEqualOP(
+                    expr_ref_vector ors(m);
+                    ors.push_back(createEqualOP(
                             createSelectOP(arrLhs, createAddOP(m_autil.mk_int(i - 1), startLhs)),
                             createSelectOP(arrRhs, createAddOP(m_autil.mk_int(i - 1), startRhs))));
-                    orConstraints.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
-                    andConstraints.push_back(createOrOP(orConstraints));
+                    ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                    ands.push_back(createOrOP(ors));
                 }
 
 
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
                 if (consideredSize >= connectingSize) {
-                    andConstraints.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
-                    andConstraints.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+                    ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
+                    ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+                }
+            }
+            else if (optimizing) {
+                if (can_combine && elementNames.size() == p_bound.get_int64()) {
+                    ands.push_back(gen_constraint_var_var(a, elementNames[0], pMax, q_bound));
+                }
+                else {
+                    for (int i = 1; i <= consideredSize; ++i) {
+                        expr_ref_vector ors(m);
+                        ors.push_back(createEqualOP(
+                                createSelectOP(arrLhs, createAddOP(m_autil.mk_int(i - 1), startLhs)),
+                                createSelectOP(arrRhs, createAddOP(m_autil.mk_int(i - 1), startRhs))));
+                        ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                        ands.push_back(createOrOP(ors));
+                    }
+
+
+                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
+                    if (consideredSize >= connectingSize) {
+                        ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
+                        ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+                    }
+//                    else {
+//                        ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
+//                        ands.push_back(createLessEqOP(lenLhs, mk_int(consideredSize)));
+//                    }
                 }
             }
             else {
-                if (optimizing) {
-                    if (can_combine && elementNames.size() == p_bound.get_int64()) {
-                        andConstraints.push_back(gen_constraint_var_var(a, elementNames[0], pMax, q_bound));
-                    }
-                    else {
-                        if (can_combine) {
-                            NOT_IMPLEMENTED_YET();
-                        }
-                        else
-                            NOT_IMPLEMENTED_YET();
-                    }
+                if (can_combine) {
+                    ands.push_back(gen_constraint_flat_var(a, elementNames, pos, pMax, q_bound));
                 }
-                else {
-                    if (can_combine) {
-                        andConstraints.push_back(gen_constraint_flat_var(a, elementNames, pos, pMax, q_bound));
-                    }
-                    else
-                        andConstraints.push_back(gen_constraint_flat_flat(a, elementNames, pos, pMax, q_bound));
-                }
-
+                else
+                    ands.push_back(gen_constraint_flat_flat(a, elementNames, pos, pMax, q_bound));
             }
         }
-        return createAndOP(andConstraints);
+        return createAndOP(ands);
     }
 
     /*
@@ -10879,7 +10893,7 @@ namespace smt {
             expr *extraConstraint /* length = ? */
     ) {
         
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << " optimizing: " << optimizing << std::endl;);
 
         SASSERT (elements[regexPos].second <= REGEX_CODE);
         bool unrollMode = pMax == PMAX;
@@ -10910,8 +10924,8 @@ namespace smt {
 		return strTmp;
 
 #else
-        expr_ref_vector andConstraints(m);
-        andConstraints.push_back(createLessEqOP(regex_length, m_autil.mk_int(connectingSize)));
+        expr_ref_vector big_ands(m);
+        big_ands.push_back(createLessEqOP(regex_length, m_autil.mk_int(connectingSize)));
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(a.first, m) << std::endl;);
         vector<std::pair<int, int>> charRange = collect_char_range(elements[regexPos].first);
 
@@ -10933,7 +10947,7 @@ namespace smt {
 
                     ors.push_back(createOrOP(ors_range));
                     ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
-                    andConstraints.push_back(createOrOP(ors));
+                    big_ands.push_back(createOrOP(ors));
                 }
             }
             else {
@@ -10946,12 +10960,13 @@ namespace smt {
                     bound = tmp_len;
                 }
                 expr* arr = get_var_flat_array(elements[regexPos].first);
+                expr* flat_size = get_var_flat_size(elements[regexPos]);
                 if (arr)
                     for (int i = 0; i < bound; ++i){
                         expr_ref_vector ors(m);
-                        ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
+                        ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), flat_size));
                         ors.push_back(createEqualOP(createSelectOP(arr, mk_int(i)), createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs))));
-                        andConstraints.push_back(createOrOP(ors));
+                        big_ands.push_back(createOrOP(ors));
                     }
                 for (int i = 0; i < bound; ++i) {
                     expr_ref_vector ors(m);
@@ -10967,9 +10982,11 @@ namespace smt {
                         ors_range.push_back(createAndOP(ands));
                     }
                     ors.push_back(createOrOP(ors_range));
-                    ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
-                    andConstraints.push_back(createOrOP(ors));
+                    ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), flat_size));
+                    big_ands.push_back(createOrOP(ors));
                 }
+
+                big_ands.push_back(createLessEqOP(flat_size, mk_int(bound)));
             }
         }
         else {
@@ -10986,7 +11003,7 @@ namespace smt {
                     ors.push_back(createEqualOP(createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs)),
                                                       mk_int(strTmp[i % tmpNum])));
                     ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
-                    andConstraints.push_back(createOrOP(ors));
+                    big_ands.push_back(createOrOP(ors));
                 }
             }
             else {
@@ -10996,12 +11013,12 @@ namespace smt {
                     ors.push_back(createEqualOP(createSelectOP(lhs_array, createAddOP(m_autil.mk_int(i), pre_lhs)),
                             mk_int(strTmp[i % tmpNum])));
                     ors.push_back(createGreaterOP(m_autil.mk_int(i + 1), get_var_flat_size(elements[regexPos])));
-                    andConstraints.push_back(createOrOP(ors));
+                    big_ands.push_back(createOrOP(ors));
                 }
             }
         }
 
-        expr_ref ret(createAndOP(andConstraints), m);
+        expr_ref ret(createAndOP(big_ands), m);
         return ret;
 #endif
     };
@@ -12861,6 +12878,13 @@ namespace smt {
             int_vector const& right_arr,
             vector<std::pair<std::string, int>> const& lhs_elements,
             vector<std::pair<std::string, int>> const& rhs_elements){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
+        if (i > 0) {
+            STRACE("str", tout << __LINE__ << " " << lhs_elements[i - 1].first << " " << lhs_elements[i].first << " "
+                               << left_arr[i - 1] << std::endl;);
+        }
+        else
+            STRACE("str", tout << __LINE__ <<  " " << i << " " << lhs_elements[i].first << " " << left_arr[i] << std::endl;);
         if (left_arr[i] == SUMFLAT && right_arr[j] == i){
             /* check forward */
             if (i < (int)lhs_elements.size() - 1)
@@ -12883,6 +12907,7 @@ namespace smt {
             /* check backward */
             if (i > 0)
                 if (lhs_elements[i - 1].first.compare(lhs_elements[i].first) == 0) {
+
                     if (left_arr[i - 1] == EMPTYFLAT){
                         return LEFT_EMPTY;
                     }
@@ -19146,6 +19171,8 @@ namespace smt {
                     if (len_int != -1) {
                         zstring strValue;
                         if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
+                            // double check with other values
+                            construct_string_from_combination(mg, m_root2value, strValue);
                         }
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
                         return to_app(th.mk_string(strValue));
@@ -19370,22 +19397,10 @@ namespace smt {
                 for (const auto& e : com.get_value())
                     STRACE("str", tout << "\t" << mk_pp(e, mg.get_manager()) << std::endl;);
             }
-            ptr_vector<expr> combination = find_combination(root_node);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << mk_pp(root_node, mg.get_manager()) << " " << combination.size() << std::endl;);
-            if (combination.size() > 0)
-                for (const auto &eq : combination){
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << mk_pp(node, mg.get_manager()) << " by " << mk_pp(eq, mg.get_manager()) << len_eq << std::endl;);
-                    construct_string(mg, eq, m_root2value, val);
-                }
 
-            std::string ret = "";
-            for (int i = 0; i < len_int; ++i)
-                if (val[i] == -1) {
-                    ret = ret + th.default_char;
-                } else
-                    ret = ret + (char)val[i];
-            strValue = zstring(ret.c_str());
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
+            construct_string_from_combination(mg, m_root2value, val);
+            strValue = fill_default_char(len_int, val);
+
             return to_app(th.mk_string(strValue));
         }
         else {
@@ -19393,6 +19408,43 @@ namespace smt {
         }
 
         return false;
+    }
+
+    zstring theory_trau::string_value_proc::fill_default_char(int len, int_vector const &val){
+        zstring value;
+        std::string ret = "";
+        for (int i = 0; i < len; ++i)
+            if (val[i] == -1) {
+                ret = ret + th.default_char;
+            } else
+                ret = ret + (char)val[i];
+        value = zstring(ret.c_str());
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
+        return value;
+    }
+
+    void theory_trau::string_value_proc::construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, zstring &val){
+        int_vector v;
+        for (unsigned i = 0; i < val.length(); ++i){
+            v.push_back(val[i]);
+        }
+        construct_string_from_combination(mg, m_root2value, v);
+        std::string value = "";
+        for (unsigned i = 0; i < v.size(); ++i){
+            value = value + (char)v[i];
+        }
+        val = zstring(value.c_str());
+    }
+
+    void theory_trau::string_value_proc::construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, int_vector &val){
+        expr* root_node = th.get_context().get_enode(node)->get_root()->get_owner();
+        ptr_vector<expr> combination = find_combination(root_node);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << mk_pp(root_node, mg.get_manager()) << " " << combination.size() << std::endl;);
+        if (combination.size() > 0)
+            for (const auto &eq : combination){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << " " << mk_pp(node, mg.get_manager()) << " by " << mk_pp(eq, mg.get_manager()) << std::endl;);
+                construct_string(mg, eq, m_root2value, val);
+            }
     }
 
     ptr_vector<expr> theory_trau::string_value_proc::find_combination(expr*  e){
@@ -19577,7 +19629,7 @@ namespace smt {
                             val[j] = node_val[j - sum];
                         } else {
                             if (val[j] != (int) node_val[j - sum]) {
-                                if (val[j] == th.default_char)
+                                if (val[j] == th.default_char || th.u.str.is_string(nodes[i]))
                                     val[j] = node_val[j - sum];
                                 else
                                      STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);

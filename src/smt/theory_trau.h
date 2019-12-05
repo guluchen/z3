@@ -250,6 +250,9 @@ namespace smt {
             void collect_alternative_components(expr* v, vector<zstring>& ret);
             expr* is_regex_plus_breakdown(expr* e);
             bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue);
+            zstring fill_default_char(int len, int_vector const &val);
+            void construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, zstring &val);
+            void construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, int_vector &val);
             ptr_vector<expr> find_combination(expr*  e);
             bool construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val);
             bool get_char_range(unsigned_set & char_set);
@@ -352,7 +355,7 @@ namespace smt {
                 void find_remaining_non_fresh_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const &eq_combination);
                 void find_remaining_non_fresh_substr_vars(obj_map<expr, int> &non_fresh_vars);
                 void refine_not_contain_vars(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);
-                bool is_not_important(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
+                bool is_fresh(expr* haystack, zstring needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> const& non_fresh_vars);
                 bool appear_in_eq(expr* haystack, zstring needle, ptr_vector<expr> const& s, obj_map<expr, int> const& non_fresh_vars);
                 bool eq_in_list(expr* n, ptr_vector<expr> const& nodes);
                 bool can_omit(expr* lhs, expr* rhs, zstring needle);
@@ -567,6 +570,7 @@ namespace smt {
                                     pair_expr_vector const& lhs_elements,
                                     pair_expr_vector const& rhs_elements,
                                     obj_map<expr, int> const& non_fresh_variables);
+                bool one_var_arrange(pair_expr_vector const& elements);
                 void insert_top(expr_int const& e, pair_expr_vector &v);
             /*
              * Flat = Flat
