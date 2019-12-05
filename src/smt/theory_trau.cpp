@@ -3664,7 +3664,10 @@ namespace smt {
 
                     }
                 }
-                carry_on_results.insert(S, zstring(tmp.c_str()));
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(S, eqs);
+                for (const auto& eq : eqs)
+                    carry_on_results.insert(eq, zstring(tmp.c_str()));
             }
             else {
                 expr *eq_node = nullptr;
@@ -19157,7 +19160,7 @@ namespace smt {
             }
             else
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
-        }
+        } 
 
         sort * str_sort = th.u.str.mk_string_sort();
         bool is_string = str_sort == m_sort;
