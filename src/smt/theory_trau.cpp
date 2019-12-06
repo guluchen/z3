@@ -3314,11 +3314,12 @@ namespace smt {
             return FC_CONTINUE;
         }
 
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+
         bool addAxiom;
         expr_ref_vector diff(m);
 
         if (is_completed_branch(addAxiom, diff)){
+            STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
             if (addAxiom)
                 return FC_CONTINUE;
             else
@@ -4197,7 +4198,7 @@ namespace smt {
      * two branches are equal if SAT core of a branch is TRUE in the other branch
      */
     bool theory_trau::is_completed_branch(bool &addAxiom, expr_ref_vector &diff){
-        
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         addAxiom = false;
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
         fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
@@ -4229,7 +4230,6 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completed state " << completed_branches.size() << std::endl;);
-            // check all completed state, skip the last one
             for (int i = 0; i < (int)completed_branches.size() - 1; ++i){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
                 if (at_same_eq_state(completed_branches[i], diff) && at_same_diseq_state(guessed_eqs, guessed_diseqs, completed_branches[i].disequalities)){
@@ -4830,10 +4830,12 @@ namespace smt {
 
         // compare all diseq
         for(const auto& e : prev_diseq){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
             // skip x = ""
             if (is_empty_comparison(e))
                 continue;
-            if (!curr_diseq.contains(e) && curr_eq.contains(e)) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+            if (!curr_diseq.contains(e) && curr_eq.contains(to_app(e)->get_arg(0))) {
                 //STRACE("str", tout << __LINE__ <<  " not at_same_state  " << mk_pp(e, m) << std::endl;);
                 return false;
             }
@@ -6532,9 +6534,9 @@ namespace smt {
             }
             zstring value;
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
-            if (constLhs != nullptr && u.str.is_string(constLhs, value))
+            if (constLhs != nullptr && u.str.is_string(constLhs, value) && (constLhs == lhs || get_assign_lvl(lhs, constLhs) == 0))
                 handle_disequality_const(rhs, value, non_fresh_vars);
-            else if (constRhs != nullptr && u.str.is_string(constRhs, value))
+            else if (constRhs != nullptr && u.str.is_string(constRhs, value) && (constRhs == rhs || get_assign_lvl(rhs, constRhs) == 0))
                 handle_disequality_const(lhs, value, non_fresh_vars);
             else
                 handle_disequality_var(lhs, rhs, non_fresh_vars);
@@ -6772,8 +6774,9 @@ namespace smt {
                 assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), assertExpr));
             }
         }
-
-
+        else {
+            assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
+        }
     }
 
     void theory_trau::handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars){
@@ -9695,7 +9698,7 @@ namespace smt {
         rational one(1);
         bool unrollMode = pMax == PMAX;
         expr_int b = elements[pos];
-
+        expr_ref_vector ands(m);
         expr* lenA = get_var_flat_size(a);
         expr* lenB = get_var_flat_size(b);
         expr* arrA = get_var_flat_array(a);
@@ -9704,8 +9707,13 @@ namespace smt {
         expr* iterB = get_flat_iter(b);
         expr* pre_lhs = leng_prefix_lhs(a, elements, pos, false, unrollMode);
         expr* pre_rhs = leng_prefix_rhs(b, unrollMode);
+        int fixed_len = -1;
+        if (is_fixed_len_var(elements[pos].first, fixed_len)) {
+            bound = fixed_len;
+            ands.push_back(createLessEqOP(mk_strlen(elements[pos].first), mk_int(bound)));
+        }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " pre_rhs: " << mk_pp(pre_rhs, m) << std::endl;);
-        expr_ref_vector ands(m);
+
 
         if (elements.size() == 1) {
             ands.push_back(createEqualOP(iterA, iterB));
@@ -13309,6 +13317,10 @@ namespace smt {
                 curr_var_pieces_counter[l_k] += 1;
             }
             else {
+                int len_var = -1;
+                if (is_fixed_len_var(list[k], len_var) && len_var == 1){
+
+                }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << "; bound = " << p_bound.get_int64() << std::endl;);
                 for (int j = curr_var_pieces_counter[l_k]; j < curr_var_pieces_counter[l_k] + p_bound.get_int64(); ++j) { /* split variables into p_bound.get_int64() parts */
                     elements.push_back(std::make_pair(list[k], j));
@@ -18379,6 +18391,8 @@ namespace smt {
         correct_underapproximation_model(mg);
         carry_on_results.reset();
         eval_str_int(setup_str2int_map(mg), false);
+        for (const auto& value : carry_on_results)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(value.m_key, m) << " \"" << value.m_value << "\"" << std::endl;);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         setup_dependency_graph();
         default_char = setup_default_char(init_included_char_set(), init_excluded_char_set());
@@ -19623,7 +19637,11 @@ namespace smt {
             int sum = 0;
             for (int i = 0; i < (int)nodes.size(); ++i){
                 zstring node_val;
-                bool has_val = get_str_value(th.get_context().get_enode(nodes[i]), m_root2value, node_val);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+                bool has_val = false;
+                has_val = th.u.str.is_string(nodes[i], node_val);
+                if (!has_val)
+                    has_val = get_str_value(th.get_context().get_enode(nodes[i]), m_root2value, node_val);
                 if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
                     int len_int = node_val.length();
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << std::endl;);
