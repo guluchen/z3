@@ -8000,7 +8000,7 @@ namespace smt {
     expr* theory_trau::const_contains_key(zstring c, expr* pre_contain, expr* key, rational len){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(key, m) << std::endl;);
         zstring constKey;
-        int lenInt = len.get_int32();
+        int lenInt = len.get_int64();
 
         if (u.str.is_string(key, constKey)){
             if (c.contains(constKey)) {
@@ -8012,7 +8012,7 @@ namespace smt {
             expr_ref_vector ors(m);
             expr* arr = get_var_flat_array(key);
 
-            for (unsigned i = 0; i <= c.length() - len.get_int32(); ++i) {
+            for (unsigned i = 0; i <= c.length() - len.get_int64(); ++i) {
                 expr_ref_vector ands(m);
                 // | pre_contain | = i
                 ands.push_back(createEqualOP(mk_strlen(pre_contain), mk_int(i)));
@@ -19160,7 +19160,7 @@ namespace smt {
             }
             else
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
-        } 
+        }
 
         sort * str_sort = th.u.str.mk_string_sort();
         bool is_string = str_sort == m_sort;
@@ -19476,14 +19476,14 @@ namespace smt {
             for (unsigned i = 0; i < num_entries; i++){
                 func_entry const* fe = fi->get_entry(i);
                 expr* k =  fe->get_arg(0);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " <<  mk_pp(k, mg.get_manager())<< std::endl;);
                 rational key;
-                if (th.m_autil.is_numeral(k, key) && key.get_int32() >=0 ) {
+                if (th.m_autil.is_numeral(k, key) && key.get_int64() >=0 ) {
                     expr* v =  fe->get_result();
-
                     rational value;
                     if (th.m_autil.is_numeral(v, value)) {
-                        if (key.get_int32() < (int)vValue.size()) {
-                            vValue[key.get_int32()] = value.get_int32();
+                        if (key.get_int64() < (int)vValue.size()) {
+                            vValue[key.get_int64()] = value.get_int64();
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << key << " " << value << std::endl;);
                         }
                     }
@@ -19756,7 +19756,7 @@ namespace smt {
         if (m_root2value.find(n->get_root(), val)) {
             rational valInt;
             if (th.m_autil.is_numeral(val, valInt)) {
-                value = valInt.get_int32();
+                value = valInt.get_int64();
                 return true;
             }
             else {
@@ -19770,7 +19770,7 @@ namespace smt {
 
                 rational tmp;
                 if (th.m_autil.is_numeral(value_ral, tmp)) {
-                    value = tmp.get_int32();
+                    value = tmp.get_int64();
                     return true;
                 }
                 else
