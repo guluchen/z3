@@ -15170,6 +15170,8 @@ namespace smt {
 
                             if (concat_with_const(c.m_key))
                                 tmp.push_back(c.m_key);
+                            expr* needle = nullptr;
+//                            if (tmp.size() >= 1 && !(is_contain_equality(c.m_key, needle) && u.str.is_string(needle))) {
                             if (tmp.size() >= 1) {
                                 ret.insert(c.m_key, tmp);
                             }
@@ -15360,29 +15362,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " add " << mk_pp(e.m_key, m) << std::endl;);
             ret.push_back(e.m_key);
         }
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << ret.size() << std::endl;);
-//        if (ret.size() == 1 && !is_in_non_fresh_family(var, non_fresh_vars)) {
-//            // check if none of variable is really important
-//            ptr_vector<expr> v;
-//            get_all_nodes_in_concat(*ret.begin(), v);
-//            bool shouldKeep = false;
-//            for (const auto& nn : v) {
-//                int tmp;
-//                if (u.str.is_string(nn)){
-//                    shouldKeep = true;
-//                    break;
-//                }
-//                else if ((is_in_non_fresh_family(nn, non_fresh_vars, tmp) && tmp == -1)){
-//                    shouldKeep = true;
-//                    break;
-//                }
-//            }
-//
-//            if (!shouldKeep) {
-//                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": reset " << mk_pp(var, m) << std::endl;);
-//                ret.reset();
-//            }
-//        }
         return ret;
     }
 
@@ -15473,12 +15452,12 @@ namespace smt {
         context& ctx = get_context();
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
 
-        ptr_vector<expr> result = {};
+        ptr_vector<expr> results = {};
         object = ctx.get_enode(object)->get_root()->get_owner();
 
 
         if (constValue != nullptr) {
-            result.push_back(constValue);
+            results.push_back(constValue);
 
             if (object != constValue) {
                 expr_ref tmp(createEqualOP(object, constValue), m);
@@ -15487,7 +15466,7 @@ namespace smt {
             }
         }
 
-        obj_hashtable<expr> eqConcat;
+        obj_hashtable<expr> eq_concat;
         // refine concat: a . b = c . d && a = c && b = d
         expr_ref_vector refined_eqNodeSet(m);
         expr *arg0 = nullptr;
@@ -15551,11 +15530,13 @@ namespace smt {
                 if (is_non_fresh(arg1, non_fresh_vars) && !has_empty_vars(arg1)) {
                     eq_rhs.reset();
                     eq_rhs.push_back(find_representation(arg1));
+                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg1, m) << " --> " << mk_pp(eq_rhs[0], m) << std::endl;);
                 }
 
                 if (is_non_fresh(arg0, non_fresh_vars) && !has_empty_vars(arg0)) {
                     eq_lhs.reset();
                     eq_lhs.push_back(find_representation(arg0));
+                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg0, m) << " --> " << mk_pp(eq_lhs[0], m) << std::endl;);
                 }
 
                 // to avoid the exponential growth
@@ -15588,14 +15569,14 @@ namespace smt {
                             if (val_lhs.length() == 0) {
                                 STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << mk_pp(l, m) << " " << val_lhs << "--> = " << mk_pp(valueRhs, m)<< std::endl;);
                                 empty_concat = true;
-                                eqConcat.insert(rewrite_concat(valueRhs));
+                                eq_concat.insert(rewrite_concat(valueRhs));
                             }
 
                         if (!empty_concat && hasRhSValue)
                             if (val_rhs.length() == 0){
                                 STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << mk_pp(r, m) << " " << val_rhs << "--> = " << mk_pp(valueLhs, m) << std::endl;);
                                 empty_concat = true;
-                                eqConcat.insert(rewrite_concat(valueLhs));
+                                eq_concat.insert(rewrite_concat(valueLhs));
                             }
 
                         if (!empty_concat) {
@@ -15619,30 +15600,30 @@ namespace smt {
                             if (hasLhSValue && hasRhSValue){
                                 expr *tmp = u.str.mk_string(val_lhs + val_rhs);
                                 m_trail.push_back(tmp);
-                                eqConcat.insert(tmp);
+                                eq_concat.insert(tmp);
                             }
                             else if (hasLhSValue) {
                                 expr *tmp = create_concat_with_str(val_lhs, r);
                                 m_trail.push_back(tmp);
-                                eqConcat.insert(tmp);
+                                eq_concat.insert(tmp);
                             }
                             else if (hasRhSValue) {
                                 expr *tmp = create_concat_with_str(l, val_rhs);
                                 m_trail.push_back(tmp);
-                                eqConcat.insert(tmp);
+                                eq_concat.insert(tmp);
                             }
                             else {
                                 expr *tmp = create_concat_with_concat(l, r);
                                 m_trail.push_back(tmp);
-                                eqConcat.insert(tmp);
+                                eq_concat.insert(tmp);
                             }
                         }
                     }
             }
         }
 
-        STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << result.size() <<  " cases " << std::endl;);
-        for (const auto& e: eqConcat)
+        STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << eq_concat.size() <<  " cases " << std::endl;);
+        for (const auto& e: eq_concat)
             STRACE("str",
                    if (!u.str.is_concat(e))
                        tout << "\t\t" << mk_pp(e, m) << std::endl;
@@ -15656,7 +15637,7 @@ namespace smt {
                    });
 
         // continuing refining
-        for (const auto& nn : eqConcat)
+        for (const auto& nn : eq_concat)
             if (((!u.str.is_extract(nn)) &&
                  (!u.str.is_at(nn)) &&
                  (!u.str.is_replace(nn)) &&
@@ -15669,43 +15650,46 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << mk_pp(object, m) << " = " << mk_pp(nn, m) << std::endl;);
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
-                if (tmp.size() != 0 && !concat_in_set(nn, result)) {
-                    result.push_back(nn);
-
+                if (tmp.size() != 0 && !concat_in_set(nn, results)) {
+                    results.push_back(nn);
                 }
                 else {
                     obj_hashtable<expr> ret;
                     get_non_fresh_in_node(nn, non_fresh_vars, ret, true);
-                    if ((!ret.contains(nn) || ret.size() >= 2) && !concat_in_set(nn, result)) {
-                        result.push_back(nn);
+                    if ((!ret.contains(nn) || ret.size() >= 2) && !concat_in_set(nn, results)) {
+                        STRACE("str", tout << __LINE__ << " add " << mk_pp(nn, m) << std::endl;);
+                        results.push_back(nn);
                     }
                 }
             }
-
-        if (result.size() == 0) {
+        STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << results.size() << " cases " << std::endl;);
+        if (results.size() == 0) {
             expr* simp_concat = simplify_concat(object);
-            if (!result.contains(simp_concat)) {
-                result.push_back(simp_concat);
+            if (!results.contains(simp_concat)) {
+                if (is_non_fresh(simp_concat, non_fresh_vars)) {
+                    results.push_back(find_representation(simp_concat));
+                }
+                else results.push_back(simp_concat);
             }
         }
         else {
             // important var, it = itself, size = 1, it is root --> add another option if it is possible
-            if ( result.size() == 1 &&
-                    is_non_fresh(object, non_fresh_vars) &&
-                    object == *result.begin() &&
-                    u.str.is_concat(object)
+            if (results.size() == 1 &&
+                is_non_fresh(object, non_fresh_vars) &&
+                    object == *results.begin() &&
+                u.str.is_concat(object)
                 ){
                 for (const auto& nn : eqNodeSet)
                     if (!u.str.is_concat(nn) && to_app(nn)->get_num_args() < 2) {
-                        if (!concat_in_set(nn, result))
-                            result.push_back(nn);
+                        if (!concat_in_set(nn, results))
+                            results.push_back(nn);
                     }
             }
         }
 
-        combinations.insert(object, result);
+        combinations.insert(object, results);
 
-        for (const auto& e: result)
+        for (const auto& e: results)
             STRACE("str",
                    if (!u.str.is_concat(e))
                        tout << "\t\t" << mk_pp(e, m) << std::endl;
@@ -15717,7 +15701,7 @@ namespace smt {
                            tout << mk_pp(childrenVector[i], m)  << " ";
                        tout << std::endl;
                    });
-        return result;
+        return results;
     }
 
     expr* theory_trau::find_representation(expr* e){
