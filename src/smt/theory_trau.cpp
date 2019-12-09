@@ -18631,8 +18631,9 @@ namespace smt {
     }
 
     void theory_trau::finalize_model(model_generator& mg) {
-        STRACE("str", tout << "finalizing model..." << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& e : string_int_conversion_terms){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             if (m_autil.is_int_expr(e)){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 rational val;
@@ -18650,6 +18651,7 @@ namespace smt {
                 }
             }
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
     }
 
     void theory_trau::assert_axiom(expr *const e) {
@@ -19173,6 +19175,7 @@ namespace smt {
                         zstring strValue;
                         if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
                             // double check with other values
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
                             construct_string_from_combination(mg, m_root2value, strValue);
                         }
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
@@ -19193,7 +19196,7 @@ namespace smt {
                 }
                 zstring strValue;
                 construct_normally(mg, len_int, m_root2value, strValue);
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " " << strValue << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " \"" << strValue << "\"" << std::endl;);
                 return to_app(th.mk_string(strValue));
             }
             else {
@@ -19363,14 +19366,14 @@ namespace smt {
                     if (th.u.str.is_concat(node))
                         construct_string(mg, node, m_root2value, val);
 
-                    std::string ret = "";
+                    unsigned * s_vector = new unsigned[len_int];
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
-                            ret = ret + th.default_char;
+                            s_vector[i] = th.default_char;
                         } else
-                            ret = ret + (char)val[i];
-
-                    strValue = zstring(ret.c_str());
+                            s_vector[i] = (char)val[i];
+                    strValue = zstring(len_int, s_vector);
+                    delete[] (s_vector);
                     return to_app(th.mk_string(strValue));
                 } else {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
@@ -19413,14 +19416,15 @@ namespace smt {
 
     zstring theory_trau::string_value_proc::fill_default_char(int len, int_vector const &val){
         zstring value;
-        std::string ret = "";
+        unsigned * s_vector = new unsigned[len];
         for (int i = 0; i < len; ++i)
             if (val[i] == -1) {
-                ret = ret + th.default_char;
+                s_vector[i] = th.default_char;
             } else
-                ret = ret + (char)val[i];
-        value = zstring(ret.c_str());
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << ret << std::endl;);
+                s_vector[i] = (char)val[i];
+        value = zstring(len, s_vector);
+        delete[] (s_vector);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << value << std::endl;);
         return value;
     }
 
@@ -19430,11 +19434,13 @@ namespace smt {
             v.push_back(val[i]);
         }
         construct_string_from_combination(mg, m_root2value, v);
-        std::string value = "";
+        unsigned * s_vector = new unsigned[v.size()];
         for (unsigned i = 0; i < v.size(); ++i){
-            value = value + (char)v[i];
+            s_vector[i] = v[i];
         }
-        val = zstring(value.c_str());
+        val = zstring(v.size(), s_vector);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << val << std::endl;);
+        delete[] (s_vector);
     }
 
     void theory_trau::string_value_proc::construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, int_vector &val){
@@ -19568,7 +19574,6 @@ namespace smt {
 
     zstring theory_trau::string_value_proc::fill_chars(int_vector const& vValue, unsigned_set const& char_set, bool &completed){
         zstring value;
-
         for (unsigned i = 0; i < vValue.size(); ++i) {
             if (char_set.size() > 0){
                 char tmp = (char)vValue[i];
