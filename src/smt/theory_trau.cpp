@@ -6854,7 +6854,7 @@ namespace smt {
                 handle_not_contain_const(lhs, value, premise, cached);
             else
                 handle_not_contain_var(lhs, contain, premise, cached);
-        }
+        } 
     }
 
     void theory_trau::handle_not_contain_substr_index(expr *lhs, expr *rhs){
@@ -6902,10 +6902,6 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached){
-        zstring tmp("U");
-        if (rhs == tmp)
-            return;
-        
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << rhs << ")\n";);
         int bound = -1;
 
