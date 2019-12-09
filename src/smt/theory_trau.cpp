@@ -6854,7 +6854,7 @@ namespace smt {
                 handle_not_contain_const(lhs, value, premise, cached);
             else
                 handle_not_contain_var(lhs, contain, premise, cached);
-        } 
+        }
     }
 
     void theory_trau::handle_not_contain_substr_index(expr *lhs, expr *rhs){
@@ -19603,7 +19603,7 @@ namespace smt {
     }
 
     int theory_trau::string_value_proc::find_alternative_value(int val){
-        for (int i = 1; i < 32; ++i)
+        for (int i = 16; i < 32; ++i)
             if (!th.value_set.contains(i))
                 return i;
         for (int i = 129; i < 255; ++i)
