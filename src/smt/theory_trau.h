@@ -243,6 +243,9 @@ namespace smt {
             }
 
             app * mk_value(model_generator & mg, expr_ref_vector const & values) override ;
+            zstring find_value(expr* n);
+            zstring get_eq_combination_value(expr* n);
+            bool are_equal_concat(expr* lhs, expr* rhs);
             bool question_return_value(zstring s);
             bool construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value);
             bool create_string_with_length(vector<zstring> const& elements, zstring &current_str, int remain_length);

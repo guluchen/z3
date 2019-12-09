@@ -15358,6 +15358,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " add " << mk_pp(e.m_key, m) << std::endl;);
             ret.push_back(e.m_key);
         }
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << ret.size() << std::endl;);
         return ret;
     }
 
@@ -19158,6 +19159,10 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(m_dependencies[i].get_enode()->get_owner(), m) << " no value " << std::endl;);
         }
 
+        zstring found_value = find_value(node);
+        if (found_value != zstring(""))
+            return to_app(th.mk_string(found_value));
+
         sort * str_sort = th.u.str.mk_string_sort();
         bool is_string = str_sort == m_sort;
 
@@ -19175,6 +19180,7 @@ namespace smt {
                             construct_string_from_combination(mg, m_root2value, strValue);
                         }
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = \"" << strValue << "\"" << std::endl;);
+                        th.carry_on_results.insert(node, strValue);
                         return to_app(th.mk_string(strValue));
                     }
                 }
@@ -19193,6 +19199,7 @@ namespace smt {
                 zstring strValue;
                 construct_normally(mg, len_int, m_root2value, strValue);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, m) << " \"" << strValue << "\"" << std::endl;);
+                th.carry_on_results.insert(node, strValue);
                 return to_app(th.mk_string(strValue));
             }
             else {
@@ -19206,6 +19213,58 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << " " <<  ((float)(clock() - t))/CLOCKS_PER_SEC<< std::endl;);
         return node;
+    }
+
+    zstring theory_trau::string_value_proc::find_value(expr* n){
+        app* val = nullptr;
+        for (const auto& eq : th.uState.eq_combination){
+            if (are_equal_concat(n, eq.m_key)){
+                zstring tmp = get_eq_combination_value(eq.m_key);
+                if (tmp != zstring("")){
+                    return tmp;
+                }
+            }
+
+            for (const auto& e : eq.m_value){
+                if (are_equal_concat(n, e)){
+                    zstring tmp = get_eq_combination_value(eq.m_key);
+                    if (tmp != zstring("")){
+                        return tmp;
+                    }
+                }
+            }
+        }
+        return zstring("");
+    }
+
+    zstring theory_trau::string_value_proc::get_eq_combination_value(expr* n){
+        if (th.uState.eq_combination.contains(n)){
+            if (th.carry_on_results.contains(n))
+                return th.carry_on_results[n];
+            else {
+                for (const auto& e : th.uState.eq_combination[n])
+                    if (th.carry_on_results.contains(e))
+                        return th.carry_on_results[e];
+            }
+        }
+        return zstring("");
+    }
+
+    bool theory_trau::string_value_proc::are_equal_concat(expr* lhs, expr* rhs){
+        ptr_vector<expr> vLhs;
+        th.get_nodes_in_concat(lhs, vLhs);
+
+        ptr_vector<expr> vRhs;
+        th.get_nodes_in_concat(rhs, vRhs);
+
+        if (vLhs.size() == vRhs.size()) {
+            for (unsigned i = 0; i < vLhs.size(); ++i)
+                if (vLhs[i] != vRhs[i])
+                    return false;
+        }
+        else
+            return false;
+        return true;
     }
 
     bool theory_trau::string_value_proc::question_return_value(zstring s){
