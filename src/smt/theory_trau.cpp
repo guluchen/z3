@@ -3289,7 +3289,7 @@ namespace smt {
 
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-        dump_assignments();
+//        dump_assignments();
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
@@ -15136,7 +15136,7 @@ namespace smt {
             if (!important) {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
                 // the var is too complicated
-                if (c_second.size() > 20) {
+                if (c_second.size() >= 10) {
                     non_fresh_vars.insert(c.m_key, -1);
                     ret.insert(c.m_key, c_second);
                 }
@@ -15551,6 +15551,7 @@ namespace smt {
                     eq_rhs.push_back(find_equivalent_variable(arg1));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
                 }
+
                 for (const auto &l : eq_lhs)
                     for (const auto &r : eq_rhs) {
                         zstring val_lhs, val_rhs;
