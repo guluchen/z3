@@ -18433,7 +18433,7 @@ namespace smt {
         for (const auto& n : uState.eq_combination) {
             if (!ctx.is_relevant(n.m_key))
                 continue;
-
+            obj_hashtable<expr> required_values;
             expr_ref_vector dep = get_dependencies(n.m_key);
             expr* reg = nullptr;
             for (const auto& nn : dep) {
@@ -18442,15 +18442,27 @@ namespace smt {
                 if (u.str.is_string(nn) || is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << mk_pp(n.m_key, m) << std::endl;);
                     if (!are_equal_exprs(n.m_key, nn)) {
-                        if (!dependency_graph.contains(n.m_key)){
-                            dependency_graph.insert(n.m_key, {});
-                        }
-                        dependency_graph[n.m_key].insert(ctx.get_enode(nn)->get_root()->get_owner());
+                        required_values.insert(ctx.get_enode(nn)->get_root()->get_owner());
                     }
                     included_nodes.insert(ctx.get_enode(nn)->get_root()->get_owner());
                 }
             }
+
+            if (!dependency_graph.contains(n.m_key)){
+                dependency_graph.insert(n.m_key, {});
+            }
+            for (const auto& e : required_values)
+                dependency_graph[n.m_key].insert(e);
+
+            for (const auto& e : n.m_value){
+                if (!dependency_graph.contains(e)){
+                    dependency_graph.insert(e, {});
+                }
+                for (const auto& ex : required_values)
+                    dependency_graph[e].insert(ex);
+            }
         }
+
     }
 
     void theory_trau::setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes){
@@ -19145,7 +19157,6 @@ namespace smt {
 
     app * theory_trau::string_value_proc::mk_value(model_generator & mg, expr_ref_vector const &  values) {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        clock_t start_clock = clock();
         ast_manager & m = mg.get_manager();
         obj_map<enode, app *> m_root2value = mg.get_root2value();
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":"  << mk_pp(node, m) << std::endl;);
@@ -19160,9 +19171,10 @@ namespace smt {
         }
 
         zstring found_value = find_value(node);
-        if (found_value != zstring(""))
+        if (found_value != zstring("")) {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " got value "  << found_value << std::endl;);
             return to_app(th.mk_string(found_value));
-
+        }
         sort * str_sort = th.u.str.mk_string_sort();
         bool is_string = str_sort == m_sort;
 
@@ -19421,6 +19433,7 @@ namespace smt {
                     if (th.u.str.is_concat(node))
                         construct_string(mg, node, m_root2value, val);
 
+                    construct_string_from_combination(mg, m_root2value, val);
                     unsigned * s_vector = new unsigned[len_int];
                     for (int i = 0; i < len_int; ++i)
                         if (val[i] == -1) {
@@ -19445,7 +19458,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << std::endl;);
             if (th.u.str.is_concat(node))
                 construct_string(mg, node, m_root2value, val);
-
 
             int len_eq = -1;
             expr* root_node = th.get_context().get_enode(node)->get_root()->get_owner();
@@ -19516,6 +19528,10 @@ namespace smt {
                 if (th.get_context().get_enode(n.m_key)->get_root()->get_owner() == e) {
                     eqs.append(n.m_value);
                 }
+                for (const auto& nn : n.m_value)
+                    if (are_equal_concat(e, nn)){
+                        eqs.append(n.m_value);
+                    }
             }
         return eqs;
     }
@@ -19690,16 +19706,10 @@ namespace smt {
                     int len_int = node_val.length();
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << std::endl;);
                     for (int j = sum; j < sum + len_int; ++j) {
-                        if (val[j] == -1) {
+                        if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
                             val[j] = node_val[j - sum];
-                        } else {
-                            if (val[j] != (int) node_val[j - sum]) {
-                                if (val[j] == th.default_char || th.u.str.is_string(nodes[i]))
-                                    val[j] = node_val[j - sum];
-                                else
-                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " " << (char)val[j] << " \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
-                            }
-                        }
+                        } else if (val[j] != node_val[j - sum])
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \"" << (char)val[j] << "\" vs \"" << node_val[j - sum] << "\" in \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
                     }
                     sum = sum + len_int;
                 }
