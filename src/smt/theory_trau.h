@@ -1019,9 +1019,9 @@ namespace smt {
             bool is_fixed_len_var(expr* nn, int& len);
             expr_set collect_non_ineq_vars();
             expr_set collect_needles();
-            void collect_non_fresh_vars_str_int(obj_map<expr, int> &vars);
+            void collect_non_fresh_vars_str_int(obj_map<expr, int> &str_int_vars);
             int find_fixed_len(expr* e);
-            void add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len);
+            void add_non_fresh_var(expr* const &e, obj_map<expr, int> &str_int_vars, int len);
             void update_string_int_vars(expr* v, expr* e, obj_map<expr, expr*> &s);
             bool is_str_int_var(expr* e);
             void refine_important_vars(obj_map<expr, int> &non_fresh_vars, expr_ref_vector &fresh_vars, obj_map<expr, ptr_vector<expr>> const& eq_combination);

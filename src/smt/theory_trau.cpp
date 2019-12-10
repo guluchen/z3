@@ -14203,7 +14203,7 @@ namespace smt {
         return ret;
     }
 
-    void theory_trau::collect_non_fresh_vars_str_int(obj_map<expr, int> &vars){
+    void theory_trau::collect_non_fresh_vars_str_int(obj_map<expr, int> &str_int_vars){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         flat_enabled = false;
         if (string_int_conversion_terms.size() > 0) {
@@ -14217,22 +14217,22 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m)<< std::endl;);
                 app* a = to_app(e);
                 if (u.str.is_stoi(a->get_arg(0), a0)){
-                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a0, str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a0, a->get_arg(0),string_int_vars);
                     update_string_int_vars(a->get_arg(1), a0,int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0), a0)){
-                    add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a->get_arg(1), str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), a0,string_int_vars);
                     update_string_int_vars(a0, a->get_arg(0), int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1), a0)){
-                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a0, str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a0, a->get_arg(1), string_int_vars);
                     update_string_int_vars(a->get_arg(0), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1), a0)){
-                    add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a->get_arg(0), str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), a0, string_int_vars);
                     update_string_int_vars(a0, a->get_arg(1), int_string_vars);
                 }
@@ -14243,30 +14243,30 @@ namespace smt {
 
                 app* a = to_app(to_app(e)->get_arg(0));
                 if (u.str.is_stoi(a->get_arg(0), a0)){
-                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a0, str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a0, a->get_arg(0), string_int_vars);
                     update_string_int_vars(a->get_arg(1), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(0), a0)){
-                    add_non_fresh_var(a->get_arg(1), vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a->get_arg(1), str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(1), a0, string_int_vars);
                     update_string_int_vars(a0, a->get_arg(1), int_string_vars);
                 }
                 else if (u.str.is_stoi(a->get_arg(1), a0)){
-                    add_non_fresh_var(a0, vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a0, str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a0, a->get_arg(0), string_int_vars);
                     update_string_int_vars(a->get_arg(0), a0, int_string_vars);
                 }
                 else if (u.str.is_itos(a->get_arg(1), a0)){
-                    add_non_fresh_var(a->get_arg(0), vars, str_int_bound.get_int64());
+                    add_non_fresh_var(a->get_arg(0), str_int_vars, str_int_bound.get_int64());
                     update_string_int_vars(a->get_arg(0), a0, string_int_vars);
                     update_string_int_vars(a0, a->get_arg(0), int_string_vars);
                 }
             }
         }
 
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << vars.size() << std::endl;);
-        if (vars.size() > 0)
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << str_int_vars.size() << std::endl;);
+        if (str_int_vars.size() > 0)
             flat_enabled = true;
     }
 
@@ -14281,17 +14281,20 @@ namespace smt {
         return -1;
     }
 
-    void theory_trau::add_non_fresh_var(expr* const &e, obj_map<expr, int> &vars, int len){
+    void theory_trau::add_non_fresh_var(expr* const &e, obj_map<expr, int> &str_int_vars, int len){
         int tmp = find_fixed_len(e);
         if (tmp != -1)
             len = tmp;
-        if (vars.contains(e)){
-            if (!(vars[e] == -1 || vars[e] > len))
-                vars[e] = len;
-        }
-        else{
-            vars.insert(e, len);
-        }
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(e, eqs);
+        for (const auto& eq : eqs)
+            if (str_int_vars.contains(eq)){
+                if (!(str_int_vars[eq] == -1 || str_int_vars[eq] > len))
+                    str_int_vars[eq] = len;
+            }
+            else{
+                str_int_vars.insert(eq, len);
+            }
 
     }
 
