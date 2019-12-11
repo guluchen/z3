@@ -18505,7 +18505,7 @@ namespace smt {
             for (const auto& nn : dep) {
                 if (!ctx.is_relevant(nn))
                     continue;
-                if (u.str.is_string(nn) || is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
+                if (is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << mk_pp(n.m_key, m) << std::endl;);
                     if (!are_equal_exprs(n.m_key, nn)) {
                         required_values.insert(ctx.get_enode(nn)->get_root()->get_owner());
