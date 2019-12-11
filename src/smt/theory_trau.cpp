@@ -4879,6 +4879,7 @@ namespace smt {
                     starts.push_back(constStr);
                     ends.push_back(constStr);
                 }
+
             // check all starts
             for (unsigned i = 0; i < starts.size(); ++i)
                 for (unsigned j = i + 1; j < starts.size(); ++j)
@@ -4886,7 +4887,7 @@ namespace smt {
 
                     }
                     else {
-                        
+
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " starts with " << starts[i] << " and " << starts[j] << std::endl;);
                         return false;
                     }
@@ -4898,10 +4899,67 @@ namespace smt {
 
                     }
                     else {
-                        
+
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " ends with " << ends[i] << " and " << ends[j] << std::endl;);
                         return false;
                     }
+        }
+
+        expr_ref_vector ands(m);
+        for (const auto& c : eq_combination) {
+            expr_ref_vector starts_var(m);
+            expr_ref_vector ends_var(m);
+            zstring constStr;
+            for (const auto& concat : c.get_value())
+                if (u.str.is_concat(concat)){
+                    ptr_vector<expr> childNodes;
+                    get_nodes_in_concat(concat, childNodes);
+                    starts_var.push_back(childNodes[0]);
+                    ends_var.push_back(childNodes[childNodes.size() - 1]);
+                }
+                else if (u.str.is_string(concat, constStr)) {
+                    starts_var.push_back(concat);
+                    ends_var.push_back(concat);
+                }
+
+            for (const auto& s : starts_var)
+                for (const auto& ss : starts_var){
+                    zstring str;
+                    if (u.str.is_string(ss, str)){
+                        expr* realHaystack = nullptr;
+                        if (not_contain(s, ss, realHaystack)){
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+                            expr* tmp = createLessEqOP(mk_strlen(s), mk_int(str.length() - 1));
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
+                            ands.push_back(tmp);
+                        }
+                    }
+                }
+
+            for (const auto& s : ends_var){
+                zstring str;
+                for (const auto& ss : ends_var)
+                    if (u.str.is_string(ss, str)){
+                        expr* realHaystack = nullptr;
+                        if (not_contain(s, ss, realHaystack)){
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+                            expr* tmp = createLessEqOP(mk_strlen(s), mk_int(str.length() - 1));
+                            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(tmp, m) << std::endl;);
+                            ands.push_back(tmp);
+                        }
+                    }
+            }
+
+
+            if (ands.size() > 0) {
+                expr_ref_vector eqcores(m), diseqcores(m);
+                fetch_guessed_exprs_with_scopes(eqcores, diseqcores);
+                fetch_guessed_core_exprs(eq_combination, eqcores, diseqcores);
+                expr_ref toAssert(rewrite_implication(createAndOP(eqcores), createAndOP(ands)), m);
+                m_trail.push_back(toAssert.get());
+                assert_axiom(toAssert.get());
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
+            }
         }
         return true;
     }
@@ -14869,15 +14927,18 @@ namespace smt {
 
     bool theory_trau::collect_not_contains(expr* nn, expr_set const& ineq_vars, expr_set const& needles){
         if (ineq_vars.contains(nn))
-            if (is_haystack(nn))
+            if (is_haystack(nn)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " is_haystack " << mk_pp(nn, m) << std::endl;);
                 return true;
-
+            }
         if (needles.contains(nn)) {
             bool has_const_eq = false;
             get_eqc_value(nn, has_const_eq);
             if (!has_const_eq) {
-                if (is_needle(nn))
+                if (is_needle(nn)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " is_needle " << mk_pp(nn, m) << std::endl;);
                     return true;
+                }
             }
         }
         return false;
