@@ -18529,6 +18529,7 @@ namespace smt {
             }
 
             if (is_non_fresh(n.m_key)){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << std::endl;);
                 for (const auto& e : n.m_value)
                     if (!are_equal_exprs(n.m_key, e)){
                         if (!dependency_graph.contains(e)){
