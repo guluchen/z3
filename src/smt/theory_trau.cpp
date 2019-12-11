@@ -15091,7 +15091,8 @@ namespace smt {
             if (!combinations.contains(node)){
                 TRACE("str", tout << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
                 expr_ref_vector parents(m);
-                extend_object(ctx.get_enode(node)->get_root()->get_owner(), combinations, non_root_nodes, parents, non_fresh_vars);
+                norrmalize_object(ctx.get_enode(node)->get_root()->get_owner(), combinations, non_root_nodes, parents,
+                                  non_fresh_vars);
             }
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
@@ -15430,7 +15431,7 @@ namespace smt {
             return false;
     }
 
-    ptr_vector<expr> theory_trau::extend_object(
+    ptr_vector<expr> theory_trau::norrmalize_object(
             expr* object,
             obj_map<expr, ptr_vector<expr>> &combinations,
             obj_hashtable<expr> &non_root_nodes,
@@ -15508,7 +15509,7 @@ namespace smt {
                     expr_ref_vector lhs_parents(m);
                     lhs_parents.append(parents);
                     lhs_parents.push_back(arg0);
-                    eq_lhs.append(extend_object(arg0, combinations, non_root_nodes, lhs_parents, non_fresh_vars));
+                    eq_lhs.append(norrmalize_object(arg0, combinations, non_root_nodes, lhs_parents, non_fresh_vars));
                 }
                 else {
                     eq_lhs.push_back(arg0);
@@ -15521,7 +15522,7 @@ namespace smt {
                     rhs_parents.append(parents);
                     rhs_parents.push_back(arg1);
 
-                    eq_rhs.append(extend_object(arg1, combinations, non_root_nodes, rhs_parents, non_fresh_vars));
+                    eq_rhs.append(norrmalize_object(arg1, combinations, non_root_nodes, rhs_parents, non_fresh_vars));
                 }
                 else {
                     eq_rhs.push_back(arg1);
@@ -18464,6 +18465,17 @@ namespace smt {
                 }
                 for (const auto& ex : required_values)
                     dependency_graph[e].insert(ex);
+            }
+
+            if (is_non_fresh(n.m_key)){
+                for (const auto& e : n.m_value)
+                    if (!are_equal_exprs(n.m_key, e)){
+                        if (!dependency_graph.contains(e)){
+                            dependency_graph.insert(e, {});
+                        }
+                        dependency_graph[e].reset();
+                        dependency_graph[e].insert(n.m_key);
+                    }
             }
         }
 
