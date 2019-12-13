@@ -10905,6 +10905,7 @@ namespace smt {
                     ands.push_back(gen_constraint_var_var(a, elementNames[0], pMax, q_bound));
                 }
                 else {
+                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** error: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
                     for (int i = 1; i <= consideredSize; ++i) {
                         expr_ref_vector ors(m);
                         ors.push_back(createEqualOP(
@@ -10913,7 +10914,7 @@ namespace smt {
                         ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
                         ands.push_back(createOrOP(ors));
                     }
-
+                    ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
 
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
                     if (consideredSize >= connectingSize) {
@@ -15192,7 +15193,7 @@ namespace smt {
             if (!important) {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
                 // the var is too complicated
-                if (c_second.size() >= 10) {
+                if (c.get_value().size() >= 10) {
                     non_fresh_vars.insert(c.m_key, -1);
                     ret.insert(c.m_key, c_second);
                 }
@@ -15540,7 +15541,6 @@ namespace smt {
                 for (const auto& exp : refined_eqNodeSet) {
                     expr* lhs = to_app(exp)->get_arg(0);
                     expr* rhs = to_app(exp)->get_arg(1);
-
                     if (eqLhsSet.contains(lhs) && eqRhsSet.contains(rhs)) {
                         found = true;
                         break;
@@ -15556,6 +15556,8 @@ namespace smt {
 
         for (const auto& ex : refined_eqNodeSet) {
             if (u.str.is_concat(ex, arg0, arg1)) {
+                if (skip_concat(ex))
+                    continue;
                 add_non_root_vars(arg0, arg1, non_root_nodes);
 
                 STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
@@ -15759,6 +15761,21 @@ namespace smt {
                        tout << std::endl;
                    });
         return results;
+    }
+
+    bool theory_trau::skip_concat(expr* e){
+        expr* arg0 = nullptr, *arg1 = nullptr;
+        if (u.str.is_concat(e, arg0, arg1)) {
+            if (u.str.is_concat(arg0)) {
+                ptr_vector<expr> nodes;
+                if (nodes.size() == 2 && u.str.is_string(nodes[1])) {
+                    std::string tmp = expr2str(nodes[0]);
+                    if (tmp.find("pre_contain!") != std::string::npos || tmp.find("indexOf1!") != std::string::npos)
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     expr* theory_trau::find_representation(expr* e){
@@ -19805,8 +19822,12 @@ namespace smt {
                     for (int j = sum; j < sum + len_int; ++j) {
                         if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
                             val[j] = node_val[j - sum];
-                        } else if (val[j] != node_val[j - sum])
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \"" << (char)val[j] << "\" vs \"" << node_val[j - sum] << "\" in \"" << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
+                        } else if (val[j] != node_val[j - sum]) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
+                                               << (char) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
+                                               << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
+//                            val[j] = node_val[j - sum];
+                        }
                     }
                     sum = sum + len_int;
                 }
