@@ -4865,20 +4865,16 @@ namespace smt {
             vector<zstring> starts;
             vector<zstring> ends;
             zstring constStr;
-            for (const auto& concat : c.get_value())
-                if (u.str.is_concat(concat)){
-                    ptr_vector<expr> childNodes;
-                    get_nodes_in_concat(concat, childNodes);
-                    zstring value;
-                    if (u.str.is_string(childNodes[0], value))
-                        starts.push_back(value);
-                    if (u.str.is_string(childNodes[childNodes.size() - 1], value))
-                        ends.push_back(value);
-                }
-                else if (u.str.is_string(concat, constStr)) {
-                    starts.push_back(constStr);
-                    ends.push_back(constStr);
-                }
+            for (const auto& concat : c.get_value()){
+                zstring value;
+                expr* left_most = getMostLeftNodeInConcat(concat);
+                if (u.str.is_string(left_most, value))
+                    starts.push_back(value);
+                expr* right_most = getMostRightNodeInConcat(concat);
+                if (u.str.is_string(right_most, value))
+                    ends.push_back(value);
+            }
+
 
             // check all starts
             for (unsigned i = 0; i < starts.size(); ++i)
@@ -4887,7 +4883,6 @@ namespace smt {
 
                     }
                     else {
-
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " starts with " << starts[i] << " and " << starts[j] << std::endl;);
                         return false;
                     }
@@ -4899,7 +4894,6 @@ namespace smt {
 
                     }
                     else {
-
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " ends with " << ends[i] << " and " << ends[j] << std::endl;);
                         return false;
                     }
@@ -16133,6 +16127,12 @@ namespace smt {
             return;
         }
         axiomatized_terms.insert(expr);
+
+        if (!can_be_prefix(expr->get_arg(0), expr->get_arg(1))){
+            TRACE("str", tout << " cannot be prefix  " << mk_pp(expr, m) << std::endl;);
+            assert_axiom(mk_not(m, expr));
+            return;
+        }
         TRACE("str", tout << "instantiate prefixof axiom for " << mk_pp(expr, m) << std::endl;);
 
         expr_ref ts0(mk_str_var("pre_prefix"), m);
@@ -16626,6 +16626,25 @@ namespace smt {
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
             m_delayed_axiom_setup_terms.push_back(containsAxiom);
         }
+    }
+
+    bool theory_trau::can_be_prefix(expr* prefix, expr* n){
+        zstring s;
+        if (u.str.is_string(prefix, s)){
+            expr* left_most = getMostLeftNodeInConcat(n);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << " " << mk_pp(left_most, m)<< std::endl;);
+            if (u.str.is_itos(left_most) && !is_number(s))
+                return false;
+        }
+        return true;
+    }
+
+    bool theory_trau::is_number(zstring n){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << n << std::endl;);
+        for (unsigned i = 0; i < n.length(); ++i)
+            if (!(n[i] >= '0' && n[i] <= '9'))
+                return false;
+        return true;
     }
 
     void theory_trau::sync_indexof(expr* e){
