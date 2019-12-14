@@ -15029,31 +15029,31 @@ namespace smt {
 
         if (diffLen > 0) {
             context& ctx = get_context();
-            vector<zstring> constParts;
+            vector<zstring> const_zstring;
             int constPartLen = 0;
             if (combinations.contains(ctx.get_enode(nn)->get_root()->get_owner())) {
                 for (const auto& concat : combinations[ctx.get_enode(nn)->get_root()->get_owner()]) {
-                    ptr_vector<expr> nodeList;
-                    get_nodes_in_concat(concat, nodeList);
-                    zstring constPartTmp = "";
-                    for (unsigned j = 0; j < nodeList.size(); ++j) {
+                    ptr_vector<expr> concat_nodes;
+                    get_nodes_in_concat(concat, concat_nodes);
+                    zstring const_tmp = "";
+                    for (unsigned j = 0; j < concat_nodes.size(); ++j) {
                         zstring valueStr;
                         bool has_eqc_value = false;
-                        expr *constValue = get_eqc_value(nodeList[j], has_eqc_value);
+                        expr *constValue = get_eqc_value(concat_nodes[j], has_eqc_value);
                         if (has_eqc_value) {
                             u.str.is_string(constValue, valueStr);
-                            constPartTmp = constPartTmp + valueStr;
+                            const_tmp = const_tmp + valueStr;
                         }
                     }
 
-                    if ((int)constPartTmp.length() > constPartLen) {
-                        constParts.clear();
-                        constParts.push_back(constPartTmp);
-                        constPartLen = (int)constPartTmp.length();
-                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << constPartTmp << std::endl;);
+                    if ((int)const_tmp.length() > constPartLen) {
+                        const_zstring.clear();
+                        const_zstring.push_back(const_tmp);
+                        constPartLen = (int)const_tmp.length();
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << const_tmp << std::endl;);
                     }
-                    else if ((int)constPartTmp.length() == constPartLen) {
-                        constParts.push_back(constPartTmp);
+                    else if ((int)const_tmp.length() == constPartLen) {
+                        const_zstring.push_back(const_tmp);
                     }
                 }
             }
@@ -15061,15 +15061,15 @@ namespace smt {
             if (constPartLen == diffLen) {
                 for (const auto &s : maxDiffStrs) {
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " diffstr: " << s << std::endl;);
-                    for (const auto &ss : constParts) {
+                    for (const auto &ss : const_zstring) {
                         if (ss.operator==(s)) {
                             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << ss << " == " << s << std::endl;);
                             if (u.str.is_concat(nn)) {
-                                ptr_vector<expr> childrenVector;
-                                get_nodes_in_concat(nn, childrenVector);
+                                ptr_vector<expr> concat_nodes;
+                                get_nodes_in_concat(nn, concat_nodes);
                                 expr_ref_vector adds(m);
-                                for (unsigned i = 0; i < childrenVector.size(); ++i)
-                                    adds.push_back(mk_strlen(childrenVector[i]));
+                                for (unsigned i = 0; i < concat_nodes.size(); ++i)
+                                    adds.push_back(mk_strlen(concat_nodes[i]));
                                 expr_ref tmp(createGreaterEqOP(createAddOP(adds), mk_int(constPartLen + 1)), m);
 //                                expr* causes = create_conjuct_all_inequalities(nn);
 
@@ -18567,7 +18567,7 @@ namespace smt {
             if (is_non_fresh(n.m_key)){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << std::endl;);
                 for (const auto& e : n.m_value)
-                    if (!are_equal_exprs(n.m_key, e)){
+                    if (!are_equal_exprs(n.m_key, e) && contains_free_variables(e)){
                         if (!dependency_graph.contains(e)){
                             dependency_graph.insert(e, {});
                         }
@@ -18576,7 +18576,18 @@ namespace smt {
                     }
             }
         }
+    }
 
+    bool theory_trau::contains_free_variables(expr* e){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(e, nodes);
+        for (const auto& n : nodes){
+            bool has_value;
+            if (!(get_eqc_value(n, has_value) || is_non_fresh(n))){
+                return true;
+            }
+        }
+        return false;
     }
 
     void theory_trau::setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes){

@@ -1074,6 +1074,7 @@ namespace smt {
         obj_map<expr, std::pair<rational, rational>> setup_str2int_map(model_generator& mg);
         void setup_dependency_graph();
         void setup_dependency_graph_from_combination(obj_hashtable<expr> &included_nodes);
+        bool contains_free_variables(expr* e);
         void setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes);
         void update_dependency_graph(expr* concat, expr* child, bool is_active, bool is_fresh);
         obj_hashtable<expr> collect_nodes_in_combination();
