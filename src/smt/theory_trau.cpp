@@ -3289,7 +3289,7 @@ namespace smt {
 
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-//        dump_assignments();
+        dump_assignments();
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
@@ -15578,20 +15578,21 @@ namespace smt {
                     expr_ref_vector rhs_parents(m);
                     rhs_parents.append(parents);
                     rhs_parents.push_back(arg1);
-
                     eq_rhs.append(norrmalize_object(arg1, combinations, non_root_nodes, rhs_parents, non_fresh_vars));
                 }
                 else {
                     eq_rhs.push_back(arg1);
                 }
 
-                if (is_non_fresh(arg1, non_fresh_vars) && !has_empty_vars(arg1)) {
+                if (is_non_fresh(arg1, non_fresh_vars)){// && !has_empty_vars(arg1)) {
                     eq_rhs.reset();
                     eq_rhs.push_back(find_representation(arg1));
                     STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg1, m) << " --> " << mk_pp(eq_rhs[0], m) << std::endl;);
                 }
+                else
+                    STRACE("str", tout << __LINE__ << " fresh" << mk_pp(arg1, m)  << std::endl;);
 
-                if (is_non_fresh(arg0, non_fresh_vars) && !has_empty_vars(arg0)) {
+                if (is_non_fresh(arg0, non_fresh_vars)){// && !has_empty_vars(arg0)) {
                     eq_lhs.reset();
                     eq_lhs.push_back(find_representation(arg0));
                     STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg0, m) << " --> " << mk_pp(eq_lhs[0], m) << std::endl;);
@@ -17845,18 +17846,18 @@ namespace smt {
             }
 
             // len = sum len
-            expr_ref lenAssert(ctx.mk_eq_atom(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
+            expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
 //            if (!is_contain_family_equality(concatAst, tmp))
             {
                 // | n1 | = 0 --> concat = n2
-                expr_ref premise00(ctx.mk_eq_atom(mk_int(0), mk_strlen(n1)), m);
+                expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
                 expr_ref conclusion00(createEqualOP(concatAst, n2), m);
                 assert_implication(premise00, conclusion00);
 
                 // | n2 | = 0 --> concat = n1
-                expr_ref premise01(ctx.mk_eq_atom(mk_int(0), mk_strlen(n2)), m);
+                expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(n2)), m);
                 expr_ref conclusion01(createEqualOP(concatAst, n1), m);
                 assert_implication(premise01, conclusion01);
             }
@@ -18533,7 +18534,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
 
         for (const auto& n : uState.eq_combination) {
-            if (!ctx.is_relevant(n.m_key))
+            if (!ctx.is_relevant(n.m_key) || u.str.is_string(n.m_key))
                 continue;
             obj_hashtable<expr> required_values;
             expr_ref_vector dep = get_dependencies(n.m_key);
@@ -18541,7 +18542,7 @@ namespace smt {
             for (const auto& nn : dep) {
                 if (!ctx.is_relevant(nn))
                     continue;
-                if (is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn)) {
+                if (!u.str.is_string(nn) && (is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn))) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << mk_pp(n.m_key, m) << std::endl;);
                     if (!are_equal_exprs(n.m_key, nn)) {
                         required_values.insert(ctx.get_enode(nn)->get_root()->get_owner());
@@ -18575,6 +18576,15 @@ namespace smt {
                         dependency_graph[e].insert(n.m_key);
                     }
             }
+
+            for (const auto& e : n.m_value)
+                if (!contains_free_variables(e)){
+                    if (!dependency_graph.contains(e)){
+                        dependency_graph.insert(e, {});
+                    }
+                    if (dependency_graph[e].contains(n.m_key))
+                        dependency_graph[e].remove(n.m_key);
+                }
         }
     }
 
@@ -18584,6 +18594,7 @@ namespace smt {
         for (const auto& n : nodes){
             bool has_value;
             if (!(get_eqc_value(n, has_value) || is_non_fresh(n))){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                 return true;
             }
         }
@@ -18607,8 +18618,10 @@ namespace smt {
             expr* key1_root = ctx.get_enode(c.get_key1())->get_root()->get_owner();
             expr* key2_root = ctx.get_enode(c.get_key2())->get_root()->get_owner();
             expr* c_root = ctx.get_enode(c.get_value())->get_root()->get_owner();
-            update_dependency_graph(c.get_value(), c.get_key1(), all_nodes.contains(c_root), !included_nodes.contains(key1_root));
-            update_dependency_graph(c.get_value(), c.get_key2(), all_nodes.contains(c_root), !included_nodes.contains(key2_root));
+            if (!u.str.is_string(c.get_key1()) && !u.str.is_string(key1_root))
+                update_dependency_graph(c.get_value(), c.get_key1(), all_nodes.contains(c_root), !included_nodes.contains(key1_root));
+            if (!u.str.is_string(c.get_key2()) && !u.str.is_string(key2_root))
+                update_dependency_graph(c.get_value(), c.get_key2(), all_nodes.contains(c_root), !included_nodes.contains(key2_root));
         }
     }
 
@@ -18623,7 +18636,7 @@ namespace smt {
 
         expr* reg = nullptr;
         rational len;
-        if (u.str.is_string(child_root) || is_in_non_fresh_family(child_root) || is_internal_regex_var(child_root, reg) || is_regex_concat(child_root) || !is_active) {
+        if (is_in_non_fresh_family(child_root) || is_internal_regex_var(child_root, reg) || is_regex_concat(child_root) || !is_active) {
             bool got_len = get_len_value(child_root, len);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " len = " << len.get_int64() << std::endl;);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << " " << are_equal_exprs(concat_root, child_root) << " " << (get_len_value(child_root, len) && len.get_int64() != 0) << std::endl;);
@@ -18668,8 +18681,12 @@ namespace smt {
                 continue;
             ptr_vector <expr> nodes;
             get_all_nodes_in_concat(n.m_key, nodes);
-            for (const auto& nn : nodes)
-                ret.insert(nn);
+            for (const auto& nn : nodes) {
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(nn, eqs);
+                for (const auto& eq : eqs)
+                    ret.insert(eq);
+            }
             nodes.reset();
             for (const auto& nn : n.m_value){
                 if (!ctx.is_relevant(n.m_key))
