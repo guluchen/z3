@@ -16956,6 +16956,7 @@ namespace smt {
 
         case2_conclusion_terms.push_back(createEqualOP(expr, t3));
         case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t4), mk_int(0)));
+        case2_conclusion_terms.push_back(createEqualOP(mk_concat(t0, mk_concat(t3, t4)), mk_concat(t0, t3)));
 
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref premise_expr(m);
@@ -19031,7 +19032,7 @@ namespace smt {
     }
 
     void theory_trau::add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core){
-        rational len; 
+        rational len;
         for (const auto& v : all_vars) {
             if (get_len_value(v, len) && len.get_int64() == 0) {
                 core.push_back(createEqualOP(v, mk_string("")));
@@ -19874,14 +19875,15 @@ namespace smt {
                 if (!has_val)
                     has_val = get_str_value(th.get_context().get_enode(nodes[i]), m_root2value, node_val);
                 if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
-                    int len_int = node_val.length();
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << std::endl;);
+                    int len_int;
+                    get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes[i])), m_root2value, len_int);
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << " len = " << node_val << std::endl;);
                     for (int j = sum; j < sum + len_int; ++j) {
                         if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
                             val[j] = node_val[j - sum];
                         } else if (val[j] != node_val[j - sum]) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
-                                               << (char) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
+                                               << (int) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
                                                << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
 //                            val[j] = node_val[j - sum];
                         }
