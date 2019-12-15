@@ -1404,6 +1404,7 @@ namespace smt {
         void fetch_related_exprs(expr_ref_vector const& all_vars, expr_ref_vector &guessed_eqs);
         expr_ref_vector check_contain_related_vars(expr* v, zstring replaceKey);
         expr_ref_vector collect_all_vars_in_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+        void add_to_all_vars(expr_ref_vector &allvars, expr* e);
         void update_all_vars(expr_ref_vector &allvars, expr* e);
         bool check_intersection_not_empty(ptr_vector<expr> const& v, obj_hashtable<expr> const& allvars);
         bool check_intersection_not_empty(ptr_vector<expr> const& v, expr_ref_vector const& allvars);

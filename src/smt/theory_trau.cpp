@@ -4794,10 +4794,16 @@ namespace smt {
 
         // compare all eq
         for(const auto& e : prev_guessed_eqs){
-            if (e != m.mk_true() && !guessed_eqs.contains(e) ) {
+            if (e != m.mk_true() && !guessed_eqs.contains(e)) {
                 // check the case where some var disappear because of len = 0
                 if (to_app(e)->get_num_args() != 2)
                     continue;
+
+                if (to_app(e)->get_arg(1) == mk_string("")){
+                    rational len;
+                    if (get_len_value(to_app(e)->get_arg(0), len) && len.get_int64() == 0)
+                        continue;
+                }
 
                 // check if it is the bound var
                 std::string toStr = expr2str(e);
@@ -4813,7 +4819,7 @@ namespace smt {
                     m_trail.push_back(not_e);
                     if (guessed_diseqs.contains(not_e))
                         diff.push_back(not_e);
-                    // STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
                     return false;
                 }
                 else {
@@ -15418,6 +15424,12 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " add " << mk_pp(e.m_key, m) << std::endl;);
             ret.push_back(e.m_key);
         }
+
+        //      |(re.* (re.range "0" "9"))!tmp43| "." |(re.* (re.range "0" "9"))!tmp58| "." |(re.* (re.range "0" "9"))!tmp6| "." indexOf2!tmp69
+        //		|(re.* (re.range "0" "9"))!tmp43| "." |(re.* (re.range "0" "9"))!tmp58| "." substr3!tmp26
+        //		|(re.* (re.range "0" "9"))!tmp43| "." |(re.* (re.range "0" "9"))!tmp58| "." |(re.* (re.range "0" "9"))!tmp6| substr4!tmp16
+        //		|(re.* (re.range "0" "9"))!tmp43| "." |(re.* (re.range "0" "9"))!tmp58| substr4!tmp67
+        //		|(re.* (re.range "0" "9"))!tmp43| "." substr3!tmp45
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << ret.size() << std::endl;);
         return ret;
     }
@@ -18712,12 +18724,24 @@ namespace smt {
     void theory_trau::correct_underapproximation_model(model_generator& mg){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         // check the current branch
-        if (correct_underapproximation_model(mg, uState.eq_combination))
-            return;
+//        if (correct_underapproximation_model(mg, uState.eq_combination))
+//            return;
+//        for (const auto& s : completed_branches){
+//            if (correct_underapproximation_model(mg, s.eq_combination)){
+//                uState.eq_combination = s.eq_combination;
+//                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
+//                return;
+//            }
+//        }
+
+        expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
+        fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
+
         for (const auto& s : completed_branches){
-            if (correct_underapproximation_model(mg, s.eq_combination)){
+            expr_ref_vector diff(m);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
+            if (at_same_eq_state(s, diff) && at_same_diseq_state(guessed_eqs, guessed_diseqs, s.disequalities)){
                 uState.eq_combination = s.eq_combination;
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                 return;
             }
         }
@@ -19007,7 +19031,7 @@ namespace smt {
     }
 
     void theory_trau::add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core){
-        rational len;
+        rational len; 
         for (const auto& v : all_vars) {
             if (get_len_value(v, len) && len.get_int64() == 0) {
                 core.push_back(createEqualOP(v, mk_string("")));
@@ -19113,12 +19137,12 @@ namespace smt {
                 zstring val;
                 if (u.str.is_string(arg1, val)) {
                     if (!val.contains(containKey)) {  // x = replace y val ? && val does not contain key --> y does not contain key
-                        ptr_vector<expr> childrenVector;
-                        get_all_nodes_in_concat(arg0, childrenVector);
-                        for (unsigned j = 0; j < childrenVector.size(); ++j)
-                            if (!ret.contains(childrenVector[j])) {
-                                ret.push_back(childrenVector[j]);
-                                if (u.str.is_string(childrenVector[j], value))
+                        ptr_vector<expr> all_concat_nodes;
+                        get_all_nodes_in_concat(arg0, all_concat_nodes);
+                        for (unsigned j = 0; j < all_concat_nodes.size(); ++j)
+                            if (!ret.contains(all_concat_nodes[j])) {
+                                ret.push_back(all_concat_nodes[j]);
+                                if (u.str.is_string(all_concat_nodes[j], value))
                                     if (value.contains(containKey))
                                         return ret;
                             }
@@ -19131,12 +19155,12 @@ namespace smt {
             for (unsigned i = 0; i  < tmpVector.size(); ++i)
                 if (!ret.contains(tmpVector[i].get())){
                     STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " == " << mk_pp(tmpVector[i].get(), m) << std::endl;);
-                    ptr_vector<expr> childrenVector;
-                    get_all_nodes_in_concat(tmpVector[i].get(), childrenVector);
-                    for (unsigned j = 0; j < childrenVector.size(); ++j)
-                        if (!ret.contains(childrenVector[j])) {
-                            ret.push_back(childrenVector[j]);
-                            if (u.str.is_string(childrenVector[j], value))
+                    ptr_vector<expr> all_concat_nodes;
+                    get_all_nodes_in_concat(tmpVector[i].get(), all_concat_nodes);
+                    for (unsigned j = 0; j < all_concat_nodes.size(); ++j)
+                        if (!ret.contains(all_concat_nodes[j])) {
+                            ret.push_back(all_concat_nodes[j]);
+                            if (u.str.is_string(all_concat_nodes[j], value))
                                 if (value.contains(containKey))
                                     return ret;
                         }
@@ -19151,7 +19175,7 @@ namespace smt {
         expr_ref_vector all_vars(m);
         for (const auto& eq : eq_combination){
             // collect vars or not
-            // not collect if it is not important, and none of variable is really important
+            // not collect if it is not important, and none of variables is really important
 
             for (const auto& e : eq.get_value()) {
                 ptr_vector<expr> nodes;
@@ -19160,26 +19184,31 @@ namespace smt {
                     zstring value;
                     if (u.str.is_string(nodes[i], value) && value.length() == 0)
                         continue;
-                    if (!all_vars.contains(nodes[i]))
-                        all_vars.push_back(nodes[i]);
+                    add_to_all_vars(all_vars, nodes[i]);
                 }
             }
         }
         return all_vars;
     }
 
-    void theory_trau::update_all_vars(expr_ref_vector &allvars, expr* e){
-        if (u.str.is_concat(e)) {
+    void theory_trau::add_to_all_vars(expr_ref_vector &all_vars, expr* e){
+        expr_ref_vector eqs(m);
+        collect_eq_nodes(e, eqs);
+        for (const auto& n : eqs){
             ptr_vector<expr> nodes;
-            get_nodes_in_concat(e, nodes);
-            for (unsigned j = 0; j < nodes.size(); ++j)
-                if (!allvars.contains(nodes[j]))
-                    allvars.push_back(nodes[j]);
+            get_nodes_in_concat(n, nodes);
+            for (const auto& nn : nodes)
+                if (!all_vars.contains(nn))
+                    all_vars.push_back(nn);
         }
-        else {
-            if (!allvars.contains(e))
-                allvars.push_back(e);
-        }
+    }
+
+    void theory_trau::update_all_vars(expr_ref_vector &all_vars, expr* e){
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(e, nodes);
+        for (unsigned j = 0; j < nodes.size(); ++j)
+            if (!all_vars.contains(nodes[j]))
+                all_vars.push_back(nodes[j]);
     }
 
     bool theory_trau::check_intersection_not_empty(ptr_vector<expr> const& v, obj_hashtable<expr> const& allvars){
