@@ -18627,19 +18627,19 @@ namespace smt {
 
     void theory_trau::update_dependency_graph(expr* concat, expr* child, bool is_active, bool is_fresh){
         context& ctx = get_context();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(concat, m) << " " << mk_pp(child, m) << " active: " << is_active << " fresh: " << is_fresh << std::endl;);
         expr* child_root = ctx.get_enode(child)->get_root()->get_owner();
         expr* concat_root = ctx.get_enode(concat)->get_root()->get_owner();
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(concat, m) << " " << mk_pp(child, m) << " = " << mk_pp(child_root, m) << " active: " << is_active << " fresh: " << is_fresh << std::endl;);
         if (!dependency_graph.contains(concat_root)){
             dependency_graph.insert(concat_root, {});
         }
 
         expr* reg = nullptr;
         rational len;
-        if (is_in_non_fresh_family(child_root) || is_internal_regex_var(child_root, reg) || is_regex_concat(child_root) || !is_active) {
+        if (!is_in_non_fresh_family(concat_root) && (is_in_non_fresh_family(child_root) || is_internal_regex_var(child_root, reg) || is_regex_concat(child_root) || !is_active)) {
             bool got_len = get_len_value(child_root, len);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " len = " << len.get_int64() << std::endl;);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << " " << are_equal_exprs(concat_root, child_root) << " " << (get_len_value(child_root, len) && len.get_int64() != 0) << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << " " << are_equal_exprs(concat_root, child_root) << " " << (got_len && len.get_int64() != 0) << std::endl;);
             if (!are_equal_exprs(concat_root, child_root) && ((got_len && len.get_int64() != 0) || !got_len)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(child, m) << " VS " << mk_pp(concat, m) << std::endl;);
                 if (concat_root != child)
