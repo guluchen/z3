@@ -16956,7 +16956,7 @@ namespace smt {
 
         case2_conclusion_terms.push_back(createEqualOP(expr, t3));
         case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t4), mk_int(0)));
-        case2_conclusion_terms.push_back(createEqualOP(mk_concat(t0, mk_concat(t3, t4)), mk_concat(t0, t3)));
+        case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
 
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
         expr_ref premise_expr(m);
@@ -16964,6 +16964,7 @@ namespace smt {
         expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
 
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case2_conclusion, m) << std::endl;);
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
 
@@ -16982,6 +16983,7 @@ namespace smt {
             expr_ref case2_rw(case2, m);
             m_rewrite(case2_rw);
             assert_axiom(case2_rw);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case2_rw, m) << std::endl;);
 
             expr_ref case3_rw(case3, m);
             m_rewrite(case3_rw);
@@ -19868,15 +19870,19 @@ namespace smt {
 
             int sum = 0;
             for (int i = 0; i < (int)nodes.size(); ++i){
+                int len_int = -1;
                 zstring node_val;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                 bool has_val = false;
                 has_val = th.u.str.is_string(nodes[i], node_val);
-                if (!has_val)
+                if (!has_val) {
                     has_val = get_str_value(th.get_context().get_enode(nodes[i]), m_root2value, node_val);
-                if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
-                    int len_int;
                     get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes[i])), m_root2value, len_int);
+                }
+                else
+                    len_int = node_val.length();
+
+                if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << " len = " << node_val << std::endl;);
                     for (int j = sum; j < sum + len_int; ++j) {
                         if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
@@ -19891,8 +19897,7 @@ namespace smt {
                     sum = sum + len_int;
                 }
                 else {
-                    int len_int = -1;
-                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes[i])), m_root2value, len_int)){
+                    if (len_int != -1){
                         sum += len_int;
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nodes[i], th.get_manager()) << ": sum = " << sum << std::endl;);
                     }
