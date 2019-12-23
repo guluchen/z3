@@ -19883,17 +19883,21 @@ namespace smt {
                     len_int = node_val.length();
 
                 if (has_val || th.is_in_non_fresh_family(nodes[i]) || th.u.str.is_string(nodes[i]) || th.is_regex_var(nodes[i])){
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << " len = " << node_val << std::endl;);
-                    for (int j = sum; j < sum + len_int; ++j) {
-                        if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
-                            val[j] = node_val[j - sum];
-                        } else if (val[j] != node_val[j - sum]) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
-                                               << (int) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
-                                               << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
-//                            val[j] = node_val[j - sum];
-                        }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << " len = " << len_int << std::endl;);
+                    if (len_int == -1)
+                        return;
+                    if (has_val)
+                        for (int j = sum; j < sum + len_int; ++j) {
+                            if (val[j] == -1 || val[j] == th.default_char || th.u.str.is_string(nodes[i])) {
+                                val[j] = node_val[j - sum];
+                            } else if (val[j] != node_val[j - sum]) {
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
+                                                   << (int) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
+                                                   << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
+    //                            val[j] = node_val[j - sum];
+                            }
                     }
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": completed updating by: " << mk_pp(nodes[i], th.get_manager()) << " = " << node_val << " len = " << len_int << std::endl;);
                     sum = sum + len_int;
                 }
                 else {
