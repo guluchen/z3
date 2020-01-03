@@ -7341,6 +7341,14 @@ namespace smt {
                     else
                         setup_str_const(val, arr_var);
                 }
+
+                {
+                    expr_ref_vector eqs(m);
+                    collect_eq_nodes(v, eqs);
+
+                    for (const auto& vv : eqs)
+                        array_map.insert(vv, arr_var);
+                }
                 return;
             }
         }
