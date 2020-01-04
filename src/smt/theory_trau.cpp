@@ -6352,8 +6352,8 @@ namespace smt {
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
-            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
-                continue;
+//            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
+//                continue;
             if (line > 0) {
                 STRACE("str", tout << line << " EQ set of " << mk_pp(com.m_key, m) << std::endl;);
             }
@@ -15216,17 +15216,17 @@ namespace smt {
                     if (u.str.is_concat(c.m_key)) {
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": root concat node  " << mk_pp(c.m_key, m) << std::endl;);
                         // check if it is an important concat
-                        bool importantConcat = false;
+                        bool is_non_fresh_concat = false;
                         ptr_vector<expr> nodes;
                         get_all_nodes_in_concat(c.m_key, nodes);
                         for (const auto& v : non_fresh_vars)
                             if (nodes.contains(v.m_key)) {
-                                importantConcat = true;
+                                is_non_fresh_concat = true;
                                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": important  " << mk_pp(v.m_key, m) << std::endl;);
                                 break;
                             }
 
-                        if (importantConcat) {
+                        if (is_non_fresh_concat) {
                             ret.insert(c.m_key, c_second);
                         }
                         else {
@@ -15412,7 +15412,7 @@ namespace smt {
                 }
             }
         }
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " " << waiting_list.size() << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(var, m) << " waiting_list: " << waiting_list.size() << "; ret: " << ret.size() << std::endl;);
         for (const auto& e : waiting_list){
             zstring s;
             if (exprs.contains(e.m_value)){
@@ -16958,6 +16958,8 @@ namespace smt {
         else {
             case2_conclusion_terms.push_back(createEqualOP(base, t3));
             case3_conclusion_terms.push_back(createEqualOP(base, mk_concat(t3, t4)));
+            case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), mk_int(0)));
+            case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), mk_int(0)));
 
             sync_index_head(len, base, t3, t4);
         }
