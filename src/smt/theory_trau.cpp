@@ -17743,6 +17743,10 @@ namespace smt {
     }
 
     app * theory_trau::mk_strlen(expr * e) {
+        zstring value;
+        if (u.str.is_string(e, value))
+            return mk_int(value.length());
+
         app* tmp = u.str.mk_length(e);
         ensure_enode(tmp);
         return tmp;
