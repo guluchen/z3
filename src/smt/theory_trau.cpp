@@ -19910,7 +19910,7 @@ namespace smt {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
                                                    << (int) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
                                                    << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
-                                SASSERT(false);
+//                                SASSERT(false);
     //                            val[j] = node_val[j - sum];
                             }
                     }
