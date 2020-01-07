@@ -18571,6 +18571,7 @@ namespace smt {
             for (const auto& nn : dep) {
                 if (!ctx.is_relevant(nn))
                     continue;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " <-- " << mk_pp(n.m_key, m) << std::endl;);
                 if (!u.str.is_string(nn) && (is_in_non_fresh_family(nn) || is_internal_regex_var(nn, reg) || is_regex_concat(nn))) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << mk_pp(n.m_key, m) << std::endl;);
                     if (!are_equal_exprs(n.m_key, nn)) {
@@ -18759,6 +18760,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
             if (at_same_eq_state(s, diff) && at_same_diseq_state(guessed_eqs, guessed_diseqs, s.disequalities)){
                 uState.eq_combination = s.eq_combination;
+                uState.non_fresh_vars = s.non_fresh_vars;
                 return;
             }
         }
