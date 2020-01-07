@@ -19910,6 +19910,7 @@ namespace smt {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": inconsistent @" << j << " \""
                                                    << (int) val[j] << "\" vs \"" << node_val[j - sum] << "\" in \""
                                                    << node_val << "\" " << mk_pp(nodes[i], th.get_manager()) << std::endl;);
+                                SASSERT(false);
     //                            val[j] = node_val[j - sum];
                             }
                     }
@@ -19934,7 +19935,7 @@ namespace smt {
         for (const auto &ancestor : th.dependency_graph[node]) {
             STRACE("str",tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ancestor, mg.get_manager()) << std::endl;);
             zstring ancestorValue;
-            if (get_str_value(th.get_context().get_enode(ancestor), m_root2value, ancestorValue)) {
+            if (get_str_value(th.get_context().get_enode(ancestor), m_root2value, ancestorValue) && ancestorValue.length() >= len) {
                 if (th.u.str.is_concat(ancestor)) {
                     if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value, len, value)) {
                         return true;
@@ -19945,8 +19946,9 @@ namespace smt {
                 if (th.uState.eq_combination.contains(ancestor)) {
                     for (const auto &ancestor_i : th.uState.eq_combination[ancestor]) {
                         if (th.u.str.is_concat(ancestor_i)) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ancestor_i, mg.get_manager()) << ": value = " << ancestorValue << std::endl;);
                             if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue, m_root2value, len, value)) {
-                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": value = " << value << std::endl;);
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager()) << ": value = " << value << std::endl;);
                                 return true;
                             }
                         }
