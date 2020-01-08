@@ -6658,15 +6658,16 @@ namespace smt {
             root_lhs = lhs;
 
         if (eq_combination.contains(root_lhs)){
-            for (const auto& s : eq_combination[root_lhs]){
-                ptr_vector <expr> nodes;
-                get_nodes_in_concat(s, nodes);
-                for (const auto& nn : nodes)
-                    if (in_same_eqc(nn, new_needle)) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
-                        return false;
-                    }
-            }
+            for (const auto& s : eq_combination[root_lhs])
+                if (s != lhs){
+                    ptr_vector <expr> nodes;
+                    get_nodes_in_concat(s, nodes);
+                    for (const auto& nn : nodes)
+                        if (in_same_eqc(nn, new_needle)) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+                            return false;
+                        }
+                }
         }
 
         zstring needle_str;
@@ -6725,10 +6726,15 @@ namespace smt {
             get_nodes_in_concat(eq, nodes);
             for (const auto &nn : nodes)
                 if (are_equal_exprs(nn, needle)) {
-                    cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
-                    //assert_axiom(createEqualOP(lhs, rhs));
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
-                    return false;
+
+                    rational left_val, right_val;
+                    if (get_len_value(getMostLeftNodeInConcat(lhs), left_val) && left_val.get_int64() == 0 &&
+                        get_len_value(getMostRightNodeInConcat(lhs), right_val) && right_val.get_int64() == 0){
+                        cause = createAndOP(createEqualOP(lhs, eq), createEqualOP(nn, needle));
+                        //assert_axiom(createEqualOP(lhs, rhs));
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
+                        return false;
+                    }
                 }
         }
         return true;
@@ -6982,7 +6988,10 @@ namespace smt {
 
             if (u.str.is_string(constValue, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << "; cached" << cached << ")\n";);
-                if (value.indexof(rhs, 0) >= 0 && !cached) {
+                if (value == rhs){
+                    assert_axiom(mk_not(m, createEqualOP(mk_strlen(lhs), mk_int(value.length()))));
+                }
+                else if (value.indexof(rhs, 0) >= 0 && !cached) {
                     negate_context();
                 }
             }
