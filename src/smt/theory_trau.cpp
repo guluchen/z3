@@ -17905,6 +17905,9 @@ namespace smt {
 
         if (!concat_node_map.find(n1, n2, concatAst)) {
             concatAst = u.str.mk_concat(n1, n2);
+            expr_ref concat_m(concatAst, m);
+            m_rewrite(concat_m);
+            concatAst = concat_m.get();
             m_trail.push_back(concatAst);
             concat_node_map.insert(n1, n2, concatAst);
 
