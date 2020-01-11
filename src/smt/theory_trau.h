@@ -264,6 +264,7 @@ namespace smt {
             void construct_string(model_generator &mg, expr *eq, obj_map<enode, app *> const& m_root2value, int_vector &val);
             bool fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len, zstring &value);
             bool fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue, obj_map<enode, app *> const& m_root2value, int len, zstring &value);
+            bool part_of_concat(model_generator &mg, expr *concat, expr* sub_node, obj_map<enode, app *> const& m_root2value, int &start);
             int find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value);
             bool find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value, int &prefix);
             bool get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> const& m_root2value, int &value);
@@ -1000,10 +1001,10 @@ namespace smt {
              * cut the same prefix and suffix
              */
             void optimize_equality(expr* lhs, expr* rhs, ptr_vector<expr> &new_lhs, ptr_vector<expr> &new_rhs);
-                expr* create_concat_from_vector(ptr_vector<expr> const& v, int from_pos);
-                expr* create_concat_from_vector(ptr_vector<expr> const& v);
-                expr* create_reg_concat_from_vector(ptr_vector<expr> const& v);
-                bool have_same_len(expr* lhs, expr* rhs);
+            expr* create_concat_from_vector(ptr_vector<expr> const& v, int from_pos);
+            expr* create_concat_from_vector(ptr_vector<expr> const& v);
+            expr* create_reg_concat_from_vector(ptr_vector<expr> const& v);
+            bool have_same_len(expr* lhs, expr* rhs);
             /*
              * cut the same prefix and suffix
              */
@@ -1076,7 +1077,8 @@ namespace smt {
         void setup_dependency_graph_from_combination(obj_hashtable<expr> &included_nodes);
         bool contains_free_variables(expr* e);
         void setup_dependency_graph_from_concats(obj_hashtable<expr> &included_nodes);
-        void update_dependency_graph(expr* concat, expr* child, bool is_active, bool is_fresh);
+        bool is_covered_node(obj_hashtable<expr> const& all_nodes, expr* node);
+        void update_dependency_graph(expr* concat, expr* child, bool concat_first, bool is_fresh);
         obj_hashtable<expr> collect_nodes_in_combination();
         void print_dependency_graph();
         void correct_underapproximation_model(model_generator& mg);
@@ -1389,6 +1391,7 @@ namespace smt {
     private:
         clock_t                                             startClock;
         bool                                                newConstraintTriggered = false;
+        void rewrite_and_assert_axiom(expr *const e);
         void assert_axiom(expr *e);
         void assert_axiom(expr *const e1, expr *const e2);
         void dump_assignments();
