@@ -16206,7 +16206,7 @@ namespace smt {
 
         if (!can_be_prefix(expr->get_arg(0), expr->get_arg(1))){
             TRACE("str", tout << " cannot be prefix  " << mk_pp(expr, m) << std::endl;);
-            assert_axiom(mk_not(m, expr));
+            m_delayed_assertions_todo.push_back(mk_not(m, expr));
             return;
         }
         TRACE("str", tout << "instantiate prefixof axiom for " << mk_pp(expr, m) << std::endl;);
