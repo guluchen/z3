@@ -18730,6 +18730,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << " vs " << mk_pp(e, m) << std::endl;);
                     if (u.str.is_concat(e, arg0, arg1))
                         if (concat_node_map.find(arg0, arg1, concat_ast)){
+                            ensure_enode(e);
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << " vs " << mk_pp(e, m) << std::endl;);
                             update_dependency_graph(c.get_value(), e, is_concat_covered, !included_nodes.contains(e));
                         }
