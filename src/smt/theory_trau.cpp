@@ -18751,6 +18751,8 @@ namespace smt {
     }
 
     void theory_trau::update_dependency_graph(expr* concat, expr* child, bool concat_first, bool is_fresh){
+        if (are_equal_exprs(concat, child))
+            return;
         context& ctx = get_context();
         expr* child_root = ctx.get_enode(child)->get_root()->get_owner();
         expr* concat_root = ctx.get_enode(concat)->get_root()->get_owner();
