@@ -18809,8 +18809,9 @@ namespace smt {
         for (const auto& n : uState.eq_combination) {
             if (!ctx.is_relevant(n.m_key))
                 continue;
-            if ((n.m_value.size() == 1 && is_non_fresh(n.m_key)) || n.m_value.size() == 0)
+            if ((n.m_value.size() == 1 && !is_non_fresh(n.m_key)) || n.m_value.size() == 0)
                 continue;
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << std::endl;);
             ptr_vector <expr> nodes;
             get_all_nodes_in_concat(n.m_key, nodes);
             for (const auto& nn : nodes) {
