@@ -7363,6 +7363,10 @@ namespace smt {
             if (!are_equal_exprs(v, arr_linker[arr_var])) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arr_var, m) << std::endl;);
                 arr_var = nullptr;
+                bool has_val;
+                expr* val = get_eqc_value(v, has_val);
+                if (has_val)
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** value " << mk_pp(v, m)  << " " << mk_pp(val, m) << std::endl;);
             }
             else {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << std::endl;);
@@ -7950,7 +7954,7 @@ namespace smt {
         }
         // eq to its set
         for (const auto& element: eq_tmp) {
-            if (!u.str.is_concat(element)){
+            if (!u.str.is_concat(element) && !u.str.is_string(element)){
                 continue;
             }
 //            ptr_vector<expr> lhs;
