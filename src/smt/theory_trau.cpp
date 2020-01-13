@@ -6630,6 +6630,7 @@ namespace smt {
                 if (is_contain_family_equality(lhs, contain)){
                     if (!review_not_contain(rhs, lhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
+                        cause = nullptr;
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
