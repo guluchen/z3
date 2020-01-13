@@ -603,7 +603,9 @@ namespace smt {
         expr* containKey;
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
+        TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         if (is_contain_family_equality(simplifiedLhs, containKey)) {
+            TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -615,6 +617,7 @@ namespace smt {
             }
         }
         else if (is_contain_family_equality(simplifiedRhs, containKey)){
+            TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -1380,11 +1383,11 @@ namespace smt {
                 expr_ref_vector items(m);
                 int pos = 0;
                 for (auto itor : resolved_map) {
-                    items.push_back(ctx.mk_eq_atom(itor.m_key, itor.m_value));
+                    items.push_back(createEqualOP(itor.m_key, itor.m_value));
                     pos += 1;
                 }
                 expr_ref premise(mk_and(items), m);
-                expr_ref conclusion(ctx.mk_eq_atom(node, resultAst), m);
+                expr_ref conclusion(createEqualOP(node, resultAst), m);
                 assert_implication(premise, conclusion);
             }
             return resultAst;
@@ -3256,8 +3259,8 @@ namespace smt {
     }
 
     void theory_trau::push_scope_eh() {
-        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+//        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+//        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         m_scope_level += 1;
         mful_scope_levels.push_scope();
         m_we_expr_memo.push_scope();
@@ -3269,7 +3272,7 @@ namespace smt {
     }
 
     void theory_trau::pop_scope_eh(const unsigned num_scopes) {
-        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+//        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         m_scope_level -= num_scopes;
 
         if (m_scope_level < uState.eqLevel) {
@@ -3313,7 +3316,7 @@ namespace smt {
 
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-        dump_assignments();
+
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
@@ -3331,7 +3334,7 @@ namespace smt {
         }
         else
             newConstraintTriggered = false;
-
+        dump_assignments();
         if (eval_str_int() || eval_disequal_str_int()) {
             TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
             newConstraintTriggered = true;
@@ -6371,7 +6374,7 @@ namespace smt {
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
-            if (com.m_value.size() == 1 && com.m_key == com.m_value[0] && u.str.is_string(com.m_key))
+            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
                 continue;
             if (line > 0) {
                 STRACE("str", tout << line << " EQ set of " << mk_pp(com.m_key, m) << std::endl;);
@@ -7955,11 +7958,10 @@ namespace smt {
             if (!u.str.is_concat(element) && !u.str.is_string(element)){
                 continue;
             }
-//            ptr_vector<expr> lhs;
-//            ptr_vector<expr> rhs;
-//            optimize_equality(root_tmp, element, lhs, rhs);
-//            if (lhs.size() == 0 || rhs.size() == 0)
-//                continue;
+
+            if (u.str.is_string(element) && (element == var || element == root_tmp))
+                continue;
+
             pair_expr_vector lhs_elements = create_equality(var, false);
             pair_expr_vector rhs_elements = create_equality(element);
             expr* containKey = nullptr;
@@ -15966,9 +15968,6 @@ namespace smt {
     }
 
     void theory_trau::propagate() {
-        clock_t t = clock();
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @lvl " << m_scope_level <<  std::endl;);
-
         assert_cached_eq_state();
 
         if (uState.reassertEQ)
@@ -16070,7 +16069,6 @@ namespace smt {
                 m_delayed_assertions_todo.reset();
             }
         }
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
     }
 
     /*
