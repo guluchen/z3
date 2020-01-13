@@ -4324,11 +4324,11 @@ namespace smt {
      *
      */
     bool theory_trau::is_notContain_consistent(obj_map<expr, ptr_vector<expr>> const& eq_combination){
-        expr_ref_vector eqList(m), diseqList(m);
-        fetch_guessed_exprs_with_scopes(eqList, diseqList);
-        fetch_guessed_core_exprs(eq_combination, eqList, diseqList);
-        expr* core = createAndOP(eqList);
-
+        expr_ref_vector eqs(m), ineqs(m);
+        fetch_guessed_exprs_with_scopes(eqs, ineqs);
+        fetch_guessed_core_exprs(eq_combination, eqs, ineqs);
+        expr* core = createAndOP(eqs);
+        m_trail.push_back(core);
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -4349,21 +4349,21 @@ namespace smt {
      * t, y, z are called related variables of x
      */
     bool theory_trau::is_notContain_consistent(expr* lhs, expr* rhs, expr* core){
-        
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << std::endl;);
         expr* contain = nullptr;
-        expr_ref conclusion(createEqualOP(lhs, rhs), m);
         expr* simplifiedLhs = simplify_concat(lhs);
         expr* simplifiedRhs = simplify_concat(rhs);
         if (is_contain_family_equality(simplifiedLhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
-                return is_notContain_const_consistent(rhs, value, conclusion);
+                return is_notContain_const_consistent(rhs, lhs, value, core);
         }
         else if (is_contain_family_equality(simplifiedRhs, contain)) {
             zstring value;
             if (u.str.is_string(contain, value) && !is_trivial_contain(value))
-                return is_notContain_const_consistent(lhs, value, conclusion);
+                return is_notContain_const_consistent(lhs, rhs, value, core);
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " exit " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << std::endl;);
         return true;
     }
 
@@ -4374,18 +4374,15 @@ namespace smt {
      *
      * t, y, z are called related variables of x
      */
-    bool theory_trau::is_notContain_const_consistent(expr* lhs, zstring containKey, expr_ref conclusion){
+    bool theory_trau::is_notContain_const_consistent(expr* lhs, expr* rhs, zstring needle, expr* core){
         // find all related nodes
         
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " contains(" << mk_pp(lhs, m) << ", " << containKey << ")" << std::endl;);
-        expr_ref_vector relatedVars = check_contain_related_vars(lhs, containKey);
-        if (relatedVars.size() > 0){
-            expr_ref_vector eqs(m), diseqs(m);
-            fetch_guessed_exprs_with_scopes(eqs);
-            fetch_related_exprs(relatedVars, eqs);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " contains(" << mk_pp(lhs, m) << ", " << needle << ")" << " " << mk_pp(core, m) << std::endl;);
+        expr_ref_vector related_vars = check_contain_related_vars(lhs, needle);
+        if (related_vars.size() > 0){
 
             // implies that x contains A if needed, means negating the context
-            expr_ref toAssert(rewrite_implication(createAndOP(eqs), conclusion), m);
+            expr_ref toAssert(rewrite_implication(core, createEqualOP(lhs, rhs)), m);
             assert_axiom(toAssert);
             m_trail.push_back(toAssert);
             implied_facts.push_back(toAssert);
@@ -6675,7 +6672,7 @@ namespace smt {
                     get_nodes_in_concat(s, nodes);
                     for (const auto& nn : nodes)
                         if (in_same_eqc(nn, new_needle)) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(s, m) << " and " << mk_pp(nn, m) << ")\n";);
                             return false;
                         }
                 }
