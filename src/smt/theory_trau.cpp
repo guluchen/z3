@@ -336,14 +336,13 @@ namespace smt {
                 expr* tmp_arr = get_var_flat_array(non_fresh_var);
                 if (tmp_arr && ctx.e_internalized(tmp_arr))
                     result->add_entry(ctx.get_enode(get_var_flat_array(non_fresh_var)));
-                expr_ref_vector depImp = get_dependencies(non_fresh_var);
-                dep.append(depImp);
 
                 // add its ancestors
-                if (dependency_graph.contains(owner))
-                    for (const auto& nn : dependency_graph[owner]) {
-                        result->add_entry(ctx.get_enode(nn));
-                    }
+//                if (dependency_graph.contains(owner))
+//                    for (const auto& nn : dependency_graph[owner]) {
+//                        STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " --> " << mk_ismt2_pp(nn, m) << ")" << std::endl;);
+//                        result->add_entry(ctx.get_enode(nn));
+//                    }
             }
             else if (is_internal_regex_var(owner.get(), reg)){
                 // add array
