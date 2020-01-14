@@ -179,6 +179,7 @@ namespace smt {
                 u.str.is_string(a0_conststr, a0_s);
                 u.str.is_string(a1_conststr, a1_s);
                 zstring result = a0_s + a1_s;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_ismt2_pp(n, m)  << " " << result << std::endl;);
                 return to_app(mk_string(result));
             }
         }
@@ -188,6 +189,15 @@ namespace smt {
         bool hasEqc = false;
         expr * n_eqc = get_eqc_value(n, hasEqc);
         if (hasEqc) {
+            expr_ref_vector eqs(m);
+            collect_eq_nodes(n, eqs);
+            for (const auto& eq : eqs){
+                rational len;
+                get_len_value(eq, len);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_ismt2_pp(n, m)  << " = " << mk_ismt2_pp(eq, m) << " len = " << len << std::endl;);
+            }
+
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_ismt2_pp(n, m)  << " " << mk_ismt2_pp(n_eqc, m) << std::endl;);
             return to_app(n_eqc);
         } else {
             return nullptr;
@@ -255,12 +265,13 @@ namespace smt {
         }
         if (vLen.get_int64() == 0)
             return alloc(expr_wrapper_proc, u.str.mk_string(zstring("")));
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_ismt2_pp(owner, m) << std::endl;);
         app * val = mk_value_helper(owner, mg);
         if (val != nullptr) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m)  << " " << mk_ismt2_pp(val, m) << std::endl;);
             zstring value;
             u.str.is_string(val, value);
+            SASSERT(value.length() == vLen.get_int64());
             return alloc(expr_wrapper_proc, u.str.mk_string(value));
         }
         else if (carry_on_results.contains(owner)){ 
