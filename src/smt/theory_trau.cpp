@@ -495,8 +495,6 @@ namespace smt {
         
         enode *const n1 = get_enode(x);
         enode *const n2 = get_enode(y);
-
-//        TRACE("str", tout << __FUNCTION__ << ":" << mk_ismt2_pp(n1->get_owner(), m) << " = " << mk_ismt2_pp(n2->get_owner(), m) << "@lvl " << m_scope_level << std::endl;);
         TRACE("str", tout << __FUNCTION__ << ":" << "@lvl " << m_scope_level << std::endl;);
         handle_equality(get_enode(x)->get_owner(), get_enode(y)->get_owner());
 
@@ -571,6 +569,8 @@ namespace smt {
         sort * lhs_sort = m.get_sort(lhs);
         sort * rhs_sort = m.get_sort(rhs);
         sort * str_sort = u.str.mk_string_sort();
+        expr_ref lhs_m(lhs, m);
+        expr_ref rhs_m(rhs, m);
 
         if (lhs_sort != str_sort || rhs_sort != str_sort) {
             return;
@@ -6385,8 +6385,8 @@ namespace smt {
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
-            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
-                continue;
+//            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
+//                continue;
             if (line > 0) {
                 STRACE("str", tout << line << " EQ set of " << mk_pp(com.m_key, m) << std::endl;);
             }
@@ -14643,7 +14643,7 @@ namespace smt {
 
                 if (ret.contains(arg0) && check_existing_occurence(arg0, arg1, visited)) {
                     continue;
-                } 
+                }
                 if (arg0 == arg1) {
                     ret.insert(arg0, 2);
                 }
@@ -15451,18 +15451,23 @@ namespace smt {
 
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(n, m) << s.size() << std::endl;);
                 // do not have const or important var
-                bool found = false;
-                ptr_vector<expr> v;
-                get_nodes_in_concat(n, v);
-                for (const auto& nn : v) {
-                    exprs.push_back(nn);
-                    if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found)
+                if (u.str.is_string(var)){
                     ret.push_back(n);
+                }
+                else {
+                    bool found = false;
+                    ptr_vector<expr> v;
+                    get_nodes_in_concat(n, v);
+                    for (const auto &nn : v) {
+                        exprs.push_back(nn);
+                        if (u.str.is_string(nn) || is_non_fresh(nn, non_fresh_vars)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        ret.push_back(n);
+                }
             }
             else {
                 exprs.push_back(n);
@@ -18737,7 +18742,9 @@ namespace smt {
             ptr_vector<expr> nodes;
             get_nodes_in_concat(c_root, nodes);
             for (int i = 0; i < nodes.size() - 1; ++i)
-                for (int j = i + 1; j < nodes.size() - 1; ++j){
+                for (int j = i + 1; j < nodes.size(); ++j){
+                    if (i == 0 && j == nodes.size() - 1)
+                        continue;
                     // create concat from i - > j
                     expr* e = nodes[j];
                     for (int k = j - 1; k >= i; --k){
@@ -18745,7 +18752,7 @@ namespace smt {
                     }
                     m_trail.push_back(e);
                     expr* arg0 = nullptr, *arg1 = nullptr, *concat_ast;
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << " vs " << mk_pp(e, m) << std::endl;);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ctx.get_enode(c.get_value())->get_root()->get_owner(), m) << " vs " << mk_pp(e, m) << std::endl;);
                     if (u.str.is_concat(e, arg0, arg1))
                         if (concat_node_map.find(arg0, arg1, concat_ast)){
                             ensure_enode(e);
@@ -20096,7 +20103,7 @@ namespace smt {
         if (th.u.str.is_concat(concat)){
             int prefix;
             if (part_of_concat(mg, concat, node, m_root2value, prefix)){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << std::endl;);
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << " of " << concatValue << std::endl;);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
                 return true;
