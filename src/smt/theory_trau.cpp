@@ -14622,8 +14622,14 @@ namespace smt {
         vector<str::expr_pair> visited;
         for (const auto& n : concat_node_map)
             if (ctx.is_relevant(n.get_value())){
-                expr* arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
-                expr* arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+                expr* arg0 = n.get_key1();
+                ensure_enode(arg0);
+                if (!u.str.is_string(arg0))
+                    arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
+                expr* arg1 = n.get_key2();
+                ensure_enode(arg1);
+                if (!u.str.is_string(arg1))
+                    arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
                 zstring tmp;
                 if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
                     continue;
@@ -14637,7 +14643,7 @@ namespace smt {
 
                 if (ret.contains(arg0) && check_existing_occurence(arg0, arg1, visited)) {
                     continue;
-                }
+                } 
                 if (arg0 == arg1) {
                     ret.insert(arg0, 2);
                 }
@@ -14669,10 +14675,8 @@ namespace smt {
     }
 
     bool theory_trau::check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> v){
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << std::endl;);
         for (const auto& p : v)
             if (p.first.get() == lhs){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << " " << mk_pp(p.second.get(), m) << std::endl;);
                 // e is a part of p
                 expr_ref_vector eqs(m);
                 collect_eq_nodes(p.second.get(), eqs);
@@ -14681,14 +14685,17 @@ namespace smt {
                         if (are_equal_exprs(rhs, getMostLeftNodeInConcat(n)))
                             return true;
                     }
-
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << std::endl;);
                 eqs.reset();
                 collect_eq_nodes(rhs, eqs);
-                for (const auto& n : eqs)
-                    if (u.str.is_concat(n)){
-                        if (are_equal_exprs(p.second.get(), getMostLeftNodeInConcat(n)))
+                for (const auto& n : eqs) {
+                    if (u.str.is_concat(n)) {
+                        if (are_equal_exprs(p.second.get(), getMostLeftNodeInConcat(n))) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                             return true;
+                        }
                     }
+                }
             }
         return false;
     }
