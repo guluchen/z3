@@ -16112,7 +16112,7 @@ namespace smt {
 
         if (u.str.is_string(a_str)) {
             expr_ref len_str(m);
-            len_str = mk_strlen(a_str);
+            len_str = u.str.mk_length(a_str);
             SASSERT(len_str);
 
             zstring strconst;
