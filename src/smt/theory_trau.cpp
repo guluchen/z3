@@ -439,11 +439,26 @@ namespace smt {
     bool theory_trau::is_regex_concat(expr* n){
         ptr_vector<expr> nodes;
         get_nodes_in_concat(n, nodes);
-        for (unsigned i = 0; i < nodes.size(); ++i)
-            if (!u.str.is_string(nodes[i]) && !is_regex_var(nodes[i])) {
+        expr* reg = nullptr;
+        zstring str("");
+        for (unsigned i = 0; i < nodes.size(); ++i) {
+            expr* reg_tmp = nullptr;
+            zstring str_tmp;
+            if (!u.str.is_string(nodes[i], str_tmp) && !is_regex_var(nodes[i], reg_tmp)) {
                 return false;
             }
+            if (reg_tmp != nullptr && reg != nullptr && !match_regex(reg, reg_tmp))
+                return false;
+            if (reg_tmp != nullptr && str.length() > 0 && !match_regex(reg_tmp, str))
+                return false;
+            if (reg != nullptr && u.str.is_string(nodes[i], str_tmp) && !match_regex(reg, str_tmp))
+                return false;
 
+            if (reg_tmp)
+                reg = reg_tmp;
+            if (u.str.is_string(nodes[i], str_tmp))
+                str = str_tmp;
+        }
         return true;
     }
 
@@ -8232,8 +8247,10 @@ namespace smt {
                 for (const auto& n : eqs)
                     if (!u.str.is_concat(n)){
                         std::string tmp = expr2str(n);
-                        if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second))
+                        if (tmp.find("!tmp") != std::string::npos && !u.re.is_concat(we.second)) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
                             return true;
+                        }
                     }
             }
         }
@@ -14312,6 +14329,23 @@ namespace smt {
                     ret.insert(needle);
             }
         }
+
+        for (const auto& we : m_we_expr_memo){
+            expr* needle = nullptr;
+            if (is_contain_family_equality(we.second, needle) && (is_char_at(needle) || is_substr_var(needle))){
+                bool has_eq = false;
+                get_eqc_value(needle, has_eq);
+                if (!has_eq)
+                    ret.insert(needle);
+            }
+
+            if (is_contain_family_equality(we.first, needle) && (is_char_at(needle) || is_substr_var(needle))){
+                bool has_eq = false;
+                get_eqc_value(needle, has_eq);
+                if (!has_eq)
+                    ret.insert(needle);
+            }
+        }
         return ret;
     }
 
@@ -14996,13 +15030,10 @@ namespace smt {
         }
 
         if (needles.contains(nn)) {
-            bool has_const_eq = false;
-            get_eqc_value(nn, has_const_eq);
-            if (!has_const_eq) {
-                if (is_needle(nn)) {
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " is_needle " << mk_pp(nn, m) << std::endl;);
-                    return true;
-                }
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " is_needle " << mk_pp(nn, m) << std::endl;);
+            if (is_needle(nn)) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " is_needle " << mk_pp(nn, m) << std::endl;);
+                return true;
             }
         }
         return false;
@@ -15075,6 +15106,32 @@ namespace smt {
                 if (is_contain_family_equality(we.first.get(), tmp)){
                     if (are_equal_exprs(tmp, nn))
                         return true;
+                }
+            }
+        }
+
+        for (const auto& we : m_we_expr_memo){
+            if (u.str.is_concat(we.second.get())){
+                expr* tmp = nullptr;
+                if (is_contain_family_equality(we.second.get(), tmp)){
+                    if (are_equal_exprs(tmp, nn)) {
+                        bool has_eq_val = false;
+                        get_eqc_value(nn, has_eq_val);
+                        if (!has_eq_val)
+                            return true;
+                    }
+                }
+            }
+
+            if (u.str.is_concat(we.first.get())){
+                expr* tmp = nullptr;
+                if (is_contain_family_equality(we.first.get(), tmp)){
+                    if (are_equal_exprs(tmp, nn)) {
+                        bool has_eq_val = false;
+                        get_eqc_value(nn, has_eq_val);
+                        if (!has_eq_val)
+                            return true;
+                    }
                 }
             }
         }
