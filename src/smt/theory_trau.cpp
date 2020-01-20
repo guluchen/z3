@@ -3388,6 +3388,7 @@ namespace smt {
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (try_solve(eq_combination)){
+            print_eq_combination(eq_combination);
             TRACE("str", tout << "Resuming search due to axioms added by try_solve." << std::endl;);
             newConstraintTriggered = true;
             return FC_CONTINUE;
@@ -3702,7 +3703,7 @@ namespace smt {
                             createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
                             m);
                     expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
-                    expr_ref axiom(rewrite_implication(premise, conclusion), m);
+                    expr_ref axiom(createEqualOP(premise, conclusion), m);
                     if (!string_int_axioms.contains(axiom)) {
                         STRACE("str",
                                tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first
@@ -4325,6 +4326,7 @@ namespace smt {
                 }
         }
         if (to_assert.size() > 0){
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
             fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
             fetch_guessed_core_exprs(eq_combination, guessed_eqs, guessed_diseqs);
@@ -4332,7 +4334,7 @@ namespace smt {
 
             expr* tmp = createAndOP(to_assert);
             expr* assertingExpr = rewrite_implication(coreExpr, tmp);
-            assert_axiom(tmp);
+            assert_axiom(assertingExpr);
             m_trail.push_back(assertingExpr);
             implied_facts.push_back(assertingExpr);
             return true;
@@ -4938,6 +4940,7 @@ namespace smt {
 
                     }
                     else {
+                        print_eq_combination(eq_combination);
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " starts with " << starts[i] << " and " << starts[j] << std::endl;);
                         return false;
                     }
@@ -4949,6 +4952,7 @@ namespace smt {
 
                     }
                     else {
+                        print_eq_combination(eq_combination);
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(c.m_key, m) << " ends with " << ends[i] << " and " << ends[j] << std::endl;);
                         return false;
                     }
@@ -5985,18 +5989,18 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << std::endl;);
                 expr* a0 = nullptr;
                 if (u.str.is_stoi(a->get_arg(0), a0)){
-                    handle_str2int(a->get_arg(1), a0);
+                    handle_str2int(a->get_arg(1), a0, true);
                 }
                 else if (u.str.is_itos(a->get_arg(0), a0)){
                     if (!m_autil.is_numeral(a0))
-                        handle_int2str(a0, a->get_arg(1));
+                        handle_int2str(a0, a->get_arg(1), true);
                 }
                 else if (u.str.is_stoi(a->get_arg(1), a0)){
-                    handle_str2int(a->get_arg(0), a0);
+                    handle_str2int(a->get_arg(0), a0, true);
                 }
                 else if (u.str.is_itos(a->get_arg(1), a0)){
                     if (!m_autil.is_numeral(a0))
-                        handle_int2str(a0, a->get_arg(0));
+                        handle_int2str(a0, a->get_arg(0), true);
                 }
             }
             return true;
@@ -6004,11 +6008,14 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::handle_str2int(expr* num, expr* str){
-        
+    void theory_trau::handle_str2int(expr* num, expr* str, bool neg){
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
-            expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(num, m) << std::endl;);
+            expr *to_assert = rewrite_implication(createEqualOP(str, mk_string("")),
+                                                  createEqualOP(num, mk_int(-1)));
+            if (neg)
+                to_assert = mk_not(m, to_assert);
             m_trail.push_back(to_assert);
             assert_axiom(to_assert);
             return;
@@ -6076,11 +6083,13 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::handle_int2str(expr* num, expr* str){
+    void theory_trau::handle_int2str(expr* num, expr* str, bool neg){
         
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
             expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
+            if (neg)
+                to_assert = mk_not(m, to_assert);
             m_trail.push_back(to_assert);
             assert_axiom(to_assert);
             return;
@@ -6399,8 +6408,8 @@ namespace smt {
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
-//            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
-//                continue;
+            if (com.m_value.size() == 1 && com.m_key == com.m_value[0])
+                continue;
             if (line > 0) {
                 STRACE("str", tout << line << " EQ set of " << mk_pp(com.m_key, m) << std::endl;);
             }
@@ -6683,7 +6692,11 @@ namespace smt {
     }
 
     bool theory_trau::review_not_contain(expr* lhs, expr* rhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
-        
+        expr_ref_vector eqs_rhs(m);
+        collect_eq_nodes(rhs, eqs_rhs);
+        for (const auto& eq : eqs_rhs)
+            if (!u.str.is_concat(eq))
+                return true;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
         if (!review_notcontain_trivial(lhs, rhs, new_needle, cause)){
@@ -7060,10 +7073,6 @@ namespace smt {
 
             expr_ref axiom(createAndOP(cases), m);
             assert_axiom(createEqualOP(premise, axiom.get()));
-//            assert_axiom(axiom.get(), mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))));
-
-//            expr_ref tmpAxiom(createEqualOP(mk_not(m, mk_contains(lhs, u.str.mk_string(rhs))), axiom.get()), m);
-//            uState.add_asserting_constraints(axiom);
         }
     }
 
@@ -8984,7 +8993,7 @@ namespace smt {
             arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Checking case");
             expr* tmp = to_arith(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_elements, rhs_elements, non_fresh_variables);
 
-            if (tmp != nullptr) {
+            if (tmp != nullptr && tmp != m.mk_false()) {
                 cases.push_back(tmp);
                 arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Correct case");
                 STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " " <<  std::endl;);
@@ -19810,35 +19819,31 @@ namespace smt {
             if (constraint01 || constraint02) {
                 if (!constraint02) {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
-                    int_vector val;
-                    for (int i = 0; i < len_int; ++i)
-                        val.push_back(-1);
+                    int_vector val = init_vector(len_int);
 
                     if (th.u.str.is_concat(node))
                         construct_string(mg, node, m_root2value, val);
 
                     construct_string_from_combination(mg, m_root2value, val);
-                    unsigned * s_vector = new unsigned[len_int];
-                    for (int i = 0; i < len_int; ++i)
-                        if (val[i] == -1) {
-                            s_vector[i] = th.default_char;
-                        } else
-                            s_vector[i] = (char)val[i];
-                    strValue = zstring(len_int, s_vector);
-                    delete[] (s_vector);
+                    strValue = fill_default_char(val.size(), val);
                     return to_app(th.mk_string(strValue));
                 } else {
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case non root" << (constraint01 ? " true " : "false ") << (constraint02 ? " true " : "false ") << th.dependency_graph[node].size()<< std::endl;);
-                    if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue))
+                    if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
+                        int_vector val;
+                        for (int i = 0; i < len_int; ++i)
+                            val.push_back(strValue[i]);
+
+                        if (th.u.str.is_concat(node))
+                            construct_string(mg, node, m_root2value, val);
+                        strValue = fill_default_char(val.size(), val);
                         return to_app(th.mk_string(strValue));
+                    }
                 }
             }
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": case root " << len_int << std::endl;);
             // root var
-            int_vector val;
-
-            for (int i = 0; i < len_int; ++i)
-                val.push_back(-1);
+            int_vector val = init_vector(len_int);
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << val.size() << std::endl;);
             if (th.u.str.is_concat(node))
                 construct_string(mg, node, m_root2value, val);
@@ -19863,6 +19868,13 @@ namespace smt {
         }
 
         return false;
+    }
+
+    int_vector theory_trau::string_value_proc::init_vector(int len){
+        int_vector val;
+        for (int i = 0; i < len; ++i)
+            val.push_back(-1);
+        return val;
     }
 
     zstring theory_trau::string_value_proc::fill_default_char(int len, int_vector const &val){
@@ -20126,14 +20138,21 @@ namespace smt {
     }
 
     bool theory_trau::string_value_proc::fetch_value_from_dep_graph(model_generator &mg, obj_map<enode, app *> const& m_root2value, int len, zstring &value){
-        // component var
+        int_vector val = init_vector(len);
+
+        bool found = false;
+
         for (const auto &ancestor : th.dependency_graph[node]) {
             STRACE("str",tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ancestor, mg.get_manager()) << std::endl;);
             zstring ancestorValue;
             if (get_str_value(th.get_context().get_enode(ancestor), m_root2value, ancestorValue) && ancestorValue.length() >= len) {
                 if (th.u.str.is_concat(ancestor)) {
                     if (fetch_value_belong_to_concat(mg, ancestor, ancestorValue, m_root2value, len, value)) {
-                        return true;
+                        for (int i = 0; i < len; ++i)
+                            if (val[i] == -1 || val[i] == th.default_char) {
+                                val[i] = value[i];
+                            }
+                        found = true;
                     }
                 }
 
@@ -20144,15 +20163,20 @@ namespace smt {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ancestor_i, mg.get_manager()) << ": value = " << ancestorValue << std::endl;);
                             if (fetch_value_belong_to_concat(mg, ancestor_i, ancestorValue, m_root2value, len, value)) {
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(node, mg.get_manager()) << ": value = " << value << std::endl;);
-                                return true;
+                                for (int i = 0; i < len; ++i)
+                                    if (val[i] == -1 || val[i] == th.default_char) {
+                                        val[i] = value[i];
+                                    }
+                                found = true;
                             }
                         }
                     }
                 }
-
             }
         }
-        return false;
+
+        value = fill_default_char(len, val);
+        return found;
     }
 
     bool theory_trau::string_value_proc::fetch_value_belong_to_concat(model_generator &mg, expr *concat, zstring concatValue, obj_map<enode, app *> const& m_root2value, int len, zstring &value){
@@ -20188,30 +20212,33 @@ namespace smt {
 
     bool theory_trau::string_value_proc::part_of_concat(model_generator &mg, expr *concat, expr* sub_node, obj_map<enode, app *> const& m_root2value, int &start){
         start = 0;
-        ptr_vector<expr> nodes_1;
-        th.get_nodes_in_concat(concat, nodes_1);
-
+        expr_ref_vector eqs(th.get_manager());
+        th.collect_eq_nodes(concat, eqs);
         ptr_vector<expr> nodes_2;
         th.get_nodes_in_concat(sub_node, nodes_2);
-        if (nodes_1.size() >= nodes_2.size()){
-            for (unsigned i = 0; i < nodes_1.size() - nodes_2.size(); ++i){
-                bool found = true;
-                for (unsigned j = 0; j < nodes_2.size(); ++j){
-                    if (nodes_1[i + j] != nodes_2[j]){
-                        found = false;
-                        break;
+        for (const auto& c : eqs) {
+            start = 0;
+            ptr_vector<expr> nodes_1;
+            th.get_nodes_in_concat(c, nodes_1);
+            if (nodes_1.size() >= nodes_2.size()) {
+                for (unsigned i = 0; i < nodes_1.size() - nodes_2.size(); ++i) {
+                    bool found = true;
+                    for (unsigned j = 0; j < nodes_2.size(); ++j) {
+                        if (nodes_1[i + j] != nodes_2[j]) {
+                            found = false;
+                            break;
+                        }
                     }
-                }
-                if (found == true){
-                    return true;
-                }
+                    if (found == true) {
+                        return true;
+                    }
 
-                int subLen;
-                if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes_1[i])), m_root2value, subLen)) {
-                    start += subLen;
-                }
-                else {
-                    SASSERT(false);
+                    int subLen;
+                    if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(nodes_1[i])), m_root2value, subLen)) {
+                        start += subLen;
+                    } else {
+                        SASSERT(false);
+                    }
                 }
             }
         }

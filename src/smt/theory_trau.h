@@ -253,6 +253,7 @@ namespace smt {
             void collect_alternative_components(expr* v, vector<zstring>& ret);
             expr* is_regex_plus_breakdown(expr* e);
             bool construct_normally(model_generator & mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring& strValue);
+            int_vector init_vector(int len);
             zstring fill_default_char(int len, int_vector const &val);
             void construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, zstring &val);
             void construct_string_from_combination(model_generator & mg, obj_map<enode, app *> const& m_root2value, int_vector &val);
@@ -412,8 +413,8 @@ namespace smt {
                     expr_ref_vector const& diff);
                 bool assert_state(expr_ref_vector const& guessed_eqs, expr_ref_vector const& guessed_diseqs);
                 bool handle_str_int();
-                    void handle_str2int(expr* num, expr* str);
-                    void handle_int2str(expr* num, expr* str);
+                    void handle_str2int(expr* num, expr* str, bool neg = false);
+                    void handle_int2str(expr* num, expr* str, bool neg = false);
                         rational get_max_s2i(expr* n);
                         bool quickpath_str2int(expr* num, expr* str, bool cached = true);
                         bool quickpath_int2str(expr* num, expr* str, bool cached = true);
