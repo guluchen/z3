@@ -6634,6 +6634,7 @@ namespace smt {
     }
 
     void theory_trau::handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars){
+        
         expr* contain = nullptr;
         if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
             
@@ -6965,6 +6966,12 @@ namespace smt {
     void theory_trau::handle_not_contain(expr *lhs, expr *rhs, bool cached){
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
+        if (is_trivial_inequality(lhs, rhs)){
+            expr* premise = createEqualOP(lhs, rhs);
+            expr* conclusion = createEqualOP(mk_strlen(lhs), mk_strlen(rhs));
+            assert_axiom(rewrite_implication(mk_not(m, premise), mk_not(m, conclusion)));
+            return;
+        }
         if (is_contain_family_equality(lhs, contain)) {
             handle_not_contain_substr_index(rhs, contain);
             zstring value;
@@ -15026,6 +15033,40 @@ namespace smt {
 
         if (upper_bound(n, upperBoundVal) && upperBoundVal < s.length())
             return true;
+        return false;
+    }
+
+    bool theory_trau::is_trivial_inequality(expr* lhs, expr* rhs){
+        expr_ref_vector lhs_eqs(m);
+        expr_ref_vector rhs_eqs(m);
+        collect_eq_nodes(lhs, lhs_eqs);
+        collect_eq_nodes(rhs, rhs_eqs);
+        for (const auto& l : lhs_eqs)
+            for (const auto& r : rhs_eqs)
+                if (compare_concat(l, r))
+                    return true;
+        return false;
+    }
+
+    bool theory_trau::compare_concat(expr* lhs, expr* rhs){
+        ptr_vector<expr> lhs_nodes;
+        ptr_vector<expr> rhs_nodes;
+        get_nodes_in_concat(lhs, lhs_nodes);
+        get_nodes_in_concat(rhs, rhs_nodes);
+        if (lhs_nodes.size() > rhs_nodes.size()){
+            for (const auto& n : rhs_nodes){
+                if (!lhs_nodes.contains(n))
+                    return false;
+            }
+            return true;
+        }
+        else if (lhs_nodes.size() < rhs_nodes.size()){
+            for (const auto& n : lhs_nodes){
+                if (!rhs_nodes.contains(n))
+                    return false;
+            }
+            return true;
+        }
         return false;
     }
 

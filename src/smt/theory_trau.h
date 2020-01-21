@@ -1032,7 +1032,9 @@ namespace smt {
                 vector<zstring> collect_all_inequalities(expr* nn);
                     bool is_var_var_inequality(expr* x, expr* y);
                 expr* create_conjuct_all_inequalities(expr* nn);
-                    bool is_trivial_inequality(expr* n, zstring s);
+                bool is_trivial_inequality(expr* n, zstring s);
+                bool is_trivial_inequality(expr* lhs, expr* rhs);
+                bool compare_concat(expr* lhs, expr* rhs);
                 bool collect_not_contains(expr* nn, expr_set const& ineq_vars, expr_set const& needles);
                     bool is_haystack(expr* nn);
                     bool is_needle(expr* nn);
