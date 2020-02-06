@@ -6586,6 +6586,7 @@ namespace smt {
     }
 
     void theory_trau::handle_diseq_notcontain(bool cached){
+        return;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
@@ -6599,6 +6600,7 @@ namespace smt {
     }
 
     void theory_trau::handle_disequalities(){
+
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -6942,6 +6944,7 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain(){
+
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -7383,7 +7386,10 @@ namespace smt {
 
         expr_ref_vector ands(m);
         for (int i = 0; i < len; ++i){
-            ands.push_back(createEqualOP(createSelectOP(arr_a, createAddOP(start, mk_int(i))), createSelectOP(arr_b, mk_int(i))));
+            expr_ref_vector ors(m);
+            ors.push_back(createEqualOP(createSelectOP(arr_a, createAddOP(start, mk_int(i))), createSelectOP(arr_b, mk_int(i))));
+            ors.push_back(createLessEqOP(mk_strlen(b), mk_int(i)));
+            ands.push_back(createOrOP(ors));
         }
 //        ands.push_back(createLessEqOP(mk_strlen(b), mk_int(len)));
         return createAndOP(ands);
@@ -16565,7 +16571,7 @@ namespace smt {
         }
         expr_ref ts0(value.first, m);
         expr_ref ts1(value.second, m);
-        assert_axiom(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))));
+//        assert_axiom(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))));
         if (u.str.is_extract(haystack.get())){
             app* substr = to_app(haystack.get());
             rational ra;
