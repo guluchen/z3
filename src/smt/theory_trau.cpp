@@ -16565,7 +16565,7 @@ namespace smt {
         }
         expr_ref ts0(value.first, m);
         expr_ref ts1(value.second, m);
-
+        assert_axiom(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))));
         if (u.str.is_extract(haystack.get())){
             app* substr = to_app(haystack.get());
             rational ra;
