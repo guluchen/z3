@@ -6967,12 +6967,14 @@ namespace smt {
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
         if (is_trivial_inequality(lhs, rhs)){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             expr* premise = createEqualOP(lhs, rhs);
             expr* conclusion = createEqualOP(mk_strlen(lhs), mk_strlen(rhs));
             assert_axiom(rewrite_implication(mk_not(m, premise), mk_not(m, conclusion)));
             return;
         }
         if (is_contain_family_equality(lhs, contain)) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(rhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
@@ -6981,6 +6983,7 @@ namespace smt {
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_family_equality(rhs, contain)) {
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(lhs, contain);
             zstring value;
             if (u.str.is_string(contain, value))
@@ -16752,7 +16755,6 @@ namespace smt {
         else {
             index_head.insert(ex, x1.get());
         }
-
         // -----------------------
         // true branch
         expr_ref_vector then_items(m);
@@ -17327,7 +17329,6 @@ namespace smt {
         expr_ref x1(contain_split_pair.first, m);
         expr_ref x2(contain_split_pair.second, m);
         expr_ref result(mk_str_var("result"), m);
-
         // condAst = Contains(args[0], args[1])
         expr_ref condAst(mk_contains(haystack, needle), m);
         // -----------------------
@@ -17387,6 +17388,14 @@ namespace smt {
         app *ex = e->get_owner();
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(ex, m) << std::endl;);
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
+        ptr_vector<expr> needle_nodes; get_all_nodes_in_concat(ex->get_arg(1), needle_nodes);
+        if (true){
+            if (needle_nodes.contains(ex->get_arg(0)) && u.str.is_contains(ex)){
+                TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(ex->get_arg(1))), m) << std::endl;);
+                assert_axiom(createITEOP(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(ex->get_arg(1))), createEqualOP(ex, m.mk_true()), createEqualOP(ex, m.mk_false())));
+                return true;
+            }
+        }
         if (haystack == needle) {
             if (u.str.is_replace(ex))
                 m_delayed_assertions_todo.push_back(createEqualOP(ex, ex->get_arg(2)));
