@@ -15559,7 +15559,7 @@ namespace smt {
         for (const auto& n : s) {
             if (u.str.is_concat(n)) {
                 expr* needle = nullptr;
-                if (is_contain_family_equality(n, needle)){
+                if (is_contain_family_equality(n, needle) && !is_non_fresh_concat(n, non_fresh_vars)){
                     waiting_list.insert(n, needle);
                     continue;
                 }
