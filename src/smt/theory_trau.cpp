@@ -8663,7 +8663,8 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v, m) << std::endl;);
-            SASSERT(false);
+            if (!u.re.is_full_char(v) && !u.re.is_full_seq(v))
+                SASSERT(false);
         }
         return true;
     }
@@ -8744,6 +8745,9 @@ namespace smt {
         }
         else if (u.re.is_loop(v)){
             collect_strs_in_membership(to_app(v)->get_arg(0), ret);
+        }
+        else if (u.re.is_full_seq(v) || u.re.is_full_char(v)){
+
         }
         else
             NOT_IMPLEMENTED_YET();
