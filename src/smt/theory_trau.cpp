@@ -3883,9 +3883,10 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         sigma_domain = collect_char_domain_from_concat();
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        q_bound = analyze_bounds();
+        STRACE("str", tout << __LINE__ <<  " q_bound: " << ":  " << q_bound << std::endl;);
         non_fresh_vars = collect_non_fresh_vars();
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
-        analyze_upper_bound_str_int();
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_hashtable<expr> non_root_vars;
         bool axiom_added = false;
@@ -3894,29 +3895,17 @@ namespace smt {
         return axiom_added;
     }
 
-    bool theory_trau::analyze_upper_bound_str_int(){
-        rational bound = str_int_bound;
-        bool all_upper_bounds = true;
-        for (const auto& num : int_string_vars){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << mk_pp(num.m_key, m) << std::endl;);
-            rational ub, lb;
-            if (upper_num_bound(num.m_key, ub)){
-                rational log10 = log_10(ub);
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " upper_num_bound " << ub << " log10 " << log10 << std::endl;);
-                if (log10 > bound)
-                    bound = log10;
-            }
-            else {
-                all_upper_bounds = false;
-                if (lower_num_bound(num.m_key, lb)){
-                    rational log10 = log_10(lb);
-                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " lower_num_bound " << ub << " log10 " << log10 << std::endl;);
-                    if (log10 > bound)
-                        bound = log10;
-                }
+    int theory_trau::analyze_bounds(){
+        context &ctx = get_context();
+        obj_hashtable<expr> all_str_exprs;
+        sort* string_sort = u.str.mk_string_sort();
+        for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
+            expr* owner = (*it)->get_root()->get_owner();
+            if ((m.get_sort(owner)) == string_sort) {
+                all_str_exprs.insert(owner);
             }
         }
-        return all_upper_bounds;
+        return get_max_bound(all_str_exprs);
     }
 
     rational theory_trau::log_10(rational n){
@@ -5921,6 +5910,10 @@ namespace smt {
         bool axiomAdded = handle_str_int();
         guessed_eqs.append(diff);
         axiomAdded = convert_equalities(eq_combination, non_fresh_vars, createAndOP(guessed_eqs)) || axiomAdded;
+
+//        if (membership_memo.size() > 0)
+//            axiomAdded = true;
+        STRACE("str", tout << __LINE__ <<  " axiomAdded: " << axiomAdded << std::endl;);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         completed_branches.push_back(uState);
         return axiomAdded;
@@ -6666,7 +6659,9 @@ namespace smt {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << "\n";);
                 if (is_contain_family_equality(lhs, contain)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "\n";);
                     if (!review_not_contain(rhs, lhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         cause = nullptr;
@@ -6675,6 +6670,7 @@ namespace smt {
                     }
                 }
                 else if (is_contain_family_equality(rhs, contain)){
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << "\n";);
                     if (!review_not_contain(lhs, rhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         cause = nullptr;
@@ -6750,7 +6746,8 @@ namespace smt {
                     }
                 }
             }
-
+        else if (are_equal_exprs(needle, lhs))
+            return false;
         return true;
     }
 
@@ -7144,12 +7141,9 @@ namespace smt {
                 // check var name
                 std::string n1 = expr2str(nodes[0]);
                 std::string n3 = expr2str(nodes[nodes.size() - 1]);
-                if ((n1.find("pre_contain!tmp") != std::string::npos &&
-                     n3.find("post_contain!tmp") != std::string::npos) ||
-                    (n1.find("indexOf1!tmp") != std::string::npos &&
-                     n3.find("indexOf2!tmp") != std::string::npos) ||
-                        (n1.find("replace1!tmp") != std::string::npos &&
-                         n3.find("replace2!tmp") != std::string::npos)) {
+                if ((n1.find("pre_contain!tmp") != std::string::npos && n3.find("post_contain!tmp") != std::string::npos) ||
+                    (n1.find("indexOf1!tmp") != std::string::npos && n3.find("indexOf2!tmp") != std::string::npos) ||
+                    (n1.find("replace1!tmp") != std::string::npos && n3.find("replace2!tmp") != std::string::npos)) {
                     nodes.pop_back();
                     contain = create_concat_from_vector(nodes, 0);
                     return true;
@@ -7196,6 +7190,34 @@ namespace smt {
 
         obj_hashtable<expr> all_str_exprs;
         obj_hashtable<expr> all_consts;
+        get_all_exprs(eq_combination, all_str_exprs, all_consts);
+
+        // calculate sum consts
+        int sumConst = 0;
+        for (const auto& s: all_consts){
+            zstring tmp;
+            u.str.is_string(s, tmp);
+            sumConst += tmp.length();
+        }
+
+        sumConst = std::min(sumConst, 100);
+
+        int maxInt = get_max_bound(all_str_exprs);
+
+        // count non internal var
+        int cnt = 5;
+        for (const auto& v: all_str_exprs){
+            if (!is_internal_var(v) && !u.str.is_string(v))
+                cnt++;
+        }
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << maxInt << " " << cnt << " " << sumConst << std::endl;);
+        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, maxInt));
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
+    }
+
+    void theory_trau::get_all_exprs(obj_map<expr, ptr_vector<expr>> const& eq_combination,
+                                    obj_hashtable<expr> &all_str_exprs,
+                                    obj_hashtable<expr> &all_consts){
         for (const auto& v : eq_combination){
             expr_ref_vector eqs(m);
             collect_eq_nodes(v.m_key, eqs);
@@ -7217,44 +7239,36 @@ namespace smt {
                 }
             }
         }
-
-        // calculate sum consts
-        int sumConst = 0;
-        for (const auto& s: all_consts){
-            zstring tmp;
-            u.str.is_string(s, tmp);
-            sumConst += tmp.length();
-        }
-
-        sumConst = std::min(sumConst, 100);
-
-        int maxInt = -1;
+    }
+    
+    int theory_trau::get_max_bound(obj_hashtable<expr> const&all_str_exprs){
+        int max_bound = -1;
 
         for (const auto& v: all_str_exprs){
-            rational vLen;
-            bool vLen_exists = get_len_value(v, vLen);
-            if (vLen_exists){
-                maxInt = std::max(maxInt, vLen.get_int32());
-            }
-            else {
-                rational lo(-1), hi(-1);
-
-                if (lower_bound(v, lo))
-                    maxInt = std::max(maxInt, lo.get_int32());
-                if (upper_bound(v, hi))
-                    maxInt = std::max(maxInt, hi.get_int32());
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v, m) << std::endl;);
+            expr_ref_vector eqs(m);
+            collect_eq_nodes(v, eqs);
+            for (const auto& e: eqs) {
+                rational vLen;
+                bool vLen_exists = get_len_value(e, vLen);
+                if (vLen_exists) {
+                    max_bound = std::max(max_bound, vLen.get_int32());
+                    break;
+                } else {
+                    rational lo(-1), hi(-1);
+                    if (lower_bound(e, lo)) {
+                        max_bound = std::max(max_bound, lo.get_int32());
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << " " << lo << std::endl;);
+                    }
+                    if (upper_bound(e, hi)) {
+                        max_bound = std::max(max_bound, hi.get_int32());
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << " " << hi << std::endl;);
+                    }
+                }
             }
         }
-
-        // count non internal var
-        int cnt = 5;
-        for (const auto& v: all_str_exprs){
-            if (!is_internal_var(v) && !u.str.is_string(v))
-                cnt++;
-        }
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << maxInt << " " << cnt << " " << sumConst << std::endl;);
-        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, maxInt));
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << max_bound << std::endl;);
+        return max_bound;
     }
 
     void theory_trau::init_underapprox(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars){
@@ -7535,7 +7549,7 @@ namespace smt {
     }
 
     expr* theory_trau::setup_regex_var(expr* var, expr* rexpr, expr* arr, rational bound, expr* prefix){
-        expr* ret = setup_char_range_arr(rexpr, arr, bound, prefix);
+        expr* ret = setup_char_range_arr(var, rexpr, arr, bound, prefix);
         if (ret != nullptr) {
         }
         else {
@@ -7561,23 +7575,29 @@ namespace smt {
         return ret;
     }
 
-    expr* theory_trau::setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix){
-        vector<std::pair<int, int>> charRange = collect_char_range(e);
-        if (charRange[0].first != -1) {
+    expr* theory_trau::setup_char_range_arr(expr* var, expr* e, expr* arr, rational bound, expr* prefix){
+        vector<std::pair<int, int>> char_range = collect_char_range(e);
+        if (char_range[0].first != -1) {
             expr_ref_vector ret(m);
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(e, m) << std::endl;);
             for (unsigned i = 0; i < bound.get_int64(); ++i) {
-                expr_ref_vector ors(m);
                 expr_ref_vector ors_range(m);
-                for (unsigned j = 0; j < charRange.size(); ++j) {
-                    expr_ref_vector ands(m);
-                    ands.push_back(createGreaterEqOP(
-                            createSelectOP(arr, createAddOP(prefix, m_autil.mk_int(i))),
-                            m_autil.mk_int(charRange[j].first)));
-                    ands.push_back(createLessEqOP(
-                            createSelectOP(arr, createAddOP(prefix, m_autil.mk_int(i))),
-                            m_autil.mk_int(charRange[j].second)));
-                    ors_range.push_back(createAndOP(ands));
+                for (unsigned j = 0; j < char_range.size(); ++j) {
+                    if (char_range[j].first == char_range[j].second)
+                        ors_range.push_back(createEqualOP(
+                                createSelectOP(arr, createAddOP(prefix, m_autil.mk_int(i))),
+                                m_autil.mk_int(char_range[j].first)));
+                    else {
+                        expr_ref_vector ands(m);
+                        ands.push_back(createGreaterEqOP(
+                                createSelectOP(arr, createAddOP(prefix, m_autil.mk_int(i))),
+                                m_autil.mk_int(char_range[j].first)));
+                        ands.push_back(createLessEqOP(
+                                createSelectOP(arr, createAddOP(prefix, m_autil.mk_int(i))),
+                                m_autil.mk_int(char_range[j].second)));
+                        ors_range.push_back(createAndOP(ands));
+                    }
+                    ors_range.push_back(createLessEqOP(mk_strlen(var), mk_int(i)));
                 }
                 ret.push_back(createOrOP(ors_range));
             }
@@ -7925,8 +7945,9 @@ namespace smt {
             }
 
         }
-
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << std::endl;);
         if (asserted_constraints.size() > 0) {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << std::endl;);
             expr_ref tmp(createAndOP(asserted_constraints), m);
             uState.add_asserting_constraints(tmp);
         }
@@ -14607,8 +14628,10 @@ namespace smt {
         // not equal to any concat/const
         expr_ref_vector eqs(m);
         expr *value = collect_eq_nodes(nn, eqs);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         if (value != nullptr)
             return false;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
         if (check_union_membership(nn, len))
             return true;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(nn, m) << " == " << len << std::endl;);
@@ -14859,6 +14882,11 @@ namespace smt {
             if (we.first.get() == nn){
                 if (u.re.is_star(we.second.get()) || u.re.is_star(we.second.get())) {
                     len = q_bound.get_int64();
+                    rational lo;
+                    if (lower_bound(nn, lo) && len < lo.get_int64()) {
+                        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << " " << lo << std::endl;);
+                        len = len + lo.get_int64();
+                    }
                     return true;
                 }
                 else {

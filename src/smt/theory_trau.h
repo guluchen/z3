@@ -353,7 +353,7 @@ namespace smt {
                 int eval_invalid_str2int(expr* e, expr* &eq_node);
             bool eval_int2str(app * a);
             bool init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
-                bool analyze_upper_bound_str_int();
+            int analyze_bounds();
                 rational log_10(rational n);
                 rational ten_power(rational n);
             bool refined_init_chain_free(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> &eq_combination);
@@ -438,7 +438,7 @@ namespace smt {
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr, expr* premise = nullptr);
                 expr* setup_regex_var(expr* var, expr* rexpr, expr* arr, rational bound, expr* prefix);
-                    expr* setup_char_range_arr(expr* e, expr* arr, rational bound, expr* prefix);
+                    expr* setup_char_range_arr(expr* var, expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
                 char setup_default_char(unsigned_set const& included_chars, unsigned_set const& exclude_chars);
@@ -473,7 +473,11 @@ namespace smt {
                     bool is_contain_equality(expr* n, expr* &contain);
                     bool is_trivial_contain(zstring s);
                 void  init_connecting_size(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars, bool prep = true);
-                    void static_analysis(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+                void static_analysis(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+                void get_all_exprs(obj_map<expr, ptr_vector<expr>> const& eq_combination,
+                                        obj_hashtable<expr> &all_str_exprs,
+                                        obj_hashtable<expr> &all_consts);
+                int get_max_bound(obj_hashtable<expr> const& all_str_exprs);
             bool convert_equalities(obj_map<expr, ptr_vector<expr>> const& eq_combination,
                                            obj_map<expr, int> & non_fresh_vars,
                                            expr* premise);
