@@ -8425,6 +8425,7 @@ namespace smt {
     }
 
     bool theory_trau::isUnionStr(zstring str){
+        return false;
         return str.contains("|");
     }
 
@@ -12284,6 +12285,7 @@ namespace smt {
             string_set values;
             if (isUnionStr(value)){
                 values = get_regex_components(value);
+                STRACE("str", tout << __LINE__ << " checking str: " << values.size() << std::endl;);
             }
             else
                 values.insert(value);
@@ -12355,7 +12357,7 @@ namespace smt {
             return ret;
         }
         vector<zstring> components = collect_alternative_components(s);
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << s << " " << components.size() << std::endl;);
         if (components.size() > 0) {
             if (components.size() == 1) {
                 string_set ret;
@@ -12364,6 +12366,7 @@ namespace smt {
             }
             string_set ret;
             for (unsigned i = 0 ; i < components.size(); ++i) {
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << components[i] << std::endl;);
                 remove_parentheses(components[i]);
                 string_set tmp = get_regex_components(components[i]);
                 for (const auto& s : tmp)
@@ -12372,7 +12375,7 @@ namespace smt {
             return ret;
         }
         else
-        SASSERT(false);
+            SASSERT(false);
         return {};
     }
 
