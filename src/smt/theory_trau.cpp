@@ -5951,8 +5951,6 @@ namespace smt {
 
     bool theory_trau::handle_str_int(){
         if (string_int_conversion_terms.size() > 0) {
-
-            
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << std::endl;);
             expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
             fetch_guessed_str_int_with_scopes(guessed_eqs, guessed_diseqs);
@@ -6579,7 +6577,6 @@ namespace smt {
     }
 
     void theory_trau::handle_diseq_notcontain(bool cached){
-
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
@@ -7434,7 +7431,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** value " << mk_pp(v, m)  << " " << mk_pp(val, m) << std::endl;);
             }
             else {
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << mk_pp(arr_linker[arr_var], m) << std::endl;);
                 zstring val;
                 if (u.str.is_string(v, val)) {
                     if (v != arr_linker[arr_var])
@@ -7463,8 +7460,8 @@ namespace smt {
             else {
                 v1 = mk_arr_var(flat_arr);
                 array_map_reverse.insert(flat_arr, v1);
-                STRACE("str", tout << __LINE__ << " making arr: " << flat_arr << " --> " << mk_pp(v1, m) << std::endl;);
-                arr_linker.insert(v1, v);
+                STRACE("str", tout << __LINE__ << " making arr: " << flat_arr << " --> " << mk_pp(v1, m) << " " << mk_pp(v, m) << std::endl;);
+                arr_linker.insert(v1, ctx.get_enode(v)->get_root()->get_owner());
             }
 
             {
@@ -7478,7 +7475,8 @@ namespace smt {
             zstring val;
             expr* rexpr = nullptr;
             if (u.str.is_string(v, val)){
-                setup_str_const(val, v1);
+                expr* premise = createEqualOP(v, ctx.get_enode(v)->get_root()->get_owner());
+                setup_str_const(val, v1, premise);
             }
             else if (is_internal_regex_var(v, rexpr)) {
                 if (!non_fresh_vars.contains(v)) {
