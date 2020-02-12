@@ -270,7 +270,8 @@ namespace smt {
             bool find_prefix_len(model_generator &mg, expr *concat, expr *subNode, obj_map<enode, app *> const& m_root2value, int &prefix);
             bool get_int_value(model_generator &mg, enode *n, obj_map<enode, app *> const& m_root2value, int &value);
             bool get_str_value(enode *n, obj_map<enode, app *> const& m_root2value, zstring &value);
-            bool match_regex(expr *a, zstring b);
+            bool match_regex(expr *a, const zstring b);
+            bool trivially_match(expr *a);
             bool match_regex(expr *a, expr *b);
             eautomaton* get_automaton(expr* re);
         };

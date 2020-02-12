@@ -6579,6 +6579,7 @@ namespace smt {
     }
 
     void theory_trau::handle_diseq_notcontain(bool cached){
+
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
@@ -15086,8 +15087,10 @@ namespace smt {
         collect_eq_nodes(rhs, rhs_eqs);
         for (const auto& l : lhs_eqs)
             for (const auto& r : rhs_eqs)
-                if (compare_concat(l, r))
+                if (compare_concat(l, r)) {
+                    STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(l, m) << " != " << mk_pp(r, m)<< std::endl;);
                     return true;
+                }
         return false;
     }
 
@@ -15100,6 +15103,9 @@ namespace smt {
             for (const auto& n : rhs_nodes){
                 if (!lhs_nodes.contains(n))
                     return false;
+                else {
+                    lhs_nodes.erase(n);
+                }
             }
             return true;
         }
@@ -15107,6 +15113,9 @@ namespace smt {
             for (const auto& n : lhs_nodes){
                 if (!rhs_nodes.contains(n))
                     return false;
+                else {
+                    rhs_nodes.erase(n);
+                }
             }
             return true;
         }
@@ -19872,10 +19881,12 @@ namespace smt {
             if (tmp != nullptr){
                 return collect_alternative_components(tmp, ret);
             }
-            else
-                NOT_IMPLEMENTED_YET();
+            else {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << mk_pp(v, th.get_manager()) << std::endl;);
+            }
         }
         else {
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " "  << mk_pp(v, th.get_manager()) << std::endl;);
             NOT_IMPLEMENTED_YET();
         }
     }
@@ -20064,6 +20075,7 @@ namespace smt {
             // revise string basing on regex
             if (char_set.size() == 0) {
                 if (regex != nullptr) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(regex, th.get_manager()) << std::endl;);
                     if (!match_regex(regex, val)) {
                         vector<zstring> elements = collect_alternative_components(regex);
                         if (elements.size() == 1 && len_int % elements[0].length() == 0){
@@ -20072,6 +20084,7 @@ namespace smt {
                             val = new_str;
                             return true;
                         }
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(regex, th.get_manager()) << std::endl;);
                         for (int i = 0; i < (int)value.length(); ++i) {
                             zstring tmp = val.extract(0, i);
                             if (!match_regex(regex, tmp)) {
@@ -20100,7 +20113,7 @@ namespace smt {
                     }
                 }
             }
-
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(regex, th.get_manager()) << std::endl;);
             if (completed == false) {
                 return false;
             }
@@ -20432,9 +20445,23 @@ namespace smt {
         }
     }
 
-    bool theory_trau::string_value_proc::match_regex(expr *a, zstring b){
+    bool theory_trau::string_value_proc::match_regex(expr *a, const zstring b){
+        if (trivially_match(a))
+            return true;
         expr* tmp = th.u.re.mk_to_re(th.u.str.mk_string(b));
         return match_regex(a, tmp);
+    }
+
+    bool theory_trau::string_value_proc::trivially_match(expr *a){
+        expr* lhs = nullptr, *rhs = nullptr;
+        if (th.u.re.is_concat(a,lhs, rhs)){
+            if (th.u.re.is_full_seq(lhs) || th.u.re.is_full_char(rhs)){
+                return true;
+            }
+            if (trivially_match(lhs) || trivially_match(rhs))
+                return true;
+        }
+        return false;
     }
 
     bool theory_trau::string_value_proc::match_regex(expr *a, expr *b) {
