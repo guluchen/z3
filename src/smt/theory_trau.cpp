@@ -7483,6 +7483,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " arr: " << flat_arr << " : " << mk_pp(v, m) << std::endl;);
                     SASSERT(false);
                 }
+                expr* premise = createEqualOP(v, ctx.get_enode(v)->get_root()->get_owner());
                 int bound = non_fresh_vars[v] == -1 ? connectingSize : non_fresh_vars[v];
                 expr *to_assert = setup_regex_var(v, rexpr, v1, rational(bound), mk_int(0));
                 to_assert = createAndOP(createLessEqOP(mk_strlen(v), mk_int(bound)), to_assert);
@@ -20365,7 +20366,21 @@ namespace smt {
             return true;
         expr* e1 = nullptr, *e2 = nullptr;
         if (th.u.str.is_concat(concat, e1, e2)){
-            if (!find_prefix_len(mg, e1, subNode, m_root2value, prefix)) {
+            if (e1 == subNode){
+                return true;
+            }
+            else if (e2 == subNode){
+                int subLen = -1;
+                zstring val_str;
+                if (th.u.str.is_string(e1, val_str)){
+                    prefix += val_str.length();
+                }
+                else if (get_int_value(mg, th.get_context().get_enode(th.mk_strlen(e1)), m_root2value, subLen)) {
+                    prefix += subLen;
+                }
+                return true;
+            }
+            else if (!find_prefix_len(mg, e1, subNode, m_root2value, prefix)) {
                 if (!find_prefix_len(mg, e2, subNode, m_root2value, prefix))
                     return false;
                 else

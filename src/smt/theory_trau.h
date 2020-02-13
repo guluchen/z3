@@ -439,7 +439,7 @@ namespace smt {
                 void setup_str_int_arr(expr* v, int start);
                 void setup_str_const(zstring val, expr* arr, expr* premise = nullptr);
                 expr* setup_regex_var(expr* var, expr* rexpr, expr* arr, rational bound, expr* prefix);
-                    expr* setup_char_range_arr(expr* var, expr* e, expr* arr, rational bound, expr* prefix);
+                expr* setup_char_range_arr(expr* var, expr* e, expr* arr, rational bound, expr* prefix);
                 void create_notcontain_map();
                 void create_const_set();
                 char setup_default_char(unsigned_set const& included_chars, unsigned_set const& exclude_chars);
