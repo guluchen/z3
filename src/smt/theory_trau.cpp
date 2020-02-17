@@ -20288,7 +20288,10 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << " of " << concatValue << std::endl;);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
-                return true;
+                if (value.length() != len)
+                    return false;
+                else
+                    return true;
             }
 
             ptr_vector<expr> leafNodes;
@@ -20305,7 +20308,10 @@ namespace smt {
                 prefix = find_prefix_len(mg, concat, tmp, m_root2value);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
-                return true;
+                if (value.length() != len)
+                    return false;
+                else
+                    return true;
             }
             return false;
         }
