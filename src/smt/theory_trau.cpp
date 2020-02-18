@@ -6172,6 +6172,7 @@ namespace smt {
         rational pos = str_int_bound - one;
         expr* arr = get_var_flat_array(str);
         SASSERT(arr);
+        expr* unroll_premise = createEqualOP(arr_linker[arr], str);
         expr* strLen = mk_strlen(str);
         expr_ref_vector ands(m);
         ands.push_back(rewrite_implication(createEqualOP(strLen, mk_int(0)), createEqualOP(num, mk_int(- 1))));
@@ -6219,7 +6220,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " valid_s2i: " << mk_pp(valid_s2i, m) << std::endl;);
         ands.push_back(rewrite_implication(valid_s2i, createAndOP(ands_tmp)));
         ands.push_back(rewrite_implication(mk_not(m, valid_s2i), createEqualOP(num, mk_int(- 1))));
-        return createAndOP(ands);
+        return rewrite_implication(unroll_premise, createAndOP(ands));
     }
 
     expr* theory_trau::valid_str_int(expr* str){
@@ -6590,7 +6591,6 @@ namespace smt {
     }
 
     void theory_trau::handle_disequalities(){
-
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -6883,6 +6883,7 @@ namespace smt {
             expr* arrLhs = get_var_flat_array(lhs);
             expr* arrRhs = get_var_flat_array(rhs);
             if (arrLhs != nullptr && arrRhs != nullptr) {
+                expr* premises = createAndOP(createEqualOP(arr_linker[arrLhs], lhs), createEqualOP(arr_linker[arrRhs], rhs), mk_not(m, createEqualOP(lhs, rhs)));
                 STRACE("str", tout << __LINE__ << " min len: " << bound << "\n";);
                 for (int i = 0; i < bound; ++i) {
                     expr_ref_vector subcases(m);
@@ -6894,7 +6895,7 @@ namespace smt {
                 }
 
                 expr *assertExpr = createOrOP(cases);
-                assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), assertExpr));
+                assert_axiom(rewrite_implication(premises, assertExpr));
             }
         }
         else {
@@ -6911,12 +6912,31 @@ namespace smt {
         expr_ref notLenEq(mk_not(m, eqref.get()), m);
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
         cases.push_back(notLenEq);
+        bool has_val = false;
+        expr* string_expr_val = get_eqc_value(lhs, has_val);
+        zstring string_val;
+        if (has_val && u.str.is_string(string_expr_val, string_val)){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " trivial not (" << mk_pp(lhs, m) << " = " << string_val << " != " << rhs << ")\n";);
+            return;
+        }
+        else {
+            expr_ref_vector eqs(m);
+            collect_eq_nodes(lhs, eqs);
+            for (const auto& eq : eqs){
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " = " << mk_pp(eq, m) << ")\n";);
+            }
+        }
         if (is_non_fresh(lhs, non_fresh_vars) && !is_trivial_inequality(lhs, rhs)) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = get_var_flat_array(lhs);
             if (arrLhs == nullptr)
                 return;
+            expr_ref premise(mk_not(m, createEqualOP(lhs, u.str.mk_string(rhs))), m);
+            if (arr_linker[arrLhs] != lhs){
+                premise = createAndOP(premise, createEqualOP(arr_linker[arrLhs], lhs));
+            }
 
+            ensure_enode(premise.get());
             for (unsigned i = 0; i < rhs.length(); ++i) {
                 expr_ref_vector subcases(m);
                 subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
@@ -6924,8 +6944,6 @@ namespace smt {
                 subcases.push_back(mk_not(m, tmp));
                 cases.push_back(createAndOP(subcases));
             }
-            expr_ref premise(mk_not(m, createEqualOP(lhs, u.str.mk_string(rhs))), m);
-            ensure_enode(premise.get());
             expr_ref conclusion(createOrOP(cases), m);
 
 
@@ -6933,12 +6951,13 @@ namespace smt {
             assert_axiom(tmpAxiom.get());
         }
         else if (rhs.length() == 0){
-            assert_axiom(createGreaterEqOP(mk_strlen(lhs), mk_int(1)));
+            expr_ref premise(mk_not(m, createEqualOP(lhs, u.str.mk_string(rhs))), m);
+            ensure_enode(premise.get());
+            assert_axiom(createEqualOP(premise, createGreaterEqOP(mk_strlen(lhs), mk_int(1))));
         }
     }
 
     void theory_trau::handle_not_contain(){
-
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -7013,6 +7032,7 @@ namespace smt {
         is_fixed_len_var(lhs, len_lhs);
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
+        expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr_lhs], lhs), createEqualOP(arr_linker[arr_rhs], rhs));
         expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
         m_rewrite(cond);
         ors.push_back(cond);
@@ -7030,7 +7050,7 @@ namespace smt {
                 }
                 ors.push_back(createAndOP(ands));
             }
-            assert_axiom(createEqualOP(premise, createOrOP(ors)));
+            assert_axiom(createEqualOP(premises, createOrOP(ors)));
         }
     }
 
@@ -7064,6 +7084,7 @@ namespace smt {
 
             if (arr == nullptr)
                 return;
+            expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr], lhs));
 
             for (int i = (int)rhs.length(); i <= bound; ++i){
                 expr_ref_vector subcases(m);
@@ -7079,7 +7100,7 @@ namespace smt {
             cases.push_back(createLessEqOP(lenExpr, mk_int(bound)));
 
             expr_ref axiom(createAndOP(cases), m);
-            assert_axiom(createEqualOP(premise, axiom.get()));
+            assert_axiom(createEqualOP(premises, axiom.get()));
         }
     }
 
@@ -7391,10 +7412,13 @@ namespace smt {
     expr* theory_trau::sync_2_vars(expr* a, expr* b, int len, expr* start){
         expr* arr_a = get_var_flat_array(a);
         expr* arr_b = get_var_flat_array(b);
-
+        expr_ref_vector premises(m);
         SASSERT(arr_a);
         SASSERT(arr_b);
-
+        if (arr_linker[arr_a] != a)
+            premises.push_back(createEqualOP(arr_linker[arr_a], a));
+        if (arr_linker[arr_b] != b)
+            premises.push_back(createEqualOP(arr_linker[arr_b], b));
         expr_ref_vector ands(m);
         for (int i = 0; i < len; ++i){
             expr_ref_vector ors(m);
@@ -7403,7 +7427,7 @@ namespace smt {
             ands.push_back(createOrOP(ors));
         }
 //        ands.push_back(createLessEqOP(mk_strlen(b), mk_int(len)));
-        return createAndOP(ands);
+        return rewrite_implication(createAndOP(premises), createAndOP(ands));
     }
     void theory_trau::mk_and_setup_arr(expr* v, obj_map<expr, int> &non_fresh_vars){
         context & ctx = get_context();
