@@ -10974,14 +10974,17 @@ namespace smt {
         expr_ref startLhs(leng_prefix_lhs(a, elementNames, pos, optimizing, unrollMode), m);
         expr_ref startRhs(leng_prefix_rhs(elementNames[pos], unrollMode), m);
         /* optimize length of generated string */
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* arrLhs = get_var_flat_array(a);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* arrRhs = get_var_flat_array(elementNames[pos]);
-
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* lenA = get_var_flat_size(a);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* lenB = get_var_flat_size(elementNames[pos]);
-
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* iterB = get_flat_iter(elementNames[pos]);
-
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr_ref_vector ands(m);
         expr* lenRhs = nullptr;
         /* combine two parts if it is possible */
@@ -11004,7 +11007,6 @@ namespace smt {
             lenLhs = get_var_size(a);
         else
             lenLhs = get_var_flat_size(a);
-
 
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         if (!unrollMode){
@@ -13503,20 +13505,20 @@ namespace smt {
                 else if (content.length() == 1)
                     elements.push_back(std::make_pair(list[k], -1));
             }
-            else if (is_internal_regex_var(l_k, reg)){
-                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << std::endl;);
-                if (!found || (curr_var_pieces_counter[l_k] + 1 > var_pieces_counter[l_k])){
-                    create_internal_int_vars(l_k);
-                    if (!found)
-                        var_pieces_counter.insert(l_k, 0);
-                    var_pieces_counter[l_k] += 1;
-                }
-                else {
-                    reuse_internal_int_vars(l_k);
-                }
-                elements.push_back(std::make_pair(l_k, REGEX_CODE - curr_var_pieces_counter[l_k]));
-                curr_var_pieces_counter[l_k] += 1;
-            }
+//            else if (is_internal_regex_var(l_k, reg)){
+//                STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(l_k, m) << std::endl;);
+//                if (!found || (curr_var_pieces_counter[l_k] + 1 > var_pieces_counter[l_k])){
+//                    create_internal_int_vars(l_k);
+//                    if (!found)
+//                        var_pieces_counter.insert(l_k, 0);
+//                    var_pieces_counter[l_k] += 1;
+//                }
+//                else {
+//                    reuse_internal_int_vars(l_k);
+//                }
+//                elements.push_back(std::make_pair(l_k, REGEX_CODE - curr_var_pieces_counter[l_k]));
+//                curr_var_pieces_counter[l_k] += 1;
+//            }
             else {
                 int len_var = -1;
                 if (is_fixed_len_var(list[k], len_var) && len_var == 1){
@@ -13563,65 +13565,65 @@ namespace smt {
             start ++;
             end ++;
         }
-        else {
-            if (is_internal_regex_var(v, regex)) {
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(v, m) << std::endl;);
-                if (u.re.is_union(regex)) {
-                    start = REGEX_CODE - start;
-
-                    std::string flatSize = gen_flat_size(std::make_pair(v, start));
-
-                    expr_ref v1(mk_int_var(flatSize), m);
-                    length_map[v].push_back(v1);
-                    vector<zstring> tmp;
-                    collect_alternative_components(regex, tmp);
-                    expr_ref_vector lenConstraints(m);
-                    int_set sizes;
-                    for (unsigned i = 0; i < tmp.size(); ++i) {
-                        sizes.insert(tmp[i].length());
-                    }
-                    for (const auto& num : sizes)
-                        lenConstraints.push_back(createEqualOP(v1, mk_int(num)));
-
-                    expr_ref ors(createOrOP(lenConstraints), m);
-                    assert_axiom(ors.get());
-                    implied_facts.push_back(ors);
-                    return;
-                } else if (u.re.is_star(regex) || u.re.is_plus(regex)) {
-                    start = REGEX_CODE - start;
-
-                    std::string flatIter = gen_flat_iter(std::make_pair(v, start));
-
-                    expr_ref v1(mk_strlen(v), m);
-                    expr_ref v2(mk_int_var(flatIter), m);
-                    length_map[v].push_back(v1.get());
-                    iter_map[v].push_back(v2.get());
-                    zstring tmp = parse_regex_content(regex);
-                    expr_ref_vector constraints(m);
-
-
-                    if (u.re.is_star(v)) {
-                        constraints.push_back(createGreaterEqOP(v1, mk_int(0)));
-                        constraints.push_back(createGreaterEqOP(v2, mk_int(0)));
-                    } else {
-                        constraints.push_back(createGreaterEqOP(v1, mk_int(1)));
-                        constraints.push_back(createGreaterEqOP(v2, mk_int(1)));
-                    }
-
-                    if (tmp.length() == 0)
-                        constraints.push_back(createEqualOP(v1, mk_int(0)));
-                    else if (tmp.length() != 1 && tmp.encode().compare("uNkNoWn") != 0)
-                        constraints.push_back(
-                                createEqualOP(v1, createMulOP(mk_int(tmp.length()), v2)));
-
-                    expr_ref ands(createAndOP(constraints), m);
-
-                    assert_axiom(ands.get());
-                    implied_facts.push_back(ands);
-                    return;
-                }
-            }
-        }
+//        else {
+//            if (is_internal_regex_var(v, regex)) {
+//                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(v, m) << std::endl;);
+//                if (u.re.is_union(regex)) {
+//                    start = REGEX_CODE - start;
+//
+//                    std::string flatSize = gen_flat_size(std::make_pair(v, start));
+//
+//                    expr_ref v1(mk_int_var(flatSize), m);
+//                    length_map[v].push_back(v1);
+//                    vector<zstring> tmp;
+//                    collect_alternative_components(regex, tmp);
+//                    expr_ref_vector lenConstraints(m);
+//                    int_set sizes;
+//                    for (unsigned i = 0; i < tmp.size(); ++i) {
+//                        sizes.insert(tmp[i].length());
+//                    }
+//                    for (const auto& num : sizes)
+//                        lenConstraints.push_back(createEqualOP(v1, mk_int(num)));
+//
+//                    expr_ref ors(createOrOP(lenConstraints), m);
+//                    assert_axiom(ors.get());
+//                    implied_facts.push_back(ors);
+//                    return;
+//                } else if (u.re.is_star(regex) || u.re.is_plus(regex)) {
+//                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " " << start << " " << end << std::endl;);
+//                    start = REGEX_CODE - start;
+//                    std::string flatIter = gen_flat_iter(std::make_pair(v, start));
+//
+//                    expr_ref v1(mk_strlen(v), m);
+//                    expr_ref v2(mk_int_var(flatIter), m);
+//                    length_map[v].push_back(v1.get());
+//                    iter_map[v].push_back(v2.get());
+//                    zstring tmp = parse_regex_content(regex);
+//                    expr_ref_vector constraints(m);
+//
+//
+//                    if (u.re.is_star(v)) {
+//                        constraints.push_back(createGreaterEqOP(v1, mk_int(0)));
+//                        constraints.push_back(createGreaterEqOP(v2, mk_int(0)));
+//                    } else {
+//                        constraints.push_back(createGreaterEqOP(v1, mk_int(1)));
+//                        constraints.push_back(createGreaterEqOP(v2, mk_int(1)));
+//                    }
+//
+//                    if (tmp.length() == 0)
+//                        constraints.push_back(createEqualOP(v1, mk_int(0)));
+//                    else if (tmp.length() != 1 && tmp.encode().compare("uNkNoWn") != 0)
+//                        constraints.push_back(
+//                                createEqualOP(v1, createMulOP(mk_int(tmp.length()), v2)));
+//
+//                    expr_ref ands(createAndOP(constraints), m);
+//
+//                    assert_axiom(ands.get());
+//                    implied_facts.push_back(ands);
+//                    return;
+//                }
+//            }
+//        }
 
         expr_ref_vector adds(m);
         for (int i = start; i < end; ++i) {
