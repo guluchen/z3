@@ -7213,12 +7213,15 @@ namespace smt {
 
         // calculate sum consts
         int sumConst = 0;
+        int max_len = 0;
         for (const auto& s: all_consts){
             zstring tmp;
             u.str.is_string(s, tmp);
             sumConst += tmp.length();
+            max_len = max_len > tmp.length() ? max_len : tmp.length();
         }
-
+        sumConst = sumConst > 100 ? max_len + 100 : sumConst;
+        
         int maxInt = get_max_bound(all_str_exprs);
 
         // count non internal var
