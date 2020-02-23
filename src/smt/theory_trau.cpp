@@ -7219,8 +7219,6 @@ namespace smt {
             sumConst += tmp.length();
         }
 
-        sumConst = std::min(sumConst, 100);
-
         int maxInt = get_max_bound(all_str_exprs);
 
         // count non internal var
@@ -7248,12 +7246,18 @@ namespace smt {
 
             for (const auto& eq : v.get_value()){
                 if (is_app(eq)){
+                    zstring const_val;
                     ptr_vector<expr> nodes;
                     get_nodes_in_concat(eq, nodes);
                     for (unsigned i = 0; i < nodes.size(); ++i) {
                         all_str_exprs.insert(nodes[i]);
-                        if (u.str.is_string(nodes[i]))
-                            all_consts.insert(nodes[i]);
+                        zstring const_part;
+                        if (u.str.is_string(nodes[i], const_part)) {
+                            const_val = const_val + const_part;
+                        }
+                    }
+                    if (const_val.length()){
+                        all_consts.insert(mk_string(const_val));
                     }
                 }
             }
