@@ -6034,7 +6034,7 @@ namespace smt {
         rational len;
         if (get_len_value(n, len)) {
             if (get_assign_lvl(mk_strlen(n), mk_int(len)) == 0)
-                return ten_power(len) - rational(1);
+                return ten_power(len + rational(1)) - rational(1);
         }
 
         return ten_power(str_int_bound) - rational(1);
@@ -6254,7 +6254,7 @@ namespace smt {
                         mk_int('9')));
                 ands.push_back(rewrite_implication(premise, createAndOP(conclusions)));
             }
-            for (int i = 0; i < str_int_bound; ++i) {
+            for (int i = 1; i <= str_int_bound.get_int64(); ++i) {
                 expr *premise = createGreaterEqOP(strLen, mk_int(q_bound.get_int64() + i));
                 rational to_minus = rational(-1) * rational(i);
                 expr *pos = createAddOP(strLen, mk_int(to_minus));
