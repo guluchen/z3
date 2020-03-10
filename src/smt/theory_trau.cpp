@@ -6218,8 +6218,9 @@ namespace smt {
         // if !valid --> value = -1, else ands_tmp
         expr* valid_s2i = valid_str_int(str);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " valid_s2i: " << mk_pp(valid_s2i, m) << std::endl;);
-        ands.push_back(rewrite_implication(valid_s2i, createAndOP(ands_tmp)));
-        ands.push_back(rewrite_implication(mk_not(m, valid_s2i), createEqualOP(num, mk_int(- 1))));
+        ands.push_back(createITEOP(valid_s2i, createAndOP(ands_tmp), createEqualOP(num, mk_int(- 1))));
+//        ands.push_back(rewrite_implication(valid_s2i, createAndOP(ands_tmp)));
+//        ands.push_back(rewrite_implication(mk_not(m, valid_s2i), createEqualOP(num, mk_int(- 1))));
         return rewrite_implication(unroll_premise, createAndOP(ands));
     }
 
