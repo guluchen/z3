@@ -6214,6 +6214,8 @@ namespace smt {
             expr* conclusion = createEqualOP(num, createAddOP(adds));
             ands_tmp.push_back(rewrite_implication(premise, conclusion));
         }
+
+        ands_tmp.push_back(createGreaterEqOP(num, mk_int(0)));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(str, m) << std::endl;);
         // if !valid --> value = -1, else ands_tmp
         expr* valid_s2i = valid_str_int(str);
