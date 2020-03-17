@@ -16652,18 +16652,17 @@ namespace smt {
         }
         expr_ref ts0(value.first, m);
         expr_ref ts1(value.second, m);
-//        assert_axiom(createEqualOP(mk_strlen(ex->get_arg(0)), mk_strlen(mk_concat(ts0, mk_concat(ex->get_arg(1), ts1)))));
         if (u.str.is_extract(haystack.get())){
             app* substr = to_app(haystack.get());
             rational ra;
             if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
-                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
-                    app *rootContain = mk_contains(substr->get_arg(0), needle);
-                    enode* keynode = ensure_enode(rootContain);
-                    SASSERT(contain_split_map.contains(keynode));
-                    assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
-                }
+//                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
+//                    app *premise = mk_contains(substr->get_arg(0), needle);
+//                    enode* keynode = ensure_enode(premise);
+//                    SASSERT(contain_split_map.contains(keynode));
+//                    assert_axiom(rewrite_implication(premise, createEqualOP(value.first, contain_split_map[keynode].first->get_owner())));
+//                }
             }
         }
 
@@ -17263,15 +17262,18 @@ namespace smt {
     }
 
     void theory_trau::sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part){
+
         context & ctx = get_context();
         
         STRACE("str",
                tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(pos, m) << " = " << mk_pp(first_part, m) << std::endl;);
+
         if (u.str.is_index(to_app(pos))){
             if (to_app(pos)->get_arg(0) == base){
                 // index >= 0 --> substr0 == head of index
                 if (index_head.contains(pos)) {
-                    assert_axiom(ctx.mk_eq_atom(first_part, index_head[pos]));
+                    auto condition = u.str.mk_contains(base, to_app(pos)->get_arg(1));
+                    assert_axiom(rewrite_implication(condition, createEqualOP(first_part, index_head[pos])));
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(first_part, m) << " = " << mk_pp(index_head[pos], m) << std::endl;);
                 }
                 else {
@@ -17290,10 +17292,9 @@ namespace smt {
                     if (u.str.is_string(to_app(arg0)->get_arg(1), value)){
                         if (arg1 == mk_int(value.length())){
                             if (index_tail.contains(arg0)) {
-                                if (second_part != index_tail[arg0].second)
-                                    assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg0].second));
-                                if (first_part != index_tail[arg0].first)
-                                    assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg0].first));
+                                auto condition = u.str.mk_contains(base, to_app(arg0)->get_arg(1));
+                                assert_axiom(rewrite_implication(condition, createEqualOP(second_part, index_tail[arg0].second)));
+                                assert_axiom(rewrite_implication(condition, createEqualOP(first_part, index_tail[arg0].first)));
 
                                 expr* concat_0 = nullptr;
                                 expr* concat_1 = nullptr;
@@ -17315,10 +17316,9 @@ namespace smt {
                     if (u.str.is_string(to_app(arg1)->get_arg(1), value)){
                         if (arg0 == mk_int(value.length())){
                             if (index_tail.contains(arg1)) {
-                                if (second_part != index_tail[arg1].second)
-                                    assert_axiom(ctx.mk_eq_atom(second_part, index_tail[arg1].second));
-                                if (first_part != index_tail[arg1].first)
-                                    assert_axiom(ctx.mk_eq_atom(first_part, index_tail[arg1].first));
+                                auto condition = u.str.mk_contains(base, to_app(arg1)->get_arg(1));
+                                assert_axiom(rewrite_implication(condition, createEqualOP(second_part, index_tail[arg1].second)));
+                                assert_axiom(rewrite_implication(condition, createEqualOP(first_part, index_tail[arg1].first)));
 
                                 expr* concat_0 = nullptr;
                                 expr* concat_1 = nullptr;
