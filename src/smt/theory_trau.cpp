@@ -2999,7 +2999,7 @@ namespace smt {
         }
 
         // build conclusion: not (lhs == rhs)
-        expr_ref conclusion01(mk_not(m, ctx.mk_eq_atom(lhs, rhs)), m);
+        expr_ref conclusion01(mk_not(m, createEqualOP(lhs, rhs)), m);
 
         // build premise: not ( Length(lhs) == Length(rhs) )
         expr_ref len_lhs(mk_strlen(lhs), m);
@@ -3012,7 +3012,7 @@ namespace smt {
         if (u.str.is_string(rhs, valueRhs))
             len_rhs = mk_int(valueRhs.length());
 
-        expr_ref premise01(mk_not(m, ctx.mk_eq_atom(len_lhs, len_rhs)), m);
+        expr_ref premise01(mk_not(m, createEqualOP(len_lhs, len_rhs)), m);
 
         expr* empty = mk_string("");
         if (lhs == empty || rhs == empty)
@@ -12804,6 +12804,9 @@ namespace smt {
         context & ctx = get_context();
         if (x == y)
             return m.mk_true();
+        if (u.str.is_string(x) && u.str.is_string(y)){
+            return m.mk_false();
+        }
         app* tmp = ctx.mk_eq_atom(x, y);
         ctx.internalize(tmp, false);
         return tmp;
@@ -16824,7 +16827,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].first, m) << std::endl;);
             assert_axiom(createEqualOP(x2.get(), index_tail[ex].second));
             expr* x1_arg1 = mk_concat(x1.get(), needle);
-            assert_axiom(createEqualOP(index_tail[ex].first, x1_arg1));
+            assert_axiom(rewrite_implication(contain_constraint, createEqualOP(index_tail[ex].first, x1_arg1)));
             length_relation.insert(std::make_pair(index_tail[ex].first, x1.get()));
             length_relation.insert(std::make_pair(index_tail[ex].first, needle));
         }
@@ -16834,7 +16837,7 @@ namespace smt {
 
         if (index_head.contains(ex)) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " update index head vs substring " << mk_pp(index_head[ex], m) << std::endl;);
-            assert_axiom(createEqualOP(x1.get(), index_head[ex]));
+            assert_axiom(rewrite_implication(contain_constraint, createEqualOP(x1.get(), index_head[ex])));
         }
         else {
             index_head.insert(ex, x1.get());
@@ -17185,9 +17188,10 @@ namespace smt {
 
         // Case 1: pos < 0 or pos >= strlen(base) or len < 0
         // ==> (Substr ...) = ""
-        expr_ref case1_premise(m.mk_not(argumentsValid), m);
+        expr_ref case1_premise_1(m.mk_not(argumentsValid), m);
+        expr_ref case1_premise_2(createLessEqOP(len, mk_int(-1)), m);
         expr_ref case1_conclusion(createEqualOP(expr, mk_string("")), m);
-        expr_ref case1(m.mk_implies(case1_premise, case1_conclusion), m);
+        expr_ref case1(m.mk_implies(createOrOP(case1_premise_1, case1_premise_2), case1_conclusion), m);
 
         bool startFromHead = false;
         rational startingInteger;
@@ -17235,7 +17239,6 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case2_conclusion, m) << std::endl;);
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
-
         case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t3), len));
         case3_conclusion_terms.push_back(createEqualOP(expr, t3));
 
