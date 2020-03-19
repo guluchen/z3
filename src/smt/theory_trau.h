@@ -1332,7 +1332,7 @@ namespace smt {
         re2automaton                                        m_mk_aut;
         expr_ref_vector                                     m_res;
         rational                                            p_bound = rational(2);
-        rational                                            q_bound = rational(10);
+        rational                                            q_bound = rational(11);
         rational                                            str_int_bound;
         rational                                            max_str_int_bound = rational(11);
         rational                                            max_p_bound = rational(3);
