@@ -1101,20 +1101,21 @@ namespace smt {
 
         void assert_cached_eq_state();
         void handle_equality(expr * lhs, expr * rhs);
-            bool is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs);
-            bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes);
-            void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
-            expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
-            expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
-            expr_ref_vector negate_equality(expr* lhs, expr* rhs);
-            bool is_inconsisten(obj_hashtable<expr> concat_lhs, obj_hashtable<expr> const& concat_rhs, obj_hashtable<expr> const_lhs, obj_hashtable<expr> const& const_rhs, bool &wrongStart, bool &wrongEnd);
+        bool is_const_eq(expr* lhs, expr* rhs);
+        bool is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs);
+        bool new_eq_check_wrt_disequalities(expr* n, zstring containKey, expr_ref conclusion, obj_hashtable<expr> &checked_nodes);
+        void special_assertion_for_contain_vs_substr(expr* lhs, expr* rhs);
+        expr_ref_vector collect_all_empty_start(expr* lhs, expr* rhs);
+        expr_ref_vector collect_all_empty_end(expr* lhs, expr* rhs);
+        expr_ref_vector negate_equality(expr* lhs, expr* rhs);
+        bool is_inconsisten(obj_hashtable<expr> concat_lhs, obj_hashtable<expr> const& concat_rhs, obj_hashtable<expr> const_lhs, obj_hashtable<expr> const& const_rhs, bool &wrongStart, bool &wrongEnd);
         /*
          * strArgmt::solve_concat_eq_str()
          * Solve concatenations of the form:
          *   const == Concat(const, X)
          *   const == Concat(X, const)
          */
-        void solve_concat_eq_str(expr * concat, expr * str);
+        void solve_concat_eq_str(expr * concat, expr * str, expr* premise);
         // previously Concat() in strTheory.cpp
         // Evaluates the concatenation (n1 . n2) with respect to
         // the current equivalence classes of n1 and n2.

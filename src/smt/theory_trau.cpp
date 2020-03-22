@@ -626,10 +626,10 @@ namespace smt {
         }
         TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         expr* containKey;
-        expr* simplifiedLhs = simplify_concat(lhs);
-        expr* simplifiedRhs = simplify_concat(rhs);
-        TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
-        if (is_contain_family_equality(simplifiedLhs, containKey)) {
+        expr* simplified_lhs = simplify_concat(lhs);
+        expr* simplified_rhs = simplify_concat(rhs);
+        TRACE("str", tout << __FUNCTION__ << ": " << mk_pp(simplified_lhs, m) << " = " << mk_pp(simplified_rhs, m) << std::endl;);
+        if (is_contain_family_equality(simplified_lhs, containKey)) {
             TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
@@ -641,7 +641,7 @@ namespace smt {
                 }
             }
         }
-        else if (is_contain_family_equality(simplifiedRhs, containKey)){
+        else if (is_contain_family_equality(simplified_rhs, containKey)){
             TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
@@ -654,6 +654,10 @@ namespace smt {
             }
         }
 
+        if (is_const_eq(simplified_lhs, simplified_rhs)){
+            return;
+        }
+
         // BEGIN new_eq_handler() in strTheory
 
         // Check that a string's length can be 0 iff it is the empty string.
@@ -662,18 +666,17 @@ namespace smt {
         // (lhs == rhs) -> ( Length(lhs) == Length(rhs) )
         instantiate_str_eq_length_axiom(ctx.get_enode(lhs), ctx.get_enode(rhs));
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
-        // group terms by equivalence class (groupNodeInEqc())
 
         obj_hashtable<expr> eqc_concat_lhs;
         obj_hashtable<expr> eqc_var_lhs;
         obj_hashtable<expr> eqc_const_lhs;
         group_terms_by_eqc(lhs, eqc_concat_lhs, eqc_var_lhs, eqc_const_lhs);
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         obj_hashtable<expr> eqc_concat_rhs;
         obj_hashtable<expr> eqc_var_rhs;
         obj_hashtable<expr> eqc_const_rhs;
         group_terms_by_eqc(rhs, eqc_concat_rhs, eqc_var_rhs, eqc_const_rhs);
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         TRACE("str",
               tout << "lhs eqc:" << std::endl;
                       tout << "Constants:" << std::endl;
@@ -687,7 +690,7 @@ namespace smt {
                           tout << mk_ismt2_pp(ex, m) << std::endl;
                       }
         );
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         bool wrongStart, wrongEnd;
         if (is_inconsisten(eqc_concat_lhs, eqc_concat_rhs, eqc_const_lhs, eqc_const_rhs, wrongStart, wrongEnd)){
             STRACE("str", tout << __LINE__ << " is_inconsisten " << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
@@ -713,15 +716,15 @@ namespace smt {
          */
         if (eqc_const_lhs.size() != 0) {
             expr * conStr = *(eqc_const_lhs.begin());
-
+            expr* premise = createEqualOP(lhs, rhs);
             for (const auto& e : eqc_concat_rhs) {
-                solve_concat_eq_str(e, conStr);
+                solve_concat_eq_str(e, conStr, premise);
             }
         } else if (eqc_const_rhs.size() != 0) {
             expr* conStr = *(eqc_const_rhs.begin());
-
+            expr* premise = createEqualOP(lhs, rhs);
             for (const auto& e : eqc_concat_lhs) {
-                solve_concat_eq_str(e, conStr);
+                solve_concat_eq_str(e, conStr, premise);
             }
         }
 
@@ -766,6 +769,45 @@ namespace smt {
 
         special_assertion_for_contain_vs_substr(lhs, rhs);
         special_assertion_for_contain_vs_substr(rhs, lhs);
+    }
+
+    bool theory_trau::is_const_eq(expr* lhs, expr* rhs){
+        ptr_vector<expr> lhs_nodes;
+        get_nodes_in_concat(lhs, lhs_nodes);
+        ptr_vector<expr> rhs_nodes;
+        get_nodes_in_concat(rhs, rhs_nodes);
+        zstring lhs_str, rhs_str;
+        expr_ref_vector ands(m);
+        for (const auto& n : lhs_nodes){
+            bool has_val = false;
+            expr* val = get_eqc_value(n, has_val);
+            if (has_val){
+                zstring val_str;
+                u.str.is_string(val, val_str);
+                lhs_str = lhs_str + val_str;
+                ands.push_back(createEqualOP(n, val));
+            }
+            else
+                return false;
+        }
+
+        for (const auto& n : rhs_nodes){
+            bool has_val = false;
+            expr* val = get_eqc_value(n, has_val);
+            if (has_val){
+                zstring val_str;
+                u.str.is_string(val, val_str);
+                rhs_str = rhs_str + val_str;
+                ands.push_back(createEqualOP(n, val));
+            }
+            else
+                return false;
+        }
+
+        if (lhs_str != rhs_str){
+            assert_axiom(rewrite_implication(createAndOP(ands), mk_not(m, createEqualOP(lhs, rhs))));
+        }
+        return true;
     }
 
     bool theory_trau::is_inconsisten_wrt_disequalities(expr* lhs, expr* rhs){
@@ -1077,7 +1119,7 @@ namespace smt {
      *   const == Concat(const, X)
      *   const == Concat(X, const)
      */
-    void theory_trau::solve_concat_eq_str(expr * concat, expr * str) {
+    void theory_trau::solve_concat_eq_str(expr * concat, expr * str, expr* premise) {
         
         context &ctx = get_context();
 
@@ -1092,9 +1134,9 @@ namespace smt {
                 // ( (Concat a1 a2) == "" ) -> ( (a1 == "") AND (a2 == "") )
 
 
-                expr_ref premise(ctx.mk_eq_atom(concat, str), m);
-                expr_ref c1(ctx.mk_eq_atom(a1, str), m);
-                expr_ref c2(ctx.mk_eq_atom(a2, str), m);
+                // expr_ref premise(ctx.mk_eq_atom(concat, str), m);
+                expr_ref c1(createEqualOP(a1, str), m);
+                expr_ref c2(createEqualOP(a2, str), m);
                 expr_ref conclusion(m.mk_and(c1, c2), m);
                 assert_implication(premise, conclusion);
 
@@ -1110,17 +1152,17 @@ namespace smt {
                 int iPos = 0;
                 expr_ref_vector item1(m);
                 if (a1 != arg1) {
-                    item1.push_back(ctx.mk_eq_atom(a1, arg1));
+                    item1.push_back(createEqualOP(a1, arg1));
                     iPos += 1;
                 }
                 if (a2 != arg2) {
-                    item1.push_back(ctx.mk_eq_atom(a2, arg2));
+                    item1.push_back(createEqualOP(a2, arg2));
                     iPos += 1;
                 }
                 expr_ref implyL1(mk_and(item1), m);
                 newConcat = mk_concat(arg1, arg2);
                 if (newConcat != str) {
-                    expr_ref implyR1(ctx.mk_eq_atom(concat, newConcat), m);
+                    expr_ref implyR1(createEqualOP(concat, newConcat), m);
                     assert_implication(implyL1, implyR1);
                 }
             } else {
@@ -1145,7 +1187,7 @@ namespace smt {
                     TRACE("str", tout << "inconsistency detected: \""
                                       << arg1_str << "\" + \"" << arg2_str <<
                                       "\" != \"" << const_str << "\"" << "\n";);
-                    expr_ref equality(ctx.mk_eq_atom(concat, str), m);
+                    expr_ref equality(createEqualOP(concat, str), m);
                     expr_ref diseq(mk_not(m, equality), m);
                     assert_axiom(diseq);
                     return;
@@ -1163,7 +1205,7 @@ namespace smt {
                                       << arg2_str <<
                                       "\" is longer than \"" << const_str << "\","
                                       << " so cannot be concatenated with anything to form it" << "\n";);
-                    expr_ref equality(ctx.mk_eq_atom(newConcat, str), m);
+                    expr_ref equality(createEqualOP(newConcat, str), m);
                     expr_ref diseq(mk_not(m, equality), m);
                     assert_axiom(diseq);
                     return;
@@ -1177,14 +1219,14 @@ namespace smt {
                                           << "suffix of concatenation result expected \"" << secondPart << "\", "
                                           << "actually \"" << arg2_str << "\""
                                           << "\n";);
-                        expr_ref equality(ctx.mk_eq_atom(newConcat, str), m);
+                        expr_ref equality(createEqualOP(newConcat, str), m);
                         expr_ref diseq(mk_not(m, equality), m);
                         assert_axiom(diseq);
                         return;
                     } else {
                         expr_ref tmpStrConst(mk_string(firstPart), m);
-                        expr_ref premise(ctx.mk_eq_atom(newConcat, str), m);
-                        expr_ref conclusion(ctx.mk_eq_atom(arg1, tmpStrConst), m);
+                        // expr_ref premise(createEqualOP(newConcat, str), m);
+                        expr_ref conclusion(createEqualOP(arg1, tmpStrConst), m);
                         assert_implication(premise, conclusion);
                         return;
                     }
@@ -1202,7 +1244,7 @@ namespace smt {
                                       << arg1_str <<
                                       "\" is longer than \"" << const_str << "\","
                                       << " so cannot be concatenated with anything to form it" << "\n";);
-                    expr_ref equality(ctx.mk_eq_atom(newConcat, str), m);
+                    expr_ref equality(createEqualOP(newConcat, str), m);
                     expr_ref diseq(m.mk_not(equality), m);
                     assert_axiom(diseq);
                     return;
@@ -1216,14 +1258,15 @@ namespace smt {
                                           << "prefix of concatenation result expected \"" << secondPart << "\", "
                                           << "actually \"" << arg1_str << "\""
                                           << "\n";);
-                        expr_ref equality(ctx.mk_eq_atom(newConcat, str), m);
+                        expr_ref equality(createEqualOP(newConcat, str), m);
                         expr_ref diseq(m.mk_not(equality), m);
                         assert_axiom(diseq);
                         return;
                     } else {
                         expr_ref tmpStrConst(mk_string(secondPart), m);
-                        expr_ref premise(ctx.mk_eq_atom(newConcat, str), m);
-                        expr_ref conclusion(ctx.mk_eq_atom(arg2, tmpStrConst), m);
+                        // expr_ref premise(createEqualOP(newConcat, str), m);
+                        expr_ref conclusion(createEqualOP(arg2, tmpStrConst), m);
+                        TRACE("str", tout << " premise " << mk_pp(premise, m) << "; conclusion " << mk_pp(conclusion, m) << "\n";);
                         assert_implication(premise, conclusion);
                         return;
                     }
@@ -1237,7 +1280,7 @@ namespace smt {
                     bool arg2Len_exists = get_len_value(arg2, arg2Len);
                     rational concatStrLen(const_str.length());
                     if (arg1Len_exists || arg2Len_exists) {
-                        expr_ref ax_l1(ctx.mk_eq_atom(concat, str), m);
+                        expr_ref ax_l1(createEqualOP(concat, str), m);
                         expr_ref ax_l2(m);
                         zstring prefixStr, suffixStr;
                         if (arg1Len_exists) {
@@ -1258,7 +1301,7 @@ namespace smt {
                             prefixStr = const_str.extract(0, arg1Len.get_unsigned());
                             rational concat_minus_arg1 = concatStrLen - arg1Len;
                             suffixStr = const_str.extract(arg1Len.get_unsigned(), concat_minus_arg1.get_unsigned());
-                            ax_l2 = ctx.mk_eq_atom(mk_strlen(arg1), mk_int(arg1Len));
+                            ax_l2 = createEqualOP(mk_strlen(arg1), mk_int(arg1Len));
                         } else {
                             // arg2's length is available
                             if (arg2Len.is_neg()) {
@@ -1278,7 +1321,7 @@ namespace smt {
                             rational concat_minus_arg2 = concatStrLen - arg2Len;
                             prefixStr = const_str.extract(0, concat_minus_arg2.get_unsigned());
                             suffixStr = const_str.extract(concat_minus_arg2.get_unsigned(), arg2Len.get_unsigned());
-                            ax_l2 = ctx.mk_eq_atom(mk_strlen(arg2), mk_int(arg2Len));
+                            ax_l2 = createEqualOP(mk_strlen(arg2), mk_int(arg2Len));
                         }
                         // consistency check
                         if (u.str.is_concat(to_app(arg1)) && !can_concat_eq_str(arg1, prefixStr)) {
@@ -3284,7 +3327,7 @@ namespace smt {
     }
 
     void theory_trau::push_scope_eh() {
-//        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
 //        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         m_scope_level += 1;
         mful_scope_levels.push_scope();
@@ -3297,7 +3340,7 @@ namespace smt {
     }
 
     void theory_trau::pop_scope_eh(const unsigned num_scopes) {
-//        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         m_scope_level -= num_scopes;
 
         if (m_scope_level < uState.eqLevel) {
@@ -3646,43 +3689,56 @@ namespace smt {
         bool S_hasEqcValue;
         expr * S_str = get_eqc_value(S, S_hasEqcValue);
         if (S_hasEqcValue) {
-            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << std::endl;);
             zstring str;
             u.str.is_string(S_str, str);
+            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " " << str << std::endl;);
             bool valid = true;
 
             rational converted_representation = string_to_int(str, valid);
             if (i_val_exists && converted_representation == i_val)
                 return false;
-            // TODO this duplicates code a bit, we can simplify the branch on "conclusion" only
+
+            STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " valid:" << valid << std::endl;);
             if (valid) {
                 // return actuan value
-                expr_ref premise(ctx.mk_eq_atom(S, mk_string(str)), m);
-                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(converted_representation, true)), m);
+                expr_ref premise(createEqualOP(S, mk_string(str)), m);
+                expr_ref conclusion(createEqualOP(a, m_autil.mk_numeral(converted_representation, true)), m);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     if (to_assert)
                         assert_axiom(axiom);
+                    else {
+                        STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " NOT ASSERT" << std::endl;);
+                    }
                     implied_facts.push_back(axiom.get());
                     m_trail.push_back(axiom);
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
                 }
+                else {
+                    STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " NOT ASSERT" << std::endl;);
+                }
             }
             else {
                 // return -1
-                expr_ref premise(ctx.mk_eq_atom(S, mk_string(str)), m);
-                expr_ref conclusion(ctx.mk_eq_atom(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
+                expr_ref premise(createEqualOP(S, mk_string(str)), m);
+                expr_ref conclusion(createEqualOP(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
                 expr_ref axiom(rewrite_implication(premise, conclusion), m);
                 if (!string_int_axioms.contains(axiom)) {
                     string_int_axioms.insert(axiom);
                     m_trail.push_back(axiom);
                     if (to_assert)
                         assert_axiom(axiom);
+                    else {
+                        STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " NOT ASSERT" << std::endl;);
+                    }
                     implied_facts.push_back(axiom.get());
                     m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
                     axiomAdd = true;
+                }
+                else {
+                    STRACE("str", tout << __LINE__ << "integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " NOT ASSERT" << std::endl;);
                 }
             }
         }
@@ -3726,7 +3782,7 @@ namespace smt {
             else {
                 expr *eq_node = nullptr;
                 int val = eval_invalid_str2int(S, eq_node);
-                STRACE("str", tout << __LINE__ << " integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " " << val << std::endl;);
+                STRACE("str", tout << __LINE__ << " integer theory assigns " << mk_pp(a, m) << " = " << i_val.to_string() << " " << val << " i_val_exists:" << i_val_exists << std::endl;);
                 if (val == -1 && i_val.get_int64() != -1) {
                     expr_ref premise(createEqualOP(S, eq_node), m);
                     expr_ref conclusion(createEqualOP(a, m_autil.mk_numeral(rational::minus_one(), true)), m);
