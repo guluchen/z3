@@ -720,6 +720,10 @@ namespace smt {
                         obj_map<expr, int> const& non_fresh_variables,
                         bool optimizing,
                         int pMax = PMAX);
+
+                int strengthen_bound(pair_expr_vector const& elements, /* contain const */
+                                          obj_map<expr, int> const& non_fresh_variables,
+                                          int pos);
                     /*
                      * Generate constraints for the case
                      * X = T . "abc" . Y . Z

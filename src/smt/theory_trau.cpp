@@ -7223,7 +7223,7 @@ namespace smt {
             sumConst += tmp.length();
             max_len = max_len > tmp.length() ? max_len : tmp.length();
         }
-        sumConst = sumConst > 100 ? max_len + 100 : sumConst;
+        sumConst = sumConst > 50 ? max_len + 50 : sumConst;
         
         int maxInt = get_max_bound(all_str_exprs);
 
@@ -7234,7 +7234,7 @@ namespace smt {
                 cnt++;
         }
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << maxInt << " " << cnt << " " << sumConst << std::endl;);
-        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, maxInt));
+        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, std::max(maxInt, sumConst)));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
@@ -10826,7 +10826,7 @@ namespace smt {
                 ands.push_back(
                         handle_non_fresh_non_fresh_array(
                                 a, elements, i,
-                                std::min(non_fresh_variables[elements[i].first], non_fresh_variables[a.first]),
+                                std::min(strengthen_bound(elements, non_fresh_variables, i), non_fresh_variables[a.first]),
                                 optimizing,
                                 pMax));
 
@@ -10836,6 +10836,30 @@ namespace smt {
         expr_ref ret(createAndOP(ands), m);
         return ret.get();
     }
+
+    int theory_trau::strengthen_bound(pair_expr_vector const& elements, /* contain const */
+                                       obj_map<expr, int> const& non_fresh_variables,
+                                       int pos){
+        int current_bound = non_fresh_variables[elements[pos].first];
+        if (current_bound == -1 || current_bound == connectingSize){
+            int str_len = 0;
+            expr* prev = nullptr;
+            for (const auto& e : elements){
+                zstring str_val;
+                if (u.str.is_string(e.first, str_val)){
+                    if (prev == nullptr || e.first != prev){
+                        str_len += str_val.length();
+                    }
+                }
+                prev = e.first;
+            }
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***" << mk_pp(elements[pos].first, m) <<  ": from " << current_bound << " to " << connectingSize - str_len << std::endl;);
+            return connectingSize - str_len;
+        }
+        else
+            return non_fresh_variables[elements[pos].first];
+    }
+
 
     /*
 	 * Generate constraints for the case
@@ -10984,17 +11008,11 @@ namespace smt {
         expr_ref startLhs(leng_prefix_lhs(a, elementNames, pos, optimizing, unrollMode), m);
         expr_ref startRhs(leng_prefix_rhs(elementNames[pos], unrollMode), m);
         /* optimize length of generated string */
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* arrLhs = get_var_flat_array(a);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* arrRhs = get_var_flat_array(elementNames[pos]);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* lenA = get_var_flat_size(a);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* lenB = get_var_flat_size(elementNames[pos]);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr* iterB = get_flat_iter(elementNames[pos]);
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         expr_ref_vector ands(m);
         expr* lenRhs = nullptr;
         /* combine two parts if it is possible */
@@ -11060,7 +11078,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
                 if (consideredSize >= connectingSize) {
                     ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
-                    ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+//                    ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
                 }
             }
             else if (optimizing) {
@@ -11082,7 +11100,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
                     if (consideredSize >= connectingSize) {
                         ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
-                        ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+//                        ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
                     }
 //                    else {
 //                        ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
