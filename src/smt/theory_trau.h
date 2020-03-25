@@ -773,9 +773,10 @@ namespace smt {
                     */
                     expr* handle_non_fresh_non_fresh_array(
                             expr_int a,
-                            pair_expr_vector const& elements,
+                            pair_expr_vector const& elements_rhs,
                             int pos,
-                            int bound,
+                            int new_bound,
+                            int old_bound,
                             bool optimizing,
                             int pMax = PMAX);
 

@@ -6637,6 +6637,7 @@ namespace smt {
     }
 
     void theory_trau::handle_diseq_notcontain(bool cached){
+        return;
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
@@ -8178,10 +8179,10 @@ namespace smt {
     }
 
     expr* theory_trau::try_solve(expr* a, expr* b){
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(a, m) << " " << mk_pp(b, m) << std::endl;);
         zstring val_a;
         expr* ret = nullptr;
         if (u.str.is_string(a, val_a)) {
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(a, m) << " " << mk_pp(b, m) << std::endl;);
             ptr_vector<expr> nodes;
             get_nodes_in_concat(b, nodes);
             int i = 0;
@@ -10883,6 +10884,7 @@ namespace smt {
                         handle_non_fresh_non_fresh_array(
                                 a, elements, i,
                                 std::min(strengthen_bound(elements, non_fresh_variables, i), non_fresh_variables[a.first]),
+                                non_fresh_variables[elements[i].first],
                                 optimizing,
                                 pMax));
 
@@ -11050,9 +11052,10 @@ namespace smt {
 	 */
     expr* theory_trau::handle_non_fresh_non_fresh_array(
             expr_int a,
-            pair_expr_vector const& elementNames,
+            pair_expr_vector const& elements_rhs,
             int pos,
-            int bound,
+            int new_bound,
+            int old_bound,
             bool optimizing,
             int pMax){
 
@@ -11061,36 +11064,36 @@ namespace smt {
         bool unrollMode = pMax == PMAX;
 
         /* find the start position --> */
-        expr_ref startLhs(leng_prefix_lhs(a, elementNames, pos, optimizing, unrollMode), m);
-        expr_ref startRhs(leng_prefix_rhs(elementNames[pos], unrollMode), m);
+        expr_ref start_lhs(leng_prefix_lhs(a, elements_rhs, pos, optimizing, unrollMode), m);
+        expr_ref start_rhs(leng_prefix_rhs(elements_rhs[pos], unrollMode), m);
         /* optimize length of generated string */
-        expr* arrLhs = get_var_flat_array(a);
-        expr* arrRhs = get_var_flat_array(elementNames[pos]);
+        expr* arr_lhs = get_var_flat_array(a);
+        expr* arr_rhs = get_var_flat_array(elements_rhs[pos]);
         expr* lenA = get_var_flat_size(a);
-        expr* lenB = get_var_flat_size(elementNames[pos]);
-        expr* iterB = get_flat_iter(elementNames[pos]);
+        expr* lenB = get_var_flat_size(elements_rhs[pos]);
+        expr* iterB = get_flat_iter(elements_rhs[pos]);
         expr_ref_vector ands(m);
-        expr* lenRhs = nullptr;
+        expr* len_rhs = nullptr;
         /* combine two parts if it is possible */
         bool can_combine = false;
-        if (elementNames[pos].second % p_bound.get_int64() == 0 &&
-            pos < (int)elementNames.size() - 1 &&
-                p_bound.get_int64() > 1 && elementNames[pos].second >= 0) {
-            SASSERT(elementNames[pos + 1].second % p_bound.get_int64() == 1);
+        if (elements_rhs[pos].second % p_bound.get_int64() == 0 &&
+            pos < (int)elements_rhs.size() - 1 &&
+                p_bound.get_int64() > 1 && elements_rhs[pos].second >= 0) {
+            SASSERT(elements_rhs[pos + 1].second % p_bound.get_int64() == 1);
             SASSERT(p_bound.get_int64() == 2);
-            lenRhs = get_var_size(elementNames[pos]);
+            len_rhs = get_var_size(elements_rhs[pos]);
             can_combine = true;
         }
         else {
-            lenRhs = get_var_flat_size(elementNames[pos]);
+            len_rhs = get_var_flat_size(elements_rhs[pos]);
             can_combine = false;
         }
 
-        expr* lenLhs = nullptr;
+        expr* len_lhs = nullptr;
         if (optimizing)
-            lenLhs = get_var_size(a);
+            len_lhs = get_var_size(a);
         else
-            lenLhs = get_var_flat_size(a);
+            len_lhs = get_var_flat_size(a);
 
         STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
         if (!unrollMode){
@@ -11098,17 +11101,17 @@ namespace smt {
                 expr_ref_vector ors(m);
                 ors.push_back(
                         createEqualOP(
-                                createSelectOP(arrLhs,
-                                                       createModOP(
-                                                               createAddOP(m_autil.mk_int(i - 1), startLhs),
+                                createSelectOP(arr_lhs,
+                                               createModOP(
+                                                               createAddOP(m_autil.mk_int(i - 1), start_lhs),
                                                                m_autil.mk_int(pMax))),
 
-                                createSelectOP(arrRhs,
-                                                       createModOP(
-                                                               createAddOP(m_autil.mk_int(i - 1), startRhs),
+                                createSelectOP(arr_rhs,
+                                               createModOP(
+                                                               createAddOP(m_autil.mk_int(i - 1), start_rhs),
                                                                m_autil.mk_int(pMax)))));
 
-                ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                ors.push_back(createLessEqOP(len_rhs, m_autil.mk_int(i - 1)));
                 ands.push_back(createOrOP(ors));
             }
 
@@ -11118,59 +11121,58 @@ namespace smt {
                             createEqualOP(iterB, m_autil.mk_int(1))));
         }
         else {
-            int consideredSize = bound;
-            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << consideredSize << " can_combine:" << can_combine << " elementNames.size(): " << elementNames.size() << std::endl;);
+            int considered_size = new_bound;
+            STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << considered_size << " can_combine:" << can_combine << " elements_rhs.size(): " << elements_rhs.size() << std::endl;);
             if (!flat_enabled) {
-                for (int i = 1; i <= consideredSize; ++i) {
+                for (int i = 1; i <= considered_size; ++i) {
                     expr_ref_vector ors(m);
                     ors.push_back(createEqualOP(
-                            createSelectOP(arrLhs, createAddOP(m_autil.mk_int(i - 1), startLhs)),
-                            createSelectOP(arrRhs, createAddOP(m_autil.mk_int(i - 1), startRhs))));
-                    ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                            createSelectOP(arr_lhs, createAddOP(m_autil.mk_int(i - 1), start_lhs)),
+                            createSelectOP(arr_rhs, createAddOP(m_autil.mk_int(i - 1), start_rhs))));
+                    ors.push_back(createLessEqOP(len_rhs, m_autil.mk_int(i - 1)));
                     ands.push_back(createOrOP(ors));
                 }
 
 
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
-                ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
-                if (consideredSize >= connectingSize) {
-//                    ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
-//                    ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << considered_size << "; connectingSize size: " << connectingSize << std::endl;);
+                if (new_bound >= connectingSize || old_bound >= connectingSize) {
+                    ands.push_back(createLessEqOP(len_rhs, mk_int(considered_size)));
+//                    ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                 }
             }
             else if (optimizing) {
-                if (can_combine && elementNames.size() == p_bound.get_int64()) {
-                    ands.push_back(gen_constraint_var_var(a, elementNames[0], pMax, q_bound));
+                if (can_combine && elements_rhs.size() == p_bound.get_int64()) {
+                    ands.push_back(gen_constraint_var_var(a, elements_rhs[0], pMax, q_bound));
                 }
                 else {
-                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** error: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
-                    for (int i = 1; i <= consideredSize; ++i) {
+                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " *** error: " << considered_size << "; connectingSize size: " << connectingSize << std::endl;);
+                    for (int i = 1; i <= considered_size; ++i) {
                         expr_ref_vector ors(m);
                         ors.push_back(createEqualOP(
-                                createSelectOP(arrLhs, createAddOP(m_autil.mk_int(i - 1), startLhs)),
-                                createSelectOP(arrRhs, createAddOP(m_autil.mk_int(i - 1), startRhs))));
-                        ors.push_back(createLessEqOP(lenRhs, m_autil.mk_int(i - 1)));
+                                createSelectOP(arr_lhs, createAddOP(m_autil.mk_int(i - 1), start_lhs)),
+                                createSelectOP(arr_rhs, createAddOP(m_autil.mk_int(i - 1), start_rhs))));
+                        ors.push_back(createLessEqOP(len_rhs, m_autil.mk_int(i - 1)));
                         ands.push_back(createOrOP(ors));
                     }
-                    ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
+                    ands.push_back(createLessEqOP(len_rhs, mk_int(considered_size)));
 
-                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
-                    if (consideredSize >= connectingSize) {
-                        ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
-//                        ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
+                    STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << considered_size << "; connectingSize size: " << connectingSize << std::endl;);
+                    if (considered_size >= connectingSize) {
+                        ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
+//                        ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                     }
 //                    else {
-//                        ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
-//                        ands.push_back(createLessEqOP(lenLhs, mk_int(consideredSize)));
+//                        ands.push_back(createLessEqOP(len_rhs, mk_int(considered_size)));
+//                        ands.push_back(createLessEqOP(len_lhs, mk_int(considered_size)));
 //                    }
                 }
             }
             else {
                 if (can_combine) {
-                    ands.push_back(gen_constraint_flat_var(a, elementNames, pos, pMax, q_bound));
+                    ands.push_back(gen_constraint_flat_var(a, elements_rhs, pos, pMax, q_bound));
                 }
                 else
-                    ands.push_back(gen_constraint_flat_flat(a, elementNames, pos, pMax, q_bound));
+                    ands.push_back(gen_constraint_flat_flat(a, elements_rhs, pos, pMax, q_bound));
             }
         }
         return createAndOP(ands);
