@@ -6636,8 +6636,7 @@ namespace smt {
         return axiomAdded;
     }
 
-    void theory_trau::handle_diseq_notcontain(bool cached){
-        return;
+    void theory_trau::handle_diseq_notcontain(bool cached){ 
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
