@@ -11132,8 +11132,9 @@ namespace smt {
 
 
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << consideredSize << "; connectingSize size: " << connectingSize << std::endl;);
+                ands.push_back(createLessEqOP(lenRhs, mk_int(consideredSize)));
                 if (consideredSize >= connectingSize) {
-                    ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
+//                    ands.push_back(createLessEqOP(lenRhs, mk_int(connectingSize)));
 //                    ands.push_back(createLessEqOP(lenLhs, mk_int(connectingSize)));
                 }
             }
