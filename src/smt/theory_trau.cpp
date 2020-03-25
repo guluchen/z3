@@ -654,7 +654,7 @@ namespace smt {
             }
         }
 
-        if (is_const_eq(simplified_lhs, simplified_rhs)){
+        if (is_const_eq(simplified_lhs, simplified_rhs) || simplified_lhs == simplified_rhs){
             return;
         }
 
@@ -3040,7 +3040,7 @@ namespace smt {
             skip = true;
             return;
         }
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " != "  << mk_pp(rhs, m) << std::endl;);
         // build conclusion: not (lhs == rhs)
         expr_ref conclusion01(mk_not(m, createEqualOP(lhs, rhs)), m);
 
@@ -3060,8 +3060,8 @@ namespace smt {
         expr* empty = mk_string("");
         if (lhs == empty || rhs == empty)
             assert_axiom(createEqualOP(premise01, conclusion01));
-        else
-            assert_implication(premise01, conclusion01);
+//        else
+//            assert_implication(premise01, conclusion01);
 
         // check all combinations
         zstring value;
