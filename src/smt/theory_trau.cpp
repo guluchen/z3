@@ -715,16 +715,16 @@ namespace smt {
          *   const == Concat(X, const)
          */
         if (eqc_const_lhs.size() != 0) {
-            expr * conStr = *(eqc_const_lhs.begin());
-            expr* premise = createEqualOP(lhs, rhs);
+            expr * const_str = *(eqc_const_lhs.begin());
+            expr* premise = createAndOP(createEqualOP(lhs, rhs), createEqualOP(lhs, const_str));
             for (const auto& e : eqc_concat_rhs) {
-                solve_concat_eq_str(e, conStr, premise);
+                solve_concat_eq_str(e, const_str, premise);
             }
         } else if (eqc_const_rhs.size() != 0) {
-            expr* conStr = *(eqc_const_rhs.begin());
-            expr* premise = createEqualOP(lhs, rhs);
+            expr* const_str = *(eqc_const_rhs.begin());
+            expr* premise = createAndOP(createEqualOP(lhs, rhs), createEqualOP(rhs, const_str));
             for (const auto& e : eqc_concat_lhs) {
-                solve_concat_eq_str(e, conStr, premise);
+                solve_concat_eq_str(e, const_str, premise);
             }
         }
 
@@ -745,23 +745,23 @@ namespace smt {
                     if (eqn1.contains(n3) && n2 != n4) {
                         expr_ref_vector litems(m);
                         if (lhs != rhs)
-                            litems.push_back(ctx.mk_eq_atom(lhs, rhs));
+                            litems.push_back(createEqualOP(lhs, rhs));
                         if (n1 != n3)
-                            litems.push_back(ctx.mk_eq_atom(n1, n3));
+                            litems.push_back(createEqualOP(n1, n3));
 
                         expr_ref implyL(mk_and(litems), m);
-                        assert_implication(implyL, ctx.mk_eq_atom(n2, n4));
+                        assert_implication(implyL, createEqualOP(n2, n4));
                     }
 
                     if (eqn2.contains(n4) && n1 != n3) {
                         expr_ref_vector litems(m);
                         if (lhs != rhs)
-                            litems.push_back(ctx.mk_eq_atom(lhs, rhs));
+                            litems.push_back(createEqualOP(lhs, rhs));
                         if (n2 != n4)
-                            litems.push_back(ctx.mk_eq_atom(n2, n4));
+                            litems.push_back(createEqualOP(n2, n4));
 
                         expr_ref implyL(mk_and(litems), m);
-                        assert_implication(implyL, ctx.mk_eq_atom(n1, n3));
+                        assert_implication(implyL, createEqualOP(n1, n3));
                     }
 
                 }
@@ -6636,7 +6636,7 @@ namespace smt {
         return axiomAdded;
     }
 
-    void theory_trau::handle_diseq_notcontain(bool cached){ 
+    void theory_trau::handle_diseq_notcontain(bool cached){
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
             handle_disequalities();
@@ -11132,10 +11132,9 @@ namespace smt {
                     ands.push_back(createOrOP(ors));
                 }
 
-
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << considered_size << "; connectingSize size: " << connectingSize << std::endl;);
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << new_bound << " " << old_bound << "; connectingSize size: " << connectingSize << std::endl;);
                 if (new_bound >= connectingSize || old_bound >= connectingSize) {
-                    ands.push_back(createLessEqOP(len_rhs, mk_int(considered_size)));
+                    ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
 //                    ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                 }
             }
