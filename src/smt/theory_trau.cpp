@@ -291,8 +291,8 @@ namespace smt {
                 expr* arr_expr = get_var_flat_array(owner.get());
                 if (arr_expr) {
                     if (ctx.e_internalized(arr_expr)) {
-                        enode *arrNode = ctx.get_enode(arr_expr);
-                        result = alloc(string_value_proc, *this, s, n->get_owner(), true, arrNode, regex, vLen.get_int64());
+                        enode *arr_node = ctx.get_enode(arr_expr);
+                        result = alloc(string_value_proc, *this, s, n->get_owner(), true, arr_node, regex, vLen.get_int64());
                     }
                     else
                         return alloc(expr_wrapper_proc, owner);
@@ -19802,7 +19802,11 @@ namespace smt {
                 }
                 if (regex != nullptr) {
                     zstring strValue;
-                    if (construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": len : " << len_int << std::endl;);
+                    if (arr_node == nullptr) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": nullptr : " << std::endl;);
+                    }
+                    if (arr_node != nullptr && construct_string_from_array(mg, m_root2value, arr_node, len_int, strValue)) {
                         return to_app(th.mk_string(strValue));
                     }
                     if (fetch_value_from_dep_graph(mg, m_root2value, len_int, strValue)) {
@@ -20147,6 +20151,7 @@ namespace smt {
     }
 
     bool theory_trau::string_value_proc::construct_string_from_array(model_generator mg, obj_map<enode, app *> const& m_root2value, enode *arr, int len_int, zstring &val){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
         SASSERT(arr->get_owner() != nullptr);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(arr->get_owner(), mg.get_manager()) << " " << len_int << std::endl;);
 

@@ -222,6 +222,7 @@ namespace smt {
 
             string_value_proc(theory_trau& th, sort * s, app* node, bool _non_fresh_var, expr* regex, int len = -1):
                     th(th), m_sort(s), node(node), non_fresh_var(_non_fresh_var), regex(regex), len(len){
+                arr_node = nullptr;
             }
 
             ~string_value_proc() override {}
