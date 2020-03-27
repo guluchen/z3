@@ -3066,17 +3066,17 @@ namespace smt {
         // check all combinations
         zstring value;
         if (u.str.is_string(lhs, value)) {
-            expr* extraAssert = handle_trivial_diseq(rhs, value);
-            if (extraAssert != nullptr) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_axiom(createEqualOP(conclusion01, extraAssert));
+            expr* extra_assert = handle_trivial_diseq(rhs, value);
+            if (extra_assert != nullptr) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extra_assert, m) << std::endl;);
+                assert_axiom(createEqualOP(conclusion01, extra_assert));
             }
         }
         else if (u.str.is_string(rhs, value)) {
-            expr* extraAssert = handle_trivial_diseq(lhs, value);
-            if (extraAssert != nullptr) {
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extraAssert, m) << std::endl;);
-                assert_axiom(createEqualOP(conclusion01, extraAssert));
+            expr* extra_assert = handle_trivial_diseq(lhs, value);
+            if (extra_assert != nullptr) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(extra_assert, m) << std::endl;);
+                assert_axiom(createEqualOP(conclusion01, extra_assert));
             }
         }
 
@@ -3084,11 +3084,11 @@ namespace smt {
     }
 
     expr* theory_trau::handle_trivial_diseq(expr * e, zstring value){
-        
+        return nullptr;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-        string_set constPart = extract_const(e);
+        string_set const_part = extract_const(e);
 
-        for (const auto& s : constPart)
+        for (const auto& s : const_part)
             if (s.length() > value.length() || (s.length() == value.length() && s != value)) {
                 return createGreaterEqOP(mk_strlen(e), mk_int(s.length()));
             }
@@ -6072,14 +6072,14 @@ namespace smt {
             return;
         }
 
-        expr* unrollConstraint = unroll_str_int(num, str);
+        expr* unroll_c = unroll_str_int(num, str);
 //        expr* lenConstraint = lower_bound_str_int(num, str);
-        expr* boundConstraint = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
+        expr* bound_c = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
         rational max_value = get_max_s2i(str);
 
-        expr* conclusion = createAndOP(unrollConstraint, createLessEqOP(num, mk_int(max_value)), fill_0);
-        expr* premise = createAndOP(boundConstraint, createEqualOP(num, u.str.mk_stoi(str)));
+        expr* conclusion = createAndOP(unroll_c, createLessEqOP(num, mk_int(max_value)), fill_0);
+        expr* premise = createAndOP(bound_c, createEqualOP(num, u.str.mk_stoi(str)));
         expr* to_assert = rewrite_implication(premise, conclusion);
         assert_axiom(to_assert);
         m_trail.push_back(to_assert);
@@ -6131,7 +6131,6 @@ namespace smt {
     }
 
     void theory_trau::handle_int2str(expr* num, expr* str, bool neg){
-        
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
             expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
@@ -6147,14 +6146,16 @@ namespace smt {
             return;
         }
 
-        expr* unrollConstraint = unroll_str_int(num, str);
-        expr* lenConstraint = lower_bound_int_str(num, str);
-        expr* boundConstraint = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
+        expr* unroll_c = unroll_str_int(num, str);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(num, m) << " = " << mk_pp(str, m) << std::endl << mk_pp(unroll_c, m) << std::endl;);
+        expr* len_c = lower_bound_int_str(num, str);
+        expr* bound_c = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
 
         rational max_value = get_max_s2i(str);
-        expr* conclusion = createAndOP(lenConstraint, unrollConstraint, createLessEqOP(num, mk_int(max_value)), fill_0);
-        expr* premise = createAndOP(boundConstraint, createEqualOP(str, u.str.mk_itos(num)));
+        expr* conclusion = createAndOP(len_c, unroll_c, createLessEqOP(num, mk_int(max_value)), fill_0);
+//        expr* conclusion = createAndOP(len_c, createLessEqOP(num, mk_int(max_value)), fill_0);;
+        expr* premise = createAndOP(bound_c, createEqualOP(str, u.str.mk_itos(num)));
         expr* to_assert = rewrite_implication(premise, conclusion);
         m_trail.push_back(to_assert);
         assert_axiom(to_assert);
@@ -6398,7 +6399,6 @@ namespace smt {
      * ...
      */
     expr* theory_trau::lower_bound_int_str(expr* num, expr* str){
-        
         expr_ref_vector ands(m);
 
         rational ten(10);
@@ -7523,7 +7523,7 @@ namespace smt {
             else {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << mk_pp(arr_linker[arr_var], m) << std::endl;);
                 zstring val;
-                if (u.str.is_string(v, val)) {
+                if (u.str.is_string(v, val) && val.length() > 0) {
                     if (v != arr_linker[arr_var])
                         setup_str_const(val, arr_var, createEqualOP(v, arr_linker[arr_var]));
                     else
@@ -11134,7 +11134,10 @@ namespace smt {
 
                 STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << new_bound << " " << old_bound << "; connectingSize size: " << connectingSize << std::endl;);
                 if (new_bound >= connectingSize || old_bound >= connectingSize) {
-                    ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
+                    if (old_bound > new_bound)
+                        ands.push_back(createLessEqOP(len_rhs, mk_int(new_bound)));
+                    else
+                        ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
 //                    ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                 }
             }
