@@ -422,7 +422,7 @@ namespace smt {
                         bool quickpath_int2str(expr* num, expr* str, bool cached = true);
                         expr* unroll_str2int(expr* n);
                         expr* unroll_str_int(expr* num, expr* str);
-                        expr* valid_str_int(expr* str);
+                        expr* valid_str_int(expr* num, expr* str);
                         expr* lower_bound_str_int(expr* num, expr* str);
                         expr* lower_bound_str_int(expr* num, expr* str, rational bound);
                         expr* lower_bound_int_str(expr* num, expr* str);

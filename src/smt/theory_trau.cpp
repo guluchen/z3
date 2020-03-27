@@ -577,7 +577,6 @@ namespace smt {
     }
 
     void theory_trau::handle_equality(expr * lhs, expr * rhs) {
-        
         context & ctx = get_context();
         // both terms must be of sort String
         sort * lhs_sort = m.get_sort(lhs);
@@ -1786,8 +1785,6 @@ namespace smt {
         collect_eq_nodes(rhs, eq_rhs);
 
         for (const auto & it : concat_node_map){
-
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             if (it.get_key1() && it.get_key2() && it.get_value() && u.str.is_concat(it.get_value())) {
                 continue;
             }
@@ -3009,7 +3006,6 @@ namespace smt {
      */
     void theory_trau::instantiate_str_diseq_length_axiom(expr * lhs, expr * rhs, bool &skip) {
         context & ctx = get_context();
-        
 
         rational lenLhs, lenRhs;
         if (get_len_value(lhs, lenLhs) && get_len_value(rhs, lenRhs))
@@ -3327,7 +3323,7 @@ namespace smt {
     }
 
     void theory_trau::push_scope_eh() {
-        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
+//        STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
 //        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         m_scope_level += 1;
         mful_scope_levels.push_scope();
@@ -6130,7 +6126,7 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::handle_int2str(expr* num, expr* str, bool neg){
+    void theory_trau::handle_int2str(expr* num, expr* str, bool neg){ 
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
             expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
@@ -6154,7 +6150,6 @@ namespace smt {
 
         rational max_value = get_max_s2i(str);
         expr* conclusion = createAndOP(len_c, unroll_c, createLessEqOP(num, mk_int(max_value)), fill_0);
-//        expr* conclusion = createAndOP(len_c, createLessEqOP(num, mk_int(max_value)), fill_0);;
         expr* premise = createAndOP(bound_c, createEqualOP(str, u.str.mk_itos(num)));
         expr* to_assert = rewrite_implication(premise, conclusion);
         m_trail.push_back(to_assert);
@@ -6220,8 +6215,6 @@ namespace smt {
     }
 
     expr* theory_trau::unroll_str_int(expr* num, expr* str){
-        
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(str, m) << std::endl;);
         rational ten(10);
         rational one(1);
         rational zero(0);
@@ -6233,14 +6226,12 @@ namespace smt {
         expr* strLen = mk_strlen(str);
         expr_ref_vector ands(m);
         ands.push_back(rewrite_implication(createEqualOP(strLen, mk_int(0)), createEqualOP(num, mk_int(- 1))));
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(str, m) << std::endl;);
 
         expr_ref_vector ands_tmp(m);
         rational consider_len = str_int_bound;
 
-        if (is_char_at(str))
+        if (is_char_at(str) || is_char_at(num))
             consider_len = one;
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(str, m) << std::endl;);
         for (rational len = one; len <= consider_len; len = len + one) {
             expr_ref_vector adds(m);
             rational pos = len - one;
@@ -6273,18 +6264,17 @@ namespace smt {
         }
 
         ands_tmp.push_back(createGreaterEqOP(num, mk_int(0)));
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(str, m) << std::endl;);
+//        if (consider_len != one)
+//            return m.mk_true();
         // if !valid --> value = -1, else ands_tmp
-        expr* valid_s2i = valid_str_int(str);
+        expr* valid_s2i = valid_str_int(num, str);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " valid_s2i: " << mk_pp(valid_s2i, m) << std::endl;);
         ands.push_back(createITEOP(valid_s2i, createAndOP(ands_tmp), createEqualOP(num, mk_int(- 1))));
-//        ands.push_back(rewrite_implication(valid_s2i, createAndOP(ands_tmp)));
-//        ands.push_back(rewrite_implication(mk_not(m, valid_s2i), createEqualOP(num, mk_int(- 1))));
         return rewrite_implication(unroll_premise, createAndOP(ands));
     }
 
-    expr* theory_trau::valid_str_int(expr* str){
-        if (is_char_at(str)){
+    expr* theory_trau::valid_str_int(expr* num, expr* str){
+        if (is_char_at(str) || is_char_at(num)){
             expr *arr = get_var_flat_array(str);
             expr_ref_vector conclusions(m);
             conclusions.push_back(createGreaterEqOP(
@@ -6333,6 +6323,28 @@ namespace smt {
         if (u.str.is_at(str))
             return true;
         else {
+            expr* cond = nullptr;
+            expr* cond_t = nullptr;
+            expr* cond_f = nullptr;
+            context & ctx = get_context();
+            if (m.is_ite(str, cond, cond_t, cond_f)){
+                expr* arg0 = nullptr;
+                switch (ctx.get_assignment(cond)){
+                    case l_true:
+                        if (u.str.is_at(cond_t))
+                            return true;
+                        else if (u.str.is_stoi(cond_t, arg0) && u.str.is_at(arg0))
+                            return true;
+                    case l_false:
+                        if (u.str.is_at(cond_f))
+                            return true;
+                        else if (u.str.is_stoi(cond_f, arg0) && u.str.is_at(arg0))
+                            return true;
+                    case l_undef:
+                        break;
+                }
+            }
+
             std::string name_str = expr2str(str);
             if (name_str.find("charAt1") == 0)
                 return true;
@@ -6365,7 +6377,6 @@ namespace smt {
             expr* conclusion = createGreaterEqOP(len_e, mk_int(len));
             ands.push_back(rewrite_implication(premise, conclusion));
         }
-//        ands.push_back(createLessEqOP(len_e, mk_int(str_int_bound)));
         return createAndOP(ands);
     }
 
@@ -6389,7 +6400,6 @@ namespace smt {
             expr* conclusion = createGreaterEqOP(len_e, mk_int(len));
             ands.push_back(rewrite_implication(premise, conclusion));
         }
-//        ands.push_back(createLessEqOP(len_e, mk_int(str_int_bound)));
         return createAndOP(ands);
     }
 
@@ -6409,7 +6419,10 @@ namespace smt {
         rational prePower(0);
         rational minusOne = zero - one;
         expr* len_e = mk_strlen(str);
-        while (len <= str_int_bound){
+        rational consider_len = str_int_bound;
+        if (is_char_at(str) || is_char_at(num))
+            consider_len = one;
+        while (len <= consider_len){
             len = len + 1;
             powerOf = powerOf * ten; // 10^len
 
@@ -6424,13 +6437,12 @@ namespace smt {
             prePower = powerOf;
         }
         ands.push_back(createLessEqOP(len_e, mk_int(str_int_bound)));
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(createAndOP(ands), m) << std::endl;);
         return createAndOP(ands);
     }
 
     expr* theory_trau::fill_0_1st_loop(expr* num, expr* str){
         
-        if (is_char_at(str))
+        if (is_char_at(str) || is_char_at(num))
             return m.mk_true();
 
         expr_ref_vector ands(m);
