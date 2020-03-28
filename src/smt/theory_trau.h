@@ -776,8 +776,9 @@ namespace smt {
                             expr_int a,
                             pair_expr_vector const& elements_rhs,
                             int pos,
-                            int new_bound,
-                            int old_bound,
+                            int lhs_bound,
+                            int new_rhs_bound,
+                            int old_rhs_bound,
                             bool optimizing,
                             int pMax = PMAX);
 

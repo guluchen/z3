@@ -2818,9 +2818,8 @@ namespace smt {
                     skip = true;
             }
         }
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @ lvl " << m_scope_level << std::endl;);
+
         instantiate_str_diseq_length_axiom(n1, n2, skip);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " @ lvl " << m_scope_level << std::endl;);
         if (!skip && is_not_added_diseq(expr_ref{n1, m}, expr_ref{n2, m})) {
             STRACE("str", tout << __FUNCTION__ << ": add to m_wi_expr_memo: " << mk_ismt2_pp(n1, m) << " != " << mk_ismt2_pp(n2, m) << std::endl;);
             // skip all trivial diseq
@@ -5962,8 +5961,6 @@ namespace smt {
         guessed_eqs.append(diff);
         axiomAdded = convert_equalities(eq_combination, non_fresh_vars, createAndOP(guessed_eqs)) || axiomAdded;
 
-//        if (membership_memo.size() > 0)
-//            axiomAdded = true;
         STRACE("str", tout << __LINE__ <<  " axiomAdded: " << axiomAdded << std::endl;);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         completed_branches.push_back(uState);
@@ -6147,7 +6144,6 @@ namespace smt {
         expr* fill_0 = fill_0_1st_loop(num, str);
 
         rational max_value = get_max_s2i(str);
-        //
         expr* conclusion = createAndOP(len_c, unroll_c, createLessEqOP(num, mk_int(max_value)), fill_0);
         expr* premise = createAndOP(bound_c, createEqualOP(str, u.str.mk_itos(num)));
         expr* to_assert = rewrite_implication(premise, conclusion);
@@ -6451,7 +6447,6 @@ namespace smt {
 
         while (len < str_int_bound + q_bound){
             expr* premise = createGreaterEqOP(len_n, mk_int(len));
-
             rational tmp = len - str_int_bound;
             expr* conclusion = createEqualOP(createSelectOP(arr, mk_int(tmp)), zero_e);
             ands.push_back(rewrite_implication(premise, conclusion));
@@ -10883,13 +10878,11 @@ namespace smt {
             else if (elements[i].second >= 0 && non_fresh_variables.contains(elements[i].first)){
                 if (elements[i].second % p_bound.get_int64() == 1 && i > 0)
                     continue;
-                int bound = std::max(non_fresh_variables[elements[i].first], non_fresh_variables[a.first]);
-                if (bound >= connectingSize)
-                    bound = std::min(non_fresh_variables[elements[i].first], non_fresh_variables[a.first]);
                 ands.push_back(
                         handle_non_fresh_non_fresh_array(
                                 a, elements, i,
-                                std::min(strengthen_bound(elements, non_fresh_variables, i), non_fresh_variables[a.first]),
+                                non_fresh_variables[a.first],
+                                strengthen_bound(elements, non_fresh_variables, i),
                                 non_fresh_variables[elements[i].first],
                                 optimizing,
                                 pMax));
@@ -11060,13 +11053,14 @@ namespace smt {
             expr_int a,
             pair_expr_vector const& elements_rhs,
             int pos,
-            int new_bound,
-            int old_bound,
+            int lhs_bound,
+            int new_rhs_bound,
+            int old_rhs_bound,
             bool optimizing,
             int pMax){
 
         
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << new_rhs_bound << std::endl;);
         bool unrollMode = pMax == PMAX;
 
         /* find the start position --> */
@@ -11101,7 +11095,7 @@ namespace smt {
         else
             len_lhs = get_var_flat_size(a);
 
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << new_rhs_bound << std::endl;);
         if (!unrollMode){
             for (int i = 1; i <= pMax; ++i){
                 expr_ref_vector ors(m);
@@ -11127,7 +11121,7 @@ namespace smt {
                             createEqualOP(iterB, m_autil.mk_int(1))));
         }
         else {
-            int considered_size = new_bound;
+            int considered_size = std::min(new_rhs_bound, lhs_bound);
             STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << "; size: " << considered_size << " can_combine:" << can_combine << " elements_rhs.size(): " << elements_rhs.size() << std::endl;);
             if (!flat_enabled) {
                 for (int i = 1; i <= considered_size; ++i) {
@@ -11139,13 +11133,12 @@ namespace smt {
                     ands.push_back(createOrOP(ors));
                 }
 
-                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << new_bound << " " << old_bound << "; connectingSize size: " << connectingSize << std::endl;);
-                if (new_bound >= connectingSize || old_bound >= connectingSize) {
-                    if (old_bound > new_bound)
-                        ands.push_back(createLessEqOP(len_rhs, mk_int(new_bound)));
+                STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << new_rhs_bound << " " << old_rhs_bound << "; connectingSize size: " << connectingSize << std::endl;);
+                if (new_rhs_bound >= connectingSize || old_rhs_bound >= connectingSize) {
+                    if (old_rhs_bound > new_rhs_bound)
+                        ands.push_back(createLessEqOP(len_rhs, mk_int(new_rhs_bound)));
                     else
                         ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
-//                    ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                 }
             }
             else if (optimizing) {
@@ -11167,12 +11160,7 @@ namespace smt {
                     STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << considered_size << "; connectingSize size: " << connectingSize << std::endl;);
                     if (considered_size >= connectingSize) {
                         ands.push_back(createLessEqOP(len_rhs, mk_int(connectingSize)));
-//                        ands.push_back(createLessEqOP(len_lhs, mk_int(connectingSize)));
                     }
-//                    else {
-//                        ands.push_back(createLessEqOP(len_rhs, mk_int(considered_size)));
-//                        ands.push_back(createLessEqOP(len_lhs, mk_int(considered_size)));
-//                    }
                 }
             }
             else {
@@ -16593,7 +16581,7 @@ namespace smt {
                 }
             }
         }
-        return nullptr;
+        return false;
     }
 
 
@@ -19772,6 +19760,11 @@ namespace smt {
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                             ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        std::string tmp = expr2str(a2);
+                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
+                            continue;
+                        }
                         if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) && !stored_eq.contains(a1)) {
                             guessed_eqs.push_back(s);
                             stored_eq.push_back(a1);
@@ -19787,6 +19780,11 @@ namespace smt {
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        std::string tmp = expr2str(a2);
+                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
+                            continue;
+                        }
                         if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) &&
                             !stored_diseq.contains(a1)) {
                             guessed_diseqs.push_back(s);
