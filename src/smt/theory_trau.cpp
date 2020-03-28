@@ -16568,15 +16568,15 @@ namespace smt {
         if (u.str.is_string(arg0, val)){
             if (is_char_at(arg1)){
                 if (val.length() == 0){
-                    assert_axiom(createEqualOP(e, m.mk_true()));
+                    m_delayed_assertions_todo.push_back(createEqualOP(e, m.mk_true()));
                     return true;
                 }
                 else if (val.length() == 1){
-                    assert_axiom(createEqualOP(e, createEqualOP(arg0, arg1)));
+                    m_delayed_assertions_todo.push_back(createEqualOP(e, createEqualOP(arg0, arg1)));
                     return true;
                 }
                 else {
-                    assert_axiom(createEqualOP(e, m.mk_false()));
+                    m_delayed_assertions_todo.push_back(createEqualOP(e, m.mk_false()));
                     return true;
                 }
             }
@@ -17272,11 +17272,11 @@ namespace smt {
         if (is_char_at(base)){
             rational pos_val;
             if (m_autil.is_numeral(pos, pos_val) && pos_val >= rational(1)){
-                assert_axiom(createEqualOP(expr, mk_string("")));
+                m_delayed_assertions_todo.push_back(createEqualOP(expr, mk_string("")));
                 return;
             }
             else
-                assert_axiom(rewrite_implication(createGreaterEqOP(pos, mk_int(1)), createEqualOP(expr, mk_string(""))));
+                m_delayed_assertions_todo.push_back(rewrite_implication(createGreaterEqOP(pos, mk_int(1)), createEqualOP(expr, mk_string(""))));
         }
 
 
