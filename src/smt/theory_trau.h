@@ -1203,6 +1203,7 @@ namespace smt {
         void instantiate_axiom_int_to_str(enode * e);
         void instantiate_axiom_str_to_int(enode * e);
 
+        bool prefix_suffix_shortpath(expr* e);
         bool can_be_prefix(expr* prefix, expr* n);
         bool is_number(zstring n);
         void sync_indexof(expr* e);

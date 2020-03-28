@@ -16515,16 +16515,18 @@ namespace smt {
             return;
         }
         TRACE("str", tout << "instantiate prefixof axiom for " << mk_pp(expr, m) << std::endl;);
-
+        if (prefix_suffix_shortpath(expr)){
+            return;
+        }
         expr_ref ts0(mk_str_var("pre_prefix"), m);
         expr_ref ts1(mk_str_var("post_prefix"), m);
         prefix_set.insert(expr, ts0.get());
         assert_axiom(createEqualOP(mk_strlen(ts0), mk_strlen(expr->get_arg(0))));
 
-        expr_ref_vector innerItems(m);
-        innerItems.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
-        innerItems.push_back(m.mk_ite(createEqualOP(ts0, expr->get_arg(0)), expr, mk_not(m, expr)));
-        expr_ref then1(m.mk_and(innerItems.size(), innerItems.c_ptr()), m);
+        expr_ref_vector inner_items(m);
+        inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
+        inner_items.push_back(m.mk_ite(createEqualOP(ts0, expr->get_arg(0)), expr, mk_not(m, expr)));
+        expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
         SASSERT(then1);
 
         // the top-level condition is Length(arg0) >= Length(arg1)
@@ -16547,15 +16549,17 @@ namespace smt {
         axiomatized_terms.insert(expr);
 
         TRACE("str", tout << "instantiate suffixof axiom for " << mk_pp(expr, m) << std::endl;);
-
+        if (prefix_suffix_shortpath(expr)){
+            return;
+        }
         expr_ref ts0(mk_str_var("pre_suffix"), m);
         expr_ref ts1(mk_str_var("post_suffix"), m);
         suffix_set.insert(expr, ts1.get());
-        expr_ref_vector innerItems(m);
-        innerItems.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
-        innerItems.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
-        innerItems.push_back(m.mk_ite(createEqualOP(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
-        expr_ref then1(m.mk_and(innerItems.size(), innerItems.c_ptr()), m);
+        expr_ref_vector inner_items(m);
+        inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
+        inner_items.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
+        inner_items.push_back(m.mk_ite(createEqualOP(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
+        expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
 
         // the top-level condition is Length(arg0) >= Length(arg1)
         expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
@@ -16565,6 +16569,30 @@ namespace smt {
         expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
         assert_axiom(finalAxiom);
     }
+
+    bool theory_trau::prefix_suffix_shortpath(expr* e){
+        expr* arg0 = to_app(e)->get_arg(0);
+        expr* arg1 = to_app(e)->get_arg(1);
+        zstring val;
+        if (u.str.is_string(arg0, val)){
+            if (is_char_at(arg1)){
+                if (val.length() == 0){
+                    assert_axiom(createEqualOP(e, m.mk_true()));
+                    return true;
+                }
+                else if (val.length() == 1){
+                    assert_axiom(createEqualOP(e, createEqualOP(arg0, arg1)));
+                    return true;
+                }
+                else {
+                    assert_axiom(createEqualOP(e, m.mk_false()));
+                    return true;
+                }
+            }
+        }
+        return nullptr;
+    }
+
 
     /*
      * Quick paths:
@@ -17252,7 +17280,13 @@ namespace smt {
         }
 
         if (is_char_at(base)){
-            assert_axiom(rewrite_implication(createGreaterEqOP(pos, mk_int(1)), createEqualOP(expr, mk_string(""))));
+            rational pos_val;
+            if (m_autil.is_numeral(pos, pos_val) && pos_val >= rational(1)){
+                assert_axiom(createEqualOP(expr, mk_string("")));
+                return;
+            }
+            else
+                assert_axiom(rewrite_implication(createGreaterEqOP(pos, mk_int(1)), createEqualOP(expr, mk_string(""))));
         }
 
 
