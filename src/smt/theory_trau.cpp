@@ -6069,7 +6069,6 @@ namespace smt {
         }
 
         expr* unroll_c = unroll_str_int(num, str);
-//        expr* lenConstraint = lower_bound_str_int(num, str);
         expr* bound_c = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
         rational max_value = get_max_s2i(str);
@@ -6126,7 +6125,7 @@ namespace smt {
         return false;
     }
 
-    void theory_trau::handle_int2str(expr* num, expr* str, bool neg){ 
+    void theory_trau::handle_int2str(expr* num, expr* str, bool neg){
         rational len_val;
         if (get_len_value(str, len_val) && len_val == rational(0)){
             expr* to_assert = rewrite_implication(createEqualOP(str, mk_string("")), createEqualOP(num, mk_int(-1)));
@@ -6149,6 +6148,7 @@ namespace smt {
         expr* fill_0 = fill_0_1st_loop(num, str);
 
         rational max_value = get_max_s2i(str);
+        //
         expr* conclusion = createAndOP(len_c, unroll_c, createLessEqOP(num, mk_int(max_value)), fill_0);
         expr* premise = createAndOP(bound_c, createEqualOP(str, u.str.mk_itos(num)));
         expr* to_assert = rewrite_implication(premise, conclusion);
@@ -6264,8 +6264,6 @@ namespace smt {
         }
 
         ands_tmp.push_back(createGreaterEqOP(num, mk_int(0)));
-//        if (consider_len != one)
-//            return m.mk_true();
         // if !valid --> value = -1, else ands_tmp
         expr* valid_s2i = valid_str_int(num, str);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " valid_s2i: " << mk_pp(valid_s2i, m) << std::endl;);
@@ -6410,7 +6408,6 @@ namespace smt {
      */
     expr* theory_trau::lower_bound_int_str(expr* num, expr* str){
         expr_ref_vector ands(m);
-
         rational ten(10);
         rational powerOf(1);
         rational one(1);
@@ -6441,7 +6438,6 @@ namespace smt {
     }
 
     expr* theory_trau::fill_0_1st_loop(expr* num, expr* str){
-        
         if (is_char_at(str) || is_char_at(num))
             return m.mk_true();
 
@@ -17254,6 +17250,11 @@ namespace smt {
                 return;
             }
         }
+
+        if (is_char_at(base)){
+            assert_axiom(rewrite_implication(createGreaterEqOP(pos, mk_int(1)), createEqualOP(expr, mk_string(""))));
+        }
+
 
         expr_ref_vector argumentsValid_terms(m);
         // pos >= 0
