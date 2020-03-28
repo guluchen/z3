@@ -1726,7 +1726,7 @@ namespace smt {
                 // inconsistency check: value
                 if (!can_two_nodes_eq(eqc_nn1, eqc_nn2)) {
                     STRACE("str", tout << "inconsistency detected: " << mk_pp(eqc_nn1, m) << " cannot be equal to " << mk_pp(eqc_nn2, m) << std::endl;);
-                    expr_ref to_assert(mk_not(m, ctx.mk_eq_atom(eqc_nn1, eqc_nn2)), m);
+                    expr_ref to_assert(mk_not(m, createEqualOP(eqc_nn1, eqc_nn2)), m);
 
                     expr_ref_vector litems(m);
                     if (lhs != eqc_nn1)
@@ -1942,10 +1942,10 @@ namespace smt {
         if (regex_sort == nullptr)
             return;
 
-        expr_ref_vector eqNodeSet(m);
+        expr_ref_vector eqs(m);
 
-        expr * constStr_1 = collect_eq_nodes(nn1, eqNodeSet);
-        expr * constStr_2 = collect_eq_nodes(nn2, eqNodeSet);
+        expr * constStr_1 = collect_eq_nodes(nn1, eqs);
+        expr * constStr_2 = collect_eq_nodes(nn2, eqs);
         expr * constStr = (constStr_1 != nullptr) ? constStr_1 : constStr_2;
 
         if (constStr == nullptr) {
@@ -1956,7 +1956,7 @@ namespace smt {
             expr* lhs = u.re.mk_to_re(constStr);
             ensure_enode(lhs);
             m_trail.push_back(lhs);
-            for (const auto& e: eqNodeSet) {
+            for (const auto& e: eqs) {
                 if (regex_in_var_reg_str_map.contains(e)) {
                     expr_ref_vector litems(m);
                     expr* rhs = construct_overapprox(e, litems);
@@ -2042,21 +2042,21 @@ namespace smt {
 
         if (regex_sort == nullptr)
             return nullptr;
-        ptr_vector<expr> childrenVector;
-        get_nodes_in_concat(nn, childrenVector);
-        zstring emptyConst("");
-        expr* emptyReg = u.re.mk_to_re(u.str.mk_string(emptyConst));
-        app *lhs = to_app(emptyReg);
+        ptr_vector<expr> subnodes_concat;
+        get_nodes_in_concat(nn, subnodes_concat);
+        zstring empty_const("");
+        expr* empty_reg = u.re.mk_to_re(u.str.mk_string(empty_const));
+        app *lhs = to_app(empty_reg);
         ensure_enode(lhs);
         m_trail.push_back(lhs);
 
         // list of constraints
         bool lastIsSigmaStar = false;
-        for (auto el : childrenVector) {
-            zstring constStrValue;
-            if (u.str.is_string(el, constStrValue)) {
-                if (constStrValue.length() > 0) {
-                    if (lhs != emptyReg)
+        for (auto el : subnodes_concat) {
+            zstring const_str_value;
+            if (u.str.is_string(el, const_str_value)) {
+                if (const_str_value.length() > 0) {
+                    if (lhs != empty_reg)
                         lhs = u.re.mk_concat(lhs, u.re.mk_to_re(el));
                     else
                         lhs = u.re.mk_to_re(el);
@@ -2066,13 +2066,13 @@ namespace smt {
                 }
             } else {
                 // if it is equal to const
-                expr_ref_vector tmpEqNodeSet(m);
-                expr *childValue = collect_eq_nodes(el, tmpEqNodeSet);
-                if (childValue != nullptr) {
-                    litems.push_back(ctx.mk_eq_atom(childValue, el));
-                    u.str.is_string(childValue, constStrValue);
-                    if (constStrValue.length() > 0) {
-                        lhs = u.re.mk_concat(lhs, u.re.mk_to_re(childValue));
+                expr_ref_vector eqs_vector(m);
+                expr *subnode_val = collect_eq_nodes(el, eqs_vector);
+                if (subnode_val != nullptr) {
+                    litems.push_back(createEqualOP(subnode_val, el));
+                    u.str.is_string(subnode_val, const_str_value);
+                    if (const_str_value.length() > 0) {
+                        lhs = u.re.mk_concat(lhs, u.re.mk_to_re(subnode_val));
                         ensure_enode(lhs);
                         m_trail.push_back(lhs);
                         lastIsSigmaStar = false;
@@ -2082,11 +2082,11 @@ namespace smt {
                     // if it has languages, take the 1st one
                     if (regex_in_var_reg_str_map.contains(el)) {
                         expr* tmp = nullptr;
-                        expr_ref_vector tmpList(m);
+                        expr_ref_vector tmp_list(m);
                         for (const auto& we: membership_memo) {
                             if (we.first.get() == el) {
                                 tmp = tmp == nullptr ? we.second.get() : u.re.mk_inter(we.second.get(), tmp);
-                                tmpList.push_back(u.re.mk_in_re(we.first.get(), we.second.get()));
+                                tmp_list.push_back(u.re.mk_in_re(we.first.get(), we.second.get()));
                                 STRACE("str", tout << __LINE__ << ": " << mk_ismt2_pp(tmp, m) << std::endl;);
                             }
                         }
@@ -2095,7 +2095,7 @@ namespace smt {
                             if (we.first.get() == el) {
                                 STRACE("str", tout << __LINE__ << ": " << mk_ismt2_pp(we.first, m) << std::endl;);
                                 tmp = tmp == nullptr ? u.re.mk_complement(we.second.get()) : u.re.mk_inter( u.re.mk_complement(we.second.get()), tmp);
-                                tmpList.push_back(mk_not(m, u.re.mk_in_re(we.first.get(), we.second.get())));
+                                tmp_list.push_back(mk_not(m, u.re.mk_in_re(we.first.get(), we.second.get())));
                                 STRACE("str", tout << __LINE__ << ": " << mk_ismt2_pp(tmp, m) << std::endl;);
                             }
                         }
@@ -2104,12 +2104,12 @@ namespace smt {
                         bool empty = au01->is_empty();
 
                         if (empty) {
-                            assert_implication(createAndOP(tmpList), m.mk_false());
+                            assert_implication(createAndOP(tmp_list), m.mk_false());
                             return nullptr;
                         }
                         else {
-                            for (unsigned i = 0; i < tmpList.size(); ++i)
-                                litems.push_back(tmpList[i].get());
+                            for (unsigned i = 0; i < tmp_list.size(); ++i)
+                                litems.push_back(tmp_list[i].get());
                             lhs = u.re.mk_concat(lhs, tmp);
                             ensure_enode(lhs);
                             m_trail.push_back(lhs);
@@ -2117,7 +2117,7 @@ namespace smt {
                         }
                     } else {
                         if (!lastIsSigmaStar) {
-                            if (lhs != emptyReg)
+                            if (lhs != empty_reg)
                                 lhs = u.re.mk_concat(lhs, u.re.mk_full_seq(regex_sort));
                             else
                                 lhs = u.re.mk_full_seq(regex_sort);
@@ -2144,14 +2144,14 @@ namespace smt {
         
         TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(n1, m) << " and " << mk_pp(n2, m) << std::endl;);
 
-        expr_ref_vector willEqClass(m);
-        expr * constStrAst_1 = collect_eq_nodes(n1, willEqClass);
-        expr * constStrAst_2 = collect_eq_nodes(n2, willEqClass);
+        expr_ref_vector neq_eq_class(m);
+        expr * constStrAst_1 = collect_eq_nodes(n1, neq_eq_class);
+        expr * constStrAst_2 = collect_eq_nodes(n2, neq_eq_class);
         expr * constStrAst = (constStrAst_1 != nullptr) ? constStrAst_1 : constStrAst_2;
 
         // step 1: we may have constant values for Contains checks now
         if (constStrAst != nullptr) {
-            for (auto a : willEqClass) {
+            for (auto a : neq_eq_class) {
                 if (a == constStrAst) {
                     continue;
                 }
@@ -2167,8 +2167,8 @@ namespace smt {
             //   * "EQC(M) U EQC(concat(..., "jio", ...))" as substr and
             //   * If strAst registered has an eqc constant in the context
             // -------------------------------------------------------------
-            for (auto a : willEqClass) {
-                check_contain_by_substr(a, willEqClass);
+            for (auto a : neq_eq_class) {
+                check_contain_by_substr(a, neq_eq_class);
             }
         }
 
@@ -2185,8 +2185,8 @@ namespace smt {
         //         (9) containPairBoolMap[<eqc(y), eqc(x)>] /\ m = n  ==>  (b1 -> b2)
         // ------------------------------------------
 
-        for (auto varAst1 : willEqClass) {
-            for (auto varAst2 : willEqClass) {
+        for (auto varAst1 : neq_eq_class) {
+            for (auto varAst2 : neq_eq_class) {
                 check_contain_by_eq_nodes(varAst1, varAst2);
             }
         }
@@ -3184,7 +3184,6 @@ namespace smt {
                 } else if (u.str.is_at(ap) || u.str.is_extract(ap) || u.str.is_replace(ap)) {
                     m_library_aware_axiom_todo.insert(n);
                 } else if (u.str.is_itos(ap)) {
-                    TRACE("str", tout << __LINE__ << " found string-integer conversion term: " << mk_pp(ex, m) << std::endl;);
                     string_int_conversion_terms.insert(ap);
                     m_library_aware_axiom_todo.insert(n);
                     if (str_int_bound_expr == nullptr)
@@ -16515,27 +16514,29 @@ namespace smt {
             return;
         }
         TRACE("str", tout << "instantiate prefixof axiom for " << mk_pp(expr, m) << std::endl;);
-        if (prefix_suffix_shortpath(expr)){
+        if (prefix_suffix_shortpath_for_charat(expr)){
             return;
         }
-        expr_ref ts0(mk_str_var("pre_prefix"), m);
-        expr_ref ts1(mk_str_var("post_prefix"), m);
-        prefix_set.insert(expr, ts0.get());
-        assert_axiom(createEqualOP(mk_strlen(ts0), mk_strlen(expr->get_arg(0))));
+        else {
+            expr_ref ts0(mk_str_var("pre_prefix"), m);
+            expr_ref ts1(mk_str_var("post_prefix"), m);
+            prefix_set.insert(expr, ts0.get());
+            assert_axiom(createEqualOP(mk_strlen(ts0), mk_strlen(expr->get_arg(0))));
 
-        expr_ref_vector inner_items(m);
-        inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
-        inner_items.push_back(m.mk_ite(createEqualOP(ts0, expr->get_arg(0)), expr, mk_not(m, expr)));
-        expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
-        SASSERT(then1);
+            expr_ref_vector inner_items(m);
+            inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
+            inner_items.push_back(m.mk_ite(createEqualOP(ts0, expr->get_arg(0)), expr, mk_not(m, expr)));
+            expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
+            SASSERT(then1);
 
-        // the top-level condition is Length(arg0) >= Length(arg1)
-        expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
-        m_rewrite(sub);
-        expr_ref topLevelCond(m_autil.mk_ge(sub, mk_int(0)), m);
+            // the top-level condition is Length(arg0) >= Length(arg1)
+            expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
+            m_rewrite(sub);
+            expr_ref premise(m_autil.mk_ge(sub, mk_int(0)), m);
 
-        expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
-        assert_axiom(finalAxiom);
+            expr_ref to_assert(m.mk_ite(premise, then1, mk_not(m, expr)), m);
+            assert_axiom(to_assert);
+        }
     }
 
     void theory_trau::instantiate_axiom_suffixof(enode * e) {
@@ -16549,28 +16550,30 @@ namespace smt {
         axiomatized_terms.insert(expr);
 
         TRACE("str", tout << "instantiate suffixof axiom for " << mk_pp(expr, m) << std::endl;);
-        if (prefix_suffix_shortpath(expr)){
+        if (prefix_suffix_shortpath_for_charat(expr)){
             return;
         }
-        expr_ref ts0(mk_str_var("pre_suffix"), m);
-        expr_ref ts1(mk_str_var("post_suffix"), m);
-        suffix_set.insert(expr, ts1.get());
-        expr_ref_vector inner_items(m);
-        inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
-        inner_items.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
-        inner_items.push_back(m.mk_ite(createEqualOP(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
-        expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
+        else {
+            expr_ref ts0(mk_str_var("pre_suffix"), m);
+            expr_ref ts1(mk_str_var("post_suffix"), m);
+            suffix_set.insert(expr, ts1.get());
+            expr_ref_vector inner_items(m);
+            inner_items.push_back(createEqualOP(expr->get_arg(1), mk_concat(ts0, ts1)));
+            inner_items.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(expr->get_arg(0))));
+            inner_items.push_back(m.mk_ite(createEqualOP(ts1, expr->get_arg(0)), expr, mk_not(m, expr)));
+            expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
 
-        // the top-level condition is Length(arg0) >= Length(arg1)
-        expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
-        m_rewrite(sub);
-        expr_ref topLevelCond(m_autil.mk_ge(sub, mk_int(0)), m);
+            // the top-level condition is Length(arg0) >= Length(arg1)
+            expr_ref sub(m_autil.mk_sub(mk_strlen(expr->get_arg(1)), mk_strlen(expr->get_arg(0))), m);
+            m_rewrite(sub);
+            expr_ref premise(m_autil.mk_ge(sub, mk_int(0)), m);
 
-        expr_ref finalAxiom(m.mk_ite(topLevelCond, then1, mk_not(m, expr)), m);
-        assert_axiom(finalAxiom);
+            expr_ref to_assert(m.mk_ite(premise, then1, mk_not(m, expr)), m);
+            assert_axiom(to_assert);
+        }
     }
 
-    bool theory_trau::prefix_suffix_shortpath(expr* e){
+    bool theory_trau::prefix_suffix_shortpath_for_charat(expr* e){
         expr* arg0 = to_app(e)->get_arg(0);
         expr* arg1 = to_app(e)->get_arg(1);
         zstring val;
@@ -17039,8 +17042,7 @@ namespace smt {
         zstring s;
         if (u.str.is_string(prefix, s)){
             expr* left_most = getMostLeftNodeInConcat(n);
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << s << " " << mk_pp(left_most, m)<< std::endl;);
-            if (u.str.is_itos(left_most) && !is_number(s))
+            if (u.str.is_itos(left_most) && !(is_number(s)))
                 return false;
         }
         return true;
