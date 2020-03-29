@@ -6063,7 +6063,6 @@ namespace smt {
         if (quickpath_str2int(num, str)) {
             return;
         }
-
         expr* unroll_c = unroll_str_int(num, str);
         expr* bound_c = createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound));
         expr* fill_0 = fill_0_1st_loop(num, str);
@@ -6136,7 +6135,6 @@ namespace smt {
         if (quickpath_int2str(num, str)) {
             return;
         }
-
         expr* unroll_c = unroll_str_int(num, str);
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(num, m) << " = " << mk_pp(str, m) << std::endl << mk_pp(unroll_c, m) << std::endl;);
         expr* len_c = lower_bound_int_str(num, str);
@@ -19760,11 +19758,11 @@ namespace smt {
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                             ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
-                        std::string tmp = expr2str(a2);
-                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
-                            continue;
-                        }
+//                        std::string tmp = expr2str(a2);
+//                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
+//                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
+//                            continue;
+//                        }
                         if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) && !stored_eq.contains(a1)) {
                             guessed_eqs.push_back(s);
                             stored_eq.push_back(a1);
@@ -19780,11 +19778,11 @@ namespace smt {
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
-                        std::string tmp = expr2str(a2);
-                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
-                            continue;
-                        }
+//                        std::string tmp = expr2str(a2);
+//                        if (tmp.find("s2i!") == 0 || tmp.find("i2s!") == 0) {
+//                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " skip: " << mk_pp(s, m) << std::endl;);
+//                            continue;
+//                        }
                         if ((u.str.is_stoi(a1) || u.str.is_itos(a1)) &&
                             !stored_diseq.contains(a1)) {
                             guessed_diseqs.push_back(s);
