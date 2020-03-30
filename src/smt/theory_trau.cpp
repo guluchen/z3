@@ -4897,7 +4897,7 @@ namespace smt {
 
                 // check if it is the bound var
                 std::string toStr = expr2str(e);
-                if (toStr.find("Bound!") != std::string::npos)
+                if (!is_theory_str_term(to_app(e)->get_arg(0)) || !is_theory_str_term(to_app(e)->get_arg(1)))
                     continue;
                 expr* lhs = simplify_concat(to_app(e)->get_arg(0));
                 expr* rhs = simplify_concat(to_app(e)->get_arg(1));
@@ -5956,7 +5956,6 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
 
         handle_diseq_notcontain();
-
         bool axiomAdded = handle_str_int();
         guessed_eqs.append(diff);
         axiomAdded = convert_equalities(eq_combination, non_fresh_vars, createAndOP(guessed_eqs)) || axiomAdded;
@@ -6610,7 +6609,7 @@ namespace smt {
     bool theory_trau::underapproximation_cached(){
         expr_ref_vector guessed_exprs(m);
         fetch_guessed_exprs_from_cache(uState, guessed_exprs);
-        expr* causexpr = createAndOP(guessed_exprs);
+        expr* causexpr = nullptr;
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << " @lvl " << m_scope_level << std::endl;);
         if (uState.asserting_constraints.size() > 0)
@@ -8332,7 +8331,9 @@ namespace smt {
     }
 
     void theory_trau::assert_breakdown_combination(expr* e, expr* premise){
+        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(premise, m) << std::endl;);
         ensure_enode(e);
+
         assert_axiom(e, premise);
     }
 
@@ -19416,8 +19417,7 @@ namespace smt {
         add_equalities_to_core(guessed_exprs, all_vars, ret);
         add_assignments_to_core(all_vars, ret);
         add_disequalities_to_core(diseq_exprs, ret);
-        add_core_str_int(guessed_exprs);
-
+        add_core_str_int(guessed_exprs, ret);
         if (get_bound_str_int_control_var() != nullptr) {
             if (bound == rational(0))
                 ret.push_back(createEqualOP(get_bound_str_int_control_var(), mk_int(str_int_bound)));
@@ -19429,21 +19429,19 @@ namespace smt {
         guessed_exprs.append(ret);
     }
 
-    void theory_trau::add_core_str_int(expr_ref_vector &guessed_eqs){
+    void theory_trau::add_core_str_int(expr_ref_vector const &guessed_eqs, expr_ref_vector &ret){
         context& ctx = get_context();
-        expr_ref_vector assignments(m);
-        ctx.get_assignments(assignments);
 
         expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
-        for (const auto& s : assignments) {
+        for (const auto& s : guessed_eqs) {
             if (ctx.is_relevant(s)) {
                 if (!m.is_not(s, a0)) {
                     app* a = to_app(s);
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                         if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
-                            guessed_eqs.push_back(s);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                            ret.push_back(s);
                         }
                     }
                 }
@@ -19451,9 +19449,9 @@ namespace smt {
                     app* a = to_app(a0);
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
-                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                         if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
-                            guessed_eqs.push_back(s);
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                            ret.push_back(s);
                         }
                     }
                 }
@@ -19789,7 +19787,6 @@ namespace smt {
     }
 
     void theory_trau::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessed_eqs) {
-        
         context& ctx = get_context();
         for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
             literal tmp = ctx.get_literal(mful_scope_levels[i].get());
@@ -19805,12 +19802,30 @@ namespace smt {
         context& ctx = get_context();
         for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
             literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-            int assignLvl = ctx.get_assign_level(tmp);
-            if (assignLvl >= 0) {
+            int assign_lvl = ctx.get_assign_level(tmp);
+            if (assign_lvl >= 0) {
                 if (!m.is_not(mful_scope_levels[i].get()))
                     guessed_eqs.push_back(mful_scope_levels[i].get());
                 else
                     guessed_diseqs.push_back(mful_scope_levels[i].get());
+            }
+        }
+
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
+        for (const auto& s : assignments) {
+            if (ctx.is_relevant(s)) {
+                if (!m.is_not(s, a0)) {
+                    app* a = to_app(s);
+                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
+                        ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
+                        if (m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                            guessed_eqs.push_back(s);
+                        }
+                    }
+                } 
             }
         }
     }
