@@ -19458,7 +19458,8 @@ namespace smt {
                     app* a = to_app(s);
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
-                        if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                        rational val;
+                        if (u.str.is_string(a1) || u.str.is_string(a2) || (m_autil.is_numeral(a1, val) && val >= rational(0)) || (m_autil.is_numeral(a2, val) && val >= rational(0))) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                             ret.push_back(s);
                         }
@@ -19468,7 +19469,8 @@ namespace smt {
                     app* a = to_app(a0);
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
-                        if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                        rational val;
+                        if (u.str.is_string(a1) || u.str.is_string(a2) || (m_autil.is_numeral(a1, val) && val >= rational(0)) || (m_autil.is_numeral(a2, val) && val >= rational(0))) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                             ret.push_back(s);
                         }
