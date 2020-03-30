@@ -4102,7 +4102,6 @@ namespace smt {
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> const& eq_combination){
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
-        
         for (const auto& nn : non_fresh_vars)
             STRACE("str", tout << __LINE__ << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
 
@@ -18289,7 +18288,7 @@ namespace smt {
             expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-            if (!is_contain_equality(concatAst))
+//            if (!is_contain_equality(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
