@@ -19593,8 +19593,10 @@ namespace smt {
                     get_nodes_in_concat(a2, rhs);
 
                     for (const auto& e : empty_vars)
-                        if ((lhs.contains(e) || rhs.contains(e)) && (is_contain_family_equality(a1) || is_contain_family_equality(a2))){
+                        if ((lhs.contains(e) && is_contain_equality(a1) ) || (rhs.contains(e) && is_contain_equality(a2))){
+                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                             core.push_back(s);
+                            break;
                         }
 
                 }
