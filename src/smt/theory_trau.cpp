@@ -7280,9 +7280,7 @@ namespace smt {
                 std::string n1 = expr2str(nodes[0]);
                 std::string n3 = expr2str(nodes[nodes.size() - 1]);
                 if ((n1.find("pre_contain!tmp") != std::string::npos &&
-                     n3.find("post_contain!tmp") != std::string::npos) ||
-                    (n1.find("indexOf1!tmp") != std::string::npos &&
-                     n3.find("indexOf2!tmp") != std::string::npos)) {
+                     n3.find("post_contain!tmp") != std::string::npos)) {
                     nodes.pop_back();
                     return true;
                 }
@@ -19564,8 +19562,10 @@ namespace smt {
 
     void theory_trau::add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core){
         rational len;
+        expr_ref_vector empty_vars(m);
         for (const auto& v : all_vars) {
             if (get_len_value(v, len) && len.get_int64() == 0) {
+                empty_vars.push_back(v);
                 core.push_back(createEqualOP(v, mk_string("")));
             }
             else if (u.str.is_string(v)) {
@@ -19584,6 +19584,31 @@ namespace smt {
                     }
             }
         }
+
+//        context& ctx = get_context();
+//        expr_ref_vector assignments(m);
+//        ctx.get_assignments(assignments);
+//
+//        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
+//        for (const auto& s : assignments) {
+//            if (ctx.is_relevant(s)) {
+//                if (!m.is_not(s, a0)) {
+//                    app* a = to_app(s);
+//                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) && is_theory_str_term(a1) && is_theory_str_term(a2)){
+//                        ptr_vector <expr> lhs;
+//                        get_nodes_in_concat(a1, lhs);
+//                        ptr_vector <expr> rhs;
+//                        get_nodes_in_concat(a2, rhs);
+//
+//                        for (const auto& e : empty_vars)
+//                            if (lhs.contains(e) || rhs.contains(e)){
+//                                core.push_back(s);
+//                            }
+//
+//                    }
+//                }
+//            }
+//        }
     }
 
     unsigned theory_trau::get_assign_lvl(expr* a, expr* b){
