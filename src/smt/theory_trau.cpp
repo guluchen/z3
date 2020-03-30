@@ -18288,7 +18288,7 @@ namespace smt {
             expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-            if (!is_contain_equality(concatAst))
+//            if (!is_contain_equality(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
