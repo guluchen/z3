@@ -18288,17 +18288,17 @@ namespace smt {
             expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-//            if (!is_contain_equality(concatAst))
+            if (!is_contain_equality(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
                 expr_ref conclusion00(createEqualOP(concatAst, n2), m);
-                assert_implication(premise00, conclusion00);
+                assert_axiom(createEqualOP(premise00, conclusion00));
 
                 // | n2 | = 0 --> concat = n1
                 expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(n2)), m);
                 expr_ref conclusion01(createEqualOP(concatAst, n1), m);
-                assert_implication(premise01, conclusion01);
+                assert_axiom(createEqualOP(premise01, conclusion01));
             }
         }
         return concatAst;
