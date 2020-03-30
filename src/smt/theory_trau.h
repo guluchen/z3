@@ -473,6 +473,7 @@ namespace smt {
                     bool is_contain_family_equality(expr* n);
                     bool is_contain_family_equality(expr* n, expr* &contain);
                     bool is_contain_equality(expr* n, expr* &contain);
+                    bool is_contain_equality(expr* n);
                     bool is_trivial_contain(zstring s);
                 void  init_connecting_size(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> &non_fresh_vars, bool prep = true);
                 void static_analysis(obj_map<expr, ptr_vector<expr>> const& eq_combination);

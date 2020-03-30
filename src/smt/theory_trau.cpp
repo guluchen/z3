@@ -7263,6 +7263,34 @@ namespace smt {
         return false;
     }
 
+    bool theory_trau::is_contain_equality(expr* n){
+        if (u.str.is_concat(n)){
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(n, nodes);
+
+            if (nodes.size() >= 3) {
+                expr_ref_vector eqs(m);
+                collect_eq_nodes(n, eqs);
+                for (const auto& eq : eqs)
+                    if (nodes.contains(eq)){
+                        return false;
+                    }
+
+                // check var name
+                std::string n1 = expr2str(nodes[0]);
+                std::string n3 = expr2str(nodes[nodes.size() - 1]);
+                if ((n1.find("pre_contain!tmp") != std::string::npos &&
+                     n3.find("post_contain!tmp") != std::string::npos) ||
+                    (n1.find("indexOf1!tmp") != std::string::npos &&
+                     n3.find("indexOf2!tmp") != std::string::npos)) {
+                    nodes.pop_back();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     void theory_trau::static_analysis(obj_map<expr, ptr_vector<expr>> const& eq_combination){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
 
@@ -18262,7 +18290,7 @@ namespace smt {
             expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-//            if (!is_contain_family_equality(concatAst, tmp))
+            if (!is_contain_equality(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
