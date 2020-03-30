@@ -19459,6 +19459,7 @@ namespace smt {
     }
 
     void theory_trau::add_core_str_int(expr_ref_vector const &guessed_eqs, expr_ref_vector &ret){
+        return;
         context& ctx = get_context();
 
         expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
