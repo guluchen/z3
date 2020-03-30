@@ -19390,6 +19390,7 @@ namespace smt {
         add_equalities_to_core(guessed_exprs, all_vars, ret);
         add_assignments_to_core(all_vars, ret);
         add_disequalities_to_core(diseq_exprs, ret);
+        add_core_str_int(guessed_exprs);
 
         if (get_bound_str_int_control_var() != nullptr) {
             if (bound == rational(0))
@@ -19400,6 +19401,38 @@ namespace smt {
 
         guessed_exprs.reset();
         guessed_exprs.append(ret);
+    }
+
+    void theory_trau::add_core_str_int(expr_ref_vector &guessed_eqs){
+        context& ctx = get_context();
+        expr_ref_vector assignments(m);
+        ctx.get_assignments(assignments);
+
+        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
+        for (const auto& s : assignments) {
+            if (ctx.is_relevant(s)) {
+                if (!m.is_not(s, a0)) {
+                    app* a = to_app(s);
+                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
+                        ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                            guessed_eqs.push_back(s);
+                        }
+                    }
+                }
+                else if (to_app(s)->get_num_args() == 1){
+                    app* a = to_app(a0);
+                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
+                        ((u.str.is_stoi(a1) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2))))) {
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                        if (u.str.is_string(a1) || u.str.is_string(a2) || m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                            guessed_eqs.push_back(s);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void theory_trau::add_equalities_to_core(expr_ref_vector guessed_exprs, expr_ref_vector &all_vars, expr_ref_vector &core){
