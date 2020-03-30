@@ -21,6 +21,7 @@ Create a new folder and use cmake to build Z3-Trau
 mkdir trau-build
 cd trau-build
 cmake /path/to/trau-repo
+make
 ```
 
 ## Running Z3-Trau 
