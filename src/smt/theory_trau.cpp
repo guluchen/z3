@@ -4908,7 +4908,7 @@ namespace smt {
                     m_trail.push_back(not_e);
                     if (guessed_diseqs.contains(not_e))
                         diff.push_back(not_e);
-                    STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << std::endl;);
+                    STRACE("str", tout << __LINE__ << " not at_same_state " << mk_pp(e, m) << " vs lhs:" << mk_pp(lhs, m) << " vs rhs:" << mk_pp(rhs, m)  << std::endl;);
                     return false;
                 }
                 else {
@@ -7080,6 +7080,7 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
         int len_rhs = connectingSize;
         is_fixed_len_var(rhs, len_rhs);
         expr_ref_vector ors(m);
@@ -7107,6 +7108,7 @@ namespace smt {
                 }
                 ors.push_back(createAndOP(ands));
             }
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m)  << ")\n";);
             assert_axiom(createEqualOP(premises, createOrOP(ors)));
         }
     }
@@ -15235,22 +15237,40 @@ namespace smt {
         get_nodes_in_concat(lhs, lhs_nodes);
         get_nodes_in_concat(rhs, rhs_nodes);
         if (lhs_nodes.size() > rhs_nodes.size()){
+            int pos = 0;
             for (const auto& n : rhs_nodes){
-                if (!lhs_nodes.contains(n))
-                    return false;
-                else {
-                    lhs_nodes.erase(n);
+                bool found = false;
+                while (pos < lhs_nodes.size()){
+                    if (n == lhs_nodes[pos]){
+                        pos++;
+                        found = true;
+                        break;
+                    }
+                    else {
+                        pos++;
+                    }
                 }
+                if (found == false)
+                    return false;
             }
             return true;
         }
         else if (lhs_nodes.size() < rhs_nodes.size()){
+            int pos = 0;
             for (const auto& n : lhs_nodes){
-                if (!rhs_nodes.contains(n))
-                    return false;
-                else {
-                    rhs_nodes.erase(n);
+                bool found = false;
+                while (pos < rhs_nodes.size()){
+                    if (n == rhs_nodes[pos]){
+                        pos++;
+                        found = true;
+                        break;
+                    }
+                    else {
+                        pos++;
+                    }
                 }
+                if (found == false)
+                    return false;
             }
             return true;
         }
@@ -18291,13 +18311,13 @@ namespace smt {
 //            if (!is_contain_equality(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
-                expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(n1)), m);
-                expr_ref conclusion00(createEqualOP(concatAst, n2), m);
+                expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(0))), m);
+                expr_ref conclusion00(createEqualOP(concatAst, to_app(concatAst)->get_arg(1)), m);
                 assert_axiom(createEqualOP(premise00, conclusion00));
 
                 // | n2 | = 0 --> concat = n1
-                expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(n2)), m);
-                expr_ref conclusion01(createEqualOP(concatAst, n1), m);
+                expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(1))), m);
+                expr_ref conclusion01(createEqualOP(concatAst, to_app(concatAst)->get_arg(0)), m);
                 assert_axiom(createEqualOP(premise01, conclusion01));
             }
         }
@@ -19582,26 +19602,26 @@ namespace smt {
             }
         }
 
-        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
-        for (const auto& s : guessed_exprs) {
-            if (!m.is_not(s, a0)) {
-                app* a = to_app(s);
-                if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) && is_theory_str_term(a1) && is_theory_str_term(a2)){
-                    ptr_vector <expr> lhs;
-                    get_nodes_in_concat(a1, lhs);
-                    ptr_vector <expr> rhs;
-                    get_nodes_in_concat(a2, rhs);
-
-                    for (const auto& e : empty_vars)
-                        if ((lhs.contains(e) && is_contain_equality(a1) ) || (rhs.contains(e) && is_contain_equality(a2))){
-                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
-                            core.push_back(s);
-                            break;
-                        }
-
-                }
-            }
-        }
+//        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
+//        for (const auto& s : guessed_exprs) {
+//            if (!m.is_not(s, a0)) {
+//                app* a = to_app(s);
+//                if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) && is_theory_str_term(a1) && is_theory_str_term(a2)){
+//                    ptr_vector <expr> lhs;
+//                    get_nodes_in_concat(a1, lhs);
+//                    ptr_vector <expr> rhs;
+//                    get_nodes_in_concat(a2, rhs);
+//
+//                    for (const auto& e : empty_vars)
+//                        if ((lhs.contains(e) && is_contain_equality(a1) ) || (rhs.contains(e) && is_contain_equality(a2))){
+//                            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+//                            core.push_back(s);
+//                            break;
+//                        }
+//
+//                }
+//            }
+//        }
     }
 
     unsigned theory_trau::get_assign_lvl(expr* a, expr* b){
