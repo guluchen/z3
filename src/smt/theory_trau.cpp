@@ -19414,7 +19414,7 @@ namespace smt {
         expr_ref_vector all_vars = collect_all_vars_in_eq_combination(eq_combination);
         expr_ref_vector ret(m);
         add_equalities_to_core(guessed_exprs, all_vars, ret);
-        add_assignments_to_core(all_vars, ret);
+        add_assignments_to_core(guessed_exprs, all_vars, ret);
         add_disequalities_to_core(diseq_exprs, ret);
         add_core_str_int(guessed_exprs, ret);
         if (get_bound_str_int_control_var() != nullptr) {
@@ -19557,7 +19557,7 @@ namespace smt {
         }
     }
 
-    void theory_trau::add_assignments_to_core(expr_ref_vector const& all_vars, expr_ref_vector &core){
+    void theory_trau::add_assignments_to_core(expr_ref_vector const& guessed_exprs, expr_ref_vector const& all_vars, expr_ref_vector &core){
         rational len;
         expr_ref_vector empty_vars(m);
         for (const auto& v : all_vars) {
@@ -19582,30 +19582,24 @@ namespace smt {
             }
         }
 
-//        context& ctx = get_context();
-//        expr_ref_vector assignments(m);
-//        ctx.get_assignments(assignments);
-//
-//        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
-//        for (const auto& s : assignments) {
-//            if (ctx.is_relevant(s)) {
-//                if (!m.is_not(s, a0)) {
-//                    app* a = to_app(s);
-//                    if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) && is_theory_str_term(a1) && is_theory_str_term(a2)){
-//                        ptr_vector <expr> lhs;
-//                        get_nodes_in_concat(a1, lhs);
-//                        ptr_vector <expr> rhs;
-//                        get_nodes_in_concat(a2, rhs);
-//
-//                        for (const auto& e : empty_vars)
-//                            if (lhs.contains(e) || rhs.contains(e)){
-//                                core.push_back(s);
-//                            }
-//
-//                    }
-//                }
-//            }
-//        }
+        expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
+        for (const auto& s : guessed_exprs) {
+            if (!m.is_not(s, a0)) {
+                app* a = to_app(s);
+                if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) && is_theory_str_term(a1) && is_theory_str_term(a2)){
+                    ptr_vector <expr> lhs;
+                    get_nodes_in_concat(a1, lhs);
+                    ptr_vector <expr> rhs;
+                    get_nodes_in_concat(a2, rhs);
+
+                    for (const auto& e : empty_vars)
+                        if ((lhs.contains(e) || rhs.contains(e)) && (is_contain_family_equality(a1) || is_contain_family_equality(a2))){
+                            core.push_back(s);
+                        }
+
+                }
+            }
+        }
     }
 
     unsigned theory_trau::get_assign_lvl(expr* a, expr* b){
