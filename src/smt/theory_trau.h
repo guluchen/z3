@@ -1433,7 +1433,6 @@ namespace smt {
         void fetch_guessed_exprs_from_cache(UnderApproxState const& state, expr_ref_vector &guessed_exprs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs);
         void fetch_guessed_exprs_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
-        void fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals);
         void fetch_guessed_str_int_with_scopes(expr_ref_vector &guessedEqs, expr_ref_vector &guessedDisEqs);
         const bool is_theory_str_term(expr *e) const;
         decl_kind get_decl_kind(expr *e) const;

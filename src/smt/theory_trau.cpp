@@ -7081,7 +7081,6 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << std::endl;);
         int len_rhs = connectingSize;
         is_fixed_len_var(rhs, len_rhs);
         expr_ref_vector ors(m);
@@ -7090,11 +7089,12 @@ namespace smt {
         is_fixed_len_var(lhs, len_lhs);
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
-        expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr_lhs], lhs), createEqualOP(arr_linker[arr_rhs], rhs));
-        expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
-        m_rewrite(cond);
-        ors.push_back(cond);
+
         if (arr_lhs && arr_rhs) {
+            expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr_lhs], lhs), createEqualOP(arr_linker[arr_rhs], rhs));
+            expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
+            m_rewrite(cond);
+            ors.push_back(cond);
             for (int j = 1; j <= len_rhs; ++j){
                 expr_ref_vector ands(m);
                 ands.push_back(createGreaterEqOP(mk_strlen(rhs), mk_int(j)));
@@ -19825,22 +19825,9 @@ namespace smt {
                             guessed_eqs.push_back(s);
                         }
                     }
-                } 
+                }
             }
         }
-    }
-
-    void theory_trau::fetch_guessed_literals_with_scopes(literal_vector &guessedLiterals) {
-        
-        context& ctx = get_context();
-
-        for (int i = 0; i < (int)mful_scope_levels.size(); ++i)
-            if (!m.is_not(mful_scope_levels[i].get()))
-            {
-                literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-                STRACE("str", tout << __LINE__ << " guessedLiterals " << mk_pp(mful_scope_levels[i].get(), m) << std::endl;);
-                guessedLiterals.push_back(tmp);
-            }
     }
 
     void theory_trau::fetch_guessed_str_int_with_scopes(expr_ref_vector &guessed_eqs, expr_ref_vector &guessed_diseqs) {
