@@ -4321,7 +4321,7 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completed state " << completed_branches.size() << std::endl;);
-            for (int i = 0; i < (int)completed_branches.size(); ++i){
+            for (int i = 0; i < (int)completed_branches.size() - 1; ++i){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
                 if (at_same_eq_state(completed_branches[i], diff) && at_same_diseq_state(guessed_eqs, guessed_diseqs, completed_branches[i].disequalities)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
@@ -5231,8 +5231,8 @@ namespace smt {
         else {
             std::string name_x = expr2str(nodes_x[pos]);
             std::string name_y = expr2str(nodes_y[pos]);
-            bool is_pre_contain_x = (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 );
-            bool is_pre_contain_y = (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 || name_y.find("pre_contain") == 0 );
+            bool is_pre_contain_x = (name_x.find("indexOf1") == 0 || name_x.find("pre_contain") == 0 );
+            bool is_pre_contain_y = (name_y.find("indexOf1") == 0 || name_y.find("pre_contain") == 0 );
 
             zstring tmp01;
             zstring tmp02;
@@ -7109,7 +7109,7 @@ namespace smt {
                 ors.push_back(createAndOP(ands));
             }
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m)  << ")\n";);
-            assert_axiom(createEqualOP(premises, createOrOP(ors)));
+            assert_axiom(rewrite_implication(premises, createOrOP(ors)));
         }
     }
 
@@ -18313,22 +18313,22 @@ namespace smt {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(0))), m);
                 expr_ref conclusion00(createEqualOP(concatAst, to_app(concatAst)->get_arg(1)), m);
-                assert_axiom(rewrite_implication(premise00, conclusion00));
+                assert_axiom(createEqualOP(premise00, conclusion00));
 
                 // | n2 | = 0 --> concat = n1
                 expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(1))), m);
                 expr_ref conclusion01(createEqualOP(concatAst, to_app(concatAst)->get_arg(0)), m);
-                assert_axiom(rewrite_implication(premise01, conclusion01));
+                assert_axiom(createEqualOP(premise01, conclusion01));
 
-//                // | n1 | = 0 --> concat = n2
+                // | n1 | = 0 --> concat = n2
 //                expr_ref premise02(createEqualOP(mk_int(0), mk_strlen(n1)), m);
 //                expr_ref conclusion02(createEqualOP(concatAst, n2), m);
-//                assert_axiom(createEqualOP(premise02, conclusion02));
+//                assert_axiom(rewrite_implication(premise02, conclusion02));
 //
 //                // | n2 | = 0 --> concat = n1
 //                expr_ref premise03(createEqualOP(mk_int(0), mk_strlen(n2)), m);
 //                expr_ref conclusion03(createEqualOP(concatAst, n1), m);
-//                assert_axiom(createEqualOP(premise03, conclusion03));
+//                assert_axiom(rewrite_implication(premise03, conclusion03));
             }
         }
         return concatAst;
