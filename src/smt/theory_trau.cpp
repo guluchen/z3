@@ -4321,7 +4321,7 @@ namespace smt {
         }
         else {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " completed state " << completed_branches.size() << std::endl;);
-            for (int i = 0; i < (int)completed_branches.size() - 1; ++i){
+            for (int i = 0; i < (int)completed_branches.size(); ++i){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " comparing with completed state " << uState.eqLevel << std::endl;);
                 if (at_same_eq_state(completed_branches[i], diff) && at_same_diseq_state(guessed_eqs, guessed_diseqs, completed_branches[i].disequalities)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " eq with completed state " << uState.eqLevel << std::endl;);
@@ -4931,11 +4931,10 @@ namespace smt {
                 continue;
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
             if (!curr_diseq.contains(e) && curr_eq.contains(to_app(e)->get_arg(0))) {
-                //STRACE("str", tout << __LINE__ <<  " not at_same_state  " << mk_pp(e, m) << std::endl;);
+                STRACE("str", tout << __LINE__ <<  " not at_same_state  " << mk_pp(e, m) << std::endl;);
                 return false;
             }
         }
-
         return true;
     }
 
@@ -7015,6 +7014,7 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain(){
+
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
@@ -7305,7 +7305,7 @@ namespace smt {
             sumConst += tmp.length();
             max_len = max_len > tmp.length() ? max_len : tmp.length();
         }
-        sumConst = sumConst > 50 ? max_len + 50 : sumConst;
+        sumConst = (sumConst > 50) ? max_len + 50 : sumConst;
         
         int maxInt = get_max_bound(all_str_exprs);
 
@@ -7315,7 +7315,7 @@ namespace smt {
             if (!is_internal_var(v) && !u.str.is_string(v))
                 cnt++;
         }
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << maxInt << " " << cnt << " " << sumConst << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << max_len << " " << maxInt << " " << cnt << " " << sumConst << std::endl;);
         connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, std::max(maxInt, sumConst)));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
@@ -18313,12 +18313,22 @@ namespace smt {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(0))), m);
                 expr_ref conclusion00(createEqualOP(concatAst, to_app(concatAst)->get_arg(1)), m);
-                assert_axiom(createEqualOP(premise00, conclusion00));
+                assert_axiom(rewrite_implication(premise00, conclusion00));
 
                 // | n2 | = 0 --> concat = n1
                 expr_ref premise01(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(1))), m);
                 expr_ref conclusion01(createEqualOP(concatAst, to_app(concatAst)->get_arg(0)), m);
-                assert_axiom(createEqualOP(premise01, conclusion01));
+                assert_axiom(rewrite_implication(premise01, conclusion01));
+
+//                // | n1 | = 0 --> concat = n2
+//                expr_ref premise02(createEqualOP(mk_int(0), mk_strlen(n1)), m);
+//                expr_ref conclusion02(createEqualOP(concatAst, n2), m);
+//                assert_axiom(createEqualOP(premise02, conclusion02));
+//
+//                // | n2 | = 0 --> concat = n1
+//                expr_ref premise03(createEqualOP(mk_int(0), mk_strlen(n2)), m);
+//                expr_ref conclusion03(createEqualOP(concatAst, n1), m);
+//                assert_axiom(createEqualOP(premise03, conclusion03));
             }
         }
         return concatAst;
