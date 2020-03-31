@@ -7307,7 +7307,7 @@ namespace smt {
         }
         sumConst = (sumConst > 50) ? max_len + 50 : sumConst;
         
-        int maxInt = get_max_bound(all_str_exprs);
+        int maxInt = get_max_bound(all_str_exprs) * 2;
 
         // count non internal var
         int cnt = 5;
