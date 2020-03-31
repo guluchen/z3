@@ -5231,8 +5231,8 @@ namespace smt {
         else {
             std::string name_x = expr2str(nodes_x[pos]);
             std::string name_y = expr2str(nodes_y[pos]);
-            bool is_pre_contain_x = (name_x.find("indexOf1") == 0 || name_x.find("pre_contain") == 0 );
-            bool is_pre_contain_y = (name_y.find("indexOf1") == 0 || name_y.find("pre_contain") == 0 );
+            bool is_pre_contain_x = (name_x.find("indexOf1") == 0 || name_x.find("replace1") == 0 || name_x.find("pre_contain") == 0 );
+            bool is_pre_contain_y = (name_y.find("indexOf1") == 0 || name_y.find("replace1") == 0 || name_y.find("pre_contain") == 0 );
 
             zstring tmp01;
             zstring tmp02;
@@ -5253,12 +5253,12 @@ namespace smt {
             }
             else if (is_pre_contain_x && pos + 1 < nodes_x.size() && are_equal_exprs(nodes_x[pos + 1], nodes_y[pos])){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                if (!are_equal_exprs(nodes_x[pos], mk_string("")))
+                if (!are_equal_exprs(nodes_x[pos], mk_string("")) && (name_x.find("replace1") != 0 || u.str.is_string(nodes_x[pos + 1])))
                     return createEqualOP(nodes_x[pos], mk_string(""));
             }
             else if (is_pre_contain_y && pos + 1 < nodes_y.size() && are_equal_exprs(nodes_y[pos + 1], nodes_x[pos])){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;);
-                if (!are_equal_exprs(nodes_y[pos], mk_string("")))
+                if (!are_equal_exprs(nodes_y[pos], mk_string("")) && (name_y.find("replace1") != 0 || u.str.is_string(nodes_y[pos + 1])))
                     return createEqualOP(nodes_y[pos], mk_string(""));
             }
             else if (is_pre_contain_x && pos + 1 < nodes_x.size() && u.str.is_string(nodes_x[pos + 1], tmp01) && u.str.is_string(nodes_y[pos], tmp02) && tmp01.prefixof(tmp02)){
