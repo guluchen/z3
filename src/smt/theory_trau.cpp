@@ -623,13 +623,14 @@ namespace smt {
         if (!new_eq_check(lhs, rhs)) {
             return;
         }
-        TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+        STRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         expr* containKey;
         expr* simplified_lhs = simplify_concat(lhs);
+        STRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         expr* simplified_rhs = simplify_concat(rhs);
-        TRACE("str", tout << __FUNCTION__ << ": " << mk_pp(simplified_lhs, m) << " = " << mk_pp(simplified_rhs, m) << std::endl;);
+        STRACE("str", tout << __FUNCTION__ << ": " << mk_pp(simplified_lhs, m) << " = " << mk_pp(simplified_rhs, m) << std::endl;);
         if (is_contain_family_equality(simplified_lhs, containKey)) {
-            TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+            STRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -641,7 +642,7 @@ namespace smt {
             }
         }
         else if (is_contain_family_equality(simplified_rhs, containKey)){
-            TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
+            STRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
             zstring keyStr;
             expr_ref conclusion(mk_not(m, createEqualOP(lhs, rhs)), m);
             if (u.str.is_string(containKey, keyStr)) {
@@ -12362,8 +12363,7 @@ namespace smt {
         else if (elements[currentSplit.size()].second % p_bound.get_int64() == -1 &&
                 elements[currentSplit.size()].second < 0 &&
                 elements[currentSplit.size()].second > REGEX_CODE &&
-                p_bound.get_int64() == 2) {
-            STRACE("str", tout << __LINE__ << " checking str: " << value << std::endl;);
+                p_bound.get_int64() == 2) { 
             if (value.length() <= textLeft) {
                 string_set values;
                 values.insert(value);
@@ -18303,12 +18303,11 @@ namespace smt {
             for (auto el : childrenVector) {
                 items.push_back(mk_strlen(el));
             }
-
             // len = sum len
             expr_ref lenAssert(createEqualOP(concat_length, m_autil.mk_add(items.size(), items.c_ptr())), m);
             assert_axiom(lenAssert);
 
-//            if (!is_contain_equality(concatAst))
+            if (u.str.is_concat(concatAst))
             {
                 // | n1 | = 0 --> concat = n2
                 expr_ref premise00(createEqualOP(mk_int(0), mk_strlen(to_app(concatAst)->get_arg(0))), m);
