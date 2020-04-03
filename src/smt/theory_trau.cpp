@@ -7298,17 +7298,17 @@ namespace smt {
         get_all_exprs(eq_combination, all_str_exprs, all_consts);
 
         // calculate sum consts
-        int sumConst = 0;
+        int sum_const = 0;
         int max_len = 0;
         for (const auto& s: all_consts){
             zstring tmp;
             u.str.is_string(s, tmp);
-            sumConst += tmp.length();
+            sum_const += tmp.length();
             max_len = max_len > tmp.length() ? max_len : tmp.length();
         }
-        sumConst = (sumConst > 50) ? max_len + 50 : sumConst;
+        sum_const = (sum_const > 50) ? max_len + 50 : sum_const;
         
-        int maxInt = get_max_bound(all_str_exprs) * 2;
+        int max_int = get_max_bound(all_str_exprs);
 
         // count non internal var
         int cnt = 5;
@@ -7316,8 +7316,8 @@ namespace smt {
             if (!is_internal_var(v) && !u.str.is_string(v))
                 cnt++;
         }
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << max_len << " " << maxInt << " " << cnt << " " << sumConst << std::endl;);
-        connectingSize = std::min(maxInt + cnt + sumConst, std::max(300, std::max(maxInt, sumConst)));
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << max_len << " " << max_int << " " << cnt << " " << sum_const << std::endl;);
+        connectingSize = std::min(max_int + cnt + sum_const, std::max(300, std::max(max_int + max_len, sum_const)));
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
