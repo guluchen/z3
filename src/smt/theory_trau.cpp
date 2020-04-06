@@ -4368,18 +4368,41 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
             fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
-            fetch_guessed_core_exprs(eq_combination, guessed_eqs, guessed_diseqs);
-            expr* coreExpr = createAndOP(guessed_eqs);
+            negate_if_possible(to_assert);
 
-            expr* tmp = createAndOP(to_assert);
-            expr* assertingExpr = rewrite_implication(coreExpr, tmp);
-            assert_axiom(assertingExpr);
-            m_trail.push_back(assertingExpr);
-            implied_facts.push_back(assertingExpr);
+            fetch_guessed_core_exprs(eq_combination, guessed_eqs, guessed_diseqs);
+            expr* to_assert_expr = rewrite_implication(createAndOP(guessed_eqs), createAndOP(to_assert));
+            assert_axiom(to_assert_expr);
+            m_trail.push_back(to_assert_expr);
+            implied_facts.push_back(to_assert_expr);
             return true;
         }
         else
             return false;
+    }
+
+    bool theory_trau::negate_if_possible(expr_ref_vector const& to_assert){
+        context &ctx = get_context();
+        for (const auto& e : to_assert){
+            expr* ex = nullptr;
+            if (to_app(e)->get_num_args() > 0)
+                ex = to_app(e)->get_arg(to_app(e)->get_num_args() - 1);
+            else
+                ex = e;
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
+
+            switch (ctx.get_assignment(ex)){
+                case l_true:
+                    break;
+                case l_false:
+                    negate_context();
+                    return false;
+                case l_undef:
+                    break;
+            }
+
+        }
+        return true;
     }
 
     /*
@@ -6185,6 +6208,15 @@ namespace smt {
                         implied_facts.push_back(to_assert);
                     return true;
                 }
+            }
+            else if (is_char_at(arg0)){
+                expr *to_assert = rewrite_implication(createEqualOP(str, u.str.mk_itos(num)), createEqualOP(str, arg0));
+                m_trail.push_back(to_assert);
+                assert_axiom(to_assert);
+                if (cached)
+                    implied_facts.push_back(to_assert);
+                assert_axiom(createEqualOP(str, arg0));
+                return true;
             }
         }
         return false;

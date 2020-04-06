@@ -370,6 +370,7 @@ namespace smt {
             bool is_completed_branch(bool &addAxiom, expr_ref_vector &diff);
             void update_state();
             bool propagate_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+            bool negate_if_possible(expr_ref_vector const& to_assert);
             bool is_notContain_consistent(obj_map<expr, ptr_vector<expr>> const& eq_combination);
                 bool is_notContain_consistent(expr* lhs, expr* rhs, expr* core);
                 bool is_notContain_const_consistent(expr* lhs, expr* rhs, zstring needle, expr* core);
