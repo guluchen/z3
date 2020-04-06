@@ -6759,7 +6759,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
-        if (!review_notcontain_trivial(lhs, rhs, new_needle, cause)){
+        if (!review_notcontain_trivial(lhs, new_needle, cause)){
             return false;
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
@@ -6794,7 +6794,7 @@ namespace smt {
                 zstring replacement_str;
                 if (are_equal_exprs(lhs, haystack) && u.str.is_string(replacement, replacement_str) && !replacement_str.contains(needle_str)){
                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " " << mk_pp(lhs, m) << "\n";);
-                    expr* root_lhs = ctx.get_enode(e)->get_root()->get_owner();
+                    root_lhs = ctx.get_enode(e)->get_root()->get_owner();
                     if (eq_combination.contains(root_lhs)){
                         for (const auto& s : eq_combination[root_lhs]){
                             ptr_vector <expr> nodes;
@@ -6803,6 +6803,19 @@ namespace smt {
                             for (const auto& nn : nodes)
                                 if (u.str.is_string(nn, tmp) && tmp.contains(needle_str)) {
                                     STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(root_lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
+                                    return false;
+                                }
+                        }
+                    }
+                    else {
+                        expr_ref_vector eqs(m);
+                        collect_eq_nodes(e, eqs);
+                        for (const auto& eq: eqs) {
+                            ptr_vector<expr> nodes;
+                            get_nodes_in_concat(eq, nodes);
+                            for (const auto &nn : nodes)
+                                if (are_equal_exprs(nn, needle)) {
+                                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << " because of " << mk_pp(eq, m) << " " << mk_pp(nn, m) << ")\n";);
                                     return false;
                                 }
                         }
@@ -6830,7 +6843,7 @@ namespace smt {
         return create_concat_from_vector(new_nodes);
     }
 
-    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* rhs, expr* needle, expr* &cause){
+    bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause){
         expr_ref_vector eqs(m);
         collect_eq_nodes(lhs, eqs);
         for (const auto& eq: eqs) {
