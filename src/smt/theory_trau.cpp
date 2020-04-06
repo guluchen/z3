@@ -6758,9 +6758,11 @@ namespace smt {
                 return true;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(needle, m) << ")\n";);
         expr* new_needle = remove_empty_in_concat(needle);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
         if (!review_notcontain_trivial(lhs, rhs, new_needle, cause)){
             return false;
         }
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
         context & ctx = get_context();
         expr* root_lhs = ctx.get_enode(lhs)->get_root()->get_owner();
         if (u.str.is_string(lhs))
@@ -6778,7 +6780,7 @@ namespace smt {
                         }
                 }
         }
-
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
         zstring needle_str;
         bool is_string = u.str.is_string(needle, needle_str);
         // check in relation with replace
@@ -7125,11 +7127,11 @@ namespace smt {
         int bound = -1;
 
         bool has_eqc_value = false;
-        expr *constValue = get_eqc_value(lhs, has_eqc_value);
+        expr *const_lhs = get_eqc_value(lhs, has_eqc_value);
         if (has_eqc_value) {
             zstring value;
 
-            if (u.str.is_string(constValue, value)) {
+            if (u.str.is_string(const_lhs, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << "; cached" << cached << ")\n";);
                 if (value == rhs){
                     assert_axiom(mk_not(m, createEqualOP(mk_strlen(lhs), mk_int(value.length()))));
@@ -17589,7 +17591,7 @@ namespace smt {
         // true branch
         expr_ref_vector then_items(m);
         //  args[0] = x1 . args[1] . x2
-        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2)))); 
+        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
 
         // expr->get_arg(1) == 0 --> x1 = ""
         if (!u.str.is_string(expr->get_arg(1))){
