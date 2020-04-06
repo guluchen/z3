@@ -16797,7 +16797,6 @@ namespace smt {
 
         std::pair<app*, app*> value = std::make_pair<app*, app*>(mk_str_var("pre_contain"), mk_str_var("post_contain"));
         expr_ref haystack(ex->get_arg(0), m), needle(ex->get_arg(1), m);
-        assert_axiom(createEqualOP(mk_strlen(haystack), createAddOP(mk_strlen(value.first), createAddOP(mk_strlen(needle), mk_strlen(value.second)))));
 
         app* a = mk_contains(haystack, needle);
         enode* key = ensure_enode(a);
@@ -16977,8 +16976,7 @@ namespace smt {
         expr_ref x1(value.first, m);
         expr_ref x2(value.second, m);
         expr_ref index_node(mk_int_var("index"), m);
-        assert_axiom(createEqualOP(mk_strlen(haystack), createAddOP(mk_strlen(value.first), createAddOP(mk_strlen(needle), mk_strlen(value.second)))));
-        
+
         expr* contain_constraint = mk_contains(haystack, needle);
         expr_ref condition(contain_constraint, m);
         if (index_tail.contains(ex)) {
@@ -17591,8 +17589,7 @@ namespace smt {
         // true branch
         expr_ref_vector then_items(m);
         //  args[0] = x1 . args[1] . x2
-        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
-        assert_axiom(createEqualOP(mk_strlen(haystack), createAddOP(mk_strlen(x1), createAddOP(mk_strlen(needle), mk_strlen(x2)))));
+        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2)))); 
 
         // expr->get_arg(1) == 0 --> x1 = ""
         if (!u.str.is_string(expr->get_arg(1))){
