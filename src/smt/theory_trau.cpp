@@ -4385,11 +4385,11 @@ namespace smt {
         context &ctx = get_context();
         for (const auto& e : to_assert){
             expr* ex = nullptr;
-            if (to_app(e)->get_num_args() > 0)
+            if (to_app(e)->get_num_args() > 0 && m.is_or(e))
                 ex = to_app(e)->get_arg(to_app(e)->get_num_args() - 1);
             else
                 ex = e;
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << " " << mk_pp(e, m)<< std::endl;);
 
             switch (ctx.get_assignment(ex)){
                 case l_true:
