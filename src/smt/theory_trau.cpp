@@ -4368,9 +4368,11 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
             expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
             fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
-            negate_if_possible(to_assert);
+//            check_guessed_eqs(guessed_eqs);
+//            negate_if_possible(to_assert);
 
             fetch_guessed_core_exprs(eq_combination, guessed_eqs, guessed_diseqs);
+            guessed_eqs.pop_back(); // pop the int bound
             expr* to_assert_expr = rewrite_implication(createAndOP(guessed_eqs), createAndOP(to_assert));
             assert_axiom(to_assert_expr);
             m_trail.push_back(to_assert_expr);
@@ -4379,6 +4381,25 @@ namespace smt {
         }
         else
             return false;
+    }
+
+    bool theory_trau::check_guessed_eqs(expr_ref_vector const& guessed_eqs){
+        context &ctx = get_context();
+        for (const auto& e : guessed_eqs){
+            switch (ctx.get_assignment(e)){
+                case l_true:
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_true: " << mk_pp(e, m) << std::endl;);
+                    break;
+                case l_false:
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_false: " << mk_pp(e, m) << std::endl;);
+                    return false;
+                case l_undef:
+                    STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " l_undef: " << mk_pp(e, m) << std::endl;);
+                    break;
+            }
+
+        }
+        return true;
     }
 
     bool theory_trau::negate_if_possible(expr_ref_vector const& to_assert){
@@ -14298,7 +14319,8 @@ namespace smt {
                 if (!u.str.is_string(rhs_nodes[i]))
                     and_lhs.push_back(createEqualOP(mk_strlen(rhs_nodes[i]), mk_int(lenValue)));
                 prefix = i;
-                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[i], rhs_nodes[i]));
+//                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[i], rhs_nodes[i]));
+                expr* tmp = createEqualOP(lhs_nodes[i], rhs_nodes[i]);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                 if (!to_assert.contains(tmp))
                     to_assert.push_back(tmp);
@@ -19894,14 +19916,10 @@ namespace smt {
         
         context& ctx = get_context();
         for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
-            literal tmp = ctx.get_literal(mful_scope_levels[i].get());
-            int assign_lvl = ctx.get_assign_level(tmp);
-            if (assign_lvl >= 0) {
-                if (!m.is_not(mful_scope_levels[i].get()))
-                    guessed_eqs.push_back(mful_scope_levels[i].get());
-                else
-                    guessed_diseqs.push_back(mful_scope_levels[i].get());
-            }
+            if (!m.is_not(mful_scope_levels[i].get()))
+                guessed_eqs.push_back(mful_scope_levels[i].get());
+            else
+                guessed_diseqs.push_back(mful_scope_levels[i].get());
         }
 
         expr_ref_vector assignments(m);
@@ -19913,7 +19931,8 @@ namespace smt {
                     app* a = to_app(s);
                     if (a->get_num_args() == 2 && m.is_eq(a, a1, a2) &&
                         ((u.str.is_stoi(a1)) || u.str.is_stoi(a2) || (u.str.is_itos(a1) || u.str.is_itos(a2)))) {
-                        if (m_autil.is_numeral(a1) || m_autil.is_numeral(a2)) {
+                        rational value;
+                        if ((m_autil.is_numeral(a1, value) && value >= rational(0)) || (m_autil.is_numeral(a2, value) && value >= rational(0))) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
                             guessed_eqs.push_back(s);
                         }
