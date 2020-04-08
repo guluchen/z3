@@ -8083,7 +8083,7 @@ namespace smt {
             if (v.m_value == -1 || v.m_value == oldConnectingSize) {
                 if (get_len_value(v.m_key, len)) {
                     if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0) {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v.m_key) << " len: " << len << std::endl;);
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v.m_key, m) << " len: " << len << std::endl;);
                         v.m_value = len.get_int64();
                     }
                     else
