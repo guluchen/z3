@@ -8082,8 +8082,10 @@ namespace smt {
             rational len;
             if (v.m_value == -1 || v.m_value == oldConnectingSize) {
                 if (get_len_value(v.m_key, len)) {
-                    if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0)
+                    if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0) {
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v.m_key) << " len: " << len << std::endl;);
                         v.m_value = len.get_int64();
+                    }
                     else
                         v.m_value = connectingSize;
                 }
@@ -8091,7 +8093,6 @@ namespace smt {
                     v.m_value = connectingSize;
             }
         }
-        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << connectingSize << std::endl;);
     }
 
     bool theory_trau::convert_equalities(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> & non_fresh_vars, expr* premise){
