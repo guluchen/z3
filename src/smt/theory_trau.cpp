@@ -11164,7 +11164,7 @@ namespace smt {
             int pMax){
 
         
-        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " " << new_rhs_bound << std::endl;);
+        STRACE("str", tout << __LINE__ << " *** " << __FUNCTION__ << " ***: " << mk_pp(a.first, m) << " lhs_bound: " << lhs_bound << "; rhs_bound: " << new_rhs_bound << std::endl;);
         bool unrollMode = pMax == PMAX;
 
         /* find the start position --> */
