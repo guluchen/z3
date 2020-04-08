@@ -8081,13 +8081,16 @@ namespace smt {
         for (auto &v : non_fresh_vars) {
             rational len;
             if (v.m_value == -1 || v.m_value == oldConnectingSize) {
-                if (get_len_value(v.m_key, len)) {
-                    if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0) {
-                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v.m_key, m) << " len: " << len << std::endl;);
-                        v.m_value = len.get_int64();
-                    }
-                    else
-                        v.m_value = connectingSize;
+//                if (get_len_value(v.m_key, len)) {
+//                    if (get_assign_lvl(mk_strlen(v.m_key), mk_int(len)) == 0) {
+//                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(v.m_key, m) << " len: " << len << std::endl;);
+//                        v.m_value = len.get_int64();
+//                    }
+//                    else
+//                        v.m_value = connectingSize;
+//                }
+                if (is_char_at(v.m_key)) {
+                    v.m_value = 1;
                 }
                 else
                     v.m_value = connectingSize;
@@ -14320,8 +14323,7 @@ namespace smt {
                 if (!u.str.is_string(rhs_nodes[i]))
                     and_lhs.push_back(createEqualOP(mk_strlen(rhs_nodes[i]), mk_int(lenValue)));
                 prefix = i;
-//                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[i], rhs_nodes[i]));
-                expr* tmp = createEqualOP(lhs_nodes[i], rhs_nodes[i]);
+                expr* tmp = rewrite_implication(createAndOP(and_lhs), createEqualOP(lhs_nodes[i], rhs_nodes[i]));
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                 if (!to_assert.contains(tmp))
                     to_assert.push_back(tmp);
