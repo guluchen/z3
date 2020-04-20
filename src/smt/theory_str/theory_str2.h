@@ -22,16 +22,11 @@
 #include "util/union_find.h"
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
-#include "smt/theory_str/automata.h"
-#include "smt/theory_str/affine_program.h"
-#include "smt/theory_str/str_solver.h"
 
 namespace smt {
 
 
     class theory_str2 : public theory {
-
-
 
         int m_scope_level = 0;
         static bool is_over_approximation;
@@ -39,7 +34,6 @@ namespace smt {
         th_rewriter m_rewrite;
         arith_util m_util_a;
         seq_util m_util_s;
-        str::automaton_factory::sptr m_aut_imp;
         ast_manager& m;
 
 
@@ -49,16 +43,17 @@ namespace smt {
         expr_ref_vector     m_length;             // length applications themselves
 
         std::set<std::pair<int,int>> axiomatized_eq_vars;
+        using expr_pair = std::pair<expr_ref, expr_ref>;
+        using tvar_pair = std::pair<theory_var , theory_var >;
+
+        scoped_vector<tvar_pair> m_word_eq_var_todo;
+        scoped_vector<tvar_pair> m_word_diseq_var_todo;
 
 
-        scoped_vector<str::tvar_pair> m_word_eq_var_todo;
-        scoped_vector<str::tvar_pair> m_word_diseq_var_todo;
-
-
-        scoped_vector<str::expr_pair> m_word_eq_todo;
-        scoped_vector<str::expr_pair> m_word_diseq_todo;
-        scoped_vector<str::expr_pair> m_not_contains_todo;
-        scoped_vector<str::expr_pair> m_membership_todo;
+        scoped_vector<expr_pair> m_word_eq_todo;
+        scoped_vector<expr_pair> m_word_diseq_todo;
+        scoped_vector<expr_pair> m_not_contains_todo;
+        scoped_vector<expr_pair> m_membership_todo;
     public:
         char const * get_name() const override { return "trau"; }
         theory_str2(ast_manager& m, const theory_str_params& params);
@@ -110,11 +105,11 @@ namespace smt {
         bool is_regex_sort(expr *e) const;
         bool is_const_fun(expr *e) const;
         expr_ref mk_sub(expr *a, expr *b);
+        zstring print_word_term(expr * a) const;
+
 
         literal mk_literal(expr *e);
         bool_var mk_bool_var(expr *e);
-        str::word_term mk_word_term(expr *e) const;
-        str::state mk_state_from_todo();
         void add_axiom(std::initializer_list<literal> ls);
         void handle_char_at(expr *e);
         void handle_substr(expr *e);
@@ -132,34 +127,10 @@ namespace smt {
         void string_theory_propagation(expr * ex);
         void propagate_concat_axiom(enode * cat);
         void propagate_basic_string_axioms(enode * str);
-        bool lenc_check_sat(expr *e);
         void tightest_prefix(expr*,expr*);
-        bool check_counter_system_lenc(str::solver& solver, int_expr_solver& m_int_solver);
         void print_ast(expr *e);
         void print_ctx(context& ctx);
-        bool mini_check_sat(expr *e);
     };
-
-    class int_expr_solver:expr_solver{
-        bool unsat_core=false;
-        kernel m_kernel;
-        ast_manager& m;
-        bool initialized;
-        expr_ref_vector erv;
-    public:
-        int_expr_solver(ast_manager& m, smt_params fp):
-                m_kernel(m, fp), m(m),erv(m){
-            fp.m_string_solver = symbol("none");
-            initialized=false;
-       }
-
-        lbool check_sat(expr* e) override;
-
-        void initialize(context& ctx);
-
-        void assert_expr(expr * e);
-    };
-
 }
 
 #endif /* _THEORY_STR2_H_ */

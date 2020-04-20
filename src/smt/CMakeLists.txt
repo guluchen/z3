@@ -65,10 +65,7 @@ z3_add_component(smt
     theory_pb.cpp
     theory_recfun.cpp
     theory_seq.cpp
-    theory_str/automata.cpp
-    theory_str/str_solver.cpp
     theory_str/theory_str2.cpp
-    theory_str/affine_program.cpp
     theory_special_relations.cpp
     theory_str.cpp
     theory_utvpi.cpp

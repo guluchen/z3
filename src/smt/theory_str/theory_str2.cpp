@@ -1,8 +1,6 @@
 #include <algorithm>
-#include <numeric>
 #include <sstream>
 #include "ast/ast_pp.h"
-#include "ast/rewriter/bool_rewriter.h"
 #include "smt/theory_str/theory_str2.h"
 #include "smt/smt_context.h"
 #include "smt/smt_model_generator.h"
@@ -363,6 +361,22 @@ namespace smt {
 
     }
 
+    /*
+    ensure that all elements in equivalence class occur under an application of 'length'
+    */
+    void theory_str2::enforce_length(expr *e) {
+        enode *n = ensure_enode(e);
+        enode *n1 = n;
+        do {
+            expr *o = n->get_owner();
+            if (!has_length(o)) {
+                expr_ref len = mk_len(o);
+                add_length_axiom(len);
+            }
+            n = n->get_next();
+        } while (n1 != n);
+    }
+
     void theory_str2::assign_eh(bool_var v, const bool is_true) {
         ast_manager &m = get_manager();
         STRACE("strg", tout << "assign: bool_var #" << v << " is " << is_true << ", "
@@ -432,22 +446,6 @@ namespace smt {
         const expr_ref l{get_enode(x)->get_owner(), m};
         const expr_ref r{get_enode(y)->get_owner(), m};
 
-//        //add lower bound from solvers
-//
-//        context& ctx = get_context();
-//        expr_ref el(m_util_s.str.mk_length(l), m);
-//        expr_ref er(m_util_s.str.mk_length(r), m);
-//        expr_ref _lo(m);
-//        family_id afid = m_util_a.get_family_id();
-//        for(const expr_ref& e :{el,er}) {
-//            theory_mi_arith* tha = get_th_arith<theory_mi_arith>(ctx, afid, e);
-//            if (tha && tha->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
-//            theory_i_arith* thi = get_th_arith<theory_i_arith>(ctx, afid, e);
-//            if (thi && thi->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
-//            theory_lra* thr = get_th_arith<theory_lra>(ctx, afid, e);
-//            if (thr && thr->get_lower(ctx.get_enode(e), _lo)) { std::cout << "low of "<< mk_pp(e,m) <<" = " << _lo<<std::endl;}
-//        }
-//
         m_word_diseq_todo.push_back({l, r});
         STRACE("str", tout << "new_diseq: " << l << " != " << r << '\n';);
     }
@@ -489,84 +487,37 @@ namespace smt {
     }
 
 
-    bool theory_str2::mini_check_sat(expr *e) {  // test_hlin
-        ast_manager m;
-        reg_decl_plugins(m);
-        seq_util su(m);
-        arith_util au(m);
-        smt_params params;
-        params.m_model = true;
-        smt::context ctx(m, params);
-        expr *exp = au.mk_ge(au.mk_int(0), au.mk_add(au.mk_int(1), au.mk_int(2)));
-        std::cout << "expr made:\n" << mk_pp(exp, m) << std::endl;
-//        std::cout << "print ctx ... \n";
-//        print_ctx(ctx);
-//        std::cout << "print ctx2 ... \n";
-//        sort * intSort = au.mk_int();
-//        m.mk_var(0, intSort);
-//        mk_literal(expr);
-        print_ctx(ctx);
-        str::zaut::symbol_solver csolver(m, params);
-        lbool mini_chk_res = csolver.check_sat(exp);
-        std::cout << std::boolalpha << "mini_chk_res = " << mini_chk_res << std::endl;
-        return mini_chk_res;
-    }
 
-    bool theory_str2::lenc_check_sat(expr *e) {
-        str::zaut::symbol_solver csolver(get_manager(), get_context().get_fparams());
-        lbool chk_res = csolver.check_sat(e);
-        STRACE("str", tout << std::boolalpha << "lenc_check_sat result = " << chk_res << std::endl;);
-        return chk_res;
-    }
-
-    bool theory_str2::check_counter_system_lenc(smt::str::solver &solver, int_expr_solver &m_int_solver) {
-        using namespace str;
-        bool on_screen = false;
-
-        counter_system cs = counter_system(solver);
-        cs.print_counter_system();  // STRACE output
-        cs.print_var_expr(get_manager());  // STRACE output
-
-        if (!cs.is_dag()) {
-            STRACE("str", tout << "[ABSTRACTION INTERPRETATION]\n";);
-            apron_counter_system ap_cs = apron_counter_system(cs);
-            STRACE("str", tout << "apron_counter_system constructed..." << std::endl;);
-            // ap_cs.print_apron_counter_system();  // standard output only (because of apron library)
-            STRACE("str", tout << "apron_counter_system abstraction starting..." << std::endl;);
-            ap_cs.run_abstraction();
-            STRACE("str", tout << "apron_counter_system abstraction finished..." << std::endl;);
-            // make length constraints from the result of abstraction interpretation
-            STRACE("str", tout << "generating length constraints..." << std::endl;);
-            ap_length_constraint lenc = ap_length_constraint(ap_cs.get_ap_manager(), &ap_cs.get_final_node().get_abs(),
-                                                             ap_cs.get_var_expr());
-            lenc.pretty_print(get_manager());
-            if (!lenc.empty()) {
-                expr_ref lenc_res{lenc.export_z3exp(get_manager()), get_manager()};
-                if (on_screen)
-                    std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
-                              << std::endl;  // keep stdout for test
-                STRACE("str", tout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
-                                   << std::endl;);
-                return m_int_solver.check_sat(lenc_res) == lbool::l_true;
+    zstring theory_str2::print_word_term(expr * e) const{
+        zstring s;
+        if (m_util_s.str.is_string(e, s)) {
+            return s;
+        }
+        if (m_util_s.str.is_concat(e)) {
+            //e is a concat of some elements
+            for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
+                s = s+ print_word_term(to_app(e)->get_arg(i));
             }
-
-        } else {
-            expr_ref lenc_res = cs.get_length_constraint_for_dag_counter_system(get_manager());
-            if (on_screen)
-                std::cout << "length constraint from counter system:\n" << mk_pp(lenc_res, get_manager())
-                          << std::endl;  // keep stdout for test
-            return m_int_solver.check_sat(lenc_res) == lbool::l_true;
-
+            return s;
+        }
+        if (m_util_s.str.is_stoi(e)){
+            return zstring("stoi");
+        }
+        if (m_util_s.str.is_itos(e)){
+            return zstring("itos");
         }
 
+        // e is a string variable
+        std::stringstream ss;
+        ss << "V("<<mk_pp(e, get_manager())<<")";
+        s = zstring(ss.str().data());
+        return s;
 
-        return true;
     }
 
     final_check_status theory_str2::final_check_eh() {
-        bool on_screen = false;
+        std::cout << "final_check starts\n"<<std::endl;
 
-        using namespace str;
         if (m_word_eq_todo.empty()) {
             if (is_over_approximation)
                 return FC_GIVEUP;
@@ -574,83 +525,20 @@ namespace smt {
                 return FC_DONE;
         }
 
-        TRACE("str", tout << "final_check: level " << get_context().get_scope_level() << '\n';);
-        IN_CHECK_FINAL = true;
 
-
-        if (!m_aut_imp) m_aut_imp = std::make_shared<oaut_adaptor>(get_manager(), get_context());
-        state &&root = mk_state_from_todo();
-        STRACE("strg", tout << "[Abbreviation <=> Fullname]\n" << element::abbreviation_to_fullname(););
-
-        if (on_screen) std::cout << "root original:\n" << root << std::endl;
-        STRACE("strg", tout << "root original:\n" << root << std::endl;);
-        root.remove_single_variable_word_term();
-        STRACE("strg", tout << "root removed single var:\n" << root << std::endl;);
-//        root.merge_elements();
-//        STRACE("strg", tout << "root merged:\n" << root <<std::endl;);
-
-
-        if (on_screen && is_over_approximation) {
-            std::cout << "Is over-approximation\n";
+        for (const auto& we : m_word_eq_todo) {
+            std::cout<<print_word_term(we.first)<<std::flush;
+            std::cout<<"="<<std::flush;
+            std::cout<<print_word_term(we.second)<<std::endl;
+        }
+        for (const auto& we : m_word_diseq_todo) {
+            std::cout<<print_word_term(we.first)<<"!="<<print_word_term(we.second)<<std::endl;
         }
 
-        if (root.unsolvable_by_inference()) {
-            STRACE("str", tout << "proved unsolvable by inference\n";);
-            block_curr_assignment();
-            IN_CHECK_FINAL = false;
-            return FC_CONTINUE;
-        }
-
-        if (root.word_eqs().size() == 0) {
-            if (is_over_approximation)
-                return FC_GIVEUP;
-            else
-                return FC_DONE;
-        }
-
-        int_expr_solver m_int_solver(get_manager(), get_context().get_fparams());
-        m_int_solver.initialize(get_context());
 
 
-        solver solver{std::move(root), m_aut_imp};
-        while (solver.unfinished()) {
-            solver.resume(get_manager(), get_context(), *this, m_int_solver);
-            std::list<smt::str::state> to_check = solver.get_last_leaf_states();
-            for (auto &s:to_check) {
-                bool reachable = s.is_reachable(get_manager(), m_int_solver, false);
-                if (reachable) {
-                    STRACE("str", tout << "Leaf node reachable: \n" << s << std::endl;);
-                    if (!is_over_approximation)
-                        return FC_DONE;
-                }
-            }
-        }
 
-        if (solver.check() == result::SAT) {
-            //solver.print_counter_automaton(get_manager());
-//            counter_system cs = counter_system(solver);
-//            STRACE("str", tout << "graph size: #state=" << solver.get_graph().access_map().size() << '\n';);
-//            STRACE("str", tout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';);
-//            // stdout for test: print graph size then exit
-//            if(on_screen) std::cout << "graph construction summary:\n";
-//            if(on_screen) std::cout << "#states total = " << solver.get_graph().access_map().size() << '\n';
-//            if(on_screen) std::cout << "root state quadratic? " << solver.get_root().get().quadratic() << '\n';
-//            if(on_screen) std::cout << "is the proof graph a DAG? " << cs.is_dag() << '\n';
 
-            bool cs_lenc_check_res = check_counter_system_lenc(solver, m_int_solver);
-
-            TRACE("str", tout << "final_check ends\n";);
-
-            if (cs_lenc_check_res) {
-                counter_system cs = counter_system(solver);
-
-                IN_CHECK_FINAL = false;
-                if (cs.is_dag() && !is_over_approximation)
-                    return FC_DONE;
-                else
-                    return FC_GIVEUP;
-            }  // will leave this if block if lenc_check_sat returns false
-        }
         block_curr_assignment();
         TRACE("str", tout << "final_check ends\n";);
         IN_CHECK_FINAL = false;
@@ -760,89 +648,7 @@ namespace smt {
         return bv;
     }
 
-    str::word_term theory_str2::mk_word_term(expr *const e) const {
-        using namespace str;
-        zstring s;
-        if (m_util_s.str.is_string(e, s)) {
-            return word_term::from_string(s);
-        }
-        if (m_util_s.str.is_concat(e)) {
-            word_term result;
-            for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
-                result.concat(mk_word_term(to_app(e)->get_arg(i)));
-            }
-            return result;
-        }
-        std::stringstream ss;
-        ss << mk_pp(e, get_manager());
-        return word_term::from_variable({ss.str().data()}, e);
-    }
 
-    void theory_str2::add_length(expr *l) {
-        expr *e = nullptr;
-        VERIFY(m_util_s.str.is_length(l, e));
-        SASSERT(!m_length.contains(l));
-        m_length.push_back(l);
-        m_has_length.insert(e);
-    }
-
-    /*
-  ensure that all elements in equivalence class occur under an application of 'length'
-*/
-    void theory_str2::enforce_length(expr *e) {
-        enode *n = ensure_enode(e);
-        enode *n1 = n;
-        do {
-            expr *o = n->get_owner();
-            if (!has_length(o)) {
-                expr_ref len = mk_len(o);
-                add_length_axiom(len);
-            }
-            n = n->get_next();
-        } while (n1 != n);
-    }
-
-    str::state theory_str2::mk_state_from_todo() {
-        using namespace str;
-        state result{std::make_shared<str::basic_memberships>(m_aut_imp)};
-        STRACE("str", tout << "[Build State]\nmembership todo:\n";);
-        STRACE("str", if (m_membership_todo.empty()) tout << "--\n";);
-        for (const auto &m : m_membership_todo) {
-            if(is_const_fun(m.first)){
-                zstring name{to_app(m.first)->get_decl()->get_name().bare_str()};
-                result.add_membership({element::t::VAR, name, m.first}, m.second);
-            }else{
-                //TODO:check if m.first is an instance in m.second
-
-            }
-            STRACE("str", tout << m.first << " is in " << m.second << '\n';);
-        }
-        STRACE("str", tout << "word equation todo:\n";);
-        STRACE("str", if (m_word_eq_todo.empty()) tout << "--\n";);
-        for (const auto &eq : m_word_eq_todo) {
-            result.add_word_eq({mk_word_term(eq.first), mk_word_term(eq.second)});
-            STRACE("str", tout << eq.first << " = " << eq.second << '\n';);
-        }
-        STRACE("str", tout << "word disequality todo:\n";);
-        STRACE("str", if (m_word_diseq_todo.empty()) tout << "--\n";);
-        for (const auto &diseq : m_word_diseq_todo) {
-            result.add_word_diseq({mk_word_term(diseq.first), mk_word_term(diseq.second)});
-            STRACE("str", tout << diseq.first << " != " << diseq.second << '\n';);
-        }
-
-        STRACE("str", tout << "not contains todo:\n";);
-        STRACE("str", if (m_not_contains_todo.empty()) tout << "--\n";);
-        for (const auto &nc : m_not_contains_todo) {
-            result.add_not_contains({mk_word_term(nc.first), mk_word_term(nc.second)});
-            STRACE("str", tout << "not_contains(" << nc.first << ", " << nc.second << ")\n";);
-        }
-
-
-        result.initialize_length_constraint(result.variables());
-        result.remove_useless_diseq();
-        result.initialize_model_map(result.variables());
-        return result;
-    }
 
     void theory_str2::add_axiom(expr *const e) {
         bool on_screen = true;
@@ -1361,71 +1167,5 @@ namespace smt {
                     std::cout <<"**"<< mk_pp(e, m) << (ctx.is_relevant(e) ? "\n" : " (not relevant)\n");
                 }
         );
-    }
-
-    void int_expr_solver::assert_expr(expr * e){
-
-        if(!unsat_core){
-            m_kernel.assert_expr(e);
-
-        }else{
-            erv.push_back(e);
-            lbool r = m_kernel.check(erv);
-            if(r==lbool::l_false){
-                std::cout<< "UNSAT core:\n";
-                for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
-                    std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
-                }
-            }
-        }
-    }
-
-    void int_expr_solver::initialize(context& ctx) {
-        bool on_screen =false;
-        if(!initialized){
-            initialized=true;
-            expr_ref_vector Assigns(m),Literals(m);
-            ctx.get_guessed_literals(Literals);
-            ctx.get_assignments(Assigns);
-            for (unsigned i = 0; i < ctx.get_num_asserted_formulas(); ++i) {
-                if(on_screen) std::cout<<"check_sat context from asserted:"<<mk_pp(ctx.get_asserted_formula(i),m)<<std::endl;
-                assert_expr(ctx.get_asserted_formula(i));
-
-            }
-            for (auto & e : Assigns){
-                if(ctx.is_relevant(e)) {
-                    if(on_screen) std::cout << "check_sat context from assign:" << mk_pp(e, m) << std::endl;
-                    assert_expr(e);
-                }
-                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
-            }
-//            for (auto & e : Literals){
-//                if(ctx.is_relevant(e)) {
-//                    if (on_screen) std::cout << "check_sat context from guess:" << mk_pp(e, m) << std::endl;
-//                    assert_expr(e);
-//                }
-//                if(on_screen) std::cout << "is relevant: " << ctx.is_relevant(e) << " get_assignment: "<<ctx.get_assignment(e)<<std::endl;
-//
-//            }
-
-        }
-    }
-    lbool int_expr_solver::check_sat(expr* e) {
-        bool on_screen =false;
-//        m_kernel.push();
-
-        erv.push_back(e);
-        lbool r = m_kernel.check(erv);
-        erv.pop_back();
-
-        if(on_screen && r==lbool::l_false){
-            std::cout<< "UNSAT core:\n";
-            for(unsigned i=0;i<m_kernel.get_unsat_core_size();i++){
-                std::cout<<mk_pp(m_kernel.get_unsat_core_expr(i),m)<<std::endl;
-            }
-        }
-
-//        m_kernel.pop(1);
-        return r;
     }
 }

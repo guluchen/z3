@@ -149,7 +149,7 @@ include(CheckCXXSourceCompiles)
 set(Z3_COMPONENT_CXX_DEFINES "")
 set(Z3_COMPONENT_CXX_FLAGS "")
 set(Z3_COMPONENT_EXTRA_INCLUDE_DIRS "/usr/local/include")
-set(Z3_DEPENDENT_LIBS "ap_ppl -lppl -lgmpxx -lpolkaMPQ -loctMPQ -lboxMPQ -lapron -litvMPQ -litvD -lmpfr -lgmp -lfst -ldl")
+set(Z3_DEPENDENT_LIBS "-lgmpxx -lgmp -ldl")
 set(Z3_DEPENDENT_EXTRA_CXX_LINK_FLAGS "")
 
 INCLUDE_DIRECTORIES(/usr/local/include)
