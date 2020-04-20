@@ -14,7 +14,7 @@ make
 ## Test
 Run
 ```
-z3 smt.string_solver=trauc ../Benchmarks/test/test1.smt2
+z3 smt.string_solver=trauc ../benchmarks/test/test1.smt2
 ```
 A successful execution should give you the following results
 
