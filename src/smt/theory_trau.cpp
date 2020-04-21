@@ -3748,27 +3748,27 @@ namespace smt {
                     tmp = '0' + tmp;
                 }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
-                if (to_assert) {
-                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
-                    expr_ref premise(
-                            createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
-                            m);
-                    expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
-                    expr_ref axiom(createEqualOP(premise, conclusion), m);
-                    if (!string_int_axioms.contains(axiom)) {
-                        STRACE("str",
-                               tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first
-                                    << " " << len_s << " " << tmp << std::endl;);
-                        string_int_axioms.insert(axiom);
-                        m_trail.push_back(axiom);
-
-                        assert_axiom(axiom);
-                        implied_facts.push_back(axiom.get());
-                        m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
-                        axiomAdd = true;
-
-                    }
-                }
+//                if (to_assert) {
+//                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
+//                    expr_ref premise(
+//                            createAndOP(createEqualOP(a, mk_int(i_val)), createEqualOP(mk_strlen(S), mk_int(len_s))),
+//                            m);
+//                    expr_ref conclusion(createEqualOP(S, mk_string(tmp.c_str())), m);
+//                    expr_ref axiom(createEqualOP(premise, conclusion), m);
+//                    if (!string_int_axioms.contains(axiom)) {
+//                        STRACE("str",
+//                               tout << __LINE__ << " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first
+//                                    << " " << len_s << " " << tmp << std::endl;);
+//                        string_int_axioms.insert(axiom);
+//                        m_trail.push_back(axiom);
+//
+//                        assert_axiom(axiom);
+//                        implied_facts.push_back(axiom.get());
+//                        m_trail_stack.push(insert_obj_trail<theory_trau, expr>(string_int_axioms, axiom));
+//                        axiomAdd = true;
+//
+//                    }
+//                }
                 expr_ref_vector eqs(m);
                 collect_eq_nodes(S, eqs);
                 for (const auto& eq : eqs)
@@ -4928,17 +4928,19 @@ namespace smt {
 
         // compare all eq
         for(const auto& e : prev_guessed_eqs){
+            STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << "; guessed_eqs.contains(e)" << guessed_eqs.contains(e) << "; e != m.mk_true(): " << (e != m.mk_true()) << std::endl;);
             if (e != m.mk_true() && !guessed_eqs.contains(e)) {
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 // check the case where some var disappear because of len = 0
                 if (to_app(e)->get_num_args() != 2)
                     continue;
-
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 if (to_app(e)->get_arg(1) == mk_string("")){
                     rational len;
                     if (get_len_value(to_app(e)->get_arg(0), len) && len.get_int64() == 0)
                         continue;
                 }
-
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 // check if it is the bound var
                 std::string toStr = expr2str(e);
                 if (!is_theory_str_term(to_app(e)->get_arg(0)) || !is_theory_str_term(to_app(e)->get_arg(1)))
@@ -5984,7 +5986,9 @@ namespace smt {
         fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
         fetch_guessed_core_exprs(eq_combination, guessed_eqs, guessed_diseqs);
         UnderApproxState state(m, get_actual_trau_lvl(), get_actual_trau_lvl(), eq_combination, non_fresh_vars, guessed_eqs, guessed_diseqs, str_int_bound);
-
+        for (const auto& e: guessed_eqs){
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " core: " << mk_pp(e, m)  << std::endl;);
+        }
         if (is_equal(uState, state)) {
             bool axiomAdded = assert_state(guessed_eqs, guessed_diseqs);
             return axiomAdded;
@@ -6271,11 +6275,11 @@ namespace smt {
         rational zeroChar(48);
         rational pos = str_int_bound - one;
         expr* arr = get_var_flat_array(str);
+        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " str: " << mk_pp(str, m) << "; arr " << mk_pp(arr, m) << std::endl;);
         SASSERT(arr);
         expr* unroll_premise = createEqualOP(arr_linker[arr], str);
-        expr* strLen = mk_strlen(str);
+        expr* strLen = mk_strlen_breakdown(str);
         expr_ref_vector ands(m);
-        ands.push_back(rewrite_implication(createEqualOP(strLen, mk_int(0)), createEqualOP(num, mk_int(- 1))));
 
         expr_ref_vector ands_tmp(m);
         rational consider_len = str_int_bound;
@@ -6325,6 +6329,7 @@ namespace smt {
         if (is_char_at(str) || is_char_at(num)){
             expr *arr = get_var_flat_array(str);
             expr_ref_vector conclusions(m);
+            conclusions.push_back(createGreaterEqOP(mk_strlen(str), mk_int(1)));
             conclusions.push_back(createGreaterEqOP(
                     createSelectOP(arr, mk_int(0)),
                     mk_int('0')));
@@ -6336,8 +6341,9 @@ namespace smt {
         else {
             // from 0 - q_bound
             expr_ref_vector ands(m);
+            ands.push_back(createGreaterEqOP(mk_strlen(str), mk_int(1)));
             expr *arr = get_var_flat_array(str);
-            expr *strLen = mk_strlen(str);
+            expr *strLen = mk_strlen_breakdown(str);
             for (int i = 0; i < q_bound.get_int64(); ++i) {
                 expr *premise = createGreaterEqOP(strLen, mk_int(i + 1));
                 expr_ref_vector conclusions(m);
@@ -6498,7 +6504,7 @@ namespace smt {
         rational zero_char(48);
         expr* zero_e = mk_int(zero_char);
         expr* arr = get_var_flat_array(str);
-        expr* len_n = mk_strlen(str);
+        expr* len_n = mk_strlen_breakdown(str);
 
         while (len < str_int_bound + q_bound){
             expr* premise = createGreaterEqOP(len_n, mk_int(len));
@@ -8414,7 +8420,6 @@ namespace smt {
     }
 
     void theory_trau::assert_breakdown_combination(expr* e, expr* premise){
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(premise, m) << std::endl;);
         ensure_enode(e);
 
         assert_axiom(e, premise);
@@ -10189,7 +10194,8 @@ namespace smt {
             STRACE("str", tout << "  " << mk_pp(elements[i].first, m););
         STRACE("str", tout <<  std::endl;);
 
-        if (!length_base_split(a.first, elements)){
+        if (!length_base_split(a, elements)){
+            STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: because of length base"  << std::endl;);
             return nullptr;
         }
 
@@ -12339,15 +12345,36 @@ namespace smt {
         return true;
     }
 
-    bool theory_trau::length_base_split(expr* e, pair_expr_vector const& elements){
-        expr_ref b(e, m);
+    bool theory_trau::length_base_split(expr_int e, pair_expr_vector const& elements){
+        expr_ref b(e.first, m);
         for (const auto& n : elements){
             expr_ref a(n.first, m);
             str::expr_pair p = std::make_pair(a, b);
             if (length_relation.contains(p)){
-                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << " cannot contain because of length based split" << mk_pp(n.first, m)<< std::endl;);
+                STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e.first, m) << " cannot contain because of length based split" << mk_pp(n.first, m)<< std::endl;);
                 return false;
             }
+        }
+
+        if (fixed_len_vars.contains(e.first)){
+            int sum = 0;
+            bool fix_len = true;
+            zstring val;
+            for (unsigned i = 0; i < elements.size() - p_bound.get_int64() + 1; ++i){
+                if (elements[i].second >= 0 && elements[i].second % p_bound.get_int64() == 0 && fixed_len_vars.contains(elements[i].first)){
+                    sum += fixed_len_vars[elements[i].first];
+                }
+                else if (u.str.is_string(elements[i].first, val) && elements[i].second % p_bound.get_int64() == -1){
+                    sum += val.length();
+                }
+                else
+                    fix_len = false;
+            }
+
+            if (fixed_len_vars[e.first] < sum)
+                return false;
+            else if (fix_len && fixed_len_vars[e.first] != sum && e.second % p_bound.get_int64() == 0)
+                return false;
         }
         return true;
     }
@@ -13102,6 +13129,7 @@ namespace smt {
      */
     app* theory_trau::createLessEqOP(expr* x, expr* y){
         rational val_y;
+
         if (!m_autil.is_numeral(y, val_y)) {
             expr_ref tmp(m_autil.mk_sub(y, x), m);
             m_rewrite(tmp);
@@ -13150,6 +13178,7 @@ namespace smt {
      */
     app* theory_trau::createGreaterEqOP(expr* x, expr* y){
         rational val_y;
+
         if (!m_autil.is_numeral(y, val_y)) {
             expr_ref tmp(m_autil.mk_sub(y, x), m);
             m_rewrite(tmp);
@@ -13182,7 +13211,7 @@ namespace smt {
                 if (m.is_false(e)){
                     return m.mk_false();
                 }
-                else if (!ands.contains(e)){
+                else if (!ands.contains(e) && (!trivial_true(e))){
                     ands.push_back(e);
                 }
             }
@@ -13200,6 +13229,25 @@ namespace smt {
         app* tmp = m.mk_and(ands.size(), ands.c_ptr());
         ctx.internalize(tmp, false);
         return tmp;
+    }
+
+    bool theory_trau::trivial_true(expr* e){
+        expr* premise_not = nullptr;
+        expr* conclusion = nullptr;
+        if (m.is_or(e, premise_not, conclusion)){
+            expr* premise = nullptr;
+            if (m.is_not(premise_not, premise)){
+                expr* lhs = nullptr;
+                expr* rhs = nullptr;
+                if (m_autil.is_ge(premise, lhs, rhs) || m.is_eq(premise, lhs, rhs)){
+                    expr* len_expr = nullptr;
+                    rational val;
+                    if (u.str.is_length(lhs, len_expr) && is_char_at(len_expr) && m_autil.is_numeral(rhs, val) && val.get_int64() > 1)
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     app* theory_trau::createAndOP(expr* a, expr* b, expr* c, expr* d){
@@ -14827,7 +14875,7 @@ namespace smt {
                 }
             }
         for (const auto& v : eq_combination)
-            if (v.get_value().size() >= 10) {
+            if (v.get_value().size() >= 15) {
                 expr_ref_vector eqs(m);
                 collect_eq_nodes(v.m_key, eqs);
                 for (unsigned i = 0; i < eqs.size(); ++i)
@@ -15660,7 +15708,7 @@ namespace smt {
             if (!important) {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << ": " << mk_pp(c.m_key, m) << std::endl;);
                 // the var is too complicated
-                if (c.get_value().size() >= 10) {
+                if (c.get_value().size() >= 15) {
                     non_fresh_vars.insert(c.m_key, -1);
                     ret.insert(c.m_key, c_second);
                 }
@@ -16077,13 +16125,13 @@ namespace smt {
                 }
 
                 // to avoid the exponential growth
-                if (eq_lhs.size() >= 10){
+                if (eq_lhs.size() >= 15){
                     eq_lhs.reset();
                     eq_lhs.push_back(find_equivalent_variable(arg0));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
                 }
 
-                if (eq_rhs.size() >= 10){
+                if (eq_rhs.size() >= 15){
                     eq_rhs.reset();
                     eq_rhs.push_back(find_equivalent_variable(arg1));
                     STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
@@ -16938,6 +16986,9 @@ namespace smt {
         expr_ref ts0(mk_str_var("charAt0"), m);
         expr_ref ts1(mk_str_var("charAt1"), m);
         expr_ref ts2(mk_str_var("charAt2"), m);
+        rational val_arg1;
+        if (m_autil.is_numeral(arg1, val_arg1) && val_arg1.get_int64() >= 0)
+            fixed_len_vars.insert(ts0, val_arg1.get_int64());
 
         expr_ref cond(m.mk_and(
                 m_autil.mk_ge(arg1, mk_int(0)),
@@ -17445,6 +17496,10 @@ namespace smt {
         expr_ref t0(mk_str_var("substr0"), m);
         expr_ref t3(mk_str_var("substr3"), m);
         expr_ref t4(mk_str_var("substr4"), m);
+
+        rational val_pos;
+        if (m_autil.is_numeral(pos, val_pos) && val_pos.get_int64() >= 0)
+            fixed_len_vars.insert(t0, val_pos.get_int64());
 
         if (!startFromHead) {
             case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, t3)));
@@ -18253,16 +18308,28 @@ namespace smt {
         zstring value;
         if (u.str.is_string(e, value))
             return mk_int(value.length());
-//        else if (u.str.is_concat(e)){
-//            TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-//            ptr_vector<expr> nodes;
-//            get_nodes_in_concat(e, nodes);
-//            expr_ref_vector len_nodes(m);
-//            for (const auto& n : nodes){
-//                len_nodes.push_back(mk_strlen(n));
-//            }
-//            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(createAddOP(len_nodes), m) << std::endl;);
-//            return createAddOP(len_nodes);
+        else {
+            app *tmp = u.str.mk_length(e);
+            ensure_enode(tmp);
+            return tmp;
+        }
+    }
+
+    app * theory_trau::mk_strlen_breakdown(expr * e) {
+        zstring value;
+        if (u.str.is_string(e, value))
+            return mk_int(value.length());
+        else if (u.str.is_concat(e)){
+            ptr_vector<expr> nodes;
+            get_nodes_in_concat(e, nodes);
+            expr_ref_vector len_nodes(m);
+            for (const auto& n : nodes){
+                len_nodes.push_back(mk_strlen_breakdown(n));
+            }
+            return createAddOP(len_nodes);
+        }
+//        else if (is_char_at(e)){
+//            return mk_int(1);
 //        }
         else {
             app *tmp = u.str.mk_length(e);
@@ -19683,10 +19750,16 @@ namespace smt {
     void theory_trau::add_assignments_to_core(expr_ref_vector const& guessed_exprs, expr_ref_vector const& all_vars, expr_ref_vector &core){
         rational len;
         expr_ref_vector empty_vars(m);
+        expr* empty_str = mk_string("");
+        expr_ref_vector eqs_empty(m);
+        collect_eq_nodes(empty_str, eqs_empty);
+        for (const auto& e : eqs_empty){
+            empty_vars.push_back(e);
+            core.push_back(createEqualOP(e, empty_str));
+        }
+
         for (const auto& v : all_vars) {
             if (get_len_value(v, len) && len.get_int64() == 0) {
-                empty_vars.push_back(v);
-                core.push_back(createEqualOP(v, mk_string("")));
             }
             else if (u.str.is_string(v)) {
                 // const = concat
@@ -19901,7 +19974,7 @@ namespace smt {
 
     void theory_trau::fetch_guessed_exprs_from_cache(UnderApproxState const& state, expr_ref_vector &guessed_exprs) {
         guessed_exprs.append(state.equalities);
-        fetch_guessed_core_exprs(state.eq_combination, guessed_exprs, state.disequalities, state.str_int_bound);
+//        fetch_guessed_core_exprs(state.eq_combination, guessed_exprs, state.disequalities, state.str_int_bound);
     }
 
     void theory_trau::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessed_eqs) {

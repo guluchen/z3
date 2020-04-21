@@ -885,8 +885,8 @@ namespace smt {
                     bool not_contain_check(expr* e, pair_expr_vector const& elements);
                     bool const_vs_regex(expr* reg, pair_expr_vector const& elements);
                     bool const_vs_str_int(expr* e, pair_expr_vector const& elements, expr* &extra_assert);
-                        expr* find_i2s(expr* e);
-                    bool length_base_split(expr* e, pair_expr_vector const& elements);
+                    expr* find_i2s(expr* e);
+                    bool length_base_split(expr_int e, pair_expr_vector const& elements);
                 /*
                 * textLeft: length of string
                 * nMax: number of flats
@@ -952,7 +952,7 @@ namespace smt {
             app* createOrOP(expr_ref_vector const& ors);
             app* createOrOP(expr* a, expr* b, expr* c = nullptr, expr* d = nullptr);
             app* createSelectOP(expr* x, expr* y);
-
+            bool trivial_true(expr* e);
             int optimized_lhs(
                     int i, int startPos, int j,
                     int_vector const& left_arr,
@@ -1219,6 +1219,7 @@ namespace smt {
         void sync_index_head(expr* pos, expr* base, expr* first_part, expr* second_part);
         app * mk_fresh_const(char const* name, sort* s);
         app * mk_strlen(expr * e);
+        app * mk_strlen_breakdown(expr * e);
         expr * mk_string(zstring const& str);
         expr * mk_string(const char * str);
         app * mk_str_var(std::string name);
@@ -1384,7 +1385,7 @@ namespace smt {
         const std::string                                   FLATPREFIX = "__flat_";
         int                                                 flat_var_counter = 0;
 
-
+        obj_map<expr, int>                                  fixed_len_vars;
         obj_map<expr, int>                                  var_pieces_counter;
         obj_map<expr, int>                                  curr_var_pieces_counter;
         string_set                                          generated_equalities;
