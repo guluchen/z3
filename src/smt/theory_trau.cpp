@@ -9220,8 +9220,8 @@ namespace smt {
         setup_n_n_general(lhs_elements.size(), rhs_elements.size());
 
         /* because of "general" functions, we need to refine arrangements */
-        vector<Arrangment> possibleCases;
-        get_arrangements(lhs_elements, rhs_elements, non_fresh_variables, possibleCases);
+        vector<Arrangment> possible_arranges;
+        get_arrangements(lhs_elements, rhs_elements, non_fresh_variables, possible_arranges);
 
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
         for (unsigned i = 0; i < lhs_elements.size(); ++i)
@@ -9234,21 +9234,146 @@ namespace smt {
 
         expr_ref_vector cases(m);
         /* 1 vs n, 1 vs 1, n vs 1 */
-        for (unsigned i = 0; i < possibleCases.size(); ++i) {
+        for (unsigned i = 0; i < possible_arranges.size(); ++i)
+            if (is_valid_arrange(possible_arranges[i].left_arr, possible_arranges[i].right_arr, lhs_elements, rhs_elements) &&
+                    is_valid_arrange(possible_arranges[i].right_arr, possible_arranges[i].left_arr, rhs_elements, lhs_elements)){
 
-            arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Checking case");
-            expr* tmp = to_arith(p, possibleCases[i].left_arr, possibleCases[i].right_arr, lhs_elements, rhs_elements, non_fresh_variables);
+                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Checking case");
+                expr* tmp = to_arith(p, possible_arranges[i].left_arr, possible_arranges[i].right_arr, lhs_elements, rhs_elements, non_fresh_variables);
 
-            if (tmp != nullptr && tmp != m.mk_false()) {
-                cases.push_back(tmp);
-                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Correct case");
-                STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " " <<  std::endl;);
+                if (tmp != nullptr && tmp != m.mk_false()) {
+                    cases.push_back(tmp);
+                    arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("Correct case");
+                    STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " " <<  std::endl;);
+                }
             }
             else {
+                arrangements[std::make_pair(lhs_elements.size() - 1, rhs_elements.size() - 1)][i].print("is_valid_arrange false");
+            }
+        return cases;
+    }
+
+    bool theory_trau::is_valid_arrange(
+                                    int_vector const& left_arr,
+                                    int_vector const& right_arr,
+                                    pair_expr_vector const& lhs_elements,
+                                    pair_expr_vector const& rhs_elements){
+//        return true;
+        for (unsigned i = 0; i < lhs_elements.size() - p_bound.get_int64() + 1; ++i)
+            if (fixed_len_vars.contains(lhs_elements[i].first) && lhs_elements[i].second % p_bound.get_int64() == 0){
+                int sum = 0;
+                bool should_bigger = false;
+                pair_expr_vector elements;
+                switch (left_arr[i]){
+                    case SUMFLAT:
+                        for (unsigned j = 0; j < right_arr.size(); ++j){
+                            if (right_arr[j] == i)
+                                elements.push_back(rhs_elements[j]);
+                        }
+
+                        switch (left_arr[i + 1]){
+                            case SUMFLAT:
+                                for (unsigned j = 0; j < right_arr.size(); ++j){
+                                    if (right_arr[j] == i + 1)
+                                        elements.push_back(rhs_elements[j]);
+                                }
+                                break;
+                            case EMPTYFLAT:
+                                break;
+                            default:
+                                elements.push_back(rhs_elements[left_arr[i + 1]]);
+                                if (right_arr[left_arr[i + 1]] != i)
+                                    should_bigger = true;
+                                break;
+                        }
+                        break;
+                    case EMPTYFLAT:
+                        switch (left_arr[i + 1]){
+                            case SUMFLAT:
+                                for (unsigned j = 0; j < right_arr.size(); ++j){
+                                    if (right_arr[j] == i + 1)
+                                        elements.push_back(rhs_elements[j]);
+                                }
+                                break;
+                            case EMPTYFLAT:
+                                break;
+                            default:
+                                elements.push_back(rhs_elements[left_arr[i + 1]]);
+                                if (right_arr[left_arr[i + 1]] != i)
+                                    should_bigger = true;
+                                break;
+                        }
+                        break;
+                    default:
+                        elements.push_back(rhs_elements[left_arr[i]]);
+                        if (right_arr[left_arr[i]] != i)
+                            should_bigger = true;
+                        if (left_arr[i] != left_arr[i + 1])
+                            switch (left_arr[i + 1]){
+                                case SUMFLAT:
+                                    for (unsigned j = 0; j < right_arr.size(); ++j){
+                                        if (right_arr[j] == i + 1)
+                                            elements.push_back(rhs_elements[j]);
+                                    }
+                                    break;
+                                case EMPTYFLAT:
+                                    break;
+                                default:
+                                    elements.push_back(rhs_elements[left_arr[i + 1]]);
+                                    if (right_arr[left_arr[i + 1]] != i)
+                                        should_bigger = true;
+                                    break;
+                            }
+                        break;
+                }
+                if (!is_valid_arrange_len(lhs_elements[i].first, elements, should_bigger))
+                    return false;
+            }
+        return true;
+    }
+
+    bool theory_trau::is_valid_arrange_len(expr* e, pair_expr_vector const&elements, bool should_bigger){
+        bool fix_len = true;
+        int sum = 0;
+        zstring s;
+        for (const auto& el : elements){
+            if (el.second % p_bound.get_int64() == 0 && fixed_len_vars.contains(el.first)){
+                sum = sum + fixed_len_vars[el.first];
+            }
+            else if (u.str.is_string(el.first, s))
+                sum = sum + s.length();
+            else if (el.second % p_bound.get_int64() == 0 && !fixed_len_vars.contains(el.first) || el.second <= REGEX_CODE || sum == 0)
+                fix_len = false;
+        }
+
+        if (should_bigger == true){
+            if (fix_len && sum < fixed_len_vars[e]) {
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " != ";);
+                for (const auto& el : elements)
+                    STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
+                STRACE("str", tout << std::endl;);
+                return false;
             }
         }
-        return cases;
+        else {
+            if (fix_len && sum != fixed_len_vars[e]){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " != ";);
+                for (const auto& el : elements)
+                    STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
+                STRACE("str", tout << std::endl;);
+                return false;
+            }
+            else if (sum > fixed_len_vars[e]){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " != ";);
+                for (const auto& el : elements)
+                    STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
+                STRACE("str", tout << std::endl;);
+                return false;
+            }
+        }
 
+
+        return true;
     }
 
     void theory_trau::get_arrangements(pair_expr_vector const& lhs_elements,

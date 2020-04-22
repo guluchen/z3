@@ -547,6 +547,12 @@ namespace smt {
              *
              */
             expr_ref_vector arrange(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, int p = PMAX);
+            bool is_valid_arrange(
+                    int_vector const& left_arr,
+                    int_vector const& right_arr,
+                    pair_expr_vector const& lhs_elements,
+                    pair_expr_vector const& rhs_elements);
+            bool is_valid_arrange_len(expr* e, pair_expr_vector const&elements, bool should_bigger);
             void get_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, obj_map<expr, int> const& non_fresh_variables, vector<Arrangment> &possibleCases);
             void update_possible_arrangements(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements, vector<Arrangment> const& tmp, vector<Arrangment> &possibleCases);
 
