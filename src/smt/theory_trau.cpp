@@ -3694,7 +3694,7 @@ namespace smt {
                 std::string tmp = std::to_string(i_val.get_int64());
                 if (val_len.second != rational(-10))
                     len_s = val_len.second;
-                while (tmp.length() < len_s.get_int64()) {
+                while ((int)tmp.length() < len_s.get_int64()) {
                     tmp = '0' + tmp;
                 }
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(a, m) << " " << val_len.first << " " << tmp << std::endl;);
@@ -7323,8 +7323,8 @@ namespace smt {
         get_all_exprs(eq_combination, all_str_exprs, all_consts);
 
         // calculate sum consts
-        int sum_const = 0;
-        int max_len = 0;
+        auto sum_const = 0;
+        auto max_len = 0;
         for (const auto& s: all_consts){
             zstring tmp;
             u.str.is_string(s, tmp);
@@ -7564,8 +7564,7 @@ namespace smt {
             if (!are_equal_exprs(v, arr_linker[arr_var])) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** changing array " << mk_pp(v, m)  << " " << mk_pp(arr_var, m) << std::endl;);
                 arr_var = nullptr;
-
-                expr* val = get_eqc_value(v, has_val);
+                get_eqc_value(v, has_val);
             }
             else {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** reuse existing array " << mk_pp(v, m) << " " << mk_pp(arr_var, m) << " " << mk_pp(arr_linker[arr_var], m) << std::endl;);
@@ -8236,7 +8235,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(a, m) << " " << mk_pp(b, m) << std::endl;);
             ptr_vector<expr> nodes;
             get_nodes_in_concat(b, nodes);
-            int i = 0;
+            auto i = 0;
             for (i = 0; i < nodes.size(); ++i){
                 bool has_val;
                 expr* val_expr = get_eqc_value(nodes[i], has_val);
@@ -9196,20 +9195,19 @@ namespace smt {
                                     int_vector const& right_arr,
                                     pair_expr_vector const& lhs_elements,
                                     pair_expr_vector const& rhs_elements){
-        for (unsigned i = 0; i < lhs_elements.size() - p_bound.get_int64() + 1; ++i)
+        for (auto i = 0; i < lhs_elements.size() - p_bound.get_int64() + 1; ++i)
             if (fixed_len_vars.contains(lhs_elements[i].first) && lhs_elements[i].second % p_bound.get_int64() == 0){
-                int sum = 0;
                 bool should_bigger = false;
                 pair_expr_vector elements;
                 switch (left_arr[i]){
                     case SUMFLAT:
-                        for (unsigned j = 0; j < right_arr.size(); ++j){
+                        for (auto j = 0; j < right_arr.size(); ++j){
                             if (right_arr[j] == i)
                                 elements.push_back(rhs_elements[j]);
                         }
                         switch (left_arr[i + 1]){
                             case SUMFLAT:
-                                for (unsigned j = 0; j < right_arr.size(); ++j){
+                                for (auto j = 0; j < right_arr.size(); ++j){
                                     if (right_arr[j] == i + 1)
                                         elements.push_back(rhs_elements[j]);
                                 }
@@ -9226,7 +9224,7 @@ namespace smt {
                     case EMPTYFLAT:
                         switch (left_arr[i + 1]){
                             case SUMFLAT:
-                                for (unsigned j = 0; j < right_arr.size(); ++j){
+                                for (auto j = 0; j < right_arr.size(); ++j){
                                     if (right_arr[j] == i + 1)
                                         elements.push_back(rhs_elements[j]);
                                 }
@@ -9247,7 +9245,7 @@ namespace smt {
                         if (left_arr[i] != left_arr[i + 1])
                             switch (left_arr[i + 1]){
                                 case SUMFLAT:
-                                    for (unsigned j = 0; j < right_arr.size(); ++j){
+                                    for (auto j = 0; j < right_arr.size(); ++j){
                                         if (right_arr[j] == i + 1)
                                             elements.push_back(rhs_elements[j]);
                                     }
@@ -9946,14 +9944,9 @@ namespace smt {
         expr_ref_vector ors(m);
         expr* regexA = nullptr;
         is_internal_regex_var(a.first, regexA);
-        unsigned length = 0;
-        if (u.re.is_plus(regexA))
-            length = 1;
 
         expr* regexB = nullptr;
         is_internal_regex_var(b.first, regexB);
-        if (u.re.is_plus(regexB))
-            length = 1;
 
         if (match_regex(regexA, regexB)) {
             vector<zstring> aComp;
@@ -14375,7 +14368,7 @@ namespace smt {
         ptr_vector<expr> rhs_nodes;
         get_nodes_in_concat(rhs, rhs_nodes);
 
-        int pos = 0;
+        auto pos = 0;
         while (pos < std::min(lhs_nodes.size(), rhs_nodes.size())) {
             if (are_equal_exprs(lhs_nodes[lhs_nodes.size() - pos - 1], rhs_nodes[rhs_nodes.size() - pos - 1]))
                 ++pos;
@@ -15389,7 +15382,7 @@ namespace smt {
         get_nodes_in_concat(lhs, lhs_nodes);
         get_nodes_in_concat(rhs, rhs_nodes);
         if (lhs_nodes.size() > rhs_nodes.size()){
-            int pos = 0;
+            auto pos = 0;
             for (const auto& n : rhs_nodes){
                 bool found = false;
                 while (pos < lhs_nodes.size()){
@@ -15408,7 +15401,7 @@ namespace smt {
             return true;
         }
         else if (lhs_nodes.size() < rhs_nodes.size()){
-            int pos = 0;
+            auto pos = 0;
             for (const auto& n : lhs_nodes){
                 bool found = false;
                 while (pos < rhs_nodes.size()){
@@ -15765,7 +15758,7 @@ namespace smt {
 
                             if (concat_with_const(c.m_key))
                                 tmp.push_back(c.m_key);
-                            expr* needle = nullptr;
+//                            expr* needle = nullptr;
 //                            if (tmp.size() >= 1 && !(is_contain_equality(c.m_key, needle) && u.str.is_string(needle))) {
                             if (tmp.size() >= 1) {
                                 ret.insert(c.m_key, tmp);
@@ -19255,7 +19248,7 @@ namespace smt {
                         continue;
                     // create concat from i - > j
                     expr* e = nodes[j];
-                    for (int k = j - 1; k >= i; --k){
+                    for (auto k = j - 1; k >= i; --k){
                         e = u.str.mk_concat(nodes[k], e);
                     }
                     m_trail.push_back(e);
@@ -20189,14 +20182,7 @@ namespace smt {
             return false;
         return true;
     }
-
-    bool theory_trau::string_value_proc::question_return_value(zstring s){
-        for (unsigned i = 0; i < s.length(); ++i)
-            if (s[i] != th.default_char)
-                return false;
-        return true;
-    }
-
+    
     bool theory_trau::string_value_proc::construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value){
         vector<zstring> elements = collect_alternative_components(regex);
         if (th.u.re.is_union(regex)) {
@@ -20707,7 +20693,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": found in "  << mk_pp(concat, th.get_manager()) << " of " << concatValue << std::endl;);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
-                if (value.length() != len)
+                if ((int)value.length() != len)
                     return false;
                 else
                     return true;
@@ -20727,7 +20713,7 @@ namespace smt {
                 prefix = find_prefix_len(mg, concat, tmp, m_root2value);
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": prefix = "  << prefix << std::endl;);
                 value = concatValue.extract(prefix, len);
-                if (value.length() != len)
+                if ((int)value.length() != len)
                     return false;
                 else
                     return true;
