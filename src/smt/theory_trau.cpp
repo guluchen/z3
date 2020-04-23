@@ -9258,21 +9258,24 @@ namespace smt {
                                     int_vector const& right_arr,
                                     pair_expr_vector const& lhs_elements,
                                     pair_expr_vector const& rhs_elements){
-//        return true;
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
         for (unsigned i = 0; i < lhs_elements.size() - p_bound.get_int64() + 1; ++i)
             if (fixed_len_vars.contains(lhs_elements[i].first) && lhs_elements[i].second % p_bound.get_int64() == 0){
                 int sum = 0;
                 bool should_bigger = false;
                 pair_expr_vector elements;
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << left_arr[i] << std::endl;);
                 switch (left_arr[i]){
                     case SUMFLAT:
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << left_arr[i] << std::endl;);
                         for (unsigned j = 0; j < right_arr.size(); ++j){
                             if (right_arr[j] == i)
                                 elements.push_back(rhs_elements[j]);
                         }
-
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                         switch (left_arr[i + 1]){
                             case SUMFLAT:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                 for (unsigned j = 0; j < right_arr.size(); ++j){
                                     if (right_arr[j] == i + 1)
                                         elements.push_back(rhs_elements[j]);
@@ -9281,6 +9284,7 @@ namespace smt {
                             case EMPTYFLAT:
                                 break;
                             default:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                 elements.push_back(rhs_elements[left_arr[i + 1]]);
                                 if (right_arr[left_arr[i + 1]] != i)
                                     should_bigger = true;
@@ -9288,8 +9292,10 @@ namespace smt {
                         }
                         break;
                     case EMPTYFLAT:
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << left_arr[i] << std::endl;);
                         switch (left_arr[i + 1]){
                             case SUMFLAT:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                 for (unsigned j = 0; j < right_arr.size(); ++j){
                                     if (right_arr[j] == i + 1)
                                         elements.push_back(rhs_elements[j]);
@@ -9298,6 +9304,7 @@ namespace smt {
                             case EMPTYFLAT:
                                 break;
                             default:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                 elements.push_back(rhs_elements[left_arr[i + 1]]);
                                 if (right_arr[left_arr[i + 1]] != i)
                                     should_bigger = true;
@@ -9306,11 +9313,14 @@ namespace smt {
                         break;
                     default:
                         elements.push_back(rhs_elements[left_arr[i]]);
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                         if (right_arr[left_arr[i]] != i)
                             should_bigger = true;
+                        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                         if (left_arr[i] != left_arr[i + 1])
                             switch (left_arr[i + 1]){
                                 case SUMFLAT:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                     for (unsigned j = 0; j < right_arr.size(); ++j){
                                         if (right_arr[j] == i + 1)
                                             elements.push_back(rhs_elements[j]);
@@ -9319,6 +9329,7 @@ namespace smt {
                                 case EMPTYFLAT:
                                     break;
                                 default:
+                                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
                                     elements.push_back(rhs_elements[left_arr[i + 1]]);
                                     if (right_arr[left_arr[i + 1]] != i)
                                         should_bigger = true;
@@ -9335,28 +9346,36 @@ namespace smt {
     bool theory_trau::is_valid_arrange_len(expr* e, pair_expr_vector const&elements, bool should_bigger){
         bool fix_len = true;
         int sum = 0;
+        int no_chatAt = 0;
         zstring s;
-        for (const auto& el : elements){
-            if (el.second % p_bound.get_int64() == 0 && fixed_len_vars.contains(el.first)){
-                sum = sum + fixed_len_vars[el.first];
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << std::endl;);
+        if (fixed_len_vars[e] > 0 && elements.size() == 0)
+            return false;
+
+        for (unsigned i = 0; i < elements.size(); ++i){
+            if (elements[i].second % p_bound.get_int64() == 0 && fixed_len_vars.contains(elements[i].first)){
+                sum = sum + fixed_len_vars[elements[i].first];
             }
-            else if (u.str.is_string(el.first, s))
+            else if (u.str.is_string(elements[i].first, s))
                 sum = sum + s.length();
-            else if (el.second % p_bound.get_int64() == 0 && !fixed_len_vars.contains(el.first) || el.second <= REGEX_CODE || sum == 0)
+            else if ((i == 0 || elements[i].second % p_bound.get_int64() == 0) && is_char_at(elements[i].first)) {
+                no_chatAt++;
+            }
+            else if (i == 0 || (elements[i].second % p_bound.get_int64() == 0 && !fixed_len_vars.contains(elements[i].first)) || elements[i].second <= REGEX_CODE)
                 fix_len = false;
         }
 
         if (should_bigger == true){
-            if (fix_len && sum < fixed_len_vars[e]) {
+            if ((fix_len && sum + no_chatAt < fixed_len_vars[e])) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " != ";);
                 for (const auto& el : elements)
-                    STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
+                STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
                 STRACE("str", tout << std::endl;);
                 return false;
             }
         }
         else {
-            if (fix_len && sum != fixed_len_vars[e]){
+            if (fix_len && (sum + no_chatAt > fixed_len_vars[e] || sum < fixed_len_vars[e])){
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << " != ";);
                 for (const auto& el : elements)
                     STRACE("str", tout << mk_pp(el.first, m) << ":" << el.second << " + ";);
