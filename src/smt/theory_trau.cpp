@@ -8032,7 +8032,9 @@ namespace smt {
 //                    else
 //                        v.m_value = connectingSize;
 //                }
-                if (is_char_at(v.m_key)) {
+                if (fixed_len_vars.contains(v.m_key))
+                    v.m_value = fixed_len_vars[v.m_key];
+                else if (is_char_at(v.m_key)) {
                     v.m_value = 1;
                 }
                 else
@@ -20182,7 +20184,7 @@ namespace smt {
             return false;
         return true;
     }
-    
+
     bool theory_trau::string_value_proc::construct_string_from_regex(model_generator &mg, int len_int, obj_map<enode, app *> const& m_root2value, zstring &str_value){
         vector<zstring> elements = collect_alternative_components(regex);
         if (th.u.re.is_union(regex)) {
