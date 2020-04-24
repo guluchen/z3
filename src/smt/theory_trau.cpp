@@ -17052,7 +17052,9 @@ namespace smt {
             value = std::make_pair<app *, app *>(tmpvalue.first->get_owner(), tmpvalue.second->get_owner());
         }
         else {
-            value = std::make_pair<app*, app*>(mk_str_var("indexOf1"), mk_str_var("indexOf2"));
+            expr_ref idx1(mk_str_var("indexOf1"), m);
+            expr_ref idx2(mk_str_var("indexOf2"), m);
+            value = std::make_pair<app*, app*>(to_app(idx1.get()), to_app(idx2.get()));
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
         }
 
