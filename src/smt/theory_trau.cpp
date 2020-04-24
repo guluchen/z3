@@ -7389,14 +7389,17 @@ namespace smt {
                 bool vLen_exists = get_len_value(e, vLen);
                 if (vLen_exists) {
                     max_bound = std::max(max_bound, vLen.get_int32());
+                    STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << ": " << vLen << std::endl;);
                     break;
                 } else {
                     rational lo(-1), hi(-1);
                     if (lower_bound(e, lo)) {
                         max_bound = std::max(max_bound, lo.get_int32());
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << ": " << lo << std::endl;);
                     }
                     if (upper_bound(e, hi)) {
                         max_bound = std::max(max_bound, hi.get_int32());
+                        STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(e, m) << ": " << hi << std::endl;);
                     }
                 }
             }
