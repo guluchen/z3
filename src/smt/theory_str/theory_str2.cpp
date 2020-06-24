@@ -14,9 +14,7 @@
 //#include "smt/theory_str/to_Presburger/equality_to_Presburger.h"
 #include <iostream>
 #include <fstream>
-
-
-
+#include <model/model_smt2_pp.h>
 
 
 namespace smt {
@@ -1237,7 +1235,6 @@ namespace smt {
         // test
 
         int_expr_solver m_int_solver(get_manager(), get_context().get_fparams());
-        m_int_solver.initialize(get_context());
 
         ast_manager& m = get_manager();
 
@@ -1430,6 +1427,13 @@ namespace smt {
                 std::cout << mk_pp(m_kernel.get_unsat_core_expr(i), m) << std::endl;
             }
         }
+        if (on_screen && r == lbool::l_true) {
+            model_ref model;
+            m_kernel.get_model(model);
+            model_smt2_pp(std::cout, m, *model, 0);
+
+        }
+
 
         //        m_kernel.pop(1);
         return r;
