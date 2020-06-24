@@ -11,7 +11,7 @@
 #include "ast/reg_decl_plugins.h"
 #include <set>
 //
-#include "smt/theory_str/to_Presburger/equality_to_Presburger.h"
+//#include "smt/theory_str/to_Presburger/equality_to_Presburger.h"
 #include <iostream>
 #include <fstream>
 
