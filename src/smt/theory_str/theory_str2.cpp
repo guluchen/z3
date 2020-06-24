@@ -1339,7 +1339,6 @@ namespace smt {
     }
 
 
-
     app* theory_str2::mk_int_var(std::string name) {
         context& ctx = get_context();
         ast_manager& m = get_manager();
