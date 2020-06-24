@@ -23,10 +23,13 @@
 #include "ast/rewriter/seq_rewriter.h"
 #include "ast/rewriter/th_rewriter.h"
 
+
 namespace smt {
 
 
     class theory_str2 : public theory {
+
+        unsigned m_fresh_id;
 
         int m_scope_level = 0;
         static bool is_over_approximation;
@@ -35,12 +38,14 @@ namespace smt {
         arith_util m_util_a;
         seq_util m_util_s;
         ast_manager& m;
-
+        
+        
 
         obj_hashtable<expr> axiomatized_terms;
         obj_hashtable<expr> propgated_string_theory;
         obj_hashtable<expr> m_has_length;          // is length applied
-        expr_ref_vector     m_length;             // length applications themselves
+        //expr_ref_vector     m_length;             // length applications themselves
+        expr_ref_vector     m_trail; // trail for generated terms
 
         std::set<std::pair<int,int>> axiomatized_eq_vars;
         using expr_pair = std::pair<expr_ref, expr_ref>;
@@ -99,6 +104,13 @@ namespace smt {
         void add_length(expr* e);
         void enforce_length(expr* n);
 
+
+        //
+        app* mk_int_var(std::string name);
+        app* mk_fresh_const(char const* name, sort* s);
+        void word_term_to_list(expr* e, std::list<std::pair<char, std::string>>& word_term_list) const;
+        
+
     private:
         bool is_of_this_theory(expr *e) const;
         bool is_string_sort(expr *e) const;
@@ -130,6 +142,27 @@ namespace smt {
         void tightest_prefix(expr*,expr*);
         void print_ast(expr *e);
         void print_ctx(context& ctx);
+    };
+
+
+    class int_expr_solver :expr_solver {
+        bool unsat_core = false;
+        kernel m_kernel;
+        ast_manager& m;
+        bool initialized;
+        expr_ref_vector erv;
+    public:
+        int_expr_solver(ast_manager& m, smt_params fp) :
+            m_kernel(m, fp), m(m), erv(m) {
+            fp.m_string_solver = symbol("none");
+            initialized = false;
+        }
+
+        lbool check_sat(expr* e) override;
+
+        void initialize(context& ctx);
+
+        void assert_expr(expr* e);
     };
 }
 
