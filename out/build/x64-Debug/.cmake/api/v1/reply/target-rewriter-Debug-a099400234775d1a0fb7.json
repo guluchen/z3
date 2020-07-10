@@ -1,0 +1,785 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./arith_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./array_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./ast_counter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bit2int.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bool_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bv_bounds.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bv_elim.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bv_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./datatype_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./der.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./distribute_forall.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./dl_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./elim_bounds.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./enum2bv_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./expr_replacer.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./expr_safe_replace.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./factor_equivs.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./factor_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./fpa_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./func_decl_replace.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./hoist_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./inj_axiom.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./label_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./maximize_ac_sharing.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./mk_simplified_app.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./pb_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./pb2bv_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./push_app_ite.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./quant_hoist.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./seq_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./th_rewriter.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./var_subst.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./bv_trailing.cpp.obj"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeFiles/rewriter.dir/./mk_extract_proc.cpp.obj"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"z3_add_component",
+			"add_dependencies",
+			"z3_add_component_dependencies_to_target",
+			"target_compile_options",
+			"target_compile_definitions",
+			"INCLUDE_DIRECTORIES",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"cmake/z3_add_component.cmake",
+			"src/ast/rewriter/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 199,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 231,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 6,
+				"file" : 2,
+				"line" : 155,
+				"parent" : 21
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS  /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1  "
+				},
+				{
+					"backtrace" : 8,
+					"fragment" : "-openmp"
+				},
+				{
+					"backtrace" : 9,
+					"fragment" : "/fp:precise"
+				},
+				{
+					"backtrace" : 10,
+					"fragment" : "/W3"
+				},
+				{
+					"backtrace" : 11,
+					"fragment" : "/Oy-"
+				},
+				{
+					"backtrace" : 12,
+					"fragment" : "/Gd"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 13,
+					"define" : "LEAN_DEBUG"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "Z3DEBUG"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_AMD64_"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_MP_INTERNAL"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_TRACE"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 20,
+					"define" : "_WINDOWS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 22,
+					"path" : "/usr/local/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 24,
+					"path" : "C:/Users/bottl/source/repos/z3/src"
+				}
+			],
+			"language" : "CXX",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "polynomial::@8d06ad2c9aca8e8772e2"
+		},
+		{
+			"backtrace" : 5,
+			"id" : "util::@6bc12a100e338ba65b7b"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "automata::@c03fdd289820959a05fe"
+		},
+		{
+			"backtrace" : 7,
+			"id" : "ast::@82451c30a77be7f89338"
+		}
+	],
+	"id" : "rewriter::@edda3ad5ea2f8f14cc34",
+	"name" : "rewriter",
+	"paths" : 
+	{
+		"build" : "src/ast/rewriter",
+		"source" : "src/ast/rewriter"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41
+			]
+		},
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/arith_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/array_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/ast_counter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bit2int.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bool_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bv_bounds.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bv_elim.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bv_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/datatype_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/der.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/distribute_forall.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/dl_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/elim_bounds.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/enum2bv_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/expr_replacer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/expr_safe_replace.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/factor_equivs.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/factor_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/fpa_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/func_decl_replace.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/hoist_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/inj_axiom.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/label_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/maximize_ac_sharing.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/mk_simplified_app.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/pb_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/pb2bv_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/push_app_ite.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/quant_hoist.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/seq_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/th_rewriter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/var_subst.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/bv_trailing.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/ast/rewriter/mk_extract_proc.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/arith_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/array_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/bool_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/bv_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/fpa_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/poly_rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/ast/rewriter/rewriter_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/arith_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/array_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/bool_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/bv_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/fpa_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/poly_rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/ast/rewriter/rewriter_params.pyg",
+			"sourceGroupIndex" : 2
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

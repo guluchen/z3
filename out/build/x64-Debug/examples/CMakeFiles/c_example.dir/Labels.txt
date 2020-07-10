@@ -1,0 +1,13 @@
+# Target labels
+ c_example
+# Source files and their labels
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/c_example
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/c_example.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/c_example-complete.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-install.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-mkdir.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-download.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-update.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-patch.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-configure.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/c_example-prefix/src/c_example-stamp/c_example-build.rule

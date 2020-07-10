@@ -1,0 +1,21 @@
+Performing C++ SOURCE FILE Test HAS_SSE2 failed with the following output:
+Change Dir: C:/Users/bottl/source/repos/z3/out/build/x64-Debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_260fa && [1/2] Building CXX object CMakeFiles\cmTC_260fa.dir\src.cxx.obj
+cl : 命令列 warning D9002 : 忽略未知的選項 '/arch:SSE2'
+[2/2] Linking CXX executable cmTC_260fa.exe
+
+
+Source file was:
+int main() { return 0; }
+Determining if the include file pthread.h exists failed with the following output:
+Change Dir: C:/Users/bottl/source/repos/z3/out/build/x64-Debug/CMakeFiles/CMakeTmp
+
+Run Build Command(s):C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe cmTC_1f924 && [1/2] Building CXX object CMakeFiles\cmTC_1f924.dir\CheckIncludeFile.cxx.obj
+FAILED: CMakeFiles/cmTC_1f924.dir/CheckIncludeFile.cxx.obj 
+C:\PROGRA~2\MICROS~4\2019\COMMUN~1\VC\Tools\MSVC\1426~1.288\bin\HostX64\x64\cl.exe  /nologo /TP   /DWIN32 /D_WINDOWS /W3 /GR /EHsc  /MDd /Zi /Ob0 /Od /RTC1 /showIncludes /FoCMakeFiles\cmTC_1f924.dir\CheckIncludeFile.cxx.obj /FdCMakeFiles\cmTC_1f924.dir\ /FS -c CheckIncludeFile.cxx
+CheckIncludeFile.cxx(1): fatal error C1083: 無法開啟包含檔案: 'pthread.h': No such file or directory
+ninja: build stopped: subcommand failed.
+
+
+

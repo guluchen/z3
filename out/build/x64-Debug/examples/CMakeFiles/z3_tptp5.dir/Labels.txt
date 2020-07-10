@@ -1,0 +1,13 @@
+# Target labels
+ z3_tptp5
+# Source files and their labels
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5-complete.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-install.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-mkdir.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-download.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-update.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-patch.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-configure.rule
+C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-build.rule

@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/z3_tptp5-complete.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-install.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-download.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-update.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-patch.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-configure.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/z3_tptp5-prefix/src/z3_tptp5-stamp/z3_tptp5-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"z3_tptp5"
+		],
+		"name" : "z3_tptp5"
+	}
+}

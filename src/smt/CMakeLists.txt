@@ -72,6 +72,7 @@ z3_add_component(smt
     theory_wmaxsat.cpp
     uses_theory.cpp
     watch_list.cpp
+    theory_str/to_Presburger/equality_to_Presburger.cpp
   COMPONENT_DEPENDENCIES
     bit_blaster
     cmd_context

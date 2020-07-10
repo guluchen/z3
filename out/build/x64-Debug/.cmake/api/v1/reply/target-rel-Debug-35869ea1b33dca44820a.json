@@ -1,0 +1,902 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./aig_exporter.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./check_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_base.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_bound_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_check_table.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_compiler.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_external_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_finite_product_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_instruction.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_interval_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_lazy_table.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_mk_explanations.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_mk_similarity_compressor.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_mk_simple_joins.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_product_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_relation_manager.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_sieve_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_sparse_table.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_table.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./dl_table_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./doc.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./karr_relation.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./rel_context.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./tbv.cpp.obj"
+		},
+		{
+			"path" : "src/muz/rel/CMakeFiles/rel.dir/./udoc_relation.cpp.obj"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"z3_add_component",
+			"add_dependencies",
+			"z3_add_component_dependencies_to_target",
+			"target_compile_options",
+			"target_compile_definitions",
+			"INCLUDE_DIRECTORIES",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"cmake/z3_add_component.cmake",
+			"src/muz/rel/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 199,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 231,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 6,
+				"file" : 2,
+				"line" : 155,
+				"parent" : 54
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS  /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1  "
+				},
+				{
+					"backtrace" : 41,
+					"fragment" : "-openmp"
+				},
+				{
+					"backtrace" : 42,
+					"fragment" : "/fp:precise"
+				},
+				{
+					"backtrace" : 43,
+					"fragment" : "/W3"
+				},
+				{
+					"backtrace" : 44,
+					"fragment" : "/Oy-"
+				},
+				{
+					"backtrace" : 45,
+					"fragment" : "/Gd"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 46,
+					"define" : "LEAN_DEBUG"
+				},
+				{
+					"backtrace" : 47,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 48,
+					"define" : "Z3DEBUG"
+				},
+				{
+					"backtrace" : 49,
+					"define" : "_AMD64_"
+				},
+				{
+					"backtrace" : 50,
+					"define" : "_MP_INTERNAL"
+				},
+				{
+					"backtrace" : 51,
+					"define" : "_TRACE"
+				},
+				{
+					"backtrace" : 52,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 53,
+					"define" : "_WINDOWS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 55,
+					"path" : "/usr/local/include"
+				},
+				{
+					"backtrace" : 56,
+					"path" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 57,
+					"path" : "C:/Users/bottl/source/repos/z3/src"
+				}
+			],
+			"language" : "CXX",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "polynomial::@8d06ad2c9aca8e8772e2"
+		},
+		{
+			"backtrace" : 5,
+			"id" : "util::@6bc12a100e338ba65b7b"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "sat::@d47bc915974f3a76f563"
+		},
+		{
+			"backtrace" : 7,
+			"id" : "lp::@589d23d4da35a3b30593"
+		},
+		{
+			"backtrace" : 8,
+			"id" : "hilbert::@4cdb285385639ed463f4"
+		},
+		{
+			"backtrace" : 9,
+			"id" : "nlsat::@0d70502d51e0aa911334"
+		},
+		{
+			"backtrace" : 10,
+			"id" : "automata::@c03fdd289820959a05fe"
+		},
+		{
+			"backtrace" : 11,
+			"id" : "simplex::@6797ab799a40aa90d3fe"
+		},
+		{
+			"backtrace" : 12,
+			"id" : "tactic::@2f580a174d3ebf960039"
+		},
+		{
+			"backtrace" : 13,
+			"id" : "model::@dd52281f56f5d51f359a"
+		},
+		{
+			"backtrace" : 14,
+			"id" : "ast::@82451c30a77be7f89338"
+		},
+		{
+			"backtrace" : 15,
+			"id" : "normal_forms::@01848afe0d99e15ba6cb"
+		},
+		{
+			"backtrace" : 16,
+			"id" : "rewriter::@edda3ad5ea2f8f14cc34"
+		},
+		{
+			"backtrace" : 17,
+			"id" : "euclid::@e9e8134fddb0cd14b7d2"
+		},
+		{
+			"backtrace" : 18,
+			"id" : "substitution::@abb9226f6363bba48eef"
+		},
+		{
+			"backtrace" : 19,
+			"id" : "grobner::@4eb6039e7a9ae76e0ba1"
+		},
+		{
+			"backtrace" : 20,
+			"id" : "parser_util::@950c1730cd40ce09d8fa"
+		},
+		{
+			"backtrace" : 21,
+			"id" : "core_tactics::@885f93e0c2973fa4378b"
+		},
+		{
+			"backtrace" : 22,
+			"id" : "sat_tactic::@031b9ebd0e99b81a54d9"
+		},
+		{
+			"backtrace" : 23,
+			"id" : "aig_tactic::@95cb9968617a17bbdb77"
+		},
+		{
+			"backtrace" : 24,
+			"id" : "solver::@56b03cb272704949ecff"
+		},
+		{
+			"backtrace" : 25,
+			"id" : "arith_tactics::@19e8c294bfdda7d34b92"
+		},
+		{
+			"backtrace" : 26,
+			"id" : "cmd_context::@a2a3a91db8f798611596"
+		},
+		{
+			"backtrace" : 27,
+			"id" : "nlsat_tactic::@92432ad51f274673a66d"
+		},
+		{
+			"backtrace" : 28,
+			"id" : "smt2parser::@5ec4922254221d73302f"
+		},
+		{
+			"backtrace" : 29,
+			"id" : "fpa::@e00d574e2d4d4dd4f309"
+		},
+		{
+			"backtrace" : 30,
+			"id" : "proofs::@203272206ddb96bdd54a"
+		},
+		{
+			"backtrace" : 31,
+			"id" : "macros::@2a615f82f12ce5b2c1cd"
+		},
+		{
+			"backtrace" : 32,
+			"id" : "bit_blaster::@4831973c81ed785dd86f"
+		},
+		{
+			"backtrace" : 33,
+			"id" : "smt_params::@97c7d1eba9c3d8b0fc12"
+		},
+		{
+			"backtrace" : 34,
+			"id" : "proto_model::@94e67a53e93b5fbe9c70"
+		},
+		{
+			"backtrace" : 35,
+			"id" : "smt::@348c3a94af092e249fef"
+		},
+		{
+			"backtrace" : 36,
+			"id" : "pattern::@90beef24188963c12bc7"
+		},
+		{
+			"backtrace" : 37,
+			"id" : "muz::@7dacd7b1ea016243c19b"
+		},
+		{
+			"backtrace" : 38,
+			"id" : "qe::@df10b3a77a3303825a78"
+		},
+		{
+			"backtrace" : 39,
+			"id" : "transforms::@a337d6413d3e7e46265a"
+		},
+		{
+			"backtrace" : 40,
+			"id" : "dataflow::@bf3371a6058edd8d40d7"
+		}
+	],
+	"id" : "rel::@aca2c770ba0476bf78b0",
+	"name" : "rel",
+	"paths" : 
+	{
+		"build" : "src/muz/rel",
+		"source" : "src/muz/rel"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/aig_exporter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/check_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_base.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_bound_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_check_table.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_compiler.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_external_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_finite_product_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_instruction.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_interval_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_lazy_table.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_mk_explanations.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_mk_similarity_compressor.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_mk_simple_joins.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_product_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_relation_manager.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_sieve_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_sparse_table.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_table.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/dl_table_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/doc.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/karr_relation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/rel_context.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/tbv.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/muz/rel/udoc_relation.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

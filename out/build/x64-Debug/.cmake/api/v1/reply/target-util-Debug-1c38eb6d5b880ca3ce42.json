@@ -1,0 +1,796 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./approx_nat.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./approx_set.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./bit_util.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./bit_vector.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./cmd_context_types.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./common_msgs.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./cooperate.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./debug.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./env_params.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./fixed_bit_vector.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./gparams.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./hash.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./hwf.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./inf_int_rational.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./inf_rational.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./inf_s_integer.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./lbool.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./luby.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./memory_manager.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./min_cut.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpbq.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpf.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpff.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpfx.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpn.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpq.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpq_inf.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./mpz.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./page.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./params.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./permutation.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./prime_generator.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./rational.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./region.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./rlimit.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./scoped_ctrl_c.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./scoped_timer.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./sexpr.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./s_integer.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./small_object_allocator.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./smt2_util.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./stack.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./statistics.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./symbol.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./timeit.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./timeout.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./trace.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./util.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./warning.cpp.obj"
+		},
+		{
+			"path" : "src/util/CMakeFiles/util.dir/./z3_exception.cpp.obj"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"z3_add_component",
+			"target_compile_options",
+			"target_compile_definitions",
+			"INCLUDE_DIRECTORIES",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"cmake/z3_add_component.cmake",
+			"src/util/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 11,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 199,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 4,
+				"file" : 2,
+				"line" : 155,
+				"parent" : 16
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS  /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1  "
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-openmp"
+				},
+				{
+					"backtrace" : 4,
+					"fragment" : "/fp:precise"
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "/W3"
+				},
+				{
+					"backtrace" : 6,
+					"fragment" : "/Oy-"
+				},
+				{
+					"backtrace" : 7,
+					"fragment" : "/Gd"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 8,
+					"define" : "LEAN_DEBUG"
+				},
+				{
+					"backtrace" : 9,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 10,
+					"define" : "Z3DEBUG"
+				},
+				{
+					"backtrace" : 11,
+					"define" : "_AMD64_"
+				},
+				{
+					"backtrace" : 12,
+					"define" : "_MP_INTERNAL"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "_TRACE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "_WINDOWS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 17,
+					"path" : "/usr/local/include"
+				},
+				{
+					"backtrace" : 18,
+					"path" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 19,
+					"path" : "C:/Users/bottl/source/repos/z3/src"
+				}
+			],
+			"language" : "CXX",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49
+			]
+		}
+	],
+	"id" : "util::@6bc12a100e338ba65b7b",
+	"name" : "util",
+	"paths" : 
+	{
+		"build" : "src/util",
+		"source" : "src/util"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/approx_nat.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/approx_set.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/bit_util.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/bit_vector.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/cmd_context_types.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/common_msgs.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/cooperate.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/debug.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/env_params.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/fixed_bit_vector.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/gparams.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/hash.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/hwf.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/inf_int_rational.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/inf_rational.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/inf_s_integer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lbool.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/luby.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/memory_manager.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/min_cut.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpbq.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpf.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpff.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpfx.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpn.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpq.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpq_inf.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/mpz.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/page.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/params.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/permutation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/prime_generator.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/rational.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/region.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/rlimit.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/scoped_ctrl_c.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/scoped_timer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/sexpr.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/s_integer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/small_object_allocator.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/smt2_util.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/stack.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/statistics.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/symbol.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/timeit.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/timeout.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/trace.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/util.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/warning.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/z3_exception.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

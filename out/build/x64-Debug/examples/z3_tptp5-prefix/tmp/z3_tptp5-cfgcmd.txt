@@ -1,0 +1,1 @@
+cmd='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe;-DZ3_DIR=C:/Users/bottl/source/repos/z3/out/build/x64-Debug;-DCMAKE_BUILD_TYPE:STRING=Debug;-GNinja;<SOURCE_DIR><SOURCE_SUBDIR>'

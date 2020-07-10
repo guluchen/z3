@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/cpp_example"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/cpp_example.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/CMakeFiles/cpp_example-complete.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-install.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-download.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-update.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-patch.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-configure.rule"
+		},
+		{
+			"file" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/examples/cpp_example-prefix/src/cpp_example-stamp/cpp_example-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"cpp_example"
+		],
+		"name" : "cpp_example"
+	}
+}

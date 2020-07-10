@@ -1,0 +1,514 @@
+{
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.17.20032601-MSVC_2/CMakeSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.17.20032601-MSVC_2/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Platform/Windows.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Platform/WindowsPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Compiler/MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Platform/Windows-MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/Platform/Windows-MSVC.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.17.20032601-MSVC_2/CMakeRCCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeRCInformation.cmake"
+		},
+		{
+			"path" : "cmake/cxx_compiler_flags_overrides.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"path" : "cmake/git_utils.cmake"
+		},
+		{
+			"path" : ".git/HEAD"
+		},
+		{
+			"path" : ".git/refs/heads/demo"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPythonInterp.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/target_arch_detect.cmake"
+		},
+		{
+			"path" : "cmake/target_arch_detect.cpp"
+		},
+		{
+			"path" : "cmake/z3_add_cxx_flag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeParseArguments.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindOpenMP.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeParseImplicitLinkInfo.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckIncludeFileCXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/compiler_warnings.cmake"
+		},
+		{
+			"path" : "cmake/compiler_lto.cmake"
+		},
+		{
+			"path" : "cmake/msvc_legacy_quirks.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"path" : "cmake/cmake_uninstall.cmake.in"
+		},
+		{
+			"path" : "cmake/z3_add_component.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakeParseArguments.cmake"
+		},
+		{
+			"path" : "cmake/z3_append_linker_flag_list_to_target.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/CMakePackageConfigHelpers.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/WriteBasicConfigVersionFile.cmake"
+		},
+		{
+			"path" : "cmake/Z3Config.cmake.in"
+		},
+		{
+			"path" : "cmake/Z3Config.cmake.in"
+		},
+		{
+			"path" : "src/CMakeLists.txt"
+		},
+		{
+			"path" : "src/util/CMakeLists.txt"
+		},
+		{
+			"path" : "src/util/z3_version.h.cmake.in"
+		},
+		{
+			"path" : "src/math/polynomial/CMakeLists.txt"
+		},
+		{
+			"path" : "src/sat/CMakeLists.txt"
+		},
+		{
+			"path" : "src/nlsat/CMakeLists.txt"
+		},
+		{
+			"path" : "src/util/lp/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/hilbert/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/simplex/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/automata/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/interval/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/realclosure/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/subpaving/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/rewriter/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/normal_forms/CMakeLists.txt"
+		},
+		{
+			"path" : "src/model/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/substitution/CMakeLists.txt"
+		},
+		{
+			"path" : "src/parsers/util/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/grobner/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/euclid/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/core/CMakeLists.txt"
+		},
+		{
+			"path" : "src/math/subpaving/tactic/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/aig/CMakeLists.txt"
+		},
+		{
+			"path" : "src/solver/CMakeLists.txt"
+		},
+		{
+			"path" : "src/sat/tactic/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/arith/CMakeLists.txt"
+		},
+		{
+			"path" : "src/nlsat/tactic/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ackermannization/CMakeLists.txt"
+		},
+		{
+			"path" : "src/cmd_context/CMakeLists.txt"
+		},
+		{
+			"path" : "src/cmd_context/extra_cmds/CMakeLists.txt"
+		},
+		{
+			"path" : "src/parsers/smt2/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/proofs/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/fpa/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/macros/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/pattern/CMakeLists.txt"
+		},
+		{
+			"path" : "src/ast/rewriter/bit_blaster/CMakeLists.txt"
+		},
+		{
+			"path" : "src/smt/params/CMakeLists.txt"
+		},
+		{
+			"path" : "src/smt/proto_model/CMakeLists.txt"
+		},
+		{
+			"path" : "src/smt/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/bv/CMakeLists.txt"
+		},
+		{
+			"path" : "src/smt/tactic/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/sls/CMakeLists.txt"
+		},
+		{
+			"path" : "src/qe/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/base/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/dataflow/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/transforms/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/rel/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/clp/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/tab/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/bmc/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/ddnf/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/spacer/CMakeLists.txt"
+		},
+		{
+			"path" : "src/muz/fp/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/ufbv/CMakeLists.txt"
+		},
+		{
+			"path" : "src/sat/sat_solver/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/smtlogics/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/fpa/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/fd_solver/CMakeLists.txt"
+		},
+		{
+			"path" : "src/tactic/portfolio/CMakeLists.txt"
+		},
+		{
+			"path" : "src/opt/CMakeLists.txt"
+		},
+		{
+			"path" : "src/api/CMakeLists.txt"
+		},
+		{
+			"path" : "src/api/dll/CMakeLists.txt"
+		},
+		{
+			"path" : "src/shell/CMakeLists.txt"
+		},
+		{
+			"path" : "src/test/CMakeLists.txt"
+		},
+		{
+			"path" : "src/test/fuzzing/CMakeLists.txt"
+		},
+		{
+			"path" : "src/test/lp/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.17/Modules/ExternalProject.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/examples/c_example-prefix/tmp/c_example-cfgcmd.txt.in"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/examples/c_maxsat_example-prefix/tmp/c_maxsat_example-cfgcmd.txt.in"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/examples/cpp_example-prefix/tmp/cpp_example-cfgcmd.txt.in"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/examples/z3_tptp5-prefix/tmp/z3_tptp5-cfgcmd.txt.in"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug",
+		"source" : "C:/Users/bottl/source/repos/z3"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}

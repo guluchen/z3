@@ -1,0 +1,641 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./binary_heap_priority_queue.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./binary_heap_upair_queue.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_bound_propagator.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./core_solver_pretty_printer.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./dense_matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./eta_matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./gomory.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./indexed_vector.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./int_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lar_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lar_core_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_core_solver_base.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_dual_core_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_dual_simplex.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_primal_core_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_primal_simplex.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_settings.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lu.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./lp_utils.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./nra_solver.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./permutation_matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./random_updater.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./row_eta_matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./scaler.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./square_dense_submatrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./square_sparse_matrix.cpp.obj"
+		},
+		{
+			"path" : "src/util/lp/CMakeFiles/lp.dir/./static_matrix.cpp.obj"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"z3_add_component",
+			"add_dependencies",
+			"z3_add_component_dependencies_to_target",
+			"target_compile_options",
+			"target_compile_definitions",
+			"INCLUDE_DIRECTORIES",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"cmake/z3_add_component.cmake",
+			"src/util/lp/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 199,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 231,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 6,
+				"file" : 2,
+				"line" : 155,
+				"parent" : 21
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS  /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1  "
+				},
+				{
+					"backtrace" : 8,
+					"fragment" : "-openmp"
+				},
+				{
+					"backtrace" : 9,
+					"fragment" : "/fp:precise"
+				},
+				{
+					"backtrace" : 10,
+					"fragment" : "/W3"
+				},
+				{
+					"backtrace" : 11,
+					"fragment" : "/Oy-"
+				},
+				{
+					"backtrace" : 12,
+					"fragment" : "/Gd"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 13,
+					"define" : "LEAN_DEBUG"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "Z3DEBUG"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_AMD64_"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_MP_INTERNAL"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "_TRACE"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 20,
+					"define" : "_WINDOWS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 22,
+					"path" : "/usr/local/include"
+				},
+				{
+					"backtrace" : 23,
+					"path" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 24,
+					"path" : "C:/Users/bottl/source/repos/z3/src"
+				}
+			],
+			"language" : "CXX",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "polynomial::@8d06ad2c9aca8e8772e2"
+		},
+		{
+			"backtrace" : 5,
+			"id" : "util::@6bc12a100e338ba65b7b"
+		},
+		{
+			"backtrace" : 6,
+			"id" : "sat::@d47bc915974f3a76f563"
+		},
+		{
+			"backtrace" : 7,
+			"id" : "nlsat::@0d70502d51e0aa911334"
+		}
+	],
+	"id" : "lp::@589d23d4da35a3b30593",
+	"name" : "lp",
+	"paths" : 
+	{
+		"build" : "src/util/lp",
+		"source" : "src/util/lp"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				29
+			]
+		},
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				30
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/binary_heap_priority_queue.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/binary_heap_upair_queue.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_bound_propagator.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/core_solver_pretty_printer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/dense_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/eta_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/gomory.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/indexed_vector.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/int_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lar_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lar_core_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_core_solver_base.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_dual_core_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_dual_simplex.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_primal_core_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_primal_simplex.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_settings.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lu.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/lp_utils.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/nra_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/permutation_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/random_updater.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/row_eta_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/scaler.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/square_dense_submatrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/square_sparse_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/util/lp/static_matrix.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/util/lp/lp_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/util/lp/lp_params.pyg",
+			"sourceGroupIndex" : 2
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

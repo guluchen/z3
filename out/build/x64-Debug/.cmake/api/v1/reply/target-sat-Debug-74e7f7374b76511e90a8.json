@@ -1,0 +1,617 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./ba_solver.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./dimacs.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_asymm_branch.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_bdd.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_big.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_clause.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_clause_set.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_clause_use_list.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_cleaner.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_config.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_drat.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_elim_eqs.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_elim_vars.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_iff3_finder.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_integrity_checker.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_local_search.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_lookahead.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_model_converter.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_mus.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_parallel.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_probing.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_scc.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_simplifier.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_solver.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_unit_walk.cpp.obj"
+		},
+		{
+			"path" : "src/sat/CMakeFiles/sat.dir/./sat_watched.cpp.obj"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"z3_add_component",
+			"add_dependencies",
+			"z3_add_component_dependencies_to_target",
+			"target_compile_options",
+			"target_compile_definitions",
+			"INCLUDE_DIRECTORIES",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"cmake/z3_add_component.cmake",
+			"src/sat/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 199,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 231,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 42,
+				"parent" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 207,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"command" : 5,
+				"file" : 0,
+				"line" : 203,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 6,
+				"file" : 2,
+				"line" : 155,
+				"parent" : 18
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			},
+			{
+				"command" : 7,
+				"file" : 0,
+				"line" : 237,
+				"parent" : 1
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS  /GR /EHsc /MDd /Zi /Ob0 /Od /RTC1  "
+				},
+				{
+					"backtrace" : 5,
+					"fragment" : "-openmp"
+				},
+				{
+					"backtrace" : 6,
+					"fragment" : "/fp:precise"
+				},
+				{
+					"backtrace" : 7,
+					"fragment" : "/W3"
+				},
+				{
+					"backtrace" : 8,
+					"fragment" : "/Oy-"
+				},
+				{
+					"backtrace" : 9,
+					"fragment" : "/Gd"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 10,
+					"define" : "LEAN_DEBUG"
+				},
+				{
+					"backtrace" : 11,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 12,
+					"define" : "Z3DEBUG"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "_AMD64_"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_MP_INTERNAL"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "_TRACE"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "_WINDOWS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 19,
+					"path" : "/usr/local/include"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug/src"
+				},
+				{
+					"backtrace" : 21,
+					"path" : "C:/Users/bottl/source/repos/z3/src"
+				}
+			],
+			"language" : "CXX",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "util::@6bc12a100e338ba65b7b"
+		}
+	],
+	"id" : "sat::@d47bc915974f3a76f563",
+	"name" : "sat",
+	"paths" : 
+	{
+		"build" : "src/sat",
+		"source" : "src/sat"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				26,
+				27,
+				28,
+				29
+			]
+		},
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				30,
+				31,
+				32,
+				33
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/ba_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/dimacs.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_asymm_branch.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_bdd.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_big.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_clause.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_clause_set.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_clause_use_list.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_cleaner.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_config.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_drat.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_elim_eqs.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_elim_vars.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_iff3_finder.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_integrity_checker.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_local_search.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_lookahead.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_model_converter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_mus.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_parallel.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_probing.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_scc.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_simplifier.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_solver.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_unit_walk.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "src/sat/sat_watched.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/sat/sat_asymm_branch_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/sat/sat_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/sat/sat_scc_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/src/sat/sat_simplifier_params.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/sat/sat_asymm_branch_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/sat/sat_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/sat/sat_scc_params.pyg",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"path" : "src/sat/sat_simplifier_params.pyg",
+			"sourceGroupIndex" : 2
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

@@ -1,0 +1,1739 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						68
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						70
+					]
+				},
+				{
+					"build" : "src",
+					"childIndexes" : 
+					[
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						35,
+						36,
+						37,
+						38,
+						39,
+						40,
+						41,
+						42,
+						43,
+						44,
+						45,
+						46,
+						47,
+						48,
+						49,
+						50,
+						51,
+						52,
+						53,
+						54,
+						55,
+						56,
+						57,
+						58,
+						59,
+						60,
+						61,
+						62,
+						63,
+						64,
+						65
+					],
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "src",
+					"targetIndexes" : 
+					[
+						28,
+						29
+					]
+				},
+				{
+					"build" : "src/util",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/util",
+					"targetIndexes" : 
+					[
+						71
+					]
+				},
+				{
+					"build" : "src/math/polynomial",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/polynomial",
+					"targetIndexes" : 
+					[
+						41
+					]
+				},
+				{
+					"build" : "src/sat",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/sat",
+					"targetIndexes" : 
+					[
+						49
+					]
+				},
+				{
+					"build" : "src/nlsat",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/nlsat",
+					"targetIndexes" : 
+					[
+						35
+					]
+				},
+				{
+					"build" : "src/util/lp",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/util/lp",
+					"targetIndexes" : 
+					[
+						30
+					]
+				},
+				{
+					"build" : "src/math/hilbert",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/hilbert",
+					"targetIndexes" : 
+					[
+						26
+					]
+				},
+				{
+					"build" : "src/math/simplex",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/simplex",
+					"targetIndexes" : 
+					[
+						53
+					]
+				},
+				{
+					"build" : "src/math/automata",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/automata",
+					"targetIndexes" : 
+					[
+						6
+					]
+				},
+				{
+					"build" : "src/math/interval",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/interval",
+					"targetIndexes" : 
+					[
+						27
+					]
+				},
+				{
+					"build" : "src/math/realclosure",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/realclosure",
+					"targetIndexes" : 
+					[
+						46
+					]
+				},
+				{
+					"build" : "src/math/subpaving",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/subpaving",
+					"targetIndexes" : 
+					[
+						62
+					]
+				},
+				{
+					"build" : "src/ast",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast",
+					"targetIndexes" : 
+					[
+						5
+					]
+				},
+				{
+					"build" : "src/ast/rewriter",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/rewriter",
+					"targetIndexes" : 
+					[
+						48
+					]
+				},
+				{
+					"build" : "src/ast/normal_forms",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/normal_forms",
+					"targetIndexes" : 
+					[
+						37
+					]
+				},
+				{
+					"build" : "src/model",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/model",
+					"targetIndexes" : 
+					[
+						33
+					]
+				},
+				{
+					"build" : "src/tactic",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic",
+					"targetIndexes" : 
+					[
+						66
+					]
+				},
+				{
+					"build" : "src/ast/substitution",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/substitution",
+					"targetIndexes" : 
+					[
+						64
+					]
+				},
+				{
+					"build" : "src/parsers/util",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/parsers/util",
+					"targetIndexes" : 
+					[
+						39
+					]
+				},
+				{
+					"build" : "src/math/grobner",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/grobner",
+					"targetIndexes" : 
+					[
+						25
+					]
+				},
+				{
+					"build" : "src/math/euclid",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/euclid",
+					"targetIndexes" : 
+					[
+						18
+					]
+				},
+				{
+					"build" : "src/tactic/core",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/core",
+					"targetIndexes" : 
+					[
+						14
+					]
+				},
+				{
+					"build" : "src/math/subpaving/tactic",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/math/subpaving/tactic",
+					"targetIndexes" : 
+					[
+						63
+					]
+				},
+				{
+					"build" : "src/tactic/aig",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/aig",
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"build" : "src/solver",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/solver",
+					"targetIndexes" : 
+					[
+						60
+					]
+				},
+				{
+					"build" : "src/sat/tactic",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/sat/tactic",
+					"targetIndexes" : 
+					[
+						51
+					]
+				},
+				{
+					"build" : "src/tactic/arith",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/arith",
+					"targetIndexes" : 
+					[
+						4
+					]
+				},
+				{
+					"build" : "src/nlsat/tactic",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/nlsat/tactic",
+					"targetIndexes" : 
+					[
+						36
+					]
+				},
+				{
+					"build" : "src/ackermannization",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ackermannization",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "src/cmd_context",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/cmd_context",
+					"targetIndexes" : 
+					[
+						13
+					]
+				},
+				{
+					"build" : "src/cmd_context/extra_cmds",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/cmd_context/extra_cmds",
+					"targetIndexes" : 
+					[
+						19
+					]
+				},
+				{
+					"build" : "src/parsers/smt2",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/parsers/smt2",
+					"targetIndexes" : 
+					[
+						56
+					]
+				},
+				{
+					"build" : "src/ast/proofs",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/proofs",
+					"targetIndexes" : 
+					[
+						43
+					]
+				},
+				{
+					"build" : "src/ast/fpa",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/fpa",
+					"targetIndexes" : 
+					[
+						22
+					]
+				},
+				{
+					"build" : "src/ast/macros",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/macros",
+					"targetIndexes" : 
+					[
+						32
+					]
+				},
+				{
+					"build" : "src/ast/pattern",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/pattern",
+					"targetIndexes" : 
+					[
+						40
+					]
+				},
+				{
+					"build" : "src/ast/rewriter/bit_blaster",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/ast/rewriter/bit_blaster",
+					"targetIndexes" : 
+					[
+						7
+					]
+				},
+				{
+					"build" : "src/smt/params",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/smt/params",
+					"targetIndexes" : 
+					[
+						57
+					]
+				},
+				{
+					"build" : "src/smt/proto_model",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/smt/proto_model",
+					"targetIndexes" : 
+					[
+						44
+					]
+				},
+				{
+					"build" : "src/smt",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/smt",
+					"targetIndexes" : 
+					[
+						55
+					]
+				},
+				{
+					"build" : "src/tactic/bv",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/bv",
+					"targetIndexes" : 
+					[
+						9
+					]
+				},
+				{
+					"build" : "src/smt/tactic",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/smt/tactic",
+					"targetIndexes" : 
+					[
+						58
+					]
+				},
+				{
+					"build" : "src/tactic/sls",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/sls",
+					"targetIndexes" : 
+					[
+						54
+					]
+				},
+				{
+					"build" : "src/qe",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/qe",
+					"targetIndexes" : 
+					[
+						45
+					]
+				},
+				{
+					"build" : "src/muz/base",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/base",
+					"targetIndexes" : 
+					[
+						34
+					]
+				},
+				{
+					"build" : "src/muz/dataflow",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/dataflow",
+					"targetIndexes" : 
+					[
+						16
+					]
+				},
+				{
+					"build" : "src/muz/transforms",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/transforms",
+					"targetIndexes" : 
+					[
+						68
+					]
+				},
+				{
+					"build" : "src/muz/rel",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/rel",
+					"targetIndexes" : 
+					[
+						47
+					]
+				},
+				{
+					"build" : "src/muz/clp",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/clp",
+					"targetIndexes" : 
+					[
+						12
+					]
+				},
+				{
+					"build" : "src/muz/tab",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/tab",
+					"targetIndexes" : 
+					[
+						65
+					]
+				},
+				{
+					"build" : "src/muz/bmc",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/bmc",
+					"targetIndexes" : 
+					[
+						8
+					]
+				},
+				{
+					"build" : "src/muz/ddnf",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/ddnf",
+					"targetIndexes" : 
+					[
+						17
+					]
+				},
+				{
+					"build" : "src/muz/spacer",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/spacer",
+					"targetIndexes" : 
+					[
+						61
+					]
+				},
+				{
+					"build" : "src/muz/fp",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/muz/fp",
+					"targetIndexes" : 
+					[
+						21
+					]
+				},
+				{
+					"build" : "src/tactic/ufbv",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/ufbv",
+					"targetIndexes" : 
+					[
+						69
+					]
+				},
+				{
+					"build" : "src/sat/sat_solver",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/sat/sat_solver",
+					"targetIndexes" : 
+					[
+						50
+					]
+				},
+				{
+					"build" : "src/tactic/smtlogics",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/smtlogics",
+					"targetIndexes" : 
+					[
+						59
+					]
+				},
+				{
+					"build" : "src/tactic/fpa",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/fpa",
+					"targetIndexes" : 
+					[
+						23
+					]
+				},
+				{
+					"build" : "src/tactic/fd_solver",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/fd_solver",
+					"targetIndexes" : 
+					[
+						20
+					]
+				},
+				{
+					"build" : "src/tactic/portfolio",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/tactic/portfolio",
+					"targetIndexes" : 
+					[
+						42
+					]
+				},
+				{
+					"build" : "src/opt",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/opt",
+					"targetIndexes" : 
+					[
+						38
+					]
+				},
+				{
+					"build" : "src/api",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/api",
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"build" : "src/api/dll",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/api/dll",
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"build" : "src/shell",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/shell",
+					"targetIndexes" : 
+					[
+						52
+					]
+				},
+				{
+					"build" : "src/test",
+					"childIndexes" : 
+					[
+						66,
+						67
+					],
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "src/test",
+					"targetIndexes" : 
+					[
+						67
+					]
+				},
+				{
+					"build" : "src/test/fuzzing",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 65,
+					"projectIndex" : 0,
+					"source" : "src/test/fuzzing",
+					"targetIndexes" : 
+					[
+						24
+					]
+				},
+				{
+					"build" : "src/test/lp",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 65,
+					"projectIndex" : 0,
+					"source" : "src/test/lp",
+					"targetIndexes" : 
+					[
+						31
+					]
+				},
+				{
+					"build" : "examples",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "2.8.12"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "examples",
+					"targetIndexes" : 
+					[
+						10,
+						11,
+						15,
+						72
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						35,
+						36,
+						37,
+						38,
+						39,
+						40,
+						41,
+						42,
+						43,
+						44,
+						45,
+						46,
+						47,
+						48,
+						49,
+						50,
+						51,
+						52,
+						53,
+						54,
+						55,
+						56,
+						57,
+						58,
+						59,
+						60,
+						61,
+						62,
+						63,
+						64,
+						65,
+						66,
+						67,
+						68
+					],
+					"name" : "Z3",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						35,
+						36,
+						37,
+						38,
+						39,
+						40,
+						41,
+						42,
+						43,
+						44,
+						45,
+						46,
+						47,
+						48,
+						49,
+						50,
+						51,
+						52,
+						53,
+						54,
+						55,
+						56,
+						57,
+						58,
+						59,
+						60,
+						61,
+						62,
+						63,
+						64,
+						65,
+						66,
+						67,
+						68,
+						69,
+						70,
+						71,
+						72
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 29,
+					"id" : "ackermannization::@0af9e61362aec5223954",
+					"jsonFile" : "target-ackermannization-Debug-413df760acf749447fb0.json",
+					"name" : "ackermannization",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 24,
+					"id" : "aig_tactic::@95cb9968617a17bbdb77",
+					"jsonFile" : "target-aig_tactic-Debug-904ea93a53fd22f99c82.json",
+					"name" : "aig_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 62,
+					"id" : "api::@f0e24b7f04f99860965c",
+					"jsonFile" : "target-api-Debug-fe3eac0d5c835ba110e4.json",
+					"name" : "api",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 63,
+					"id" : "api_dll::@18b3cd19fbb6cbff8c56",
+					"jsonFile" : "target-api_dll-Debug-6a9add929f702717adb9.json",
+					"name" : "api_dll",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 27,
+					"id" : "arith_tactics::@19e8c294bfdda7d34b92",
+					"jsonFile" : "target-arith_tactics-Debug-3a6873eb7c916c03dc5d.json",
+					"name" : "arith_tactics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 13,
+					"id" : "ast::@82451c30a77be7f89338",
+					"jsonFile" : "target-ast-Debug-e23be3d63d81d94ac6e9.json",
+					"name" : "ast",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 9,
+					"id" : "automata::@c03fdd289820959a05fe",
+					"jsonFile" : "target-automata-Debug-ef54d8ba3d45f3bcadf7.json",
+					"name" : "automata",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 37,
+					"id" : "bit_blaster::@4831973c81ed785dd86f",
+					"jsonFile" : "target-bit_blaster-Debug-8b57c571b9911d29ed3a.json",
+					"name" : "bit_blaster",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 51,
+					"id" : "bmc::@b6db138e054a6c7be994",
+					"jsonFile" : "target-bmc-Debug-36766905ba24954c7ac8.json",
+					"name" : "bmc",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 41,
+					"id" : "bv_tactics::@f293013ec1d162b008e2",
+					"jsonFile" : "target-bv_tactics-Debug-34859acf72a202b82dfb.json",
+					"name" : "bv_tactics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 68,
+					"id" : "c_example::@714eac15f71a94114fdf",
+					"jsonFile" : "target-c_example-Debug-be448f8816ece08ec3d7.json",
+					"name" : "c_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 68,
+					"id" : "c_maxsat_example::@714eac15f71a94114fdf",
+					"jsonFile" : "target-c_maxsat_example-Debug-fc479b549cab0c301a71.json",
+					"name" : "c_maxsat_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 49,
+					"id" : "clp::@a010afcf80d4e28a2d1f",
+					"jsonFile" : "target-clp-Debug-9e0db50d3b1f55bf8f0c.json",
+					"name" : "clp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 30,
+					"id" : "cmd_context::@a2a3a91db8f798611596",
+					"jsonFile" : "target-cmd_context-Debug-ec11bb73cf38ed33f6ac.json",
+					"name" : "cmd_context",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 22,
+					"id" : "core_tactics::@885f93e0c2973fa4378b",
+					"jsonFile" : "target-core_tactics-Debug-cdb97a8f96c8bfcde155.json",
+					"name" : "core_tactics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 68,
+					"id" : "cpp_example::@714eac15f71a94114fdf",
+					"jsonFile" : "target-cpp_example-Debug-54c4368f04d6312bbee9.json",
+					"name" : "cpp_example",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 46,
+					"id" : "dataflow::@bf3371a6058edd8d40d7",
+					"jsonFile" : "target-dataflow-Debug-d77cdd7a6dd7e5a60709.json",
+					"name" : "dataflow",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 52,
+					"id" : "ddnf::@0440c3597b0a11956c22",
+					"jsonFile" : "target-ddnf-Debug-f2cf97fd46c233a928e3.json",
+					"name" : "ddnf",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 21,
+					"id" : "euclid::@e9e8134fddb0cd14b7d2",
+					"jsonFile" : "target-euclid-Debug-4d7aa2db86f2c9040a48.json",
+					"name" : "euclid",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 31,
+					"id" : "extra_cmds::@3869cf29e633b9d3300a",
+					"jsonFile" : "target-extra_cmds-Debug-3bfeea30c1fd2d5a59cb.json",
+					"name" : "extra_cmds",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 59,
+					"id" : "fd_solver::@a712938b521207bb84bf",
+					"jsonFile" : "target-fd_solver-Debug-dffab95ef9d0a8ffb169.json",
+					"name" : "fd_solver",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 54,
+					"id" : "fp::@2af54cfe9acfe0e90db3",
+					"jsonFile" : "target-fp-Debug-0735a7caf7ab10303f76.json",
+					"name" : "fp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 34,
+					"id" : "fpa::@e00d574e2d4d4dd4f309",
+					"jsonFile" : "target-fpa-Debug-1fb4d6c0698bdb5ff905.json",
+					"name" : "fpa",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 58,
+					"id" : "fpa_tactics::@8e4a2d5745ea8648a823",
+					"jsonFile" : "target-fpa_tactics-Debug-ca9e4f4d21258e5197a1.json",
+					"name" : "fpa_tactics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 66,
+					"id" : "fuzzing::@fe7d2ce2516a247bbbd2",
+					"jsonFile" : "target-fuzzing-Debug-77d85784b61becc44366.json",
+					"name" : "fuzzing",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 20,
+					"id" : "grobner::@4eb6039e7a9ae76e0ba1",
+					"jsonFile" : "target-grobner-Debug-c81f1b335af94d7ff6de.json",
+					"name" : "grobner",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 7,
+					"id" : "hilbert::@4cdb285385639ed463f4",
+					"jsonFile" : "target-hilbert-Debug-549a44abcff9c76d86dc.json",
+					"name" : "hilbert",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 10,
+					"id" : "interval::@771d33181dff84a20d81",
+					"jsonFile" : "target-interval-Debug-1abea54dc97877a83ee1.json",
+					"name" : "interval",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "libz3::@145eef247bfb46b6828c",
+					"jsonFile" : "target-libz3-Debug-2457ec8b9dd7fc1fb217.json",
+					"name" : "libz3",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "libz3_extra_depends::@145eef247bfb46b6828c",
+					"jsonFile" : "target-libz3_extra_depends-Debug-d7716bc3e0d6413779f1.json",
+					"name" : "libz3_extra_depends",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 6,
+					"id" : "lp::@589d23d4da35a3b30593",
+					"jsonFile" : "target-lp-Debug-2211fe8826dbc2cf5c10.json",
+					"name" : "lp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 67,
+					"id" : "lp_tst::@e65c5745ec55783c7008",
+					"jsonFile" : "target-lp_tst-Debug-f0da4e6ba58c0c60bb6e.json",
+					"name" : "lp_tst",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 35,
+					"id" : "macros::@2a615f82f12ce5b2c1cd",
+					"jsonFile" : "target-macros-Debug-d97ebee1fd2803f9d5c7.json",
+					"name" : "macros",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 16,
+					"id" : "model::@dd52281f56f5d51f359a",
+					"jsonFile" : "target-model-Debug-3d7d6a6307397704bb99.json",
+					"name" : "model",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 45,
+					"id" : "muz::@7dacd7b1ea016243c19b",
+					"jsonFile" : "target-muz-Debug-2b4ebf02410fad2788a6.json",
+					"name" : "muz",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "nlsat::@0d70502d51e0aa911334",
+					"jsonFile" : "target-nlsat-Debug-81678e5d29cb633ba02d.json",
+					"name" : "nlsat",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 28,
+					"id" : "nlsat_tactic::@92432ad51f274673a66d",
+					"jsonFile" : "target-nlsat_tactic-Debug-d9d358506d0eb6651d90.json",
+					"name" : "nlsat_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 15,
+					"id" : "normal_forms::@01848afe0d99e15ba6cb",
+					"jsonFile" : "target-normal_forms-Debug-edeb61153324e3579a12.json",
+					"name" : "normal_forms",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 61,
+					"id" : "opt::@b42b5f10b4b5080c2a04",
+					"jsonFile" : "target-opt-Debug-197bdb01a06f29a0abd0.json",
+					"name" : "opt",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 19,
+					"id" : "parser_util::@950c1730cd40ce09d8fa",
+					"jsonFile" : "target-parser_util-Debug-3733f2ddca4e33775558.json",
+					"name" : "parser_util",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 36,
+					"id" : "pattern::@90beef24188963c12bc7",
+					"jsonFile" : "target-pattern-Debug-829044c6de7c364d0aa9.json",
+					"name" : "pattern",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "polynomial::@8d06ad2c9aca8e8772e2",
+					"jsonFile" : "target-polynomial-Debug-5f69cc0fa02ff53781b9.json",
+					"name" : "polynomial",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 60,
+					"id" : "portfolio::@f0a57562bcfa671bec2b",
+					"jsonFile" : "target-portfolio-Debug-ea8ca178e01f023492fc.json",
+					"name" : "portfolio",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 33,
+					"id" : "proofs::@203272206ddb96bdd54a",
+					"jsonFile" : "target-proofs-Debug-a0511672c3ad5e3d5ab8.json",
+					"name" : "proofs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 39,
+					"id" : "proto_model::@94e67a53e93b5fbe9c70",
+					"jsonFile" : "target-proto_model-Debug-1b9f6c0ea13267e2f9d7.json",
+					"name" : "proto_model",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 44,
+					"id" : "qe::@df10b3a77a3303825a78",
+					"jsonFile" : "target-qe-Debug-c220787e9ac75f9c1bf4.json",
+					"name" : "qe",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 11,
+					"id" : "realclosure::@0af1d9b3c69f220dd84a",
+					"jsonFile" : "target-realclosure-Debug-92716427f3dfcc0df156.json",
+					"name" : "realclosure",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 48,
+					"id" : "rel::@aca2c770ba0476bf78b0",
+					"jsonFile" : "target-rel-Debug-35869ea1b33dca44820a.json",
+					"name" : "rel",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 14,
+					"id" : "rewriter::@edda3ad5ea2f8f14cc34",
+					"jsonFile" : "target-rewriter-Debug-a099400234775d1a0fb7.json",
+					"name" : "rewriter",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 4,
+					"id" : "sat::@d47bc915974f3a76f563",
+					"jsonFile" : "target-sat-Debug-74e7f7374b76511e90a8.json",
+					"name" : "sat",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 56,
+					"id" : "sat_solver::@2680c2e3d82a770fd23d",
+					"jsonFile" : "target-sat_solver-Debug-a2a2bc05a5635650d2ba.json",
+					"name" : "sat_solver",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 26,
+					"id" : "sat_tactic::@031b9ebd0e99b81a54d9",
+					"jsonFile" : "target-sat_tactic-Debug-70b07b0eda60f1a44655.json",
+					"name" : "sat_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 64,
+					"id" : "shell::@f9a454401d50237771d4",
+					"jsonFile" : "target-shell-Debug-b53c84fe204b9355a5a5.json",
+					"name" : "shell",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "simplex::@6797ab799a40aa90d3fe",
+					"jsonFile" : "target-simplex-Debug-5db1e1d80877eed21a35.json",
+					"name" : "simplex",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 43,
+					"id" : "sls_tactic::@b5be0aa006e654286680",
+					"jsonFile" : "target-sls_tactic-Debug-5a8a8f89823726e88375.json",
+					"name" : "sls_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 40,
+					"id" : "smt::@348c3a94af092e249fef",
+					"jsonFile" : "target-smt-Debug-38f2c9e7f46d7d4047f9.json",
+					"name" : "smt",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 32,
+					"id" : "smt2parser::@5ec4922254221d73302f",
+					"jsonFile" : "target-smt2parser-Debug-918e79a8fc89ca21a9fa.json",
+					"name" : "smt2parser",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 38,
+					"id" : "smt_params::@97c7d1eba9c3d8b0fc12",
+					"jsonFile" : "target-smt_params-Debug-fd1a05e606618d89f233.json",
+					"name" : "smt_params",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 42,
+					"id" : "smt_tactic::@3bbbe66f51a390c8f5c9",
+					"jsonFile" : "target-smt_tactic-Debug-2ea800da1c4cb224805f.json",
+					"name" : "smt_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 57,
+					"id" : "smtlogic_tactics::@dcece79dc1ca7acfc9e7",
+					"jsonFile" : "target-smtlogic_tactics-Debug-7227345c782b3bc170f6.json",
+					"name" : "smtlogic_tactics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 25,
+					"id" : "solver::@56b03cb272704949ecff",
+					"jsonFile" : "target-solver-Debug-8796e0207c908e0e799e.json",
+					"name" : "solver",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 53,
+					"id" : "spacer::@f954b4a73a72a32ac3f9",
+					"jsonFile" : "target-spacer-Debug-12ef7f5696a80dab0364.json",
+					"name" : "spacer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 12,
+					"id" : "subpaving::@f83d39e3d0334f797d5e",
+					"jsonFile" : "target-subpaving-Debug-1da74c35f3d472b87e8d.json",
+					"name" : "subpaving",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 23,
+					"id" : "subpaving_tactic::@47f15004869d09010127",
+					"jsonFile" : "target-subpaving_tactic-Debug-f7a57eea92c616f7ca1b.json",
+					"name" : "subpaving_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 18,
+					"id" : "substitution::@abb9226f6363bba48eef",
+					"jsonFile" : "target-substitution-Debug-b0042bcf55f0fa1d1d2a.json",
+					"name" : "substitution",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 50,
+					"id" : "tab::@d91fc9ba432c99851aa1",
+					"jsonFile" : "target-tab-Debug-9265f91a713305d4b5c7.json",
+					"name" : "tab",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 17,
+					"id" : "tactic::@2f580a174d3ebf960039",
+					"jsonFile" : "target-tactic-Debug-1e24ab9617f27bfc6e0c.json",
+					"name" : "tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 65,
+					"id" : "test-z3::@b7fcbc08bf8df37e9c1b",
+					"jsonFile" : "target-test-z3-Debug-d808b86c217b59429f93.json",
+					"name" : "test-z3",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 47,
+					"id" : "transforms::@a337d6413d3e7e46265a",
+					"jsonFile" : "target-transforms-Debug-5e300c92732452b3adaa.json",
+					"name" : "transforms",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 55,
+					"id" : "ufbv_tactic::@fa3da1ea9db68296fc11",
+					"jsonFile" : "target-ufbv_tactic-Debug-084083912ab23c2e0717.json",
+					"name" : "ufbv_tactic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-Debug-3e6d43a0f0be102863ab.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "util::@6bc12a100e338ba65b7b",
+					"jsonFile" : "target-util-Debug-1c38eb6d5b880ca3ce42.json",
+					"name" : "util",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 68,
+					"id" : "z3_tptp5::@714eac15f71a94114fdf",
+					"jsonFile" : "target-z3_tptp5-Debug-13164dd3d84a3f622354.json",
+					"name" : "z3_tptp5",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/bottl/source/repos/z3/out/build/x64-Debug",
+		"source" : "C:/Users/bottl/source/repos/z3"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 0
+	}
+}
