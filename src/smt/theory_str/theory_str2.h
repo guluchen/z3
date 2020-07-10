@@ -106,10 +106,21 @@ namespace smt {
 
 
         //
-        app* mk_int_var(std::string name);
+        static app* mk_int_var(std::string name, context& ctx, ast_manager& m, arith_util m_util_a, seq_util m_util_s);
         app* mk_fresh_const(char const* name, sort* s);
         void word_term_to_list(expr* e, std::list<std::pair<char, std::string>>& word_term_list) const;
-        
+        expr_ref eq_word_term_lists_to_expr_ref(context& ctx, ast_manager& m, std::list<std::pair<char, std::string>>& L_term_list, std::list<std::pair<char, std::string>>& R_term_list, unsigned loop_size, unsigned num_loop);
+        void str_str_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_str, context& ctx, ast_manager& m);
+        void str_var_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+        void var_str_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_str, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+        void var_var_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+        void len_update(expr_ref& term_len, char type, std::string name, unsigned num_loop, context& ctx, ast_manager& m);
+        std::tuple<expr_ref, expr_ref, expr_ref> diseq_word_term_lists_to_expr_ref(context& ctx, ast_manager& m, std::list<std::pair<char, std::string>>& L_term_list, std::list<std::pair<char, std::string>>& R_term_list, unsigned loop_size, unsigned num_loop);
+        void str_str_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_str, context& ctx, ast_manager& m);
+        void str_var_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+        void var_str_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_str, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+        void var_var_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m);
+
 
     private:
         bool is_of_this_theory(expr *e) const;

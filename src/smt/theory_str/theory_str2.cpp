@@ -17,6 +17,8 @@
 #include <model/model_smt2_pp.h>
 
 
+
+
 namespace smt {
     bool theory_str2::is_over_approximation = false;
 
@@ -511,40 +513,6 @@ namespace smt {
     
 
 
-    zstring theory_str2::print_word_term(expr* e) const {
-        zstring s;
-        if (m_util_s.str.is_string(e, s)) {
-            if (s == zstring("")) {
-                s = zstring("E()");
-            }
-            else {
-                s = zstring("S(") + s + zstring(")");
-            }
-            return s;
-        }
-        if (m_util_s.str.is_concat(e)) {
-            //e is a concat of some elements
-            for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
-                s = s + print_word_term(to_app(e)->get_arg(i));
-            }
-            return s;
-        }
-        // String to Integer
-        if (m_util_s.str.is_stoi(e)) {
-            return zstring("stoi");
-        }
-        // Integer to String
-        if (m_util_s.str.is_itos(e)) {
-            return zstring("itos");
-        }
-
-        // e is a string variable
-        std::stringstream ss;
-        ss << "V(" << mk_pp(e, get_manager()) << ")";
-        s = zstring(ss.str().data());
-        return s;
-
-    }
 
 
 
@@ -1179,13 +1147,46 @@ namespace smt {
 
 
 
-    ////////////////////////////////
+////////////////////////////////
+
+    zstring theory_str2::print_word_term(expr* e) const {
+        zstring s;
+        if (m_util_s.str.is_string(e, s)) {
+            if (s == zstring("")) {
+                s = zstring("E()");
+            }
+            else {
+                s = zstring("S(") + s + zstring(")");
+            }
+            return s;
+        }
+        if (m_util_s.str.is_concat(e)) {
+            //e is a concat of some elements
+            for (unsigned i = 0; i < to_app(e)->get_num_args(); i++) {
+                s = s + print_word_term(to_app(e)->get_arg(i));
+            }
+            return s;
+        }
+        // String to Integer
+        if (m_util_s.str.is_stoi(e)) {
+            return zstring("stoi");
+        }
+        // Integer to String
+        if (m_util_s.str.is_itos(e)) {
+            return zstring("itos");
+        }
+
+        // e is a string variable
+        std::stringstream ss;
+        ss << "V(" << mk_pp(e, get_manager()) << ")";
+        s = zstring(ss.str().data());
+        return s;
+
+    }
 // my functions
 
     void theory_str2::word_term_to_list(expr* e, std::list<std::pair<char, std::string>>& word_term_list) const
     {
-        //std::cout << "Hello, Yen!\n";
-
         zstring s;
         if (m_util_s.str.is_string(e, s)) {
             if (s == zstring("")) {
@@ -1210,19 +1211,587 @@ namespace smt {
         std::stringstream ss;
         std::string var_str;
         ss <<  mk_pp(e, get_manager());
-        ss >> var_str;
+        s = zstring(ss.str().data());
         
-        word_term_list.push_back(std::make_pair('V', var_str));
+        word_term_list.push_back(std::make_pair('V', s.as_string()));
         return;
     };
+
+
+    std::tuple<expr_ref, expr_ref, expr_ref> theory_str2::diseq_word_term_lists_to_expr_ref(context& ctx, ast_manager& m, std::list<std::pair<char, std::string>>& L_term_list, std::list<std::pair<char, std::string>>& R_term_list, unsigned loop_size, unsigned num_loop)
+    {
+        expr_ref int_formula_pos_cond(m.mk_false(), m);
+        expr_ref int_formula_len_bound(m.mk_true(), m);
+        
+
+        
+        expr_ref L_term_pre_len(m_util_a.mk_int(0), m);
+        expr_ref R_term_pre_len(m_util_a.mk_int(0), m);
+        for (std::list<std::pair<char, std::string>>::iterator L_it = L_term_list.begin(); L_it != L_term_list.end(); ++L_it)
+        {
+            R_term_pre_len = m_util_a.mk_int(0);
+            for (std::list<std::pair<char, std::string>>::iterator R_it = R_term_list.begin(); R_it != R_term_list.end(); ++R_it)
+            {
+                if ((*L_it).first == 'E' || (*R_it).first == 'E')
+                {
+                    if ((*L_it).first != 'E' || (*R_it).first != 'E')
+                        int_formula_pos_cond = m.mk_true();
+                }
+                else if ((*L_it).first == 'S' && (*R_it).first == 'S')
+                    str_str_symbol_not_match_to_expr_ref(int_formula_pos_cond, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, ctx, m);
+                else if ((*L_it).first == 'S' && (*R_it).first == 'V')
+                    str_var_symbol_not_match_to_expr_ref(int_formula_pos_cond, int_formula_len_bound, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+                else if ((*L_it).first == 'V' && (*R_it).first == 'S')
+                    var_str_symbol_not_match_to_expr_ref(int_formula_pos_cond, int_formula_len_bound, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+                else if ((*L_it).first == 'V' && (*R_it).first == 'V')
+                    var_var_symbol_not_match_to_expr_ref(int_formula_pos_cond, int_formula_len_bound, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+
+                // R_pre_len_update
+                len_update(R_term_pre_len, (*R_it).first, (*R_it).second, num_loop, ctx, m);
+            }
+            // L_pre_len_update
+            len_update(L_term_pre_len, (*L_it).first, (*L_it).second, num_loop, ctx, m);
+        }
+        
+        expr_ref int_formula_len_cond(m.mk_not(m_util_a.mk_eq(L_term_pre_len, R_term_pre_len)), m);
+
+        
+        return std::make_tuple(int_formula_pos_cond,int_formula_len_bound,int_formula_len_cond);
+    }
+
+    expr_ref theory_str2::eq_word_term_lists_to_expr_ref(context& ctx, ast_manager& m, std::list<std::pair<char, std::string>>& L_term_list, std::list<std::pair<char, std::string>>& R_term_list, unsigned loop_size, unsigned num_loop)
+    {
+        expr_ref int_formula(m.mk_true(), m);
+
+        expr_ref L_term_pre_len(m_util_a.mk_int(0), m);
+        expr_ref R_term_pre_len(m_util_a.mk_int(0), m);
+        for (std::list<std::pair<char, std::string>>::iterator L_it = L_term_list.begin(); L_it != L_term_list.end(); ++L_it)
+        {
+            R_term_pre_len = m_util_a.mk_int(0);
+            for (std::list<std::pair<char, std::string>>::iterator R_it = R_term_list.begin(); R_it != R_term_list.end(); ++R_it)
+            {
+                if ((*L_it).first == 'E' || (*R_it).first == 'E')
+                {
+                    if ((*L_it).first != 'E' || (*R_it).first != 'E')
+                        int_formula = m.mk_and(int_formula, m.mk_false());
+                }
+                else if ((*L_it).first == 'S' && (*R_it).first == 'S')
+                    str_str_symbol_match_to_expr_ref(int_formula, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, ctx, m);
+                else if ((*L_it).first == 'S' && (*R_it).first == 'V')
+                    str_var_symbol_match_to_expr_ref(int_formula, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+                else if ((*L_it).first == 'V' && (*R_it).first == 'S')
+                    var_str_symbol_match_to_expr_ref(int_formula, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+                else if ((*L_it).first == 'V' && (*R_it).first == 'V')
+                    var_var_symbol_match_to_expr_ref(int_formula, L_term_pre_len, R_term_pre_len, (*L_it).second, (*R_it).second, loop_size, num_loop, ctx, m);
+
+                // R_pre_len_update
+                len_update(R_term_pre_len, (*R_it).first, (*R_it).second, num_loop, ctx, m);
+            }
+            // L_pre_len_update
+            len_update(L_term_pre_len, (*L_it).first, (*L_it).second, num_loop, ctx, m);
+        }
+
+        int_formula = m.mk_and(int_formula, m_util_a.mk_eq(L_term_pre_len, R_term_pre_len));
+
+        return int_formula;
+    };
+
+    void theory_str2::len_update(expr_ref& term_len, char type, std::string name, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        if (type == 'S')
+            term_len = m_util_a.mk_add(term_len, m_util_a.mk_int(name.size()));
+        else if (type == 'V')
+        {
+            for (unsigned i = 0; i < num_loop; i++)
+            {
+                expr_ref var_loop_i(smt::theory_str2::mk_int_var(name + "_loop_" + std::to_string(i), ctx, m, m_util_a, m_util_s), m);
+                expr_ref var_loop_i_len(smt::theory_str2::mk_int_var(name + "_loop_" + std::to_string(i) + "_len", ctx, m, m_util_a, m_util_s), m);
+                term_len = m_util_a.mk_add(term_len, m_util_a.mk_mul(var_loop_i,var_loop_i_len));
+            }
+                
+        }
+    };
+
+
+    void theory_str2::str_str_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_str, context& ctx, ast_manager& m)
+    {
+        
+        for (unsigned i = 0; i < L_str.size(); i++)
+        {
+            expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(i)),m);
+            for (unsigned j = 0; j < R_str.size(); j++)
+            {
+                expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(j)), m);
+                expr_ref len_eq(m_util_a.mk_eq(L_len, R_len), m);
+                expr_ref symbol_eq(m.mk_eq(m_util_a.mk_int((int)(L_str[i])), m_util_a.mk_int(int(R_str[j]))), m);
+                int_formula = m.mk_and(int_formula, m.mk_implies(len_eq, symbol_eq));
+            }
+        }
+    };
+
+    void theory_str2::str_str_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_str, context& ctx, ast_manager& m)
+    {
+
+        for (unsigned i = 0; i < L_str.size(); i++)
+        {
+            expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(i)), m);
+            for (unsigned j = 0; j < R_str.size(); j++)
+            {
+                expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(j)), m);
+                expr_ref len_eq(m_util_a.mk_eq(L_len, R_len), m);
+                expr_ref symbol_not_eq(m.mk_not(m.mk_eq(m_util_a.mk_int((int)(L_str[i])), m_util_a.mk_int(int(R_str[j])))), m);
+                int_formula_pos_cond = m.mk_or(int_formula_pos_cond, m.mk_and(len_eq, symbol_not_eq));
+            }
+        }
+    };
+
+
+    void theory_str2::str_var_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        
+        for (unsigned i = 0; i < L_str.size(); i++)
+        {
+            expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(i)), m);
+            expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(0)), m);
+            for (unsigned j = 0; j < num_loop; j++)
+            {
+                expr_ref R_var_loop_j(smt::theory_str2::mk_int_var(R_var+ "_loop_" + std::to_string(j), ctx, m, m_util_a, m_util_s), m);
+                expr_ref R_var_loop_j_len(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(j) + "_len", ctx, m, m_util_a, m_util_s), m);
+                if (j % 2 == 0)
+                    int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_loop_j, m_util_a.mk_int(0)));
+                else
+                    int_formula = m.mk_and(int_formula, m_util_a.mk_eq(R_var_loop_j, m_util_a.mk_int(1)));
+                for (unsigned k = 0; k < loop_size; k++)
+                {
+                    expr_ref R_var_j_k(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(j) + "_" + std::to_string(k), ctx, m, m_util_a, m_util_s), m);
+                    int_formula = m.mk_and(int_formula, m_util_a.mk_lt(R_var_j_k, m_util_a.mk_int(128)));
+                    if (k == 0)
+                    {
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(1)));
+                        if (loop_size == 1)
+                            int_formula = m.mk_and(int_formula, m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(1)));
+                    }
+                    else
+                    {
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(0)));                       
+                        expr_ref R_var_j_k_pre(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(j) + "_" + std::to_string(k-1), ctx, m, m_util_a, m_util_s), m);
+                        expr_ref premise(m_util_a.mk_eq(R_var_j_k_pre, m_util_a.mk_int(0)), m);
+                        expr_ref conclusion(m_util_a.mk_eq(R_var_j_k, m_util_a.mk_int(0)), m);
+                        int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                        premise = m.mk_and(m_util_a.mk_ge(R_var_j_k_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(R_var_j_k, m_util_a.mk_int(0)));
+                        conclusion = m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(k));
+                        int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                        if (k == loop_size - 1)
+                        {
+                            premise = m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(1));
+                            conclusion = m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(loop_size));
+                            int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+                        }
+                    }
+                    
+                    //
+                    expr_ref len_bw(m_util_a.mk_gt(m_util_a.mk_add(L_len, m_util_a.mk_int(1)), R_len), m);
+                    len_bw = m.mk_and(len_bw, m_util_a.mk_le(m_util_a.mk_add(L_len, m_util_a.mk_int(1)), m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_j, R_var_loop_j_len))));
+
+                    expr_ref pos_match(m_util_a.mk_add(R_len, m_util_a.mk_int(k)), m);
+                    pos_match = m_util_a.mk_sub(L_len, pos_match);
+                    pos_match = m_util_a.mk_mod(pos_match, R_var_loop_j_len);
+                    pos_match = m_util_a.mk_eq(pos_match, m_util_a.mk_int(0));
+                    pos_match = m.mk_and(pos_match, m_util_a.mk_lt(m_util_a.mk_int(k), R_var_loop_j_len));
+
+                    expr_ref symbol_eq(m_util_a.mk_eq(m_util_a.mk_int((int)(L_str[i])), R_var_j_k), m);
+
+                    int_formula = m.mk_and(int_formula, m.mk_implies(m.mk_and(len_bw, pos_match), symbol_eq));
+                }
+                R_len = m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_j, R_var_loop_j_len));
+            }
+        }
+    };
+
+
+    void theory_str2::var_str_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_str, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        str_var_symbol_match_to_expr_ref(int_formula, R_pre_len, L_pre_len, R_str, L_var, loop_size, num_loop, ctx, m);
+    };
+
+  
+    void theory_str2::var_str_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_str, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        str_var_symbol_not_match_to_expr_ref(int_formula_pos_cond, int_formula_len_cond, R_pre_len, L_pre_len, R_str, L_var, loop_size, num_loop, ctx, m);
+    }
+
+    void theory_str2::str_var_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_str, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+
+        for (unsigned i = 0; i < L_str.size(); i++)
+        {
+            expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(i)), m);
+            expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(0)), m);
+            for (unsigned j = 0; j < num_loop; j++)
+            {
+                expr_ref R_var_loop_j(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(j), ctx, m, m_util_a, m_util_s), m);
+                expr_ref R_var_loop_j_len(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(j) + "_len", ctx, m, m_util_a, m_util_s), m);
+                if (j % 2 == 0)
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_loop_j, m_util_a.mk_int(0)));
+                else
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(R_var_loop_j, m_util_a.mk_int(1)));
+                for (unsigned k = 0; k < loop_size; k++)
+                {
+                    expr_ref R_var_j_k(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(j) + "_" + std::to_string(k), ctx, m, m_util_a, m_util_s), m);
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_lt(R_var_j_k, m_util_a.mk_int(128)));
+                    if (k == 0)
+                    {
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(1)));
+                        if (loop_size == 1)
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(1)));
+                    }
+                    else
+                    {
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(0)));
+                        expr_ref R_var_j_k_pre(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(j) + "_" + std::to_string(k - 1), ctx, m, m_util_a, m_util_s), m);
+                        expr_ref premise(m_util_a.mk_eq(R_var_j_k_pre, m_util_a.mk_int(0)), m);
+                        expr_ref conclusion(m_util_a.mk_eq(R_var_j_k, m_util_a.mk_int(0)), m);
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                        premise = m.mk_and(m_util_a.mk_ge(R_var_j_k_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(R_var_j_k, m_util_a.mk_int(0)));
+                        conclusion = m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(k));
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                        if (k == loop_size - 1)
+                        {
+                            premise = m_util_a.mk_ge(R_var_j_k, m_util_a.mk_int(1));
+                            conclusion = m_util_a.mk_eq(R_var_loop_j_len, m_util_a.mk_int(loop_size));
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+                        }
+                    }
+
+                    //
+                    expr_ref len_bw(m_util_a.mk_gt(m_util_a.mk_add(L_len, m_util_a.mk_int(1)), R_len), m);
+                    len_bw = m.mk_and(len_bw, m_util_a.mk_le(m_util_a.mk_add(L_len, m_util_a.mk_int(1)), m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_j, R_var_loop_j_len))));
+
+                    expr_ref pos_match(m_util_a.mk_add(R_len, m_util_a.mk_int(k)), m);
+                    pos_match = m_util_a.mk_sub(L_len, pos_match);
+                    pos_match = m_util_a.mk_mod(pos_match, R_var_loop_j_len);
+                    pos_match = m_util_a.mk_eq(pos_match, m_util_a.mk_int(0));
+                    pos_match = m.mk_and(pos_match, m_util_a.mk_lt(m_util_a.mk_int(k), R_var_loop_j_len));
+
+                    expr_ref symbol_not_eq(m.mk_not(m_util_a.mk_eq(m_util_a.mk_int((int)(L_str[i])), R_var_j_k)), m);
+
+                    int_formula_pos_cond = m.mk_or(int_formula_pos_cond, m.mk_and(m.mk_and(len_bw, pos_match), symbol_not_eq));
+                }
+                R_len = m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_j, R_var_loop_j_len));
+            }
+        }
+    };
+    
+
+
+    void theory_str2::var_var_symbol_match_to_expr_ref(expr_ref& int_formula, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(0)), m);
+        for (unsigned i = 0; i < num_loop; i++)
+        {
+            expr_ref L_var_loop_i(smt::theory_str2::mk_int_var(L_var + "_loop_" + std::to_string(i), ctx, m, m_util_a, m_util_s), m);
+            expr_ref L_var_loop_i_len(smt::theory_str2::mk_int_var(L_var + "_loop_" + std::to_string(i) + "_len", ctx, m, m_util_a, m_util_s), m);
+            if (i % 2 == 0)
+                int_formula = m.mk_and(int_formula, m_util_a.mk_ge(L_var_loop_i, m_util_a.mk_int(0)));
+            else
+                int_formula = m.mk_and(int_formula, m_util_a.mk_eq(L_var_loop_i, m_util_a.mk_int(1)));
+            for (unsigned j = 0; j < loop_size; j++)
+            {
+                expr_ref L_var_i_j(smt::theory_str2::mk_int_var(L_var + "_" + std::to_string(i) + "_" + std::to_string(j), ctx, m, m_util_a, m_util_s), m);
+                int_formula = m.mk_and(int_formula, m_util_a.mk_lt(L_var_i_j, m_util_a.mk_int(128)));
+                if (j == 0)
+                {
+                    int_formula = m.mk_and(int_formula, m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(1)));
+                    if (loop_size == 1)
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(1)));
+                }
+                else
+                {
+                    int_formula = m.mk_and(int_formula, m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(0)));
+                    expr_ref L_var_i_j_pre(smt::theory_str2::mk_int_var(L_var + "_" + std::to_string(i) + "_" + std::to_string(j - 1), ctx, m, m_util_a, m_util_s), m);
+                    expr_ref premise(m_util_a.mk_eq(L_var_i_j_pre, m_util_a.mk_int(0)), m);
+                    expr_ref conclusion(m_util_a.mk_eq(L_var_i_j, m_util_a.mk_int(0)), m);
+                    int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                    premise = m.mk_and(m_util_a.mk_ge(L_var_i_j_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(L_var_i_j, m_util_a.mk_int(0)));
+                    conclusion = m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(j));
+                    int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                    if (j == loop_size - 1)
+                    {
+                        premise = m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(1));
+                        conclusion = m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(loop_size));
+                        int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+                    }
+                }
+
+
+                expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(0)), m);
+                for (unsigned k = 0; k < num_loop; k++)
+                {
+                    expr_ref R_var_loop_k(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(k), ctx, m, m_util_a, m_util_s), m);
+                    expr_ref R_var_loop_k_len(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(k) + "_len", ctx, m, m_util_a, m_util_s), m);
+                    if (k % 2 == 0)
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_loop_k, m_util_a.mk_int(0)));
+                    else
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_eq(R_var_loop_k, m_util_a.mk_int(1)));
+
+                    for (unsigned n = 0; n < loop_size; n++)
+                    {
+                        expr_ref R_var_k_n(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(k) + "_" + std::to_string(n), ctx, m, m_util_a, m_util_s), m);
+                        int_formula = m.mk_and(int_formula, m_util_a.mk_lt(R_var_k_n, m_util_a.mk_int(128)));
+                        if (n == 0)
+                        {
+                            int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(1)));
+                            if (loop_size == 1)
+                                int_formula = m.mk_and(int_formula, m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(1)));
+                        }
+                        else
+                        {
+                            int_formula = m.mk_and(int_formula, m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(0)));
+                            expr_ref R_var_k_n_pre(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(k) + "_" + std::to_string(n - 1), ctx, m, m_util_a, m_util_s), m);
+                            expr_ref premise(m_util_a.mk_eq(R_var_k_n_pre, m_util_a.mk_int(0)), m);
+                            expr_ref conclusion(m_util_a.mk_eq(R_var_k_n, m_util_a.mk_int(0)), m);
+                            int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                            premise = m.mk_and(m_util_a.mk_ge(R_var_k_n_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(R_var_k_n, m_util_a.mk_int(0)));
+                            conclusion = m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(n));
+                            int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+
+                            if (n == loop_size - 1)
+                            {
+                                premise = m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(1));
+                                conclusion = m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(loop_size));
+                                int_formula = m.mk_and(int_formula, m.mk_implies(premise, conclusion));
+                            }
+                        } 
+                        //
+                        expr_ref L_R_Dif(m_util_a.mk_sub(L_len,R_len), m);
+
+                        // L_len <= R_len
+                        expr_ref L_shift(m_util_a.mk_mod(m_util_a.mk_add(m_util_a.mk_int(j), L_R_Dif), L_var_loop_i_len), m);
+                        expr_ref L_len_cur_part_bound(m_util_a.mk_add(m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len), L_R_Dif),m);
+                        expr_ref R_len_cur_part_bound(m_util_a.mk_mul(R_var_loop_k, R_var_loop_k_len), m);
+                        for (unsigned jj = 0; jj < 2*loop_size+1; jj++)
+                        {       
+                            expr_ref L_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(jj),L_var_loop_i_len), L_shift), m);
+                            for (unsigned nn = 0; nn < 2 * loop_size + 1; nn++)
+                            {
+                                expr_ref R_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(nn), R_var_loop_k_len), m_util_a.mk_int(n)), m);
+
+                                expr_ref len_eq_with_bound_sat(m_util_a.mk_eq(L_len_cur_part, R_len_cur_part), m);
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(L_len_cur_part, L_len_cur_part_bound));
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(R_len_cur_part, R_len_cur_part_bound));
+
+                                expr_ref premise(m_util_a.mk_lt(m_util_a.mk_int(j), L_var_loop_i_len), m);
+                                premise = m.mk_and(premise, m_util_a.mk_lt(m_util_a.mk_int(n), R_var_loop_k_len));
+                                premise = m.mk_and(premise, m_util_a.mk_le(L_R_Dif, m_util_a.mk_int(0)));
+                                premise = m.mk_and(premise, len_eq_with_bound_sat);
+
+                                expr_ref symbol_eq(m_util_a.mk_eq(L_var_i_j, R_var_k_n), m);
+
+                                int_formula = m.mk_and(int_formula, m.mk_implies(premise, symbol_eq));
+                            }
+
+                        }
+                        // L_len > R_len
+                        expr_ref R_shift(m_util_a.mk_mod(m_util_a.mk_sub(m_util_a.mk_int(n), L_R_Dif), R_var_loop_k_len), m);
+                        L_len_cur_part_bound = m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len);
+                        R_len_cur_part_bound = m_util_a.mk_sub(R_len_cur_part_bound, L_R_Dif);
+                        for (unsigned jj = 0; jj < 2 * loop_size + 1; jj++)
+                        {
+                            expr_ref L_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(jj), L_var_loop_i_len), m_util_a.mk_int(j)), m);
+                            for (unsigned nn = 0; nn < 2 * loop_size + 1; nn++)
+                            {
+                                expr_ref R_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(nn), R_var_loop_k_len), R_shift), m);
+
+                                expr_ref len_eq_with_bound_sat(m_util_a.mk_eq(L_len_cur_part, R_len_cur_part), m);
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(L_len_cur_part, L_len_cur_part_bound));
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(R_len_cur_part, R_len_cur_part_bound));
+
+                                expr_ref premise(m_util_a.mk_lt(m_util_a.mk_int(j), L_var_loop_i_len), m);
+                                premise = m.mk_and(premise, m_util_a.mk_lt(m_util_a.mk_int(n), R_var_loop_k_len));
+                                premise = m.mk_and(premise, m_util_a.mk_gt(L_R_Dif, m_util_a.mk_int(0)));
+                                premise = m.mk_and(premise, len_eq_with_bound_sat);
+
+                                expr_ref symbol_eq(m_util_a.mk_eq(L_var_i_j, R_var_k_n), m);
+
+                                int_formula = m.mk_and(int_formula, m.mk_implies(premise, symbol_eq));
+                            }
+
+                        }
+
+                    }
+                    
+                    R_len = m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_k, R_var_loop_k_len));
+                }
+            }
+
+            L_len = m_util_a.mk_add(L_len, m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len));
+        }
+    };
+
+
+
+
+    void theory_str2::var_var_symbol_not_match_to_expr_ref(expr_ref& int_formula_pos_cond, expr_ref& int_formula_len_cond, expr_ref& L_pre_len, expr_ref& R_pre_len, std::string L_var, std::string R_var, unsigned loop_size, unsigned num_loop, context& ctx, ast_manager& m)
+    {
+        expr_ref L_len(m_util_a.mk_add(L_pre_len, m_util_a.mk_int(0)), m);
+        for (unsigned i = 0; i < num_loop; i++)
+        {
+            expr_ref L_var_loop_i(smt::theory_str2::mk_int_var(L_var + "_loop_" + std::to_string(i), ctx, m, m_util_a, m_util_s), m);
+            expr_ref L_var_loop_i_len(smt::theory_str2::mk_int_var(L_var + "_loop_" + std::to_string(i) + "_len", ctx, m, m_util_a, m_util_s), m);
+            if (i % 2 == 0)
+                int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(L_var_loop_i, m_util_a.mk_int(0)));
+            else
+                int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(L_var_loop_i, m_util_a.mk_int(1)));
+            for (unsigned j = 0; j < loop_size; j++)
+            {
+                expr_ref L_var_i_j(smt::theory_str2::mk_int_var(L_var + "_" + std::to_string(i) + "_" + std::to_string(j), ctx, m, m_util_a, m_util_s), m);
+                if (j == 0)
+                {
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(1)));
+                    if (loop_size == 1)
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(1)));
+                }
+                else
+                {
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(0)));
+                    expr_ref L_var_i_j_pre(smt::theory_str2::mk_int_var(L_var + "_" + std::to_string(i) + "_" + std::to_string(j - 1), ctx, m, m_util_a, m_util_s), m);
+                    expr_ref premise(m_util_a.mk_eq(L_var_i_j_pre, m_util_a.mk_int(0)), m);
+                    expr_ref conclusion(m_util_a.mk_eq(L_var_i_j, m_util_a.mk_int(0)), m);
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                    premise = m.mk_and(m_util_a.mk_ge(L_var_i_j_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(L_var_i_j, m_util_a.mk_int(0)));
+                    conclusion = m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(j));
+                    int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                    if (j == loop_size - 1)
+                    {
+                        premise = m_util_a.mk_ge(L_var_i_j, m_util_a.mk_int(1));
+                        conclusion = m_util_a.mk_eq(L_var_loop_i_len, m_util_a.mk_int(loop_size));
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+                    }
+                }
+
+
+                expr_ref R_len(m_util_a.mk_add(R_pre_len, m_util_a.mk_int(0)), m);
+                for (unsigned k = 0; k < num_loop; k++)
+                {
+                    expr_ref R_var_loop_k(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(k), ctx, m, m_util_a, m_util_s), m);
+                    expr_ref R_var_loop_k_len(smt::theory_str2::mk_int_var(R_var + "_loop_" + std::to_string(k) + "_len", ctx, m, m_util_a, m_util_s), m);
+                    if (k % 2 == 0)
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_loop_k, m_util_a.mk_int(0)));
+                    else
+                        int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(R_var_loop_k, m_util_a.mk_int(1)));
+
+                    for (unsigned n = 0; n < loop_size; n++)
+                    {
+                        expr_ref R_var_k_n(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(k) + "_" + std::to_string(n), ctx, m, m_util_a, m_util_s), m);
+                        if (n == 0)
+                        {
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(1)));
+                            if (loop_size == 1)
+                                int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(1)));
+                        }
+                        else
+                        {
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(0)));
+                            expr_ref R_var_k_n_pre(smt::theory_str2::mk_int_var(R_var + "_" + std::to_string(k) + "_" + std::to_string(n - 1), ctx, m, m_util_a, m_util_s), m);
+                            expr_ref premise(m_util_a.mk_eq(R_var_k_n_pre, m_util_a.mk_int(0)), m);
+                            expr_ref conclusion(m_util_a.mk_eq(R_var_k_n, m_util_a.mk_int(0)), m);
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                            premise = m.mk_and(m_util_a.mk_ge(R_var_k_n_pre, m_util_a.mk_int(1)), m_util_a.mk_eq(R_var_k_n, m_util_a.mk_int(0)));
+                            conclusion = m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(n));
+                            int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+
+                            if (n == loop_size - 1)
+                            {
+                                premise = m_util_a.mk_ge(R_var_k_n, m_util_a.mk_int(1));
+                                conclusion = m_util_a.mk_eq(R_var_loop_k_len, m_util_a.mk_int(loop_size));
+                                int_formula_len_cond = m.mk_and(int_formula_len_cond, m.mk_implies(premise, conclusion));
+                            }
+                        }
+                        //
+                        expr_ref L_R_Dif(m_util_a.mk_sub(L_len, R_len), m);
+
+                        // L_len <= R_len
+                        expr_ref L_shift(m_util_a.mk_mod(m_util_a.mk_add(m_util_a.mk_int(j), L_R_Dif), L_var_loop_i_len), m);
+                        expr_ref L_len_cur_part_bound(m_util_a.mk_add(m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len), L_R_Dif), m);
+                        expr_ref R_len_cur_part_bound(m_util_a.mk_mul(R_var_loop_k, R_var_loop_k_len), m);
+                        for (unsigned jj = 0; jj < 2 * loop_size + 1; jj++)
+                        {
+                            expr_ref L_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(jj), L_var_loop_i_len), L_shift), m);
+                            for (unsigned nn = 0; nn < 2 * loop_size + 1; nn++)
+                            {
+                                expr_ref R_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(nn), R_var_loop_k_len), m_util_a.mk_int(n)), m);
+
+                                expr_ref len_eq_with_bound_sat(m_util_a.mk_eq(L_len_cur_part, R_len_cur_part), m);
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(L_len_cur_part, L_len_cur_part_bound));
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(R_len_cur_part, R_len_cur_part_bound));
+
+                                expr_ref premise(m_util_a.mk_lt(m_util_a.mk_int(j), L_var_loop_i_len), m);
+                                premise = m.mk_and(premise, m_util_a.mk_lt(m_util_a.mk_int(n), R_var_loop_k_len));
+                                premise = m.mk_and(premise, m_util_a.mk_le(L_R_Dif, m_util_a.mk_int(0)));
+                                premise = m.mk_and(premise, len_eq_with_bound_sat);
+
+                                expr_ref symbol_not_eq(m.mk_not(m_util_a.mk_eq(L_var_i_j, R_var_k_n)), m);
+
+                                int_formula_pos_cond = m.mk_or(int_formula_pos_cond, m.mk_and(premise, symbol_not_eq));
+                            }
+
+                        }
+                        // L_len > R_len
+                        expr_ref R_shift(m_util_a.mk_mod(m_util_a.mk_sub(m_util_a.mk_int(n), L_R_Dif), R_var_loop_k_len), m);
+                        L_len_cur_part_bound = m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len);
+                        R_len_cur_part_bound = m_util_a.mk_sub(R_len_cur_part_bound, L_R_Dif);
+                        for (unsigned jj = 0; jj < 2 * loop_size + 1; jj++)
+                        {
+                            expr_ref L_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(jj), L_var_loop_i_len), m_util_a.mk_int(j)), m);
+                            for (unsigned nn = 0; nn < 2 * loop_size + 1; nn++)
+                            {
+                                expr_ref R_len_cur_part(m_util_a.mk_add(m_util_a.mk_mul(m_util_a.mk_int(nn), R_var_loop_k_len), R_shift), m);
+
+                                expr_ref len_eq_with_bound_sat(m_util_a.mk_eq(L_len_cur_part, R_len_cur_part), m);
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(L_len_cur_part, L_len_cur_part_bound));
+                                len_eq_with_bound_sat = m.mk_and(len_eq_with_bound_sat, m_util_a.mk_lt(R_len_cur_part, R_len_cur_part_bound));
+
+                                expr_ref premise(m_util_a.mk_lt(m_util_a.mk_int(j), L_var_loop_i_len), m);
+                                premise = m.mk_and(premise, m_util_a.mk_lt(m_util_a.mk_int(n), R_var_loop_k_len));
+                                premise = m.mk_and(premise, m_util_a.mk_gt(L_R_Dif, m_util_a.mk_int(0)));
+                                premise = m.mk_and(premise, len_eq_with_bound_sat);
+
+                                expr_ref symbol_not_eq(m.mk_not(m_util_a.mk_eq(L_var_i_j, R_var_k_n)), m);
+
+                                int_formula_pos_cond = m.mk_or(int_formula_pos_cond, m.mk_and(premise, symbol_not_eq));
+                            }
+
+                        }
+
+                    }
+
+                    R_len = m_util_a.mk_add(R_len, m_util_a.mk_mul(R_var_loop_k, R_var_loop_k_len));
+                }
+            }
+
+            L_len = m_util_a.mk_add(L_len, m_util_a.mk_mul(L_var_loop_i, L_var_loop_i_len));
+        }
+    };
+
+
+
 
 
 
     int formula_count = 0;
     final_check_status theory_str2::final_check_eh() {
         formula_count++;
-        std::cout << "\n\n\n ******* Formula*******" << formula_count << "\n";
-
+        //std::cout << "\n\n\n ******* Formula*******" << formula_count << "\n";
 
         if (m_word_eq_todo.empty()) {
             if (is_over_approximation)
@@ -1231,55 +1800,79 @@ namespace smt {
                 return FC_DONE;
         }
 
+        unsigned loop_size = 3;
+        unsigned num_loop = 1;
+
+        
 
         // test
-
+        ///*
         int_expr_solver m_int_solver(get_manager(), get_context().get_fparams());
-
+        //m_int_solver.initialize(get_context());
+        context& ctx = get_context();
         ast_manager& m = get_manager();
 
 
-
-
-
         ///*
-        int  n = 5;
-        expr_ref int_formula(m_util_a.mk_eq(m_util_a.mk_int(1), m_util_a.mk_int(1)), m);
-        expr_ref x_sum(mk_int_var("x0"), m);
-        for (int i = 0; i < n; i++)
+        if (formula_count == 1)
         {
-            expr_ref x(mk_int_var("x"+std::to_string(i)), m);
-            int_formula = m.mk_and(int_formula, m_util_a.mk_eq(m_util_a.mk_int(1),x));
-            //int_formula = m.mk_and(int_formula, m_util_a.mk_le(x,m_util_a.mk_int(nn+i-n)));
-        }
-        for (int i = 1; i < n; i++)
-        {
-            expr_ref x(mk_int_var("x"+std::to_string(i)), m);
-            x_sum = m_util_a.mk_add(x_sum, x);
-        }
-        int_formula = m.mk_and(int_formula, m_util_a.mk_eq(x_sum, m_util_a.mk_int(5)));
-        
-        std::cout << mk_pp(int_formula, get_manager()) << "\n";
+            std::list<std::pair<char, std::string>>  L_word, R_word;
+            expr_ref int_formula(m.mk_true(), m);
 
-        if (m_int_solver.check_sat(int_formula) == lbool::l_true)
-            std::cout << "Yes, Sir.\n";
-        else
-            std::cout << "No, Sir.\n";
+            std::cout << "Eq Part\n";
+            for (const auto& we : m_word_eq_todo)
+            {
+                word_term_to_list(we.first, L_word);
+                word_term_to_list(we.second, R_word);
+                
+                std::cout << "Formula: \n  Left-term\n";
+                for (std::list<std::pair<char, std::string>>::iterator it = L_word.begin(); it != L_word.end(); ++it)
+                {
+                    std::cout << "    Type: " << (*it).first << " : " << (*it).second << "\n";
+                }
+                std::cout << "  Right-term\n";
+                for (std::list<std::pair<char, std::string>>::iterator it = R_word.begin(); it != R_word.end(); ++it)
+                {
+                    std::cout << "    Type: " << (*it).first << " : " << (*it).second << "\n";
+                }
+                
+                int_formula = m.mk_and(int_formula, eq_word_term_lists_to_expr_ref(ctx, m, L_word, R_word, loop_size, num_loop));
+            }
+
+            std::cout << "Diseq Part\n";
+            for (const auto& we : m_word_diseq_todo)
+            {
+                word_term_to_list(we.first, L_word);
+                word_term_to_list(we.second, R_word);
+                
+                std::cout << "Formula: \n  Left-term\n";
+                for (std::list<std::pair<char, std::string>>::iterator it = L_word.begin(); it != L_word.end(); ++it)
+                {
+                    std::cout << "    Type: " << (*it).first << " : " << (*it).second << "\n";
+                }
+                std::cout << "  Right-term\n";
+                for (std::list<std::pair<char, std::string>>::iterator it = R_word.begin(); it != R_word.end(); ++it)
+                {
+                    std::cout << "    Type: " << (*it).first << " : " << (*it).second << "\n";
+                }
+                
+                expr_ref int_formula_pos_cond(m.mk_true(), m);
+                expr_ref int_formula_len_bound(m.mk_true(), m);
+                expr_ref int_formula_len_cond(m.mk_true(), m);
+                std::make_tuple(int_formula_pos_cond, int_formula_len_bound, int_formula_len_cond) = diseq_word_term_lists_to_expr_ref(ctx, m, L_word, R_word, loop_size, num_loop);
+
+                int_formula = m.mk_and(int_formula, m.mk_and(int_formula_len_bound, m.mk_or(int_formula_pos_cond, int_formula_len_bound)));
+            }
+
+            std::cout << "Solving...\n";
+            bool result = m_int_solver.check_sat(int_formula) == lbool::l_true;
+            if (result == true)
+                std::cout << "Yes, sir!\n";
+            else
+                std::cout << "No, sir!\n";
+        }
         //*/
-
-        // Start
-        std::vector<std::string> formula_set;
         
-
-        //formula_modifier mod;
-        //mod.inequality_in("A", "B", formula_set);
-
-
-        //std::list<std::pair<char, std::string>>  L_term, R_term;
-        //L_term.push_back(std::make_pair('V', "x"));
-        //R_term.push_back(std::make_pair('S', "abc"));
-
-
 
         /*
         std::list<std::pair<char, std::string>>  L_term, R_term;
@@ -1310,10 +1903,16 @@ namespace smt {
 
 
         /*
+        for (const auto& we : m_word_eq_todo)
+        {
+            std::cout << print_word_term(we.first) << "=" << print_word_term(we.second) << std::endl;
+        }
+
         for (const auto& we : m_word_diseq_todo)
         {
             std::cout<<print_word_term(we.first)<<"!="<<print_word_term(we.second)<<std::endl;
-        }*/
+        }
+        //*/
 
 
 
@@ -1322,7 +1921,8 @@ namespace smt {
         IN_CHECK_FINAL = false;
         return FC_CONTINUE;
     }
-    // end of final_check_eh()
+    
+
 
     ///////////////////////////////////////
     ///*
@@ -1336,9 +1936,10 @@ namespace smt {
     }
 
 
-    app* theory_str2::mk_int_var(std::string name) {
-        context& ctx = get_context();
-        ast_manager& m = get_manager();
+
+    app* theory_str2::mk_int_var(std::string name, context& ctx, ast_manager& m, arith_util m_util_a, seq_util m_util_s) {
+        //context& ctx = get_context();
+        //ast_manager& m = get_manager();
 
         //TRACE("str", tout << "creating integer variable " << name << " at scope level " << sLevel << std::endl;);
 
@@ -1415,8 +2016,9 @@ namespace smt {
     }
     lbool int_expr_solver::check_sat(expr* e) {
         bool on_screen = true;
+        //bool on_screen = false;
         //        m_kernel.push();
-        std::cout << "size: " << erv.size() << "\n";
+        //std::cout << "size: " << erv.size() << "\n";
         erv.push_back(e);
         lbool r = m_kernel.check(erv);
         erv.pop_back();
@@ -1427,13 +2029,13 @@ namespace smt {
                 std::cout << mk_pp(m_kernel.get_unsat_core_expr(i), m) << std::endl;
             }
         }
+
         if (on_screen && r == lbool::l_true) {
             model_ref model;
             m_kernel.get_model(model);
             model_smt2_pp(std::cout, m, *model, 0);
 
         }
-
 
         //        m_kernel.pop(1);
         return r;
