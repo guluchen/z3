@@ -19,6 +19,7 @@ It is licensed under the [MIT license](LICENSE.txt).
 Create a new folder and use cmake to build Z3-Trau
 ```
 git checkout new_trau (in case you clone the entire project)
+cd z3
 mkdir trau-build
 cd trau-build
 cmake ../
