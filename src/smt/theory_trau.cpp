@@ -7130,16 +7130,6 @@ namespace smt {
         expr* arr_rhs = get_var_flat_array(rhs);
 
 
-        //expr_ref_vector LC_union_PC(m);
-
-        // 
-        // Length Conflict Part
-        //
-        expr* LC = createGreaterEqOP(createAddOP(mk_strlen(rhs), mk_int(1)), mk_strlen(lhs));
-        //LC_union_PC.push_back(LC);
-        //assert_axiom(createOrOP(LC_or_PC));
-        //expr_ref LC(m_autil.mk_ge(m_autil.mk_add(mk_strlen(rhs), m_autil.mk_mul(mk_strlen(lhs), mk_int(-1))), mk_int(1)), m);
-        //assert_axiom(LC);
 
         if (!arr_lhs || !arr_rhs)
         {
@@ -7148,10 +7138,19 @@ namespace smt {
         }
 
 
+        /*
+        * Length Conflict Part
+        */
+        expr* LC = createGreaterEqOP(createAddOP(mk_strlen(rhs), mk_int(-1)), mk_strlen(lhs));
+        //LC_union_PC.push_back(LC);
+        //assert_axiom(createOrOP(LC_or_PC));
+        //expr_ref LC(m_autil.mk_ge(m_autil.mk_add(mk_strlen(rhs), m_autil.mk_mul(mk_strlen(lhs), mk_int(-1))), mk_int(1)), m);
+        //assert_axiom(LC);
+
         //std::cout << "PC-start\n";
-        //
-        // Position Conflict Part
-        //
+        /*
+        * Position Conflict Part
+        */
         ptr_vector<expr> lhs_nodes;
         get_nodes_in_concat(lhs, lhs_nodes);
         pair_expr_vector lhs_nodes_elements = create_equality(lhs_nodes);
@@ -7181,8 +7180,6 @@ namespace smt {
             assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
             PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
         }
-
-
         for (int i = 0; i < rhs_nodes_elements.size(); i++)
         {
             expr_ref rhs_i_loop_size(get_var_flat_size(rhs_nodes_elements[i]), m);
@@ -7199,7 +7196,6 @@ namespace smt {
             {
                 for (int k = 0; k < lhs_len_bound; k++)
                 {
-                    expr_ref pos_align(m);
                     if (i + j == k)
                     {
                         expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(k+1)));
