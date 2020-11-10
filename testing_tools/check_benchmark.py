@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""
+A Python script to run given string solver on specified benchmark and export log.
+Usage:
+    check_benchmak tool_command path_of_benchmark -c=tool_name
+where {tool_name} can be cvc4, z3, z3str3, Trau, TrauC (z3qses)
+log export:
+    The log will be written in a file named '{name_of_benchmark}.{date}.{tool_name}.log'
+"""
+import sys
+import os
+import time
+import re
+_base_dir = os.path.dirname(os.path.realpath(__file__))
+from argparse import ArgumentParser
+from typing import List
+from subprocess import STDOUT, check_output, CalledProcessError, TimeoutExpired
+
+
+# default commands
+DEFAULT_CMDS = {'cvc4': ['cvc4', '--lang', 'smt', '--strings-exp', '--quiet'],
+                'z3seq': ['z3'],
+                'z3str3': ['z3', 'smt.string_solver=z3str3'],
+                'trau': ['trau', '-language', 'smt2.6'],
+                'trauc': ['trauc', 'smt.string_solver=trauc', '-tr:strg'],
+                'z3-trau': ['z3-trau', 'smt.string_solver=trau']}
+
+# expected error messages
+ERROR_MSGS = {'VIOLATION', 'segfault', 'dumped', 'exception'}
+
+
+def contains_error_msg(text: str) -> bool:
+    for msg in ERROR_MSGS:
+        if msg in text:
+            return True
+    return False
+
+
+def check(tool_name: str, command: List[str], benchmark_files: List[str], time_out: int, log_file: str, silent: bool, trace_dir: str):
+    fp = open(log_file, 'a')
+    fp_err = open(log_file + '.err', 'a')
+
+    # This condition is for Trau-Tester. Use Trau -cvc4 for PyEx-sat 
+    if tool_name == 'trau':
+        if "PyEx" in benchmark_files[0]:
+            command[2] = 'cvc4'
+
+    for file in benchmark_files:
+        shell_command = command + [file]
+        time_start = time.time()
+        out_err = ""
+        result_except = False
+        try:
+            out = str(check_output(shell_command, stderr=STDOUT, timeout=time_out))
+        except CalledProcessError as err:
+            out_err = str(err.output)
+            out = out_err
+            result_except = True
+        except TimeoutExpired as err:
+            out_err = str(err.output)
+            out = 'timeout'
+        time_end = time.time()
+        time_exec = time_end - time_start
+        # print(f'execution time: {time_exec} (sec.)')
+        # print(f'output: {output}')
+        out = out.splitlines()[-1]
+        if 'unsat' in out or 'UNSAT' in out:
+            res = 'unsat'
+            result_except = False
+        elif 'sat' in out or 'SAT' in out:
+            result_except = False
+            res = 'sat'
+        elif out == 'timeout':
+            res = 'timeout'
+        elif out == 'exception':
+            res = 'exception'
+            result_except = True
+        elif 'unknown' in out:
+            result_except = False
+            res = 'unknown'
+        else:  # should not encounter this case
+            res = '???'
+            result_except = True
+            # print(f'unexpected output: {out}')
+
+        if result_except:
+            out = 'exception'
+
+        # detect error message
+        if res == 'timeout' or res == 'exception':
+            if contains_error_msg(out_err):
+                res = 'error'
+
+        log_str = f'{file}, {tool_name}, {res}, {"{:2.5f}".format(time_exec)}'
+        print(log_str)
+        fp.write(f'{log_str}\n')
+
+        # Record every output to fp_err
+        if result_except:
+            print(f'ERROR_REPORT: {out_err}')
+        fp_err.write(f'{log_str}\nstdout: {out}\n\n')
+
+        # Store -tr:strg to trace/
+        if "trauc" in command[0]:
+            filename = file.replace("/", ".")
+            os.system("mv .z3-trace " + "trace/" + filename)
+
+    fp.close()
+    fp_err.close()
+
+
+def main(argv):
+    # Set argument parser
+    arg_parser = ArgumentParser(prog=None,
+                                usage=None,
+                                description="A python script to run given string solver on specified benchmark and "
+                                            "export log.",
+                                epilog=None)
+    arg_parser.add_argument("benchmark_path", help="path of benchmarks")
+    # arg_parser.add_argument("tool_command", help="command of tool", default="")
+    arg_parser.add_argument("-c", "--cmd", help="Specify command of tool to be checked.\n"
+                                                "Use quote to include options like 'z3 smt.string_solver=z3str3'.\n"
+                                                "Some shortcut commands for regular check: \n"
+                                                "'cvc4' : 'cvc4 --lang smt', \n"
+                                                "'z3seq : 'z3', \n"
+                                                "'z3str3 : 'z3 smt.string_solver=z3str3', \n"
+                                                "'trau' : 'trau' (symbolic link), \n"
+                                                "'trauc' : 'trauc smt.string_solver=z3str3',\n"
+                                                "'z3-trau' : 'trau2 smt.string_solver=z3str3',\n",
+    dest="cmd", default='')
+    arg_parser.add_argument("-t", "--timeout", help="Set timeout, default is 10 (seconds).",
+                            dest="timeout", default=10, type=int)
+    arg_parser.add_argument("-d", "--date", help="Set date, default is current date from system.",
+                            dest="date", default='')
+    arg_parser.add_argument('--nolog', help='do not write log file (but still write error log).', dest='nolog',
+                            action='store_true')
+    arg_parser.add_argument('--z3opt', help='run with z3str3 option: \'smt.string_solver=z3str3\' '
+                                            'and will ignore shortcut commands', dest='z3opt', action='store_true')
+    args = arg_parser.parse_args()
+
+    # prepare benchmark
+    benchmark_target = args.benchmark_path
+    benchmark_target = benchmark_target.replace("/", "", -1)
+    if "." in benchmark_target:
+        benchmark_name, split, mod = benchmark_target.split(".")
+        split = int(split)
+        mod = int(mod)
+        benchmark_path = os.path.normpath(benchmark_name)
+    else:
+        split = 1
+        mod = 1
+        benchmark_path = os.path.normpath(args.benchmark_path)
+
+    files = sorted([os.path.join(root, file)
+                              for root, dirs, files in os.walk(benchmark_path) for file in files])
+    if split == 1:
+        benchmark_files = files
+    else:
+        benchmark_files = []
+        cnt = 0
+        for benchmark in files:
+            if cnt % split == mod:
+                benchmark_files.append(benchmark)
+            cnt += 1
+    benchmark_size = len(benchmark_files)
+    print(f'benchmark_path: {os.path.realpath(benchmark_path)}')
+    print(f'benchmark_size: {benchmark_size}')
+    print(f'nolog: {args.nolog}')
+
+    time_out = args.timeout
+    if args.date == '':
+        check_date = time.strftime('%Y%m%d', time.localtime())
+    else:
+        check_date = args.date
+
+    print(f'date: {check_date}')
+    print(f'tool: {args.cmd}')
+    # print(f'tool_command: {args.tool_command}')
+    # command = args.tool_command
+    if args.cmd == '':
+        print(f'Error, command not specified, use -h to see help.')
+        exit(1)
+    if args.z3opt:  # No further check. It is the responsibility of the user to specify args.cmd correctly.
+        command = [args.cmd, 'smt.string_solver=z3str3']
+    elif args.cmd in DEFAULT_CMDS:
+        command = DEFAULT_CMDS[args.cmd]
+    elif ' ' in args.cmd:
+        command = args.cmd.split()
+    else:
+        command = [args.cmd]
+
+    cmd_log = re.sub(r"[^A-Za-z0-9]", "", args.cmd)
+    log_file = f'{os.path.basename(benchmark_target)}.{check_date}.{cmd_log}.log'
+    trace_dir = _base_dir + "/trace"
+    os.system("rm -rf " + trace_dir + " && mkdir -p " + trace_dir)
+    print(f'log file: {log_file}')
+    if not args.nolog:
+        if os.path.exists(log_file):
+            print(f'Error, log file already exists. Remove or rename it.')
+            exit(1)
+        with open(log_file, 'w') as fp:
+            fp.write(f'benchmark_path: {os.path.realpath(benchmark_path)}\n')
+            fp.write(f'benchmark_size: {benchmark_size}\n')
+            fp.write(f'date: {check_date}\n')
+            fp.write(f'tool: {args.cmd}\n')
+
+    check(args.cmd, command, benchmark_files, time_out, log_file, args.nolog, trace_dir)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
