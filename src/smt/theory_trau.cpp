@@ -16,6 +16,8 @@
 #include "smt/theory_seq_empty.h"
 #include "smt/theory_trau.h"
 #include "smt/theory_lra.h"
+//
+#include "ast/expr_abstract.h"
 
 /* TODO:
  *  1. better algorithm for checking solved form
@@ -3328,28 +3330,29 @@ namespace smt {
         string_int_conversion_terms.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
-
+    //int count = 0;
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
-
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
-
+        //std::cout << "count: " << count << "\n";
+        //count++;
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
 //            newConstraintTriggered = true;
 //            return FC_CONTINUE;
 //        }
-
+        // unsure
         if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
         else
             newConstraintTriggered = false;
-        dump_assignments();
+        dump_assignments(); // print
+        // string to int
         if (eval_str_int() || eval_disequal_str_int()) {
             TRACE("str", tout << "Resuming search due to axioms added by eval_str_int." << std::endl;);
             newConstraintTriggered = true;
@@ -3359,7 +3362,7 @@ namespace smt {
 
         bool addAxiom;
         expr_ref_vector diff(m);
-
+        // §Ö¨ú not sure
         if (is_completed_branch(addAxiom, diff)){
             STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
             if (addAxiom)
@@ -3377,6 +3380,7 @@ namespace smt {
         }
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        // new 
         if (try_solve(eq_combination)){
             print_eq_combination(eq_combination);
             TRACE("str", tout << "Resuming search due to axioms added by try_solve." << std::endl;);
@@ -3391,6 +3395,7 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         expr* cause = nullptr;
+        // not sure
         if (!review_disequalities_not_contain(eq_combination, cause)){
             TRACE("str", tout << "Resuming search due to axioms added by review_disequalities_not_contain." << std::endl;);
             print_eq_combination(eq_combination);
@@ -3401,6 +3406,9 @@ namespace smt {
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        // if not_contains(x, A) then also not_contains (t, A) for all t "related " to x
+        // if x = y.z then y and z are related to x  // t = y or z or ...
+        // if t = replace (x ,B ,C) then t is related to x  // check A, B, C char
         if (!is_notContain_consistent(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by is_notContain_consistent check." << std::endl;);
             update_state();
@@ -3429,11 +3437,13 @@ namespace smt {
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        // new
         if (refined_init_chain_free(non_fresh_vars, eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by refined_init_chain_free." << std::endl;);
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+        // new
         if (can_merge_combination(eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
             print_eq_combination(eq_combination);
@@ -3877,7 +3887,14 @@ namespace smt {
      * non_fresh_var: variables in disequalities: x != y, x does not contain y
      * eq_combination: all equalities over variable
      */
-
+    // 1. collect alphebet
+    // 2. find int lower bound and upper bound
+    // 3. freash var 
+    //      x:=a
+    //      x used in not_contais or word_diseq
+    //      used more than onece
+    // normalize: if a var used in lhs => not used in rhs
+    // rhs no freash vars
     bool theory_trau::init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
@@ -5169,7 +5186,7 @@ namespace smt {
     /*
      * x = y . indexOf1 . "A" . ...
      * x = y . replace1 . "A" . ...
-     * --> indexOf1 = replace1
+     * --> indexOf1 = replace1 // vars
      */
     bool theory_trau::handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination) {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -5949,6 +5966,7 @@ namespace smt {
         for (const auto& n : non_fresh_vars)
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
 
+        //handle_diseq_notcontain();
         handle_diseq_notcontain();
         bool axiomAdded = handle_str_int();
         guessed_eqs.append(diff);
@@ -7107,36 +7125,328 @@ namespace smt {
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
+
+        expr* arr_lhs = get_var_flat_array(lhs);
+        expr* arr_rhs = get_var_flat_array(rhs);
+
+
+        //expr_ref_vector LC_union_PC(m);
+
+        // 
+        // Length Conflict Part
+        //
+        expr* LC = createGreaterEqOP(createAddOP(mk_strlen(rhs), mk_int(1)), mk_strlen(lhs));
+        //LC_union_PC.push_back(LC);
+        //assert_axiom(createOrOP(LC_or_PC));
+        //expr_ref LC(m_autil.mk_ge(m_autil.mk_add(mk_strlen(rhs), m_autil.mk_mul(mk_strlen(lhs), mk_int(-1))), mk_int(1)), m);
+        //assert_axiom(LC);
+
+        if (!arr_lhs || !arr_rhs)
+        {
+            //assert_axiom(createOrOP(LC, premise));
+            return;
+        }
+
+
+        //std::cout << "PC-start\n";
+        //
+        // Position Conflict Part
+        //
+        ptr_vector<expr> lhs_nodes;
+        get_nodes_in_concat(lhs, lhs_nodes);
+        pair_expr_vector lhs_nodes_elements = create_equality(lhs_nodes);
+        ptr_vector<expr> rhs_nodes;
+        get_nodes_in_concat(rhs, rhs_nodes);
+        pair_expr_vector rhs_nodes_elements = create_equality(rhs_nodes);
+
+        expr_ref_vector PC_len_cond(m);
+        int alpha_bound = lhs_nodes_elements.size() * q_bound.get_int64();
+        int rhs_len_bound = rhs_nodes_elements.size() * q_bound.get_int64();
+        int lhs_len_bound = lhs_nodes_elements.size() * q_bound.get_int64();
+        //std::cout << "Alpha Bound: " << alpha_bound << "\n";
+
+
+
+        assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
+        assert_axiom(createEqualOP(arr_linker[arr_rhs], rhs));
+
+
+        PC_len_cond.push_back(createGreaterEqOP(mk_strlen(lhs), mk_strlen(rhs)));
+
+
+        for (int i = 0; i < lhs_nodes_elements.size(); i++)
+        {
+            expr_ref lhs_i_loop_size(get_var_flat_size(lhs_nodes_elements[i]), m);
+            //expr_ref lhs_i_loop_iter(get_flat_iter(lhs_nodes_elements[i]), m);
+            assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
+            PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
+        }
+
+
+        for (int i = 0; i < rhs_nodes_elements.size(); i++)
+        {
+            expr_ref rhs_i_loop_size(get_var_flat_size(rhs_nodes_elements[i]), m);
+            //expr_ref rhs_i_loop_iter(get_flat_iter(rhs_nodes_elements[i]), m);
+            assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
+            PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
+        }
+
+        expr_ref_vector PC_cases(m);
+        for (int i = 0; i < alpha_bound; i++)
+        {
+            expr_ref_vector PC_alpha_fixed_cases(m);
+            for (int j = 0; j < rhs_len_bound; j++)
+            {
+                for (int k = 0; k < lhs_len_bound; k++)
+                {
+                    expr_ref pos_align(m);
+                    if (i + j == k)
+                    {
+                        expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(k+1)));
+                        expr* possible_PC = createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(k)));
+                        PC_alpha_fixed_cases.push_back(createAndOP(premise, possible_PC));
+                    }
+                }
+            }
+            PC_cases.push_back(createOrOP(PC_alpha_fixed_cases));
+        }
+
+        expr* PC = createAndOP(createAndOP(PC_len_cond), createAndOP(PC_cases));
+
+        assert_axiom(createOrOP(LC, PC));
+        return;
+
+
+        /*
         int len_rhs = connectingSize;
         is_fixed_len_var(rhs, len_rhs);
         expr_ref_vector ors(m);
 
         int len_lhs = connectingSize;
         is_fixed_len_var(lhs, len_lhs);
-        expr* arr_lhs = get_var_flat_array(lhs);
-        expr* arr_rhs = get_var_flat_array(rhs);
-
         if (arr_lhs && arr_rhs) {
+            std::cout << "In_loop\n";
             expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr_lhs], lhs), createEqualOP(arr_linker[arr_rhs], rhs));
             expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
             m_rewrite(cond);
             ors.push_back(cond);
-            for (int j = 1; j <= len_rhs; ++j){
+            for (int j = 1; j <= len_rhs; ++j) {
                 expr_ref_vector ands(m);
                 ands.push_back(createGreaterEqOP(mk_strlen(rhs), mk_int(j)));
                 for (int i = 0; i < len_lhs; ++i) {
                     expr_ref_vector ands_tmp(m);
-                    for (int k = 0; k < std::min(5, j); ++k){
+                    for (int k = 0; k < std::min(5, j); ++k) {
                         ands_tmp.push_back(createEqualOP(createSelectOP(arr_lhs, mk_int(i + k)),
-                                                         createSelectOP(arr_rhs, mk_int(k))));
+                            createSelectOP(arr_rhs, mk_int(k))));
                     }
                     ands.push_back(mk_not(m, createAndOP(ands_tmp)));
                 }
                 ors.push_back(createAndOP(ands));
             }
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m)  << ")\n";);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
             assert_axiom(rewrite_implication(premises, createOrOP(ors)));
         }
+        */
+
+
+
+
+
+        std::cout << "Print_start\n";
+
+
+        std::cout << "q_Bound: " << mk_pp(get_bound_q_control_var(), m) << "\n";
+
+        std::cout << "Word_term (lhs): \n";
+        std::cout << mk_pp(lhs, m) << "\n";
+        std::cout << "Word_term (rhs): \n";
+        std::cout << mk_pp(rhs, m) << "\n";
+
+
+
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(lhs, nodes);
+        pair_expr_vector nodes_elements = create_equality(nodes);
+        ptr_vector<expr> nodes_2;
+        get_nodes_in_concat(rhs, nodes_2);
+        pair_expr_vector nodes_elements_2 = create_equality(nodes_2);
+        std::cout << "\nNodes (lhs): \n";
+        std::cout << "#Nodes (lhs): " << nodes.size() << "\n";
+
+        for (int i = 0; i < nodes.size(); i++)
+            std::cout << "  (lhs) node: " << i << "\n    name: " << mk_pp(nodes[i], m) << "\n";
+
+        for (int i = 0; i < nodes_2.size(); i++)
+            std::cout << "  (rhs) node: " << i << "\n    name: " << mk_pp(nodes_2[i], m) << "\n";
+
+        std::cout << "\nElements (lhs): \n";
+        std::cout << "#Elements (lhs): " << nodes_elements.size() << "\n";
+
+
+        
+
+
+        
+
+        for (int i = 0; i < nodes_elements.size(); i++)
+        {
+            std::cout << "  Element: " << i << "\n  var_name: " << mk_pp(nodes_elements[i].first, m) << "\n";
+            std::cout << "  loop_idx: " << nodes_elements[i].second << "\n";
+            std::cout << "  length: " << mk_pp(mk_strlen(nodes_elements[i].first), m) << "\n";
+
+            expr_ref tmp(get_var_flat_size(nodes_elements[i]), m);
+            expr_ref tmp2(get_flat_iter(nodes_elements[i]), m);
+            expr_ref tmp3(get_var_flat_array(nodes_elements[i]), m);
+
+
+
+            std::cout << "  loop_size: " << mk_pp(tmp, m) << "\n";
+            std::cout << "  ite_num: " << mk_pp(tmp2, m) << "\n";
+            std::cout << "  name_var_flat_array??: " << mk_pp(tmp3, m) << "\n";
+            //std::cout << " bound: " << non_fresh_variables[nodes_elements[i].first] << "\n";
+            //createSelectOP(tmp3, m_autil.mk_int(i))
+            std::cout << "  bound: " << mk_pp(createSelectOP(tmp3, mk_int(nodes_elements[i].second)), m) << "\n";
+
+
+            std::cout << "\n";
+        }
+
+        for (int i = 0; i < nodes_elements_2.size(); i++)
+            std::cout << "  (rhs) Element: " << i << "\n  var_name: " << mk_pp(nodes_elements_2[i].first, m) << "\n";
+        std::cout << "\n";
+
+
+
+        expr_ref tmp(get_var_flat_array(nodes_elements[0].first), m);
+        expr_ref tmp_2(get_var_flat_array(nodes_elements_2[0].first), m);
+
+        
+        assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
+        assert_axiom(createEqualOP(arr_linker[tmp], nodes_elements[0].first));
+        assert_axiom(createEqualOP(arr_linker[tmp_2], nodes_elements_2[0].first));
+
+
+        zstring my_zstr("aabaa");
+        zstring my_zstr_3("1234567890");
+        zstring my_zstr_2("c");
+
+
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, nodes_elements[3].first));
+        
+        //assert_axiom(m_autil.mk_eq(mk_strlen(nodes_elements[0].first), mk_int(5)));
+        //assert_axiom(mk_not(m, m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(2)))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(2)), createSelectOP(tmp, mk_int(3))));
+        /*
+        assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(3))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(4))));
+        */
+        /*
+        assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(3))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(4))));
+        */
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        /*
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(0))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(1)), createSelectOP(tmp, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(2)), createSelectOP(tmp, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(3)), createSelectOP(tmp, mk_int(3))));
+        //*/
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        //assert_axiom(m_autil.mk_eq(nodes_elements_2[1].first, mk_string(my_zstr)));
+        //assert_axiom(m_autil.mk_eq(tmp, tmp_2));
+        //assert_axiom(mk_not(m,m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(1)))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(2))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(1)), createSelectOP(tmp_2, mk_int(1))));
+
+        obj_map<expr, int> non_fresh_vars;
+        non_fresh_vars = collect_non_fresh_vars();
+        if (is_non_fresh(createSelectOP(tmp, mk_int(nodes_elements[0].second)), non_fresh_vars))
+            std::cout << "Non_fresh\n";
+        else
+            std::cout << "Fresh\n";
+
+
+        std::cout << "Non_fresh_size: " << non_fresh_vars.size() << "\n";
+
+        std::cout << "nodes_elements[0].first: " << mk_pp(tmp, m) << "\n";
+        std::cout << "arr_lhs: " << mk_pp(arr_lhs, m) << "\n";
+
+        std::cout << "q_bound: " << q_bound << "\n";
+
+        expr_ref len_u_0(get_var_flat_size(nodes_elements[0]), m);
+        expr_ref len_u_1(get_var_flat_size(nodes_elements[1]), m);
+        expr_ref len_b_0(get_var_flat_size(nodes_elements_2[0]), m);
+        expr_ref len_b_1(get_var_flat_size(nodes_elements_2[1]), m);
+
+        //assert_axiom(mk_not(m, m_autil.mk_eq(m_autil.mk_add(len_u_0, len_u_1), mk_strlen(nodes_elements[0].first))));
+        //assert_axiom( m_autil.mk_eq(m_autil.mk_add(len_u_0, len_u_1), mk_strlen(nodes_elements[0].first)));
+        //assert_axiom(createGreaterEqOP(len_u_0, m_autil.mk_add(mk_int(q_bound), mk_int(45))));
+        //assert_axiom(createGreaterEqOP(m_autil.mk_add(mk_int(q_bound), mk_int(45)), len_u_1));
+        //assert_axiom(createGreaterEqOP(mk_int(5), len_u_1));
+        //assert_axiom(createGreaterEqOP(len_u_1, mk_int(5)));
+        //assert_axiom(m_autil.mk_eq(len_u_1, m_autil.mk_add(mk_int(q_bound), mk_int(10))));
+        //assert_axiom(m_autil.mk_eq(get_bound_q_control_var(), mk_strlen(nodes_elements[0].first)));
+        //assert_axiom(m_autil.mk_eq(len_u_1, mk_int(9)));
+
+        //if (my_bool)
+          //  std::cout << "Fixed_len\n";
+        //else
+          //  std::cout << "Non_fixed\n";
+
+       
+        /*
+        expr_ref x(mk_int_var("x"), m);
+        expr_ref y(mk_int_var("y"), m);
+        assert_axiom(m_autil.mk_eq(x, y));
+        assert_axiom(m_autil.mk_eq(x, mk_int(1)));
+        assert_axiom(m_autil.mk_eq(y, mk_int(1)));
+
+        expr* z(mk_int_var("z"));
+        //app* const* z = to_app(x);
+        //app* const* z;
+        app_ref_vector consts(m);
+        
+
+        //sort_ref A(m.mk_uninterpreted_sort(symbol("A")), m);
+        sort* sorts[1] = { m.get_sort(x) };
+        symbol names[1] = { symbol("z") };
+        //svector<symbol> names;
+        //names.push_back(symbol("x"));
+        //sort_ref_vector sorts(m);
+        //sorts.push_back(m.get_sort(x));
+        expr_ref body(m);
+        body = m_autil.mk_ge(m_autil.mk_add(z, mk_int(1)), z);
+        expr_ref result(m);
+        //result = m.mk_forall(1, sorts, names, body);
+
+
+        consts.push_back(to_app(z));
+
+        result = mk_forall(m, 1, consts.c_ptr(), body);
+
+        std::cout << "result: " << mk_pp(result,m) << "\n";
+        assert_axiom(result);
+        //m.mk_forall(1,)
+        //*/
+
+
+        std::cout << "Print_end\n\n";
+
+
+
+
+
+
+
+
+
+
     }
 
     void theory_trau::handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached){
@@ -8048,7 +8358,7 @@ namespace smt {
 
     bool theory_trau::convert_equalities(obj_map<expr, ptr_vector<expr>> const& eq_combination, obj_map<expr, int> & non_fresh_vars, expr* premise){
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << std::endl;);
-         
+        
         curr_var_pieces_counter.reset();
         generated_equalities.reset();
 
@@ -9123,7 +9433,7 @@ namespace smt {
             }
         }
         else
-            return m.mk_true();
+            return m.mk_true(); // Question
     }
 
     zstring theory_trau::create_string_representation(pair_expr_vector const& lhs_elements, pair_expr_vector const& rhs_elements){
@@ -13921,7 +14231,7 @@ namespace smt {
             else {
                 v2 = mk_int_var(flatIter);
 //                assert_axiom(createGreaterEqOP(v2, m_autil.mk_int(0)));
-                expr_ref iteConstraint(createEqualOP(v2, m_autil.mk_int(1)), m);
+                expr_ref iteConstraint(createEqualOP(v2, m_autil.mk_int(1)), m); // Question
                 assert_axiom(iteConstraint.get());
                 implied_facts.push_back(iteConstraint);
                 iter_map[v].push_back(v2);
