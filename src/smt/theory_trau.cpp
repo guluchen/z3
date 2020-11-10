@@ -7092,6 +7092,8 @@ namespace smt {
             return;
         }
         if (is_contain_family_equality(lhs, contain)) {
+            //std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
+            //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(rhs, contain);
             zstring value;
@@ -7101,6 +7103,8 @@ namespace smt {
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_family_equality(rhs, contain)) {
+            //std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
+            //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(lhs, contain);
             zstring value;
@@ -7129,7 +7133,8 @@ namespace smt {
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
 
-
+        //std::cout << "lhs: " << mk_pp(lhs,m) << "\n";
+        //std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
 
         if (!arr_lhs || !arr_rhs)
         {
@@ -7147,6 +7152,8 @@ namespace smt {
         //expr_ref LC(m_autil.mk_ge(m_autil.mk_add(mk_strlen(rhs), m_autil.mk_mul(mk_strlen(lhs), mk_int(-1))), mk_int(1)), m);
         //assert_axiom(LC);
 
+
+
         //std::cout << "PC-start\n";
         /*
         * Position Conflict Part
@@ -7163,7 +7170,9 @@ namespace smt {
         int rhs_len_bound = rhs_nodes_elements.size() * q_bound.get_int64();
         int lhs_len_bound = lhs_nodes_elements.size() * q_bound.get_int64();
         //std::cout << "Alpha Bound: " << alpha_bound << "\n";
-
+        //std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
+        //std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
+        //std::cout << "q_bound: " << q_bound << "\n";
 
 
         assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
@@ -7188,27 +7197,33 @@ namespace smt {
             PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
         }
 
+
+
+        
         expr_ref_vector PC_cases(m);
         for (int i = 0; i < alpha_bound; i++)
         {
             expr_ref_vector PC_alpha_fixed_cases(m);
+            expr* off_set_bound_cond = createGreaterEqOP(mk_strlen(lhs), createAddOP(mk_int(i), mk_strlen(rhs)));
             for (int j = 0; j < rhs_len_bound; j++)
             {
                 for (int k = 0; k < lhs_len_bound; k++)
                 {
                     if (i + j == k)
                     {
-                        expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(k+1)));
-                        expr* possible_PC = createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(k)));
+                        expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(j+1)));
+                        expr* possible_PC = createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(j)));
                         PC_alpha_fixed_cases.push_back(createAndOP(premise, possible_PC));
                     }
                 }
             }
-            PC_cases.push_back(createOrOP(PC_alpha_fixed_cases));
+            PC_cases.push_back(rewrite_implication(off_set_bound_cond, createOrOP(PC_alpha_fixed_cases)));
         }
 
         expr* PC = createAndOP(createAndOP(PC_len_cond), createAndOP(PC_cases));
 
+
+      
         assert_axiom(createOrOP(LC, PC));
         return;
 
@@ -7242,7 +7257,7 @@ namespace smt {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
             assert_axiom(rewrite_implication(premises, createOrOP(ors)));
         }
-        */
+        //*/
 
 
 
