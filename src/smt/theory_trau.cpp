@@ -3330,15 +3330,15 @@ namespace smt {
         string_int_conversion_terms.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
-    //int count = 0;
+    int count = 0;
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
-        //std::cout << "count: " << count << "\n";
-        //count++;
+        std::cout << "count: " << count << "\n";
+        count++;
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
 //            newConstraintTriggered = true;
@@ -7133,8 +7133,6 @@ namespace smt {
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
 
-        //std::cout << "lhs: " << mk_pp(lhs,m) << "\n";
-        //std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
 
         if (!arr_lhs || !arr_rhs)
         {
@@ -7169,14 +7167,21 @@ namespace smt {
         int alpha_bound = lhs_nodes_elements.size() * q_bound.get_int64();
         int rhs_len_bound = rhs_nodes_elements.size() * q_bound.get_int64();
         int lhs_len_bound = lhs_nodes_elements.size() * q_bound.get_int64();
-        //std::cout << "Alpha Bound: " << alpha_bound << "\n";
-        //std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
-        //std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
-        //std::cout << "q_bound: " << q_bound << "\n";
+        /*
+        std::cout << "lhs: " << mk_pp(lhs,m) << "\n";
+        std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
+        std::cout << "Alpha Bound: " << alpha_bound << "\n";
+        std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
+        std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
+        std::cout << "q_bound: " << q_bound << "\n";
+        std::cout << "connectingSize: " << connectingSize << "\n";
+        */
 
 
         assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
         assert_axiom(createEqualOP(arr_linker[arr_rhs], rhs));
+
+
 
 
         PC_len_cond.push_back(createGreaterEqOP(mk_strlen(lhs), mk_strlen(rhs)));
@@ -7212,7 +7217,7 @@ namespace smt {
                     if (i + j == k)
                     {
                         expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(j+1)));
-                        expr* possible_PC = createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(j)));
+                        expr* possible_PC = m.mk_not(createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(j))));
                         PC_alpha_fixed_cases.push_back(createAndOP(premise, possible_PC));
                     }
                 }
@@ -7222,7 +7227,7 @@ namespace smt {
 
         expr* PC = createAndOP(createAndOP(PC_len_cond), createAndOP(PC_cases));
 
-
+        //assert_axiom(createOrOP(LC, createAndOP(PC_len_cond)));
       
         assert_axiom(createOrOP(LC, PC));
         return;
@@ -7701,12 +7706,17 @@ namespace smt {
     
     int theory_trau::get_max_bound(obj_hashtable<expr> const&all_str_exprs){
         int max_bound = -1;
+        //int max_sum_consts = -1;
 
         for (const auto& v: all_str_exprs){
             expr_ref_vector eqs(m);
             collect_eq_nodes(v, eqs);
+            //int sum_consts = 0;
             for (const auto& e: eqs) {
                 rational vLen;
+                //zstring e_val;
+                //if(u.str.is_string(e, e_val))
+                    //sum_consts += e_val.length();
                 bool vLen_exists = get_len_value(e, vLen);
                 if (vLen_exists) {
                     max_bound = std::max(max_bound, vLen.get_int32());
@@ -7724,7 +7734,10 @@ namespace smt {
                     }
                 }
             }
+            //max_sum_consts = std::max(max_sum_consts, sum_consts);
+            //std::cout << "max_sum_consts: " << max_sum_consts << "\n";
         }
+        //max_bound = std::max(max_bound,max_sum_consts);
         return max_bound;
     }
 
