@@ -7174,8 +7174,8 @@ namespace smt {
         std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
         std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
         std::cout << "q_bound: " << q_bound << "\n";
-        std::cout << "connectingSize: " << connectingSize << "\n";
-        */
+        //std::cout << "connectingSize: " << connectingSize << "\n";
+        //*/
 
 
         assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
@@ -7216,13 +7216,14 @@ namespace smt {
                 {
                     if (i + j == k)
                     {
+                        //std::cout << "(i,j,k): " << i << j << k << "\n";
                         expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(j+1)));
                         expr* possible_PC = m.mk_not(createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(j))));
                         PC_alpha_fixed_cases.push_back(createAndOP(premise, possible_PC));
                     }
                 }
             }
-            PC_cases.push_back(rewrite_implication(off_set_bound_cond, createOrOP(PC_alpha_fixed_cases)));
+            PC_cases.push_back(m.mk_or(m.mk_not(off_set_bound_cond), createOrOP(PC_alpha_fixed_cases)));
         }
 
         expr* PC = createAndOP(createAndOP(PC_len_cond), createAndOP(PC_cases));
