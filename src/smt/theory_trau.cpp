@@ -3330,15 +3330,15 @@ namespace smt {
         string_int_conversion_terms.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
-    int count = 0;
+    //int count = 0;
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
             return FC_DONE;
         }
-        std::cout << "count: " << count << "\n";
-        count++;
+        //std::cout << "count: " << count << "\n";
+        //count++;
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
 //            newConstraintTriggered = true;
