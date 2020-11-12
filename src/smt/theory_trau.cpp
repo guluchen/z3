@@ -7152,7 +7152,7 @@ namespace smt {
 
 
 
-        //std::cout << "PC-start\n";
+        //std::cout << "\nPC-start\n";
         /*
         * Position Conflict Part
         */
@@ -7164,9 +7164,9 @@ namespace smt {
         pair_expr_vector rhs_nodes_elements = create_equality(rhs_nodes);
 
         expr_ref_vector PC_len_cond(m);
-        int alpha_bound = lhs_nodes_elements.size() * q_bound.get_int64();
-        int rhs_len_bound = rhs_nodes_elements.size() * q_bound.get_int64();
-        int lhs_len_bound = lhs_nodes_elements.size() * q_bound.get_int64();
+        int alpha_bound = (lhs_nodes_elements[lhs_nodes_elements.size()-1].second + 1) * q_bound.get_int64();
+        int rhs_len_bound = (rhs_nodes_elements[rhs_nodes_elements.size() - 1].second +1) * q_bound.get_int64();
+        int lhs_len_bound = (lhs_nodes_elements[lhs_nodes_elements.size() - 1].second +1) * q_bound.get_int64();
         /*
         std::cout << "lhs: " << mk_pp(lhs,m) << "\n";
         std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
@@ -7177,12 +7177,18 @@ namespace smt {
         //std::cout << "connectingSize: " << connectingSize << "\n";
         //*/
 
+        //for (int i = 0; i < lhs_nodes.size(); i++)
+            //std::cout << "lhs_node_i:" << i << " " << mk_pp(lhs_nodes[i], m) << "\n";
+        //for (int i = 0; i < rhs_nodes.size(); i++)
+            //std::cout << "rhs_node_i:" << i << " " << mk_pp(rhs_nodes[i], m) << "\n";
+        
+
 
         assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
         assert_axiom(createEqualOP(arr_linker[arr_rhs], rhs));
 
-
-
+        //std::cout << "arr_lhs: " << mk_pp(arr_lhs, m) << "\n";
+        //std::cout << "arr_rhs: " << mk_pp(arr_rhs, m) << "\n";
 
         PC_len_cond.push_back(createGreaterEqOP(mk_strlen(lhs), mk_strlen(rhs)));
 
@@ -7191,15 +7197,17 @@ namespace smt {
         {
             expr_ref lhs_i_loop_size(get_var_flat_size(lhs_nodes_elements[i]), m);
             //expr_ref lhs_i_loop_iter(get_flat_iter(lhs_nodes_elements[i]), m);
-            assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
-            PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
+            //assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
+            //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
+            //std::cout << "lhs_i_element: " << i << "\n  " << mk_pp(lhs_nodes_elements[i].first, m) << "\n  " << lhs_nodes_elements[i].second << "\n  " << mk_pp(lhs_i_loop_size, m) << "\n";
         }
         for (int i = 0; i < rhs_nodes_elements.size(); i++)
         {
             expr_ref rhs_i_loop_size(get_var_flat_size(rhs_nodes_elements[i]), m);
             //expr_ref rhs_i_loop_iter(get_flat_iter(rhs_nodes_elements[i]), m);
-            assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
-            PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
+            //assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
+            //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
+            //std::cout << "rhs_i_element: " << i << "\n  " << mk_pp(rhs_nodes_elements[i].first, m) << "\n  " << rhs_nodes_elements[i].second << "\n  " << mk_pp(rhs_i_loop_size, m) << "\n";
         }
 
 
@@ -7223,6 +7231,8 @@ namespace smt {
                     }
                 }
             }
+            //expr* pre_cond = createAndOP(off_set_bound_cond, createGreaterEqOP(mk_int(alpha_bound), mk_strlen(lhs)));
+            //PC_cases.push_back(m.mk_or(m.mk_not(pre_cond), createOrOP(PC_alpha_fixed_cases)));
             PC_cases.push_back(m.mk_or(m.mk_not(off_set_bound_cond), createOrOP(PC_alpha_fixed_cases)));
         }
 
