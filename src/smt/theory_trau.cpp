@@ -3330,7 +3330,7 @@ namespace smt {
         string_int_conversion_terms.reset();
         pop_scope_eh(get_context().get_scope_level());
     }
-    //int count = 0;
+    int count = 0;
     final_check_status theory_trau::final_check_eh() {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
@@ -3338,7 +3338,7 @@ namespace smt {
             return FC_DONE;
         }
         //std::cout << "count: " << count << "\n";
-        //count++;
+        count++;
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
 //            newConstraintTriggered = true;
@@ -7164,18 +7164,7 @@ namespace smt {
         pair_expr_vector rhs_nodes_elements = create_equality(rhs_nodes);
 
         expr_ref_vector PC_len_cond(m);
-        int alpha_bound = (lhs_nodes_elements[lhs_nodes_elements.size()-1].second + 1) * q_bound.get_int64();
-        int rhs_len_bound = (rhs_nodes_elements[rhs_nodes_elements.size() - 1].second +1) * q_bound.get_int64();
-        int lhs_len_bound = (lhs_nodes_elements[lhs_nodes_elements.size() - 1].second +1) * q_bound.get_int64();
-        /*
-        std::cout << "lhs: " << mk_pp(lhs,m) << "\n";
-        std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
-        std::cout << "Alpha Bound: " << alpha_bound << "\n";
-        std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
-        std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
-        std::cout << "q_bound: " << q_bound << "\n";
-        //std::cout << "connectingSize: " << connectingSize << "\n";
-        //*/
+        
 
         //for (int i = 0; i < lhs_nodes.size(); i++)
             //std::cout << "lhs_node_i:" << i << " " << mk_pp(lhs_nodes[i], m) << "\n";
@@ -7191,26 +7180,53 @@ namespace smt {
         //std::cout << "arr_rhs: " << mk_pp(arr_rhs, m) << "\n";
 
         PC_len_cond.push_back(createGreaterEqOP(mk_strlen(lhs), mk_strlen(rhs)));
-
+        int lhs_element_bound = lhs_nodes_elements.size();
+        int rhs_element_bound = rhs_nodes_elements.size();
 
         for (int i = 0; i < lhs_nodes_elements.size(); i++)
         {
             expr_ref lhs_i_loop_size(get_var_flat_size(lhs_nodes_elements[i]), m);
             //expr_ref lhs_i_loop_iter(get_flat_iter(lhs_nodes_elements[i]), m);
-            //assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
+            if(lhs_nodes_elements[i].second >= 0)
+                assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
             //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
-            //std::cout << "lhs_i_element: " << i << "\n  " << mk_pp(lhs_nodes_elements[i].first, m) << "\n  " << lhs_nodes_elements[i].second << "\n  " << mk_pp(lhs_i_loop_size, m) << "\n";
+            if (lhs_nodes_elements[i].second + 1 >= lhs_element_bound)
+                lhs_element_bound = lhs_nodes_elements[i].second + 1;
+            /*
+            std::cout << "lhs_element_count: " << i << "\n";
+            std::cout << "lhs_i_element: " << mk_pp(lhs_nodes_elements[i].first, m) << "\n  " << lhs_nodes_elements[i].second << "\n  " << mk_pp(lhs_i_loop_size, m) << "\n";
+            std::cout << "get_var_flat_array(lhs_nodes_elements[i].first): " << mk_pp(get_var_flat_array(lhs_nodes_elements[i].first), m) << "\n";
+            */
         }
         for (int i = 0; i < rhs_nodes_elements.size(); i++)
         {
             expr_ref rhs_i_loop_size(get_var_flat_size(rhs_nodes_elements[i]), m);
             //expr_ref rhs_i_loop_iter(get_flat_iter(rhs_nodes_elements[i]), m);
-            //assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
+            if(rhs_nodes_elements[i].second>=0)
+                assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
             //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
-            //std::cout << "rhs_i_element: " << i << "\n  " << mk_pp(rhs_nodes_elements[i].first, m) << "\n  " << rhs_nodes_elements[i].second << "\n  " << mk_pp(rhs_i_loop_size, m) << "\n";
+            if (rhs_nodes_elements[i].second + 1 >= rhs_element_bound)
+                rhs_element_bound = rhs_nodes_elements[i].second + 1;
+            /*
+            std::cout << "rhs_element_count: " << i << "\n";
+            std::cout << "rhs_i_element: " << mk_pp(rhs_nodes_elements[i].first, m) << "\n  " << rhs_nodes_elements[i].second << "\n  " << mk_pp(rhs_i_loop_size, m) << "\n";
+            std::cout << "get_var_flat_array(rhs_nodes_elements[i].first): " << mk_pp(get_var_flat_array(rhs_nodes_elements[i].first), m) << "\n";
+            */
         }
 
 
+        int alpha_bound = lhs_element_bound * q_bound.get_int64();
+        int rhs_len_bound = rhs_element_bound * q_bound.get_int64();
+        int lhs_len_bound = lhs_element_bound * q_bound.get_int64();
+        /*
+        std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
+        std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
+        std::cout << "Alpha Bound: " << alpha_bound << "\n";
+        std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
+        std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
+        std::cout << "q_bound: " << q_bound << "\n";
+        //std::cout << "connectingSize: " << connectingSize << "\n";
+        //*/
 
         
         expr_ref_vector PC_cases(m);
