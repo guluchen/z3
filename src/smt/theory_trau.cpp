@@ -3335,6 +3335,14 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
+            if (is_search_complete)
+            {
+                if (!is_printed)
+                {
+                    std::cout << "complete-search\n";
+                    is_printed = true;
+                }
+            }
             return FC_DONE;
         }
         //std::cout << "count: " << count << "\n";
@@ -3347,6 +3355,14 @@ namespace smt {
         // unsure
         if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
             STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
+            if (is_search_complete)
+            {
+                if (!is_printed)
+                {
+                    std::cout << "complete-search\n";
+                    is_printed = true;
+                }
+            }
             return FC_DONE;
         }
         else
@@ -3368,7 +3384,17 @@ namespace smt {
             if (addAxiom)
                 return FC_CONTINUE;
             else
+            {
+                if (is_search_complete)
+                {
+                    if (!is_printed)
+                    {
+                        std::cout << "complete-search\n";
+                        is_printed = true;
+                    }
+                }
                 return FC_DONE;
+            }
         }
 
 
@@ -3463,6 +3489,14 @@ namespace smt {
         }
 
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
+        if (is_search_complete)
+        {
+            if (!is_printed)
+            {
+                std::cout << "complete-search\n";
+                is_printed = true;
+            }
+        }
         return FC_DONE;
     }
 
@@ -7151,6 +7185,15 @@ namespace smt {
         //assert_axiom(LC);
 
 
+        if (is_search_complete)
+        {
+            is_search_complete = false;
+            if (!is_printed)
+            {
+                std::cout << "imcomplete-search\n";
+                is_printed = true;
+            }
+        }
 
         //std::cout << "\nPC-start\n";
         /*
