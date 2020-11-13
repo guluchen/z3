@@ -51,6 +51,8 @@ namespace smt {
         scoped_vector<str::expr_pair>   m_wi_expr_memo;
         scoped_vector<str::expr_pair>   membership_memo;
         scoped_vector<str::expr_pair>   non_membership_memo;
+        bool is_search_complete = true;
+        bool is_printed = false;
 
         typedef union_find<theory_trau>     th_union_find;
         typedef trail_stack<theory_trau>    th_trail_stack;
@@ -453,6 +455,7 @@ namespace smt {
             void init_underapprox_cached();
 
             void handle_diseq_notcontain(bool cached = false);
+            //void handle_diseq_notcontain(obj_map<expr, int>& non_fresh_vars, bool cached = false);
                 void handle_disequalities();
                 void handle_disequalities_cached();
 
@@ -466,10 +469,14 @@ namespace smt {
                     void handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars);
                     void handle_disequality_var(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars);
                 void handle_not_contain();
+                //void handle_not_contain(obj_map<expr, int>& non_fresh_vars);
                 void handle_not_contain_cached();
+                //void handle_not_contain_cached(obj_map<expr, int>& non_fresh_vars);
                     void handle_not_contain(expr *lhs, expr *rhs, bool cached = false);
+                    //void handle_not_contain(expr* lhs, expr* rhs, obj_map<expr, int>& non_fresh_vars, bool cached = false);
                     void handle_not_contain_substr_index(expr *lhs, expr *rhs);
                     void handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached = false);
+                    //void handle_not_contain_var(expr* lhs, expr* rhs, expr* premise, obj_map<expr, int>& non_fresh_vars, bool cached = false);
                     void handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached = false);
                     bool is_contain_family_equality(expr* n);
                     bool is_contain_family_equality(expr* n, expr* &contain);
