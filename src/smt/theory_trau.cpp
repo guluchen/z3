@@ -23,6 +23,104 @@
  *  3. better algorithm for computing state transform
  */
 
+/* ANNOTATION:
+ * u, v, w: word terms.
+ * x, y, z: string variables.
+ * c, d, e: character variables
+ * r, s, t: constant strings, e.g. s = “ababc”.
+ *
+ * Properties:
+ * 1. (No constraints => SAT)
+ * 
+ * 	No word equalities, inequalities, and membership formulae => SAT.
+ *
+ * 	Implementation: 
+ * 	m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0
+ *
+ * 2. String Number Conversion:
+ *
+ * 	n := toNum(c)
+ * 	n = 0, 1, …, 9 for c = “0”, “1”, …, “9”, respectively; otherwise n = -1.
+ * 	Similarly, toNum(“121”) = 121, an integer, and toNum(“1ab”) = -1.
+ *
+ * 	Corresponding functions:
+ * 	eval_str_int(), eval_disequal_str_int()
+ *
+ * 3. Self Reference
+ *
+ * 	x_1 = y_1 … x_2 … z_1
+ * 	x_2 = y_1 … x_3 … z_2	=>	x_1 = y_1 … (y_2 … x_3 … z_2) … z_2
+ * 	…
+ * 	x_i = y_i … x_1 … z_i	=> x_{i-1} = y_{i-1} … (y_i … x_1 … z_i) … z_{i-1}
+ * 	=> x_1 = u x_1 v for some u, v.
+ * 	=> u = v = \epsilon.
+ *
+ * 	Corresponding functions:
+ * 	NONE
+ *
+ * 4-1. Common Prefixes and Suffixes.
+ *
+ * 	* u and v share a common prefix, w, and
+ * 	* u = v,
+ * 	=> u’ = v’ where u = wu’ and v = wv’.
+ * 	
+ * 	On the other hand, if 
+ * 	* u_1u_2 = v_1v_2,
+ * 	* |u_1| = |v_1|, and
+ * 	* u_1 != v_1,
+ * 	=>  Inconsistent.
+ *
+ * 	Correspond functions:
+ * 	review_starting_ending_combination() // just check const prefixes and suffixes,
+ *                                           // i.e., u_1 = s and v_1 = t for some s, t.
+ *
+ * 4-2. Common Prefixes and Suffixes.
+ *
+ * 	* x = u y v
+ * 	* x = u z v
+ * 	=> y = z
+ *
+ * 	* x = u y v
+ * 	* x = u v
+ * 	=> y = \epsilon
+ *
+ * 	Corresponding functions:
+ * 	handle_contain_family() // to be fixed
+ *
+ * 5. Not_contains inference
+ *
+ * 	* x = u y v, and
+ * 	* not_contains(x, w)
+ * 	=> not_contains(y, w).
+ *
+ * 	* x = u y v, and
+ * 	* not_contains(x, “a”)
+ * 	* z = replace(y, “b”, “c”)
+ * 	=> not_contains(z, “a”).
+ * 	// To be fixed.
+ *
+ * 	Corresponding functions:
+ * 	is_notContain_consistent()
+ *
+ * 6. Equivalence of First Chars
+ *
+ * 	* uv = u’v’
+ * 	* |u|, |u’| != 0
+ * 	=> u(1) = u’(1)
+ *
+ * 	Corresponding functions:
+ * 	handle_charAt_family()
+ *
+ * 7. Word terms of same lengths
+ *
+ * 	* uv = u’v’
+ * 	* |u| = |u’|
+ * 	=> u = u’
+ *
+ * 	Corresponding functions:
+ * 	propagate_eq_combination()
+ */
+
 namespace smt {
 
     namespace str {
