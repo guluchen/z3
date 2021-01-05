@@ -53,6 +53,7 @@ namespace smt {
         scoped_vector<str::expr_pair>   non_membership_memo;
         bool is_search_complete = true;
         bool is_printed = false;
+        clock_t timer;
 
         typedef union_find<theory_trau>     th_union_find;
         typedef trail_stack<theory_trau>    th_trail_stack;
@@ -277,7 +278,17 @@ namespace smt {
             bool match_regex(expr *a, expr *b);
             eautomaton* get_automaton(expr* re);
         };
-
+    private:
+        final_check_status finished_search(){
+            STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
+            timer=clock()-timer;
+            if (is_search_complete)
+            {
+                std::cout << "complete-search\n";
+                std::cout<<"time used(s):"<<double(timer)/CLOCKS_PER_SEC<<std::endl;
+            }
+            return FC_DONE;
+        }
 
     public:
         theory_trau(ast_manager& m, const theory_str_params& params);
@@ -301,7 +312,7 @@ namespace smt {
          * Stronger than get_eqc_value() in that it will perform recursive descent
          * through every subexpression and attempt to resolve those to concrete values as well.
          * Returns the concrete value obtained from this process,
-         * guaranteed to satisfy m_strutil.is_string(),
+         * guaranteed to satisfy m_str.util.is_string(),
          * if one could be obtained,
          * or else returns NULL if no concrete value was derived.
          */

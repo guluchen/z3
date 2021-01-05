@@ -76,6 +76,7 @@ namespace smt {
               opt_ConcatOverlapAvoid(true),
               uState(m),
               implied_facts(m){
+        timer=clock();
         str_int_bound = rational(0);
     }
 
@@ -3332,20 +3333,11 @@ namespace smt {
     }
     int count = 0;
     final_check_status theory_trau::final_check_eh() {
+
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
-            STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
-            if (is_search_complete)
-            {
-                if (!is_printed)
-                {
-                    std::cout << "complete-search\n";
-                    is_printed = true;
-                }
-            }
             return FC_DONE;
         }
-        //std::cout << "count: " << count << "\n";
         count++;
 //        if (propagate_concat()) {
 //            TRACE("str", tout << "Resuming search due to axioms added by length propagation." << std::endl;);
@@ -3354,15 +3346,6 @@ namespace smt {
 //        }
         // unsure
         if (!newConstraintTriggered && uState.reassertDisEQ && uState.reassertEQ) {
-            STRACE("str", tout << __LINE__ << " DONE" << std::endl;);
-            if (is_search_complete)
-            {
-                if (!is_printed)
-                {
-                    std::cout << "complete-search\n";
-                    is_printed = true;
-                }
-            }
             return FC_DONE;
         }
         else
@@ -3378,25 +3361,17 @@ namespace smt {
 
         bool addAxiom;
         expr_ref_vector diff(m);
-        // §Ö¨ú not sure
+        // check if a branch sharing the same "SAT core" has been explored, i.e., with a subset of guessed equations
         if (is_completed_branch(addAxiom, diff)){
             STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
             if (addAxiom)
                 return FC_CONTINUE;
             else
             {
-                if (is_search_complete)
-                {
-                    if (!is_printed)
-                    {
-                        std::cout << "complete-search\n";
-                        is_printed = true;
-                    }
-                }
                 return FC_DONE;
             }
         }
-
+        //(TODO diff seems to be useless, try to remove and test)
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_map<expr, int> non_fresh_vars;
@@ -3487,17 +3462,8 @@ namespace smt {
             update_state();
             return FC_CONTINUE;
         }
+        return finished_search();
 
-        STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
-        if (is_search_complete)
-        {
-            if (!is_printed)
-            {
-                std::cout << "complete-search\n";
-                is_printed = true;
-            }
-        }
-        return FC_DONE;
     }
 
     bool theory_trau::eval_str_int(){
@@ -3918,17 +3884,17 @@ namespace smt {
 
     /*
      * sigma_domain: all letters appearing in concats
-     * non_fresh_var: variables in disequalities: x != y, x does not contain y
+     * non_fresh_var: variables in dis-equalities: x != y, x does not contain y
      * eq_combination: all equalities over variable
      */
     // 1. collect alphebet
     // 2. find int lower bound and upper bound
-    // 3. freash var 
+    // 3. fresh var
     //      x:=a
-    //      x used in not_contais or word_diseq
-    //      used more than onece
+    //      x used in not_contains or word_diseq
+    //      used more than once
     // normalize: if a var used in lhs => not used in rhs
-    // rhs no freash vars
+    // rhs no fresh vars
     bool theory_trau::init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
@@ -4928,21 +4894,30 @@ namespace smt {
         for(const auto& e : prev_guessed_eqs){
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << "; guessed_eqs.contains(e)" << guessed_eqs.contains(e) << "; e != m.mk_true(): " << (e != m.mk_true()) << std::endl;);
             if (e != m.mk_true() && !guessed_eqs.contains(e)) {
+
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 // check the case where some var disappear because of len = 0
-                if (to_app(e)->get_num_args() != 2)
+
+                if (to_app(e)->get_num_args() != 2) {
+                    std::cout<<"prev_guessed_eq: "<<mk_pp(e,m)<<" num_args:"<<to_app(e)->get_num_args()<<std::endl;
                     continue;
+                }
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
                 if (to_app(e)->get_arg(1) == mk_string("")){
                     rational len;
                     if (get_len_value(to_app(e)->get_arg(0), len) && len.get_int64() == 0)
+                        //continue if the word equation is "" = x, where |x|=0, for some x
                         continue;
                 }
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
+
+
                 // check if it is the bound var
                 std::string toStr = expr2str(e);
-                if (!is_theory_str_term(to_app(e)->get_arg(0)) || !is_theory_str_term(to_app(e)->get_arg(1)))
+                if (!is_theory_str_term(to_app(e)->get_arg(0)) || !is_theory_str_term(to_app(e)->get_arg(1))) {
+                    std::cout<<"prev_guessed_eq"<<mk_pp(e,m)<<" is not a string term."<<std::endl;
                     continue;
+                }
                 expr* lhs = simplify_concat(to_app(e)->get_arg(0));
                 expr* rhs = simplify_concat(to_app(e)->get_arg(1));
                 expr* eq = createEqualOP(lhs, rhs);
@@ -4950,6 +4925,7 @@ namespace smt {
                 collect_eq_nodes(lhs, eqs);
                 if (eq != m.mk_true() && !eqs.contains(rhs)) {
                     expr* not_e = mk_not(m, e);
+                    //YFC: check what is m_trail for (TODO)
                     m_trail.push_back(not_e);
                     if (guessed_diseqs.contains(not_e))
                         diff.push_back(not_e);
@@ -4971,7 +4947,7 @@ namespace smt {
         // compare all diseq
         for(const auto& e : prev_diseq){
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-            // skip x = ""
+            // skip x = "" (because we already have |x|!=0)
             if (is_empty_comparison(e))
                 continue;
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
@@ -20374,13 +20350,19 @@ namespace smt {
     void theory_trau::fetch_guessed_exprs_with_scopes(expr_ref_vector &guessed_eqs, expr_ref_vector &guessed_diseqs) {
         
         context& ctx = get_context();
+        //get guessed word equalities and disequalities
         for (unsigned i = 0; i < mful_scope_levels.size(); ++i) {
-            if (!m.is_not(mful_scope_levels[i].get()))
+            if (!m.is_not(mful_scope_levels[i].get())) {
+//                std::cout<<"add word eq:"<<mk_pp(mful_scope_levels[i].get(),m)<<std::endl;
                 guessed_eqs.push_back(mful_scope_levels[i].get());
-            else
+            }else {
+//                std::cout<<"add word diseq:"<<mk_pp(mful_scope_levels[i].get(),m)<<std::endl;
                 guessed_diseqs.push_back(mful_scope_levels[i].get());
+            }
         }
 
+
+        //get guessed word equations from assignments, seems to be for str-int conversion (TODO)
         expr_ref_vector assignments(m);
         ctx.get_assignments(assignments);
         expr* a0 = nullptr, *a1 = nullptr, *a2 = nullptr;
@@ -20393,6 +20375,7 @@ namespace smt {
                         rational value;
                         if ((m_autil.is_numeral(a1, value) && value >= rational(0)) || (m_autil.is_numeral(a2, value) && value >= rational(0))) {
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(s, m) << std::endl;);
+                            std::cout<<"add word eq(from assignment):"<<mk_pp(s,m)<<std::endl;
                             guessed_eqs.push_back(s);
                         }
                     }
