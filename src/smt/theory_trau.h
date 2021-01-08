@@ -1077,7 +1077,7 @@ namespace smt {
                     bool is_haystack(expr* nn);
                     bool is_needle(expr* nn);
                 bool more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences);
-                bool is_non_fresh_occurrence(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len);
+                bool is_non_fresh_occurrence_and_collect_nn_length(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len);
                 bool is_non_fresh_recheck(expr *nn, int len, obj_map<expr, ptr_vector<expr>> const& combinations);
                 obj_map<expr, int> count_occurrences_from_root();
                 bool check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> v);
@@ -1087,7 +1087,7 @@ namespace smt {
                 obj_map<expr, int> count_occurrences_from_combination(obj_map<expr, ptr_vector<expr>> const &eq_combination, obj_map<expr, int> const &non_fresh_vars);
             void print_all_assignments();
             void print_guessed_literals();
-            obj_map<expr, ptr_vector<expr>> normalize_eq(obj_hashtable<expr> &non_root_nodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);
+            obj_map<expr, ptr_vector<expr>> simplify_eq(obj_hashtable<expr> &non_root_nodes, obj_map<expr, int> &non_fresh_vars, bool &axiom_added);
             obj_map<expr, ptr_vector<expr>> refine_eq_combination(obj_map<expr, int> &non_fresh_vars, obj_map<expr, ptr_vector<expr>> const& combinations, obj_hashtable<expr> const& non_root_nodes);
             bool concat_with_const(expr* c);
                 bool can_merge_combination(obj_map<expr, ptr_vector<expr>> const& combinations);
@@ -1099,7 +1099,7 @@ namespace smt {
                     bool are_equal_concat(expr* lhs, expr* rhs);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
-                ptr_vector<expr> norrmalize_object(expr* object, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
+                ptr_vector<expr> simplify_and_ret_eq_nodes(expr* node, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
                 bool skip_concat(expr* e);
                 expr* find_representation(expr* e);
                 expr* create_concat_with_concat(expr* n1, expr* n2);
@@ -1108,7 +1108,7 @@ namespace smt {
                 expr* create_concat_with_str(zstring str, expr* n);
                 expr* ends_with_str(expr* n);
                 expr* starts_with_str(expr* n);
-                void add_non_root_vars(expr* concatL, expr* concatR, obj_hashtable<expr> &non_root_vars);
+                void add_to_non_root_vars(expr* concatL, expr* concatR, obj_hashtable<expr> &non_root_vars);
         bool can_propagate() override;
         void propagate() override;
         expr* query_theory_arith_core(expr* n, model_generator& mg);
@@ -1203,7 +1203,7 @@ namespace smt {
         */
         bool in_same_eqc(expr * n1, expr * n2);
 
-        expr * collect_eq_nodes(expr * n, expr_ref_vector & eqcSet);
+        expr * collect_eq_nodes_and_return_eq_constStrNode_if_exists(expr * n, expr_ref_vector & eqcSet);
 
         /*
         * Add axioms that are true for any string variable:

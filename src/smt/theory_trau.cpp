@@ -193,7 +193,7 @@ namespace smt {
         expr * n_eqc = get_eqc_value(n, hasEqc);
         if (hasEqc) {
             expr_ref_vector eqs(m);
-            collect_eq_nodes(n, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
             for (const auto& eq : eqs){
                 rational len;
                 get_len_value(eq, len);
@@ -308,7 +308,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ << " mk_value for: " << mk_ismt2_pp(owner, m) << " (sort " << mk_ismt2_pp(m.get_sort(owner), m) << ")" << std::endl;);
                 bool found = false;
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(owner.get(), eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(owner.get(), eqs);
                 expr* reg = nullptr;
                 for (unsigned i = 0; i < eqs.size(); ++i) {
                     if ((is_non_fresh(eqs[i].get()) && !u.str.is_concat(eqs[i].get())) || is_internal_regex_var(eqs[i].get(), reg)) {
@@ -392,7 +392,7 @@ namespace smt {
 
     bool theory_trau::is_in_non_fresh_family(expr *n){
         expr_ref_vector eq(m);
-        collect_eq_nodes(n, eq);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eq);
         for (const auto& nn : uState.non_fresh_vars)
             if (eq.contains(nn.m_key)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << " " << mk_pp(nn.m_key, m) << std::endl;);
@@ -468,7 +468,7 @@ namespace smt {
     expr_ref_vector theory_trau::get_dependencies(expr *n){
         expr_ref_vector ret(m);
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(n, m) << std::endl;);
         if (u.str.is_concat(n)){
             ptr_vector<expr> nodes;
@@ -720,10 +720,10 @@ namespace smt {
             expr* n1 = to_app(c1)->get_arg(0);
             expr* n2 = to_app(c1)->get_arg(1);
             expr_ref_vector eqn1(m);
-            collect_eq_nodes(n1, eqn1);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(n1, eqn1);
 
             expr_ref_vector eqn2(m);
-            collect_eq_nodes(n2, eqn2);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(n2, eqn2);
 
             for (const auto c2 : eqc_concat_rhs)
                 if (c1 != c2) {
@@ -863,7 +863,7 @@ namespace smt {
         
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(n, m) << std::endl;);
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         for (const auto& eq : eqs) {
             for (const auto& nn : m_wi_expr_memo) {
                 expr* key;
@@ -947,10 +947,10 @@ namespace smt {
         
         expr_ref_vector ret(m);
         expr_ref_vector eqLhs(m);
-        collect_eq_nodes(lhs, eqLhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqLhs);
 
         expr_ref_vector eqRhs(m);
-        collect_eq_nodes(rhs, eqRhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqRhs);
 
         // combine two lists
         eqLhs.append(eqRhs);
@@ -986,10 +986,10 @@ namespace smt {
         
         expr_ref_vector ret(m);
         expr_ref_vector eqLhs(m);
-        collect_eq_nodes(lhs, eqLhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqLhs);
 
         expr_ref_vector eqRhs(m);
-        collect_eq_nodes(rhs, eqRhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqRhs);
 
         // combine two lists
         eqLhs.append(eqRhs);
@@ -1026,10 +1026,10 @@ namespace smt {
         
         expr_ref_vector ret(m);
         expr_ref_vector eqLhs(m);
-        collect_eq_nodes(lhs, eqLhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqLhs);
 
         expr_ref_vector eqRhs(m);
-        collect_eq_nodes(rhs, eqRhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqRhs);
 
         for (unsigned i = 0; i < eqLhs.size(); ++i)
             if (lhs != eqLhs[i].get())
@@ -1762,7 +1762,7 @@ namespace smt {
     void theory_trau::propagate_const_str(expr * lhs, expr * rhs, zstring value){
         TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << std::endl;);
         expr_ref_vector eq_rhs(m);
-        collect_eq_nodes(rhs, eq_rhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eq_rhs);
 
         for (const auto & it : concat_node_map){
             if (it.get_key1() && it.get_key2() && it.get_value() && u.str.is_concat(it.get_value())) {
@@ -1836,7 +1836,7 @@ namespace smt {
         TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": "<< mk_pp(concat, m) << " --- " << mk_pp(new_concat, m) << std::endl;);
 
         expr_ref_vector eq_concat(m);
-        expr *value = collect_eq_nodes(concat, eq_concat);
+        expr *value = collect_eq_nodes_and_return_eq_constStrNode_if_exists(concat, eq_concat);
         if (value != nullptr){
             // get the value
             zstring sumValue;
@@ -1924,8 +1924,8 @@ namespace smt {
 
         expr_ref_vector eqs(m);
 
-        expr * constStr_1 = collect_eq_nodes(nn1, eqs);
-        expr * constStr_2 = collect_eq_nodes(nn2, eqs);
+        expr * constStr_1 = collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn1, eqs);
+        expr * constStr_2 = collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn2, eqs);
         expr * constStr = (constStr_1 != nullptr) ? constStr_1 : constStr_2;
 
         if (constStr == nullptr) {
@@ -1971,10 +1971,10 @@ namespace smt {
 
         // check concat vs regex: x . "abc" --> regexAll . "abc"
         expr_ref_vector eq_nn1(m);
-        collect_eq_nodes(nn1, eq_nn1);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn1, eq_nn1);
 
         expr_ref_vector eq_nn2(m);
-        collect_eq_nodes(nn2, eq_nn2);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn2, eq_nn2);
 
         // check all LHS concat vs RHS regex
         for (const auto& e: eq_nn1) {
@@ -2043,7 +2043,7 @@ namespace smt {
             } else {
                 // if it is equal to const
                 expr_ref_vector eqs_vector(m);
-                expr *subnode_val = collect_eq_nodes(el, eqs_vector);
+                expr *subnode_val = collect_eq_nodes_and_return_eq_constStrNode_if_exists(el, eqs_vector);
                 if (subnode_val != nullptr) {
                     litems.push_back(createEqualOP(subnode_val, el));
                     u.str.is_string(subnode_val, const_str_value);
@@ -2121,8 +2121,8 @@ namespace smt {
         TRACE("str", tout << __FUNCTION__ << ": "<< mk_pp(n1, m) << " and " << mk_pp(n2, m) << std::endl;);
 
         expr_ref_vector neq_eq_class(m);
-        expr * constStrAst_1 = collect_eq_nodes(n1, neq_eq_class);
-        expr * constStrAst_2 = collect_eq_nodes(n2, neq_eq_class);
+        expr * constStrAst_1 = collect_eq_nodes_and_return_eq_constStrNode_if_exists(n1, neq_eq_class);
+        expr * constStrAst_2 = collect_eq_nodes_and_return_eq_constStrNode_if_exists(n2, neq_eq_class);
         expr * constStrAst = (constStrAst_1 != nullptr) ? constStrAst_1 : constStrAst_2;
 
         // step 1: we may have constant values for Contains checks now
@@ -2458,8 +2458,8 @@ namespace smt {
                         } else {
                             expr_ref_vector subAst1Eqc(m);
                             expr_ref_vector subAst2Eqc(m);
-                            collect_eq_nodes(subAst1, subAst1Eqc);
-                            collect_eq_nodes(subAst2, subAst2Eqc);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(subAst1, subAst1Eqc);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(subAst2, subAst2Eqc);
 
                             if (subAst1Eqc.contains(subAst2)) {
                                 // -----------------------------------------------------------
@@ -2610,8 +2610,8 @@ namespace smt {
                         else {
                             expr_ref_vector str1Eqc(m);
                             expr_ref_vector str2Eqc(m);
-                            collect_eq_nodes(str1, str1Eqc);
-                            collect_eq_nodes(str2, str2Eqc);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(str1, str1Eqc);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(str2, str2Eqc);
 
                             if (str1Eqc.contains(str2)) {
                                 // -----------------------------------------------------------
@@ -2733,8 +2733,8 @@ namespace smt {
         }
         return false;
     }
-
-    expr * theory_trau::collect_eq_nodes(expr * n, expr_ref_vector & eqcSet) {
+    //return null if not equal to constStrNode
+    expr * theory_trau::collect_eq_nodes_and_return_eq_constStrNode_if_exists(expr * n, expr_ref_vector & eqcSet) {
         expr * constStrNode = nullptr;
 
         expr * ex = n;
@@ -2875,7 +2875,7 @@ namespace smt {
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(rhs, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqs);
 
                 for (const auto& eq : eqs)
                     if (nodes_in_lhs.contains(eq))
@@ -2910,7 +2910,7 @@ namespace smt {
             zstring key;
             if (u.str.is_string(str, key)) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(lhs, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs);
 
                 for (const auto& eq : eqs)
                     if (nodes_in_rhs.contains(eq))
@@ -3054,7 +3054,7 @@ namespace smt {
             return {};
 
         expr_ref_vector eq(m);
-        expr* const_expr = collect_eq_nodes(e, eq);
+        expr* const_expr = collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eq);
         if (const_expr != nullptr){
             zstring const_val;
             u.str.is_string(const_expr, const_val);
@@ -3444,13 +3444,13 @@ namespace smt {
             return FC_CONTINUE;
         }
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
-        // new
-        if (can_merge_combination(eq_combination)){
-            TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
-            print_eq_combination(eq_combination);
-            newConstraintTriggered = true;
-            return FC_CONTINUE;
-        }
+//        // new
+//        if (can_merge_combination(eq_combination)){
+//            TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
+//            print_eq_combination(eq_combination);
+//            newConstraintTriggered = true;
+//            return FC_CONTINUE;
+//        }
 
         if (!parikh_image_check(eq_combination)){
             negate_context();
@@ -3609,7 +3609,7 @@ namespace smt {
 
     bool theory_trau::eq_to_i2s(expr* n, expr* &i2s){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         for (const auto& nn : eqs)
             if (u.str.is_itos(nn)) {
                 i2s = nn;
@@ -3730,7 +3730,7 @@ namespace smt {
 //                    }
 //                }
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(S, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(S, eqs);
                 for (const auto& eq : eqs)
                     carry_on_results.insert(eq, zstring(tmp.c_str()));
             }
@@ -3786,7 +3786,7 @@ namespace smt {
 
     int theory_trau::eval_invalid_str2int(expr* e, expr* &eq_node){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (const auto& n : eqs){
             if (u.str.is_concat(n)) {
                 ptr_vector<expr> nodes;
@@ -3887,17 +3887,18 @@ namespace smt {
      * non_fresh_var: variables in dis-equalities: x != y, x does not contain y
      * eq_combination: all equalities over variable
      */
-    // 1. collect alphebet
-    // 2. find int lower bound and upper bound
-    // 3. fresh var
-    //      x:=a
-    //      x used in not_contains or word_diseq
-    //      used more than once
+    // 1. collect alphebet using collect_char_domain_from_concat();
+    // 2. find character variable upper bound using analyze_bounds();
+    // 3. collect non-fresh variables
+    //      (1) if a variable occurs >=2 times in the word equations and is not const, then it is non-fresh
+    //      (2) if a variable is used in no_contains or disequality and is not const, then it is non-fresh
+    //      (3) if a variable is in the equivalence class of a non-fresh varaible, then it is also non-fresh
     // normalize: if a var used in lhs => not used in rhs
     // rhs no fresh vars
     bool theory_trau::init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         sigma_domain = collect_char_domain_from_concat();
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
@@ -3905,10 +3906,22 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " q_bound: " << ":  " << q_bound << std::endl;);
         non_fresh_vars = collect_non_fresh_vars();
 
+        for(auto v:non_fresh_vars){
+            STRACE("str", tout << __LINE__ <<  " non_fresh_var: "<<mk_pp(v.m_key,m) << std::endl;);
+        }
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_hashtable<expr> non_root_vars;
         bool axiom_added = false;
-        eq_combination = normalize_eq(non_root_vars, non_fresh_vars, axiom_added);
+        eq_combination = simplify_eq(non_root_vars, non_fresh_vars, axiom_added);
+
+        STRACE("str", tout << __LINE__ <<  " normalized equations: " << std::endl;);
+        for(auto eq:eq_combination){
+            for(auto rhs:eq.m_value){
+                STRACE("str", tout << __LINE__ <<" "<<  mk_pp(eq.m_key,m) <<" = "<<mk_pp(rhs,m) << std::endl;);
+            }
+        }
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         return axiom_added;
     }
@@ -3970,7 +3983,7 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         obj_hashtable<expr> non_root_vars;
         bool axiom_added = false;
-        eq_combination = normalize_eq(non_root_vars, non_fresh_vars, axiom_added);
+        eq_combination = simplify_eq(non_root_vars, non_fresh_vars, axiom_added);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (axiom_added)
             return axiom_added;
@@ -4028,7 +4041,7 @@ namespace smt {
 
         for (const auto& nn : new_non_fresh) {
             expr_ref_vector eqs(m);
-            collect_eq_nodes(nn.m_key, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn.m_key, eqs);
             for (const auto& n : eqs)
                 non_fresh_vars.insert(n, nn.m_value);
         }
@@ -4046,7 +4059,7 @@ namespace smt {
             if (u.str.is_extract(substr.m_key, arg0, arg1, arg2) && non_fresh_vars.contains(arg0)){
                 rational len;
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(substr.m_value, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(substr.m_value, eqs);
                 if (m_autil.is_numeral(arg2, len)){
                     if (!non_fresh_vars.contains(substr.m_value)){
                         for (const auto& e : eqs)
@@ -4083,7 +4096,7 @@ namespace smt {
                 zstring needle;
                 if (is_contain_family_equality(lhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
-                    collect_eq_nodes(rhs, vec);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, vec);
                     if (is_fresh(rhs, needle, eq_combination, non_fresh_vars)){
                         if (not_imp.find(rhs) == not_imp.end())
                             for (const auto& e : vec)
@@ -4098,7 +4111,7 @@ namespace smt {
                 }
                 else if (is_contain_family_equality(rhs, contain) && u.str.is_string(contain, needle) && !is_trivial_contain(needle)) {
                     expr_ref_vector vec(m);
-                    collect_eq_nodes(lhs, vec);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, vec);
                     if (is_fresh(lhs, needle, eq_combination, non_fresh_vars)){
                         if (not_imp.find(rhs) == not_imp.end())
                             for (const auto& e : vec)
@@ -4195,7 +4208,7 @@ namespace smt {
 
     bool theory_trau::eq_in_list(expr* n, ptr_vector<expr> const& nodes) {
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         for (const auto& nn : eqs)
             if (nodes.contains(nn))
                 return true;
@@ -4691,7 +4704,7 @@ namespace smt {
         for (const auto& nn : nodes){
             if (!u.str.is_string(nn)) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(nn, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
 
                 for (const auto &c : contain_pair_bool_map) {
                     if (eqs.contains(c.get_key1())) {
@@ -4800,7 +4813,7 @@ namespace smt {
     bool theory_trau::not_contain(expr* haystack, expr* needle, expr* &realHaystack){
         context &ctx = get_context();
         expr_ref_vector eqs(m);
-        collect_eq_nodes(haystack, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(haystack, eqs);
         for (const auto& s: eqs) {
             std::pair<expr *, expr *> key = std::make_pair(s, needle);
             if (contain_pair_bool_map.contains(key)) {
@@ -4831,7 +4844,7 @@ namespace smt {
     bool theory_trau::does_contain(expr* haystack, expr* needle, expr* &realHaystack){
         context &ctx = get_context();
         expr_ref_vector eqs(m);
-        collect_eq_nodes(haystack, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(haystack, eqs);
         for (const auto& s: eqs) {
             std::pair<expr *, expr *> key = std::make_pair(s, needle);
             if (contain_pair_bool_map.contains(key)) {
@@ -4899,7 +4912,7 @@ namespace smt {
                 // check the case where some var disappear because of len = 0
 
                 if (to_app(e)->get_num_args() != 2) {
-                    std::cout<<"prev_guessed_eq: "<<mk_pp(e,m)<<" num_args:"<<to_app(e)->get_num_args()<<std::endl;
+                    //std::cout<<"prev_guessed_eq: "<<mk_pp(e,m)<<" num_args:"<<to_app(e)->get_num_args()<<std::endl;
                     continue;
                 }
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
@@ -4915,14 +4928,14 @@ namespace smt {
                 // check if it is the bound var
                 std::string toStr = expr2str(e);
                 if (!is_theory_str_term(to_app(e)->get_arg(0)) || !is_theory_str_term(to_app(e)->get_arg(1))) {
-                    std::cout<<"prev_guessed_eq"<<mk_pp(e,m)<<" is not a string term."<<std::endl;
+                    //std::cout<<"prev_guessed_eq"<<mk_pp(e,m)<<" is not a string term."<<std::endl;
                     continue;
                 }
                 expr* lhs = simplify_concat(to_app(e)->get_arg(0));
                 expr* rhs = simplify_concat(to_app(e)->get_arg(1));
                 expr* eq = createEqualOP(lhs, rhs);
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(lhs, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs);
                 if (eq != m.mk_true() && !eqs.contains(rhs)) {
                     expr* not_e = mk_not(m, e);
                     //YFC: check what is m_trail for (TODO)
@@ -5314,8 +5327,8 @@ namespace smt {
                         zstring value_i("");
                         if (name_i.find("charAt1") == 0 || (u.str.is_string(nodes_i[0], value_i) && value_i.length() > 0)) {
                             expr_ref_vector eqNodes1(m), eqNodes0(m);
-                            collect_eq_nodes(nodes_i[1], eqNodes1);
-                            collect_eq_nodes(nodes_i[0], eqNodes0);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(nodes_i[1], eqNodes1);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(nodes_i[0], eqNodes0);
 
                             for (unsigned j = i + 1; j < tmpVector.size(); ++j) {
                                 ptr_vector<expr> nodes_j;
@@ -5377,7 +5390,7 @@ namespace smt {
 
     bool theory_trau::are_equal_exprs(expr* x, expr* y){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(x, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(x, eqs);
         if (eqs.contains(y))
             return true;
         return false;
@@ -5392,6 +5405,8 @@ namespace smt {
             enode * e = *it;
             enode * root = e->get_root();
             if ((m.get_sort(root->get_owner()) == string_sort)) {
+//                std::cout<<"(node, owner) = ("<<mk_pp(e->get_owner(),m)<<", "<<mk_pp(e->get_root()->get_owner(),m)<<")"<<std::endl;
+
                 eqc_roots.insert(root->get_owner());
             }
         }
@@ -5448,17 +5463,17 @@ namespace smt {
             expr * concat_lhs = concat->get_arg(0);
             expr * concat_rhs = concat->get_arg(1);
             expr_ref_vector eq_lhs(m);
-            collect_eq_nodes(concat_lhs, eq_lhs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(concat_lhs, eq_lhs);
 
             expr_ref_vector eq_rhs(m);
-            collect_eq_nodes(concat_rhs, eq_rhs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(concat_rhs, eq_rhs);
 
             rational len_lhs, len_rhs;
             bool has_len_lhs = get_len_value(concat_lhs, len_lhs);
             bool has_len_rhs = get_len_value(concat_rhs, len_rhs);
 
             expr_ref_vector eqs(m);
-            collect_eq_nodes(*it, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(*it, eqs);
             for (unsigned i = 0; i < eqs.size(); ++i)
                 if (eqs[i].get() != *it) {
                     rational len_i;
@@ -6532,7 +6547,7 @@ namespace smt {
         for (const auto& v : currState.non_fresh_vars)
             if (!preState.non_fresh_vars.contains(v.m_key)) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(v.m_key, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
                 bool found = false;
                 for (const auto& eq : eqs)
                     // check if there are any equivalent variables
@@ -6558,7 +6573,7 @@ namespace smt {
             else {
                 // check if there are any equivalent combinations
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(n.m_key, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(n.m_key, eqs);
                 for (const auto& eq : eqs)
                     if (_eq_combination.contains(eq)){
                         comb.append(_eq_combination[eq]);
@@ -6616,7 +6631,7 @@ namespace smt {
                     else if (elements[pos] != tmp[i]) {
                         // check equivalent class
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(tmp[i], eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(tmp[i], eqs);
                         if (!eqs.contains(elements[pos]))
                             break;
                     }
@@ -6728,8 +6743,8 @@ namespace smt {
             
             expr_ref_vector eqLhs(m);
             expr_ref_vector eqRhs(m);
-            expr* constLhs = collect_eq_nodes(lhs, eqLhs);
-            expr* constRhs = collect_eq_nodes(rhs, eqRhs);
+            expr* constLhs = collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqLhs);
+            expr* constRhs = collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqRhs);
             if (constLhs != nullptr && constRhs != nullptr) {
                 STRACE("str", tout << __LINE__ <<  " simple not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
                 STRACE("str", tout << __LINE__ <<  " simple not (" << mk_pp(constLhs, m) << " = " << mk_pp(constRhs, m) << ")\n";);
@@ -6785,7 +6800,7 @@ namespace smt {
 
     bool theory_trau::review_not_contain(expr* lhs, expr* rhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
         expr_ref_vector eqs_rhs(m);
-        collect_eq_nodes(rhs, eqs_rhs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqs_rhs);
         for (const auto& eq : eqs_rhs)
             if (!u.str.is_concat(eq))
                 return true;
@@ -6842,7 +6857,7 @@ namespace smt {
                     }
                     else {
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(e, eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
                         for (const auto& eq: eqs) {
                             ptr_vector<expr> nodes;
                             get_nodes_in_concat(eq, nodes);
@@ -6878,7 +6893,7 @@ namespace smt {
 
     bool theory_trau::review_notcontain_trivial(expr* lhs, expr* needle, expr* &cause){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(lhs, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs);
         for (const auto& eq: eqs) {
             ptr_vector<expr> nodes;
             get_nodes_in_concat(eq, nodes);
@@ -7032,7 +7047,7 @@ namespace smt {
         }
         else {
             expr_ref_vector eqs(m);
-            collect_eq_nodes(lhs, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs);
             for (const auto& eq : eqs){
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " = " << mk_pp(eq, m) << ")\n";);
             }
@@ -7571,7 +7586,7 @@ namespace smt {
 
     bool theory_trau::is_contain_family_equality(expr* n){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         for  (const auto& nn : eqs) {
             if (u.str.is_concat(nn)) {
                 ptr_vector<expr> nodes;
@@ -7602,12 +7617,17 @@ namespace smt {
 
     bool theory_trau::is_contain_family_equality(expr* n, expr* &contain){
         if (u.str.is_concat(n)){
+            //std::cout<<__FUNCTION__<<" expr: "<<mk_pp(n,m)<<std::endl;
+
             ptr_vector<expr> nodes;
             get_nodes_in_concat(n, nodes);
+            for(auto nd:nodes){
+                //std::cout<<__FUNCTION__<<" node:"<<mk_pp(nd,m)<<std::endl;
+            }
 
             if (nodes.size() >= 3) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(n, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
                 for (const auto& eq : eqs)
                     if (nodes.contains(eq)){
                         contain = nullptr;
@@ -7622,6 +7642,8 @@ namespace smt {
                     (n1.find("replace1!tmp") != std::string::npos && n3.find("replace2!tmp") != std::string::npos)) {
                     nodes.pop_back();
                     contain = create_concat_from_vector(nodes, 0);
+                    //std::cout<<__FUNCTION__<<" contain:"<<mk_pp(contain,m)<<std::endl;
+
                     return true;
                 }
             }
@@ -7637,7 +7659,7 @@ namespace smt {
 
             if (nodes.size() >= 3) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(n, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
                 for (const auto& eq : eqs)
                     if (nodes.contains(eq)){
                         contain = nullptr;
@@ -7668,7 +7690,7 @@ namespace smt {
 
             if (nodes.size() >= 3) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(n, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
                 for (const auto& eq : eqs)
                     if (nodes.contains(eq)){
                         return false;
@@ -7723,7 +7745,7 @@ namespace smt {
                                     obj_hashtable<expr> &all_consts){
         for (const auto& v : eq_combination){
             expr_ref_vector eqs(m);
-            collect_eq_nodes(v.m_key, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
             for (unsigned i = 0; i < eqs.size(); ++i)
                 all_str_exprs.insert(eqs[i].get());
 
@@ -7756,7 +7778,7 @@ namespace smt {
 
         for (const auto& v: all_str_exprs){
             expr_ref_vector eqs(m);
-            collect_eq_nodes(v, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
             //int sum_consts = 0;
             for (const auto& e: eqs) {
                 rational vLen;
@@ -7818,7 +7840,7 @@ namespace smt {
                     }
                     else {
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(tmp, eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(tmp, eqs);
                         for (unsigned i = 0; i < eqs.size(); ++i)
                             if (!u.str.is_concat(eqs[i].get())) {
                                 if (!all_str_exprs.contains(eqs[i].get()))
@@ -7961,7 +7983,7 @@ namespace smt {
 
                 {
                     expr_ref_vector eqs(m);
-                    collect_eq_nodes(v, eqs);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
 
                     for (const auto& vv : eqs)
                         array_map.insert(vv, arr_var);
@@ -7985,7 +8007,7 @@ namespace smt {
 
             {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(v, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
 
                 for (const auto& vv : eqs)
                     array_map.insert(vv, v1);
@@ -8186,7 +8208,7 @@ namespace smt {
                     }
                     else {
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(tmp, eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(tmp, eqs);
                         for (unsigned i = 0; i < eqs.size(); ++i)
                             if (!u.str.is_concat(eqs[i].get())) {
                                 if (!all_str_exprs.contains(eqs[i].get()))
@@ -8250,7 +8272,7 @@ namespace smt {
                 }
                 {
                     expr_ref_vector eqs(m);
-                    collect_eq_nodes(v, eqs);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
 
                     for (const auto& vv : eqs)
                         array_map[vv] = v1;
@@ -8796,7 +8818,7 @@ namespace smt {
         if (u.str.is_concat(e)) {
             // change from concat to variable if it is possible
             expr_ref_vector eq(m);
-            collect_eq_nodes(e, eq);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eq);
             for (unsigned i = 0; i < eq.size(); ++i)
                 if (!u.str.is_concat(eq[i].get())) {
                     return eq[i].get();
@@ -8812,7 +8834,7 @@ namespace smt {
 
     bool theory_trau::is_internal_regex_var(expr* e, expr* &regex){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (const auto& we: membership_memo) {
             if (eqs.contains(we.first)){
                 regex = we.second;
@@ -8831,7 +8853,7 @@ namespace smt {
 
     bool theory_trau::is_internal_regex_var(expr* e){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (const auto& we: membership_memo) {
             if (eqs.contains(we.first)){
                 for (const auto& n : eqs)
@@ -12843,7 +12865,7 @@ namespace smt {
 
     expr* theory_trau::find_i2s(expr* e){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         expr* a0 = nullptr;
         for (const auto& s : eqs)
             if (u.str.is_itos(s, a0)) {
@@ -13400,7 +13422,7 @@ namespace smt {
         if (array_map.contains(e))
             return array_map[e];
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (unsigned i = 0; i < eqs.size(); ++i){
             if (array_map.contains(eqs[i].get())) {
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " ***: " << mk_pp(e, m) << " == " << mk_pp(eqs[i].get(), m) << std::endl;);
@@ -14121,7 +14143,7 @@ namespace smt {
             }
             else {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(list[i], eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(list[i], eqs);
                 for (unsigned j = 0; j < eqs.size(); ++j) {
                     if (is_internal_regex_var(eqs[j].get(), reg)) {
                         l.push_back(eqs[j].get()); 
@@ -14949,38 +14971,52 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
 
         obj_hashtable<expr> eqc_roots = get_eqc_roots();
-        obj_map<expr, int> tmp_result;
+        for(auto root:eqc_roots){
+//            std::cout<<"eqc_root: "<<mk_pp(root,m)<<std::endl;
+        }
+
+        obj_map<expr, int> collected_non_fresh_vars;
         obj_map<expr, int> occurrences = count_occurrences_from_root();
+        for(auto occ:occurrences){
+//            std::cout<<"occurrences: ("<<mk_pp(occ.m_key,m)<<", "<<occ.m_value<<")"<<std::endl;
+        }
         expr_set ineq_vars = collect_non_ineq_vars();
+        for(auto ineq_var:ineq_vars){
+            //std::cout<<"ineq_var: "<<mk_pp(ineq_var,m)<<std::endl;
+        }
         expr_set needles = collect_needles();
+        for(auto needle:needles){
+            //std::cout<<"needle: "<<mk_pp(needle,m)<<std::endl;
+        }
+
         for (const auto& nn : eqc_roots) {
             expr_ref_vector eqs(m);
-            expr *value = collect_eq_nodes(nn, eqs);
-            if (value == nullptr) {
-                bool imp = false;
+            expr *value = collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
+            if (value == nullptr) {//if nn does not equal to a constStrNode
+                bool implied_non_fresh = false;
                 int maxLen = 0;
                 for (const auto& eq : eqs) {
                     int len = -1;
-                    if (is_non_fresh_occurrence(eq, occurrences, ineq_vars, needles, len)) {
-                        imp = true;
+                    if (is_non_fresh_occurrence_and_collect_nn_length(eq, occurrences, ineq_vars, needles, len)) {
+                        implied_non_fresh = true;
                         is_fixed_len_var(eq, len);
                         maxLen = (maxLen == -1 || len == -1) ? -1 : (maxLen < len ? len : maxLen);
                     }
                 }
 
-                if (imp)
+                if (implied_non_fresh)
                     for (const auto& eq : eqs) {
-                        tmp_result.insert(eq, maxLen);
+                        collected_non_fresh_vars.insert(eq, maxLen);
                     }
             }
         }
 
 
-        collect_non_fresh_vars_str_int(tmp_result);
+        collect_non_fresh_vars_str_int(collected_non_fresh_vars);//(TODO)
 
-        for (const auto& nn : tmp_result)
-            STRACE("str", tout << "\t "<< mk_pp(nn.m_key, m) << ": " << nn.m_value << std::endl;);
-        return tmp_result;
+        for (const auto& nn : collected_non_fresh_vars)
+            STRACE("str", tout << "\t (non_fresh, max_len)=("<< mk_pp(nn.m_key, m) << ", " << nn.m_value <<")"<< std::endl;);
+        return collected_non_fresh_vars;
     }
 
     bool theory_trau::is_fixed_len_var(expr* nn, int& len){
@@ -14995,7 +15031,7 @@ namespace smt {
         }
         else {
             expr_ref_vector eqs(m);
-            collect_eq_nodes(nn, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
             for (const auto& n : eqs)
                 if (is_char_at(n)) {
                     len = 1;
@@ -15005,6 +15041,7 @@ namespace smt {
         return false;
     }
 
+    //collect variables occurs in any negated subformula and their eq_class
     theory_trau::expr_set theory_trau::collect_non_ineq_vars(){
         expr_set ret;
         for (const auto& we : m_wi_expr_memo){
@@ -15028,18 +15065,20 @@ namespace smt {
             }
 
             expr_ref_vector eq_lhs(m);
-            collect_eq_nodes(we.first, eq_lhs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(we.first, eq_lhs);
             for (const auto& n : eq_lhs)
                 ret.insert(n);
 
             expr_ref_vector eq_rhs(m);
-            collect_eq_nodes(we.second, eq_rhs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(we.second, eq_rhs);
             for (const auto& n : eq_rhs)
                 ret.insert(n);
         }
         return ret;
     }
 
+    //collect non-const variables surrounded by pre and post temp variables
+    // e.g. y= p.z.s, then z should be collected if it does not equal a const
     theory_trau::expr_set theory_trau::collect_needles(){
         expr_set ret;
         for (const auto& we : m_wi_expr_memo){
@@ -15161,7 +15200,7 @@ namespace smt {
         if (tmp != -1)
             len = tmp;
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (const auto& eq : eqs)
             if (str_int_vars.contains(eq)){
                 if (!(str_int_vars[eq] == -1 || str_int_vars[eq] > len))
@@ -15177,7 +15216,7 @@ namespace smt {
         rational len_val;
         if (!(u.str.is_string_term(v) && get_len_value(v, len_val) && len_val == rational(0))) {
             expr_ref_vector eqs(m);
-            collect_eq_nodes(v, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
             for (const auto &n : eqs) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_pp(v, m) << " = " << mk_pp(n, m) << std::endl;);
                 s.insert(n, e);
@@ -15213,7 +15252,7 @@ namespace smt {
                     continue;
                 if (is_non_fresh_recheck(nn.m_key, nn.m_value, eq_combination) || str_int_vars.contains(nn.m_key)) {
                     expr_ref_vector eqs(m);
-                    collect_eq_nodes(nn.m_key, eqs);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn.m_key, eqs);
                     for (unsigned i = 0; i < eqs.size(); ++i) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(nn.m_key, m) << " --> " << mk_pp(eqs[i].get(), m) << std::endl;);
                         tmp_ret.insert(eqs[i].get(), nn.m_value);
@@ -15225,7 +15264,7 @@ namespace smt {
         for (const auto& nn : non_fresh_vars)
             if (!tmp_ret.contains(nn.m_key)){
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(nn.m_key, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn.m_key, eqs);
                 for (unsigned i = 0; i < eqs.size(); ++i)
                     if (!fresh_vars.contains(eqs[i].get())){
                         fresh_vars.push_back(eqs[i].get());
@@ -15249,7 +15288,7 @@ namespace smt {
                         !is_internal_regex_var(v.m_key)) {
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " remove " << mk_pp(v.m_key, m) << std::endl;);
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(v.m_key, eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
                         for (unsigned i = 0; i < eqs.size(); ++i)
                             if (!fresh_vars.contains(eqs[i].get())){
                                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not important " << mk_pp(eqs[i].get(), m) << std::endl;);
@@ -15271,7 +15310,7 @@ namespace smt {
             if (v.m_value >= 2 && !non_fresh_vars.contains(v.m_key)){
                 if (is_char_at(v.m_key)){
                     expr_ref_vector eqs(m);
-                    collect_eq_nodes(v.m_key, eqs);
+                    collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
                     for (const auto& eq : eqs)
                         non_fresh_vars.insert(eq, 1);
                 }
@@ -15279,7 +15318,7 @@ namespace smt {
                     rational len_val;
                     if (get_len_value(v.m_key, len_val) && get_assign_lvl(mk_strlen(v.m_key), mk_int(len_val)) == 0){
                         expr_ref_vector eqs(m);
-                        collect_eq_nodes(v.m_key, eqs);
+                        collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
                         for (const auto& eq : eqs)
                             non_fresh_vars.insert(eq, len_val.get_int64());
                     }
@@ -15288,7 +15327,7 @@ namespace smt {
         for (const auto& v : eq_combination)
             if (v.get_value().size() >= 15) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(v.m_key, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(v.m_key, eqs);
                 for (unsigned i = 0; i < eqs.size(); ++i)
                     non_fresh_vars.insert(eqs[i].get(), -1);
             }
@@ -15300,31 +15339,36 @@ namespace smt {
 
     bool theory_trau::more_than_two_occurrences(expr* n, obj_map<expr, int> const& occurrences){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(n, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(n, eqs);
         for (const auto& nn : eqs)
             if (occurrences.contains(nn) && occurrences[nn] >= 2)
                 return true;
 
         return false;
     }
-    bool theory_trau::is_non_fresh_occurrence(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len){
+
+    //at the same time collect the maximal length of nn
+    //a node is non fresh if it occurrence >= 2
+    bool theory_trau::is_non_fresh_occurrence_and_collect_nn_length(expr *nn, obj_map<expr, int> const &occurrences, expr_set const& ineq_vars, expr_set const& needles, int &len){
         len = -1;
+        //std::cout<< __LINE__ <<" "<< __FUNCTION__ <<" expr: "<<mk_pp(nn,m)<<std::endl;
+
         // not equal to any concat/const
         expr_ref_vector eqs(m);
-        expr *value = collect_eq_nodes(nn, eqs);
+        expr *value = collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
         if (value != nullptr)
             return false;
-        if (check_union_membership(nn, len))
+        if (check_union_membership(nn, len))//(TODO)
             return true;
-        if (collect_not_contains(nn, ineq_vars, needles))
+        if (collect_not_contains(nn, ineq_vars, needles))//(TODO)
             return true;
         vector<zstring> max_diseq_strs;
-        if (ineq_vars.contains(nn))
-            max_diseq_strs = collect_all_inequalities(nn);
+        if (ineq_vars.contains(nn))//(TODO)
+            max_diseq_strs = collect_all_inequalities(nn);//(TODO)
         if (max_diseq_strs.size() > 0)
             len = max_diseq_strs[0].length();
 
-        if (len > 0 && max_diseq_strs[0] == "__var__"){
+        if (len > 0 && max_diseq_strs[0] == "__var__"){//(TODO)
             len = -1;
             return true;
         }
@@ -15375,52 +15419,64 @@ namespace smt {
         context& ctx = get_context();
         obj_map<expr, int> ret;
         vector<str::expr_pair> visited;
-        for (const auto& n : concat_node_map)
-            if (ctx.is_relevant(n.get_value())){
-                expr* arg0 = n.get_key1();
-                ensure_enode(arg0);
-                if (!u.str.is_string(arg0))
-                    arg0 = ctx.get_enode(n.get_key1())->get_root()->get_owner();
-                expr* arg1 = n.get_key2();
-                ensure_enode(arg1);
-                if (!u.str.is_string(arg1))
-                    arg1 = ctx.get_enode(n.get_key2())->get_root()->get_owner();
+
+        //if(n1,n2,n3) in concat_node_map, then n1.n2=n3
+
+        /*(TODO) the orders of elements in concat_node_map matters, which is strange.
+            for concat_node_map = [(c,c, cc), (c, d, cd)], it returns (c,3),(d,1).
+            for concat_node_map = [(c, d, cd), (c,c, cc)], it returns (c,2),(d,1).
+        */
+        for (const auto& n : concat_node_map) {
+//            std::cout << "concat_node_map:(" << mk_pp(n.get_key1(), m) << ", " << mk_pp(n.get_key2(), m) << ", "
+//                      << mk_pp(n.get_value(), m) << ")" << std::endl;
+
+            if (ctx.is_relevant(n.get_value())) {
+                expr *n1 = n.get_key1();
+                ensure_enode(n1);
+                if (!u.str.is_string(n1))
+                    n1 = ctx.get_enode(n1)->get_root()->get_owner();
+                expr *n2 = n.get_key2();
+                ensure_enode(n2);
+                if (!u.str.is_string(n2))
+                    n2 = ctx.get_enode(n2)->get_root()->get_owner();
                 zstring tmp;
-                if (are_equal_exprs(arg0, mk_string("")) || are_equal_exprs(arg1, mk_string("")))
+                if (are_equal_exprs(n1, mk_string("")) || are_equal_exprs(n2, mk_string("")))
                     continue;
 
-                expr_ref arg0_ref(arg0, m);
-                expr_ref arg1_ref(arg1, m);
-                if (visited.contains(std::make_pair(arg0_ref, arg1_ref)))
+                expr_ref n1_ref(n1, m);
+                expr_ref n2_ref(n2, m);
+                if (visited.contains(std::make_pair(n1_ref, n2_ref)))
                     continue;
                 else
-                    visited.push_back(std::make_pair(arg0_ref, arg1_ref));
+                    visited.push_back(std::make_pair(n1_ref, n2_ref));
 
-                if (ret.contains(arg0) && check_existing_occurence(arg0, arg1, visited)) {
+                if (ret.contains(n1) && check_existing_occurence(n1, n2, visited)) {
                     continue;
                 }
-                if (arg0 == arg1) {
-                    ret.insert(arg0, 2);
-                }
-                else {
-                    if (!u.str.is_concat(arg0) && !u.str.is_string(arg0)) {
-                        if (ret.contains(arg0) &&
-                            (!is_internal_var(arg0) || is_replace_var(arg0) || is_substr_var(arg0) || is_char_at(arg0))) {
-                            ret[arg0]++;
+                if (n1 == n2) {
+                    ret.insert(n1, 2);
+                } else {
+                    if (!u.str.is_concat(n1) && !u.str.is_string(n1)) {
+                        if (ret.contains(n1) &&
+                            (!is_internal_var(n1) || is_replace_var(n1) || is_substr_var(n1) ||
+                             is_char_at(n1))) {
+                            ret[n1]++;
                         } else {
-                            ret.insert(arg0, 1);
+                            ret.insert(n1, 1);
                         }
                     }
-                    if (!u.str.is_concat(arg1) && !u.str.is_string(arg1)) {
-                        if (ret.contains(arg1) &&
-                            (!is_internal_var(arg1) || is_replace_var(arg1) || is_substr_var(arg1) || is_char_at(arg1))) {
-                            ret[arg1]++;
+                    if (!u.str.is_concat(n2) && !u.str.is_string(n2)) {
+                        if (ret.contains(n2) &&
+                            (!is_internal_var(n2) || is_replace_var(n2) || is_substr_var(n2) ||
+                             is_char_at(n2))) {
+                            ret[n2]++;
                         } else {
-                            ret.insert(arg1, 1);
+                            ret.insert(n2, 1);
                         }
                     }
                 }
             }
+        }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         for (const auto& p : ret)
             if (p.m_value >= 2)
@@ -15434,7 +15490,7 @@ namespace smt {
             if (p.first.get() == lhs){
                 // e is a part of p
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(p.second.get(), eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(p.second.get(), eqs);
                 for (const auto& n : eqs)
                     if (u.str.is_concat(n)){
                         if (are_equal_exprs(rhs, getMostLeftNodeInConcat(n)))
@@ -15442,7 +15498,7 @@ namespace smt {
                     }
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << std::endl;);
                 eqs.reset();
-                collect_eq_nodes(rhs, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqs);
                 for (const auto& n : eqs) {
                     if (u.str.is_concat(n)) {
                         if (are_equal_exprs(p.second.get(), getMostLeftNodeInConcat(n))) {
@@ -15459,7 +15515,7 @@ namespace smt {
         if (u.str.is_at(x) || u.str.is_extract(x) || u.str.is_replace(x) || u.str.is_itos(x))
             return false;
         expr_ref_vector eqs(m);
-        collect_eq_nodes(x, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(x, eqs);
 
         for (const auto& ex : eqs) {
             std::string s = expr2str(ex);
@@ -15476,7 +15532,7 @@ namespace smt {
             return false;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << std::endl;);
         expr_ref_vector eqs(m);
-        collect_eq_nodes(x, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(x, eqs);
 
         for (const auto& ex : eqs) {
             if (u.str.is_extract(ex))
@@ -15492,7 +15548,7 @@ namespace smt {
             return false;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << std::endl;);
         expr_ref_vector eqs(m);
-        collect_eq_nodes(x, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(x, eqs);
 
         for (const auto& ex : eqs) {
             if (u.str.is_extract(ex)) {
@@ -15593,7 +15649,7 @@ namespace smt {
         
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(nn, m) << std::endl;);
         expr_ref_vector eqNodeSet(m);
-        collect_eq_nodes(nn, eqNodeSet);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqNodeSet);
         for (const auto& we : m_wi_expr_memo){
             if (eqNodeSet.contains(we.first.get())){
                 if (is_var_var_inequality(we.first.get(), we.second.get())){
@@ -15614,7 +15670,7 @@ namespace smt {
         int diffLen = 0;
         vector<zstring> maxDiffStrs;
         expr_ref_vector eqs(m);
-        collect_eq_nodes(nn, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
         for (const auto& we : m_wi_expr_memo){
             if (eqs.contains(we.first.get())){
                 bool eq_const;
@@ -15670,10 +15726,10 @@ namespace smt {
 
     bool theory_trau::is_var_var_inequality(expr* x, expr* y){
         expr_ref_vector eqx(m);
-        expr* const_x = collect_eq_nodes(x, eqx);
+        expr* const_x = collect_eq_nodes_and_return_eq_constStrNode_if_exists(x, eqx);
 
         expr_ref_vector eqy(m);
-        expr* const_y = collect_eq_nodes(y, eqy);
+        expr* const_y = collect_eq_nodes_and_return_eq_constStrNode_if_exists(y, eqy);
 
         if (const_x != nullptr || const_y != nullptr)
             return false;
@@ -15717,7 +15773,7 @@ namespace smt {
     expr* theory_trau::create_conjuct_all_inequalities(expr* nn){
         
         expr_ref_vector eqNodeSet(m);
-        collect_eq_nodes(nn, eqNodeSet);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqNodeSet);
         expr_ref_vector ands(m);
         for (const auto& we : m_wi_expr_memo)
             if (eqNodeSet.contains(we.first.get()) || eqNodeSet.contains(we.second.get())){
@@ -15750,8 +15806,8 @@ namespace smt {
     bool theory_trau::is_trivial_inequality(expr* lhs, expr* rhs){
         expr_ref_vector lhs_eqs(m);
         expr_ref_vector rhs_eqs(m);
-        collect_eq_nodes(lhs, lhs_eqs);
-        collect_eq_nodes(rhs, rhs_eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, lhs_eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, rhs_eqs);
         for (const auto& l : lhs_eqs)
             for (const auto& r : rhs_eqs)
                 if (compare_concat(l, r)) {
@@ -16042,7 +16098,7 @@ namespace smt {
             STRACE("str", tout << "Assigned value " << mk_pp(*it, m) << std::endl;);
     }
 
-    obj_map<expr, ptr_vector<expr>> theory_trau::normalize_eq(
+    obj_map<expr, ptr_vector<expr>> theory_trau::simplify_eq(
             obj_hashtable<expr> &non_root_nodes,
             obj_map<expr, int> &non_fresh_vars,
             bool &axiom_added){
@@ -16052,6 +16108,8 @@ namespace smt {
         (void) ctx;
         TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << std::endl;);
         obj_map<expr, ptr_vector<expr>> combinations;
+
+        //collect roots of equivalent classes
         expr_ref_vector eqc_roots(m);
         sort* string_sort = u.str.mk_string_sort();
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
@@ -16060,12 +16118,15 @@ namespace smt {
                 eqc_roots.push_back(owner);
             }
         }
+
+
         for (const auto& node : eqc_roots){
             if (!combinations.contains(node)){
                 TRACE("str", tout << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
                 expr_ref_vector parents(m);
-                norrmalize_object(ctx.get_enode(node)->get_root()->get_owner(), combinations, non_root_nodes, parents,
-                                  non_fresh_vars);
+                simplify_and_ret_eq_nodes(ctx.get_enode(node)->get_root()->get_owner(), combinations, non_root_nodes,
+                                          parents,
+                                          non_fresh_vars);
             }
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
@@ -16253,7 +16314,7 @@ namespace smt {
             if (eq.size() == 1) {
                 // if it is equal to itself only
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(v, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
                 if (eqs.size() == 1)
                     return true;
             }
@@ -16415,185 +16476,233 @@ namespace smt {
             return false;
     }
 
-    ptr_vector<expr> theory_trau::norrmalize_object(
-            expr* object,
+    //for a concat node a.b, it does a best effort work to substitue a and b with equivalent nodes
+    //in paticular, it uses constant string if possible and removes empty string
+    ptr_vector<expr> theory_trau::simplify_and_ret_eq_nodes(
+            expr* node,
             obj_map<expr, ptr_vector<expr>> &combinations,
             obj_hashtable<expr> &non_root_nodes,
             expr_ref_vector const& parents,
             obj_map<expr, int> const& non_fresh_vars){
-        expr_ref_vector eqNodeSet(m);
-        expr* constValue = collect_eq_nodes(object, eqNodeSet);
+//        std::cout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(node, m) << std::endl<< std::endl;
 
-        for (const auto& o : eqNodeSet)
+
+        expr_ref_vector e_eq_set(m);
+        expr* constValue = collect_eq_nodes_and_return_eq_constStrNode_if_exists(node, e_eq_set);
+
+        for (const auto& o : e_eq_set)
             if (combinations.contains(o))
                 return combinations[o];
 
         context& ctx = get_context();
-        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(object, m) << std::endl;);
+        TRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ": " << mk_pp(node, m) << std::endl;);
 
         ptr_vector<expr> results = {};
-        object = ctx.get_enode(object)->get_root()->get_owner();
+        node = ctx.get_enode(node)->get_root()->get_owner();
 
-
+        //if node equals a const
         if (constValue != nullptr) {
             results.push_back(constValue);
-
-            if (object != constValue) {
-                expr_ref tmp(createEqualOP(object, constValue), m);
+            // if node is not identical to that const, add their equivalence to context(TODO)
+            if (node != constValue) {
+                expr_ref tmp(createEqualOP(node, constValue), m);
+//                std::cout<<"add "<<mk_pp(tmp,m)<<" to context\n";
                 ctx.internalize(tmp, false);
-                object = constValue;
+                node = constValue;
             }
         }
 
         obj_hashtable<expr> eq_concat;
         // refine concat: a . b = c . d && a = c && b = d
-        expr_ref_vector refined_eqNodeSet(m);
-        expr *arg0 = nullptr;
-        expr *arg1 = nullptr;
-        for (const auto& ex: eqNodeSet) {
-            if (u.str.is_concat(ex, arg0, arg1) && ex != object) {
-                // get lhs
-                expr_ref_vector eqLhsSet(m);
-                collect_eq_nodes(arg0, eqLhsSet);
+        expr_ref_vector refined_e_eq_set(m);
+        expr *node_a = nullptr;
+        expr *node_b = nullptr;
 
-                expr_ref_vector eqRhsSet(m);
-                collect_eq_nodes(arg1, eqRhsSet);
+        //refined the e_eq_set by considering the equivalent classes
+        for (const auto& node_e: e_eq_set) {
+            //case: node_e=node_a.node_b /\ node_e!=node
+            if (u.str.is_concat(node_e, node_a, node_b) && node_e != node) {
+                expr_ref_vector a_eq_set(m);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(node_a, a_eq_set);
+
+                expr_ref_vector b_eq_set(m);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(node_b, b_eq_set);
 
                 bool found = false;
-                for (const auto& exp : refined_eqNodeSet) {
-                    expr* lhs = to_app(exp)->get_arg(0);
-                    expr* rhs = to_app(exp)->get_arg(1);
-                    if (eqLhsSet.contains(lhs) && eqRhsSet.contains(rhs)) {
+                for (const auto& refined_node_e : refined_e_eq_set) {
+                    expr* refined_node_a = to_app(refined_node_e)->get_arg(0);
+                    expr* refined_node_b = to_app(refined_node_e)->get_arg(1);
+                    if (a_eq_set.contains(refined_node_a) && b_eq_set.contains(refined_node_b)) {
                         found = true;
                         break;
                     }
                 }
 
-                if (!found)
-                    refined_eqNodeSet.push_back(ex);
+                if (!found) {
+                    refined_e_eq_set.push_back(node_e);
+//                    std::cout << "+ node_e " << mk_pp(node_e, m) << " to refined_e_eq_set" << std::endl;
+                }else{
+//                    std::cout << "x node_e" << mk_pp(node_e, m) << " has an equivalent node refined_e_eq_set" << std::endl;
+
+                }
             }
-            else if (u.str.is_concat(ex) && ex == object)
-                refined_eqNodeSet.push_back(ex);
+                //case: node_e=node_a.node_b /\ node_e==node
+            else if (u.str.is_concat(node_e) && node_e == node) {
+                refined_e_eq_set.push_back(node_e);
+//                std::cout << "+ node_e" << mk_pp(node_e, m) << " to refined_e_eq_set" << std::endl;
+            }
         }
 
-        for (const auto& ex : refined_eqNodeSet) {
-            if (u.str.is_concat(ex, arg0, arg1)) {
-                if (skip_concat(ex))
+//        std::cout << "current refined_e_eq_set" << std::endl;
+//        for (const auto& node_e : refined_e_eq_set) {
+//            std::cout << mk_pp(node_e, m) << std::endl;
+//
+//        }
+//
+//
+//        std::cout << "current parent nodes" << std::endl;
+//        for (const auto& p : parents) {
+//            std::cout << mk_pp(p, m) << std::endl;
+//        }
+
+        for (const auto& node_e : refined_e_eq_set) {
+
+            //case: node_e=node_a.node_b
+            if (u.str.is_concat(node_e, node_a, node_b)) {
+                if (skip_concat(node_e)) {//(TODO should never enter its true branch)
+                    std::cerr<<"check the line \"if (skip_concat(node_e))\", its true branch is entered\n";
                     continue;
-                add_non_root_vars(arg0, arg1, non_root_nodes);
+                }
+//                std::cout << "process "<<mk_pp(node_e, m) << std::endl;
 
-                STRACE("str", tout << __LINE__ << " " << mk_pp(arg0, m) << " . " << mk_pp(arg1, m) << std::endl;);
-                ptr_vector<expr> eq_lhs;
-                if (!parents.contains(arg0)) {
-                    expr_ref_vector lhs_parents(m);
-                    lhs_parents.append(parents);
-                    lhs_parents.push_back(arg0);
-                    eq_lhs.append(norrmalize_object(arg0, combinations, non_root_nodes, lhs_parents, non_fresh_vars));
+                add_to_non_root_vars(node_a, node_b, non_root_nodes);
+
+                STRACE("str", tout << __LINE__ << " " << mk_pp(node_a, m) << " . " << mk_pp(node_b, m) << std::endl;);
+                ptr_vector<expr> eq_nodes_a;
+                if (!parents.contains(node_a)) {
+                    expr_ref_vector node_a_parents(m);
+                    node_a_parents.append(parents);
+                    node_a_parents.push_back(node_a);
+                    eq_nodes_a.append(
+                            simplify_and_ret_eq_nodes(node_a, combinations, non_root_nodes, node_a_parents,
+                                                      non_fresh_vars));
                 }
                 else {
-                    eq_lhs.push_back(arg0);
+                    eq_nodes_a.push_back(node_a);
                 }
 
-                // get rhs
-                ptr_vector<expr> eq_rhs;
-                if (!parents.contains(arg1)) {
-                    expr_ref_vector rhs_parents(m);
-                    rhs_parents.append(parents);
-                    rhs_parents.push_back(arg1);
-                    eq_rhs.append(norrmalize_object(arg1, combinations, non_root_nodes, rhs_parents, non_fresh_vars));
+//                std::cout << "eq_nodes_a: ";
+//                for (const auto& eq : eq_nodes_a) {
+//                    std::cout << " "<<mk_pp(eq, m);
+//                }
+//                std::cout<<std::endl;
+                ptr_vector<expr> eq_nodes_b;
+                if (!parents.contains(node_b)) {
+                    expr_ref_vector node_b_parents(m);
+                    node_b_parents.append(parents);
+                    node_b_parents.push_back(node_b);
+                    eq_nodes_b.append(
+                            simplify_and_ret_eq_nodes(node_b, combinations, non_root_nodes, node_b_parents,
+                                                      non_fresh_vars));
                 }
                 else {
-                    eq_rhs.push_back(arg1);
+                    eq_nodes_b.push_back(node_b);
+                }
+//                std::cout << "eq_nodes_b:" ;
+//                for (const auto& eq : eq_nodes_a) {
+//                    std::cout <<" "<< mk_pp(eq, m) ;
+//                }
+//                std::cout<<std::endl;
+
+                if (is_non_fresh(node_a, non_fresh_vars)){// && !has_empty_vars(arg0)) {
+                    eq_nodes_a.reset();
+                    eq_nodes_a.push_back(find_representation(node_a));
+                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(node_a, m) << " --> " << mk_pp(eq_nodes_a[0], m) << std::endl;);
                 }
 
-                if (is_non_fresh(arg1, non_fresh_vars)){// && !has_empty_vars(arg1)) {
-                    eq_rhs.reset();
-                    eq_rhs.push_back(find_representation(arg1));
-                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg1, m) << " --> " << mk_pp(eq_rhs[0], m) << std::endl;);
+                if (is_non_fresh(node_b, non_fresh_vars)){// && !has_empty_vars(arg1)) {
+                    eq_nodes_b.reset();
+                    eq_nodes_b.push_back(find_representation(node_b));
+                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(node_b, m) << " --> " << mk_pp(eq_nodes_b[0], m) << std::endl;);
                 }
 
-                if (is_non_fresh(arg0, non_fresh_vars)){// && !has_empty_vars(arg0)) {
-                    eq_lhs.reset();
-                    eq_lhs.push_back(find_representation(arg0));
-                    STRACE("str", tout << __LINE__ << " find_representation " << mk_pp(arg0, m) << " --> " << mk_pp(eq_lhs[0], m) << std::endl;);
-                }
 
                 // to avoid the exponential growth
-                if (eq_lhs.size() >= 15){
-                    eq_lhs.reset();
-                    eq_lhs.push_back(find_equivalent_variable(arg0));
-                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg0, m) << std::endl;);
+                if (eq_nodes_a.size() >= 15){
+                    eq_nodes_a.reset();
+                    eq_nodes_a.push_back(find_equivalent_variable(node_a));
+                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(node_a, m) << std::endl;);
                 }
 
-                if (eq_rhs.size() >= 15){
-                    eq_rhs.reset();
-                    eq_rhs.push_back(find_equivalent_variable(arg1));
-                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(arg1, m) << std::endl;);
+                if (eq_nodes_b.size() >= 15){
+                    eq_nodes_b.reset();
+                    eq_nodes_b.push_back(find_equivalent_variable(node_b));
+                    STRACE("str", tout << __LINE__ << " too many eq combinations " << mk_pp(node_b, m) << std::endl;);
                 }
 
-                for (const auto &l : eq_lhs)
-                    for (const auto &r : eq_rhs) {
-                        zstring val_lhs, val_rhs;
-                        bool hasLhSValue = false, hasRhSValue = false;
-                        expr* valueLhs = get_eqc_value(l, hasLhSValue);
-                        expr* valueRhs = get_eqc_value(r, hasRhSValue);
+                for (const auto &eq_node_a : eq_nodes_a)
+                    for (const auto &eq_node_b : eq_nodes_b) {
+                        zstring a_str_val, b_str_val;
+                        bool a_has_str_val = false, b_has_str_val = false;
+                        expr* rep_node_a = get_eqc_value(eq_node_a, a_has_str_val);
+                        expr* rep_node_b = get_eqc_value(eq_node_b, b_has_str_val);
 
-                        if (hasLhSValue) {
-                            u.str.is_string(valueLhs, val_lhs);
+                        if (a_has_str_val) {
+                            u.str.is_string(rep_node_a, a_str_val);
                         }
-                        if (hasRhSValue) {
-                            u.str.is_string(valueRhs, val_rhs);
+                        if (b_has_str_val) {
+                            u.str.is_string(rep_node_b, b_str_val);
                         }
                         bool empty_concat = false;
-                        if (hasLhSValue)
-                            if (val_lhs.length() == 0) {
-                                STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << mk_pp(l, m) << " " << val_lhs << "--> = " << mk_pp(valueRhs, m)<< std::endl;);
+                        if (a_has_str_val)
+                            if (a_str_val.length() == 0) {
+                                STRACE("str", tout << __LINE__ << " " << mk_pp(node, m) << " " << mk_pp(eq_node_a, m) << " " << a_str_val << "--> = " << mk_pp(rep_node_b, m) << std::endl;);
                                 empty_concat = true;
-                                eq_concat.insert(rewrite_concat(valueRhs));
+                                eq_concat.insert(rewrite_concat(rep_node_b));
                             }
 
-                        if (!empty_concat && hasRhSValue)
-                            if (val_rhs.length() == 0){
-                                STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " " << mk_pp(r, m) << " " << val_rhs << "--> = " << mk_pp(valueLhs, m) << std::endl;);
+                        if (!empty_concat && b_has_str_val)
+                            if (b_str_val.length() == 0){
+                                STRACE("str", tout << __LINE__ << " " << mk_pp(node, m) << " " << mk_pp(eq_node_b, m) << " " << b_str_val << "--> = " << mk_pp(rep_node_a, m) << std::endl;);
                                 empty_concat = true;
-                                eq_concat.insert(rewrite_concat(valueLhs));
+                                eq_concat.insert(rewrite_concat(rep_node_a));
                             }
 
                         if (!empty_concat) {
-                            STRACE("str", tout << __LINE__ << " " << mk_pp(object, m) << " non root vars: " << mk_pp(l, m) << " " << mk_pp(r, m) << std::endl;);
-                            add_non_root_vars(l, r, non_root_nodes);
+                            STRACE("str", tout << __LINE__ << " " << mk_pp(node, m) << " non root vars: " << mk_pp(eq_node_a, m) << " " << mk_pp(eq_node_b, m) << std::endl;);
+                            add_to_non_root_vars(eq_node_a, eq_node_b, non_root_nodes);
 
                             expr_ref_vector eqs(m);
-                            collect_eq_nodes(l, eqs);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(eq_node_a, eqs);
                             for (const auto& eq : eqs){
                                 ensure_enode(eq);
                                 non_root_nodes.insert(eq);
                             }
                             eqs.reset();
-                            collect_eq_nodes(r, eqs);
+                            collect_eq_nodes_and_return_eq_constStrNode_if_exists(eq_node_b, eqs);
                             for (const auto& eq : eqs){
                                 ensure_enode(eq);
                                 non_root_nodes.insert(eq);
                             }
 
 
-                            if (hasLhSValue && hasRhSValue){
-                                expr *tmp = u.str.mk_string(val_lhs + val_rhs);
+                            if (a_has_str_val && b_has_str_val){
+                                expr *tmp = u.str.mk_string(a_str_val + b_str_val);
                                 m_trail.push_back(tmp);
                                 eq_concat.insert(tmp);
                             }
-                            else if (hasLhSValue) {
-                                expr *tmp = create_concat_with_str(val_lhs, r);
+                            else if (a_has_str_val) {
+                                expr *tmp = create_concat_with_str(a_str_val, eq_node_b);
                                 m_trail.push_back(tmp);
                                 eq_concat.insert(tmp);
                             }
-                            else if (hasRhSValue) {
-                                expr *tmp = create_concat_with_str(l, val_rhs);
+                            else if (b_has_str_val) {
+                                expr *tmp = create_concat_with_str(eq_node_a, b_str_val);
                                 m_trail.push_back(tmp);
                                 eq_concat.insert(tmp);
                             }
                             else {
-                                expr *tmp = create_concat_with_concat(l, r);
+                                expr *tmp = create_concat_with_concat(eq_node_a, eq_node_b);
                                 m_trail.push_back(tmp);
                                 eq_concat.insert(tmp);
                             }
@@ -16627,7 +16736,7 @@ namespace smt {
                 }
             }
         if (results.size() == 0) {
-            expr* simp_concat = simplify_concat(object);
+            expr* simp_concat = simplify_concat(node);
             if (!results.contains(simp_concat)) {
                 if (is_non_fresh(simp_concat, non_fresh_vars)) {
                     results.push_back(find_representation(simp_concat));
@@ -16638,11 +16747,11 @@ namespace smt {
         else {
             // important var, it = itself, size = 1, it is root --> add another option if it is possible
             if (results.size() == 1 &&
-                is_non_fresh(object, non_fresh_vars) &&
-                    object == *results.begin() &&
-                u.str.is_concat(object)
+                is_non_fresh(node, non_fresh_vars) &&
+                node == *results.begin() &&
+                u.str.is_concat(node)
                 ){
-                for (const auto& nn : eqNodeSet)
+                for (const auto& nn : e_eq_set)
                     if (!u.str.is_concat(nn) && to_app(nn)->get_num_args() < 2) {
                         if (!concat_in_set(nn, results))
                             results.push_back(nn);
@@ -16650,7 +16759,7 @@ namespace smt {
             }
         }
 
-        combinations.insert(object, results);
+        combinations.insert(node, results);
 
         for (const auto& e: results)
             STRACE("str",
@@ -16666,6 +16775,7 @@ namespace smt {
                    });
         return results;
     }
+
 
     bool theory_trau::skip_concat(expr* e){
         expr* arg0 = nullptr, *arg1 = nullptr;
@@ -16684,7 +16794,7 @@ namespace smt {
 
     expr* theory_trau::find_representation(expr* e){
         expr_ref_vector eqs(m);
-        expr* const_node = collect_eq_nodes(e, eqs);
+        expr* const_node = collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         if (const_node != nullptr){
             return const_node;
         }
@@ -16782,7 +16892,7 @@ namespace smt {
         return nullptr;
     }
 
-    void theory_trau::add_non_root_vars(expr* concatL, expr* concatR, obj_hashtable<expr> &non_root_vars){
+    void theory_trau::add_to_non_root_vars(expr* concatL, expr* concatR, obj_hashtable<expr> &non_root_vars){
         rational vLen;
         if (get_len_value(concatL, vLen)) {
             if (vLen.get_int64() == 0)
@@ -19725,7 +19835,7 @@ namespace smt {
             get_all_nodes_in_concat(n.m_key, nodes);
             for (const auto& nn : nodes) {
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(nn, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(nn, eqs);
                 for (const auto& eq : eqs)
                     ret.insert(eq);
             }
@@ -20111,7 +20221,7 @@ namespace smt {
         expr_ref_vector empty_vars(m);
         expr* empty_str = mk_string("");
         expr_ref_vector eqs_empty(m);
-        collect_eq_nodes(empty_str, eqs_empty);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(empty_str, eqs_empty);
         for (const auto& e : eqs_empty){
             empty_vars.push_back(e);
             core.push_back(createEqualOP(e, empty_str));
@@ -20123,7 +20233,7 @@ namespace smt {
             else if (u.str.is_string(v)) {
                 // const = concat
                 expr_ref_vector eqs(m);
-                collect_eq_nodes(v, eqs);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(v, eqs);
                 for (const auto& eq : eqs)
                     if (u.str.is_concat(eq)) {
                         if ((int)get_assign_lvl(v, eq) < m_scope_level)
@@ -20256,7 +20366,7 @@ namespace smt {
             }
 
             expr_ref_vector tmpVector(m);
-            collect_eq_nodes(tmp, tmpVector); // var in class of tmp also does not contain containkey
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(tmp, tmpVector); // var in class of tmp also does not contain containkey
             for (unsigned i = 0; i  < tmpVector.size(); ++i)
                 if (!ret.contains(tmpVector[i].get())){
                     STRACE("str", tout << __LINE__ << " " << mk_pp(tmp, m) << " == " << mk_pp(tmpVector[i].get(), m) << std::endl;);
@@ -20298,7 +20408,7 @@ namespace smt {
 
     void theory_trau::add_to_all_vars(expr_ref_vector &all_vars, expr* e){
         expr_ref_vector eqs(m);
-        collect_eq_nodes(e, eqs);
+        collect_eq_nodes_and_return_eq_constStrNode_if_exists(e, eqs);
         for (const auto& n : eqs){
             ptr_vector<expr> nodes;
             get_nodes_in_concat(n, nodes);
@@ -21120,7 +21230,7 @@ namespace smt {
     bool theory_trau::string_value_proc::part_of_concat(model_generator &mg, expr *concat, expr* sub_node, obj_map<enode, app *> const& m_root2value, int &start){
         start = 0;
         expr_ref_vector eqs(th.get_manager());
-        th.collect_eq_nodes(concat, eqs);
+        th.collect_eq_nodes_and_return_eq_constStrNode_if_exists(concat, eqs);
         ptr_vector<expr> nodes_2;
         th.get_nodes_in_concat(sub_node, nodes_2);
         for (const auto& c : eqs) {
