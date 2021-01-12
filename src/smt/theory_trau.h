@@ -5,7 +5,9 @@
 #include <set>
 #include <stack>
 #include <map>
-#include <vector> 
+#include <vector>
+#include <sstream>
+
 #include "ast/arith_decl_plugin.h"
 #include "ast/array_decl_plugin.h"
 #include "ast/ast_pp.h"
@@ -442,7 +444,9 @@ namespace smt {
                         expr* lower_bound_int_str(expr* num, expr* str);
                         expr* fill_0_1st_loop(expr* num, expr* str);
                             bool is_char_at(expr* str);
-                void print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line = -1);
+        void cout_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
+
+        void print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line = -1);
                 bool is_equal(UnderApproxState const& preState, UnderApproxState const& currState);
                     bool are_some_empty_vars_omitted(expr* n, ptr_vector<expr> const& v);
                 bool is_equal(expr_ref_vector const& corePrev, expr_ref_vector const& coreCurr);

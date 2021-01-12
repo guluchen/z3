@@ -3915,7 +3915,7 @@ namespace smt {
         bool axiom_added = false;
         eq_combination = simplify_eq(non_root_vars, non_fresh_vars, axiom_added);
 
-        STRACE("str", tout << __LINE__ <<  " normalized equations: " << std::endl;);
+        STRACE("str", tout << __LINE__ <<  " simplified equations: " << std::endl;);
         for(auto eq:eq_combination){
             for(auto rhs:eq.m_value){
                 STRACE("str", tout << __LINE__ <<" "<<  mk_pp(eq.m_key,m) <<" = "<<mk_pp(rhs,m) << std::endl;);
@@ -6509,6 +6509,20 @@ namespace smt {
         return rewrite_implication(premise, createAndOP(ands));
     }
 
+    void theory_trau::cout_eq_combination(obj_map<expr, ptr_vector<expr>> const& combinations) {
+        for (const auto& com : combinations){
+            std::stringstream msg;
+
+            msg << mk_pp(com.m_key, m) << " = ";
+            for (const auto& e : com.get_value())
+                if(e!=com.m_key)
+                    msg << mk_pp(e, m) <<", ";
+
+            if(com.get_value().size()>1)
+                std::cout<<msg.str()<< std::endl;
+        }
+    }
+
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
         
         for (const auto& com : eq_combination){
@@ -6764,9 +6778,12 @@ namespace smt {
 
     bool theory_trau::review_disequalities_not_contain(obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
         for (const auto &wi : m_wi_expr_memo) {
+
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
+//                std::cout<<"[lhs,rhs] = ["<<mk_pp(lhs,m)<<","<<mk_pp(rhs,m)<<"]"<<std::endl;
+
                 expr* contain = nullptr;
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << "\n";);
                 if (is_contain_family_equality(lhs, contain)){
@@ -16098,17 +16115,37 @@ namespace smt {
             STRACE("str", tout << "Assigned value " << mk_pp(*it, m) << std::endl;);
     }
 
+    /*
+     * This function has multiple steps
+     * (1) for a concat node a.b, it does a best effort work to replace a and b with their equivalent representative
+     *     node, in particular, it uses constant string if possible and removes empty string
+     * (2) using the derived simplied equations to check if we can conclude invalid immediately. If the formula is found
+     *     invalid during the processing, add the negation of the current context to close this branch
+     * (3) for replace(x, y,_), contain(x,y), indexOf(x,y), the tool will reduce them to constraints that include
+     *     word equation of the form x = {indexOf1!tmp...}.y.{indexOf2!tmp},
+     *     x = {replace1!tmp...}.y.{replace2!tmp}, and x = {precontains!tmp...}.y.{postcontains!tmp}. In such case,
+     *     we add {replace1!tmp...}={indexOf1!tmp...}={precontains!tmp...} and
+     *     {replace2!tmp...}={indexOf2!tmp...}={postcontains!tmp...}
+     * (4) ...
+     */
+
     obj_map<expr, ptr_vector<expr>> theory_trau::simplify_eq(
             obj_hashtable<expr> &non_root_nodes,
             obj_map<expr, int> &non_fresh_vars,
             bool &axiom_added){
         clock_t t = clock();
 
+
+
+
         context& ctx = get_context();
         (void) ctx;
         TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << std::endl;);
         obj_map<expr, ptr_vector<expr>> combinations;
 
+
+        STRACE("str", tout << __LINE__ <<  " original eq (step 0)---start" << std::endl;);
+        std::cout << __LINE__ <<  " original eq (step 0)---start" << std::endl;
         //collect roots of equivalent classes
         expr_ref_vector eqc_roots(m);
         sort* string_sort = u.str.mk_string_sort();
@@ -16116,9 +16153,36 @@ namespace smt {
             expr* owner = (*it)->get_root()->get_owner();
             if ((m.get_sort(owner)) == string_sort && !eqc_roots.contains(owner)) {
                 eqc_roots.push_back(owner);
+                if((*it)->get_owner()!=(*it)->get_root()->get_owner())
+                    std::cout<<mk_pp((*it)->get_owner(),m)<<" is represented by "<< mk_pp((*it)->get_root()->get_owner(),m)<<std::endl;
             }
         }
 
+
+
+        std::cout << " non-fresh variables: " ;
+        for(auto v:non_fresh_vars) std::cout<<mk_pp(v.m_key,m)<<", ";
+        std::cout <<  std::endl;
+
+
+        for (const auto& node : eqc_roots){
+            bool non_empty=false;
+            std::stringstream msg;
+
+            msg<<mk_pp(node,m)<<" = ";
+            expr_ref_vector eq_node_set(m);
+            expr* constValue = collect_eq_nodes_and_return_eq_constStrNode_if_exists(node, eq_node_set);
+            for(auto eq_node : eq_node_set){
+                if(node != eq_node) {
+                    non_empty=true;
+                    msg << mk_pp(eq_node, m) << ", ";
+                }
+            }
+            if(non_empty)
+                std::cout<<msg.str()<<std::endl;
+        }
+        std::cout << __LINE__ <<  " original eq (step 0)---end" << std::endl<< std::endl;
+        STRACE("str", tout << __LINE__ <<  " original eq (step 0)---end" << std::endl;);
 
         for (const auto& node : eqc_roots){
             if (!combinations.contains(node)){
@@ -16131,8 +16195,16 @@ namespace smt {
         }
         STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
 
+
+        std::cout << __LINE__ <<  " simplify_and_ret_eq_nodes (step 1)---start" << std::endl;
+        cout_eq_combination(combinations);
+        std::cout << __LINE__ <<  " simplify_and_ret_eq_nodes (step 1)---end" << std::endl;
+
         expr* cause = nullptr;
         if (!review_disequalities_not_contain(combinations, cause)){
+            //find inconsistent and block current branch
+            std::cout << __LINE__ <<  " find inconsistent and block current branch" << std::endl;
+
             print_eq_combination(combinations);
             dump_assignments();
             if (cause == nullptr)
@@ -16140,18 +16212,30 @@ namespace smt {
             else
                 negate_context(cause);
             axiom_added = true;
+            std::cout << __LINE__ <<  " review_disequalities_not_contain (step 2) find it invalid" << std::endl;
             return combinations;
         }
+        std::cout << __LINE__ <<  " review_disequalities_not_contain (step 2) did not find it invalid" << std::endl;
 
         if (handle_contain_family(combinations)){
             TRACE("str", tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
             print_eq_combination(combinations);
             update_state();
             axiom_added = true;
+            std::cout << __LINE__ <<  " handle_contain_family (step 3)---start" << std::endl;
+            cout_eq_combination(combinations);
+            std::cout << __LINE__ <<  " handle_contain_family (step 3)---end" << std::endl;
             return combinations;
         }
+        std::cout << __LINE__ <<  " handle_contain_family (step 3) did not add anything new" << std::endl;
 
-        return refine_eq_combination(non_fresh_vars, combinations, non_root_nodes);
+        obj_map<expr, ptr_vector<expr>> ret = refine_eq_combination(non_fresh_vars, combinations, non_root_nodes);
+
+        std::cout << __LINE__ <<  " refine_eq_combination (step 4)---start" << std::endl;
+        cout_eq_combination(combinations);
+        std::cout << __LINE__ <<  " refine_eq_combination (step 4)---end" << std::endl;
+
+        return ret;
     }
 
     obj_map<expr, ptr_vector<expr>> theory_trau::refine_eq_combination(
@@ -16476,8 +16560,8 @@ namespace smt {
             return false;
     }
 
-    //for a concat node a.b, it does a best effort work to substitue a and b with equivalent nodes
-    //in paticular, it uses constant string if possible and removes empty string
+    //for a concat node a.b, it does a best effort work to replace a and b with equivalent node,
+    // in particular, it uses constant string if possible and removes empty string
     ptr_vector<expr> theory_trau::simplify_and_ret_eq_nodes(
             expr* node,
             obj_map<expr, ptr_vector<expr>> &combinations,
