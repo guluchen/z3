@@ -3338,6 +3338,12 @@ namespace smt {
     }
     int count = 0;
     final_check_status theory_trau::final_check_eh() {
+        bool debug=false;
+
+        context &ctx = get_context();
+        expr_ref_vector eqc_roots(m);
+        sort* string_sort = u.str.mk_string_sort();
+
 
         TRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; bound = " << uState.str_int_bound << std::endl;);
         if (m_we_expr_memo.empty() && m_wi_expr_memo.empty() && membership_memo.size() == 0) {
@@ -3438,6 +3444,11 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (propagate_eq_combination(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by propagate_eq_combination." << std::endl;);
+            if(debug) {
+                std::cout << "Resuming search due to axioms added by propagate_eq_combination. --start" << std::endl;
+                cout_eq_combination(eq_combination);
+                std::cout << "Resuming search due to axioms added by propagate_eq_combination. --end" << std::endl;
+            }
             print_eq_combination(eq_combination);
             update_state();
             return FC_CONTINUE;
@@ -5217,6 +5228,7 @@ namespace smt {
      * --> indexOf1 = replace1 // vars
      */
     bool theory_trau::handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination) {
+        return false;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector ands(m);
@@ -16167,60 +16179,65 @@ namespace smt {
     obj_map<expr, ptr_vector<expr>> theory_trau::simplify_eq(
             obj_hashtable<expr> &non_root_nodes,
             obj_map<expr, int> &non_fresh_vars,
-            bool &axiom_added){
+            bool &axiom_added) {
         clock_t t = clock();
 
+        bool debug = false;
 
 
-
-        context& ctx = get_context();
+        context &ctx = get_context();
         (void) ctx;
         TRACE("str", tout << __FUNCTION__ << ": at level " << ctx.get_scope_level() << std::endl;);
         obj_map<expr, ptr_vector<expr>> combinations;
 
 
-        STRACE("str", tout << __LINE__ <<  " original eq (step 0)---start" << std::endl;);
-//        std::cout << __LINE__ <<  " original eq (step 0)---start" << std::endl;
+        STRACE("str", tout << __LINE__ << " original eq (step 0)---start" << std::endl;);
+
+        if (debug) std::cout << __LINE__ << " original eq (step 0)---start" << std::endl;
 //        //collect roots of equivalent classes
         expr_ref_vector eqc_roots(m);
-        sort* string_sort = u.str.mk_string_sort();
+        sort *string_sort = u.str.mk_string_sort();
         for (ptr_vector<enode>::const_iterator it = ctx.begin_enodes(); it != ctx.end_enodes(); ++it) {
-            expr* owner = (*it)->get_root()->get_owner();
+            expr *owner = (*it)->get_root()->get_owner();
             if ((m.get_sort(owner)) == string_sort && !eqc_roots.contains(owner)) {
                 eqc_roots.push_back(owner);
-//                if((*it)->get_owner()!=(*it)->get_root()->get_owner())
-//                    std::cout<<mk_pp((*it)->get_owner(),m)<<" is represented by "<< mk_pp((*it)->get_root()->get_owner(),m)<<std::endl;
+                if ((*it)->get_owner() != (*it)->get_root()->get_owner())
+                    if (debug)
+                        std::cout << mk_pp((*it)->get_owner(), m) << " is represented by "
+                                  << mk_pp((*it)->get_root()->get_owner(), m) << std::endl;
             }
         }
 //
 //
 //
-//        std::cout << " non-fresh variables: " ;
-//        for(auto v:non_fresh_vars) std::cout<<mk_pp(v.m_key,m)<<", ";
-//        std::cout <<  std::endl;
-//
-//
-//        for (const auto& node : eqc_roots){
-//            bool non_empty=false;
-//            std::stringstream msg;
-//
-//            msg<<mk_pp(node,m)<<" = ";
-//            expr_ref_vector eq_node_set(m);
-//            expr* constValue = collect_eq_nodes_and_return_eq_constStrNode_if_exists(node, eq_node_set);
-//            for(auto eq_node : eq_node_set){
-//                if(node != eq_node) {
-//                    non_empty=true;
-//                    msg << mk_pp(eq_node, m) << ", ";
-//                }
-//            }
-//            if(non_empty)
-//                std::cout<<msg.str()<<std::endl;
-//        }
-//        std::cout << __LINE__ <<  " original eq (step 0)---end" << std::endl<< std::endl;
-        STRACE("str", tout << __LINE__ <<  " original eq (step 0)---end" << std::endl;);
+        if (debug) {
+            std::cout << " non-fresh variables: ";
+            for (auto v:non_fresh_vars) std::cout << mk_pp(v.m_key, m) << ", ";
+            std::cout << std::endl;
 
-        for (const auto& node : eqc_roots){
-            if (!combinations.contains(node)){
+
+            for (const auto &node : eqc_roots) {
+                bool non_empty = false;
+                std::stringstream msg;
+
+                msg << mk_pp(node, m) << " = ";
+                expr_ref_vector eq_node_set(m);
+                expr *constValue = collect_eq_nodes_and_return_eq_constStrNode_if_exists(node, eq_node_set);
+                for (auto eq_node : eq_node_set) {
+                    if (node != eq_node) {
+                        non_empty = true;
+                        msg << mk_pp(eq_node, m) << ", ";
+                    }
+                }
+                if (non_empty)
+                    std::cout << msg.str() << std::endl;
+            }
+            std::cout << __LINE__ << " original eq (step 0)---end" << std::endl << std::endl;
+        }
+        STRACE("str", tout << __LINE__ << " original eq (step 0)---end" << std::endl;);
+
+        for (const auto &node : eqc_roots) {
+            if (!combinations.contains(node)) {
                 TRACE("str", tout << __FUNCTION__ << ":  " << mk_pp(node, m) << std::endl;);
                 expr_ref_vector parents(m);
                 simplify_and_ret_eq_nodes(ctx.get_enode(node)->get_root()->get_owner(), combinations, non_root_nodes,
@@ -16228,17 +16245,18 @@ namespace smt {
                                           non_fresh_vars);
             }
         }
-        STRACE("str", tout << __LINE__ <<  " time: " << __FUNCTION__ << ":  " << ((float)(clock() - t))/CLOCKS_PER_SEC << std::endl;);
+        STRACE("str", tout << __LINE__ << " time: " << __FUNCTION__ << ":  " << ((float) (clock() - t)) / CLOCKS_PER_SEC
+                           << std::endl;);
 
-//
-//        std::cout << __LINE__ <<  " simplify_and_ret_eq_nodes (step 1)---start" << std::endl;
-//        cout_eq_combination(combinations);
-//        std::cout << __LINE__ <<  " simplify_and_ret_eq_nodes (step 1)---end" << std::endl;
-
-        expr* cause = nullptr;
-        if (!review_disequalities_not_contain(combinations, cause)){
+        if (debug) {
+            std::cout << __LINE__ << " simplify_and_ret_eq_nodes (step 1)---start" << std::endl;
+            cout_eq_combination(combinations);
+            std::cout << __LINE__ << " simplify_and_ret_eq_nodes (step 1)---end" << std::endl;
+        }
+        expr *cause = nullptr;
+        if (!review_disequalities_not_contain(combinations, cause)) {
             //find inconsistent and block current branch
-//            std::cout << __LINE__ <<  " find inconsistent and block current branch" << std::endl;
+            if (debug) std::cout << __LINE__ << " find inconsistent and block current branch" << std::endl;
 
             print_eq_combination(combinations);
             dump_assignments();
@@ -16247,29 +16265,38 @@ namespace smt {
             else
                 negate_context(cause);
             axiom_added = true;
-//            std::cout << __LINE__ <<  " review_disequalities_not_contain (step 2) find it invalid" << std::endl;
+            if (debug)
+                std::cout << __LINE__ << " review_disequalities_not_contain (step 2) find it invalid" << std::endl;
             return combinations;
         }
-//        std::cout << __LINE__ <<  " review_disequalities_not_contain (step 2) did not find it invalid" << std::endl;
+        if (debug)
+            std::cout << __LINE__ << " review_disequalities_not_contain (step 2) did not find it invalid" << std::endl;
 
-        if (handle_contain_family(combinations)){
-            TRACE("str", tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
+        if (handle_contain_family(combinations)) {
+            TRACE("str",
+                  tout << "Resuming search due to axioms added by handle_contain_family propagation." << std::endl;);
             print_eq_combination(combinations);
             update_state();
             axiom_added = true;
-//            std::cout << __LINE__ <<  " handle_contain_family (step 3)---start" << std::endl;
-//            cout_eq_combination(combinations);
-//            std::cout << __LINE__ <<  " handle_contain_family (step 3)---end" << std::endl;
+            if (debug) {
+                std::cout << __LINE__ << " handle_contain_family (step 3)---start" << std::endl;
+                cout_eq_combination(combinations);
+                std::cout << __LINE__ << " handle_contain_family (step 3)---end" << std::endl;
+            }
             return combinations;
         }
-//        std::cout << __LINE__ <<  " handle_contain_family (step 3) did not add anything new" << std::endl;
 
+        if (debug) {
+            std::cout << __LINE__ << " handle_contain_family (step 3) did not add any new axiom---start" << std::endl;
+            cout_eq_combination(combinations);
+            std::cout << __LINE__ << " handle_contain_family (step 3)---end" << std::endl;
+        }
         obj_map<expr, ptr_vector<expr>> ret = refine_eq_combination(non_fresh_vars, combinations, non_root_nodes);
-
-//        std::cout << __LINE__ <<  " refine_eq_combination (step 4)---start" << std::endl;
-//        cout_eq_combination(combinations);
-//        std::cout << __LINE__ <<  " refine_eq_combination (step 4)---end" << std::endl;
-
+        if (debug) {
+            std::cout << __LINE__ << " refine_eq_combination (step 4)---start" << std::endl;
+            cout_eq_combination(combinations);
+            std::cout << __LINE__ << " refine_eq_combination (step 4)---end" << std::endl;
+        }
         return ret;
     }
 
@@ -20171,6 +20198,9 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
+
+//        std::cout<<"assert ("<<mk_pp(e,m)<<")"<<std::endl;
+
         ctx.mk_th_axiom(get_id(), 1, &lit);
     }
 
