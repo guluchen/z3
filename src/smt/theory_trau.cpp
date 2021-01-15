@@ -3390,6 +3390,7 @@ namespace smt {
         if (init_chain_free(non_fresh_vars, eq_combination)){
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished init_chain_free\n"; cout_eq_combination(eq_combination);}
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         // new 
@@ -3399,12 +3400,16 @@ namespace smt {
             newConstraintTriggered = true;
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished try_solve\n"; cout_eq_combination(eq_combination);}
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (!review_starting_ending_combination(eq_combination)){
             negate_equalities();
             return FC_CONTINUE;
         }
+
+        if(debug) {std::cout<<"finished review_starting_ending_combination\n"; cout_eq_combination(eq_combination);}
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         expr* cause = nullptr;
         // not sure
@@ -3417,6 +3422,8 @@ namespace smt {
                 negate_context(cause);
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished review_disequalities_not_contain\n"; cout_eq_combination(eq_combination);}
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         // if not_contains(x, A) then also not_contains (t, A) for all t "related " to x
         // if x = y.z then y and z are related to x  // t = y or z or ...
@@ -3426,6 +3433,8 @@ namespace smt {
             update_state();
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished is_notContain_consistent\n"; cout_eq_combination(eq_combination);}
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         print_eq_combination(eq_combination);
 
@@ -3435,12 +3444,17 @@ namespace smt {
             update_state();
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished handle_contain_family\n"; cout_eq_combination(eq_combination);}
+
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (handle_charAt_family(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by handle_charAt_family propagation." << std::endl;);
             update_state();
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished handle_charAt_family\n"; cout_eq_combination(eq_combination);}
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (propagate_eq_combination(eq_combination)) {
             TRACE("str", tout << "Resuming search due to axioms added by propagate_eq_combination." << std::endl;);
@@ -3453,12 +3467,16 @@ namespace smt {
             update_state();
             return FC_CONTINUE;
         }
+
+        if(debug) {std::cout<<"finished propagate_eq_combination\n"; cout_eq_combination(eq_combination);}
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         // new
         if (refined_init_chain_free(non_fresh_vars, eq_combination)){
             TRACE("str", tout << "Resuming search due to axioms added by refined_init_chain_free." << std::endl;);
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished refined_init_chain_free\n"; cout_eq_combination(eq_combination);}
+
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
 //        // new
 //        if (can_merge_combination(eq_combination)){
@@ -3472,12 +3490,16 @@ namespace smt {
             negate_context();
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished parikh_image_check\n"; cout_eq_combination(eq_combination);}
+
 
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
             return FC_CONTINUE;
         }
+        if(debug) {std::cout<<"finished underapproximation\n"; cout_eq_combination(eq_combination);}
+
         return finished_search();
 
     }
@@ -3930,6 +3952,7 @@ namespace smt {
         obj_hashtable<expr> non_root_vars;
         bool axiom_added = false;
         eq_combination = simplify_eq(non_root_vars, non_fresh_vars, axiom_added);
+
 
         STRACE("str", tout << __LINE__ <<  " simplified equations: " << std::endl;);
         for(auto eq:eq_combination){
@@ -5228,7 +5251,7 @@ namespace smt {
      * --> indexOf1 = replace1 // vars
      */
     bool theory_trau::handle_contain_family(obj_map<expr, ptr_vector<expr>> const& eq_combination) {
-        return false;
+        //return false;
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
         
         expr_ref_vector ands(m);
@@ -5264,6 +5287,12 @@ namespace smt {
      * --> indexOf1 = replace1
      */
     expr* theory_trau::create_equations_over_contain_vars(expr* x, expr* y){
+        bool debug=false;
+
+        if(debug) {
+            std::cout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;
+        }
+
         ptr_vector<expr> nodes_x;
         get_nodes_in_concat(x, nodes_x);
 
@@ -5295,7 +5324,7 @@ namespace smt {
                     zstring tmp00;
                     zstring tmp01;
                     if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
-                        if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00)) {
+                        if (tmp00==tmp01) {
                             if (!are_equal_exprs(nodes_x[pos], nodes_y[pos]))
                                 return createEqualOP(nodes_x[pos], nodes_y[pos]);
                         }
@@ -16182,7 +16211,7 @@ namespace smt {
             bool &axiom_added) {
         clock_t t = clock();
 
-        bool debug = false;
+        bool debug=false;
 
 
         context &ctx = get_context();
@@ -16294,10 +16323,10 @@ namespace smt {
         obj_map<expr, ptr_vector<expr>> ret = refine_eq_combination(non_fresh_vars, combinations, non_root_nodes);
         if (debug) {
             std::cout << __LINE__ << " refine_eq_combination (step 4)---start" << std::endl;
-            cout_eq_combination(combinations);
+            cout_eq_combination(ret);
             std::cout << __LINE__ << " refine_eq_combination (step 4)---end" << std::endl;
         }
-        return ret;
+        return combinations;
     }
 
     obj_map<expr, ptr_vector<expr>> theory_trau::refine_eq_combination(
@@ -17310,6 +17339,7 @@ namespace smt {
         }
         else {
             expr *s, *t;
+            bool debug=false;
             if (u.str.is_prefix(ex, s, t)){
                 //expr=prefix_of(s,t)
                 expr_ref post_prefix(mk_str_var("post_prefix"), m);
@@ -17330,7 +17360,7 @@ namespace smt {
 
                 expr_ref_vector ands(m);
                 expr_ref s_eq_xcy(createEqualOP(s, mk_concat(mk_concat(x, c), y)),m);
-                expr_ref t_eq_xdz(createEqualOP(s, mk_concat(mk_concat(x, d), z)),m);
+                expr_ref t_eq_xdz(createEqualOP(t, mk_concat(mk_concat(x, d), z)),m);
                 expr_ref c_neq_d(m.mk_not(createEqualOP(c,d)),m);
 
                 ands.push_back(s_eq_xcy);
@@ -17341,8 +17371,15 @@ namespace smt {
 
                 negative_implication=createOrOP(negative_implication,createAndOP(ands));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
-                assert_axiom(to_assert);
 
+                if(debug){
+                    std::cout<<"IF "<<mk_pp(ex,m)<<std::endl;
+                    std::cout<<"THEN "<<mk_pp(postive_implication,m)<<std::endl;
+                    std::cout<<"ELSE "<<mk_pp(negative_implication,m)<<std::endl;
+                }
+
+                assert_axiom(to_assert);
+//                assert_axiom(negative_implication);
             }
 
 
@@ -17361,6 +17398,7 @@ namespace smt {
             return;
         }
         else {
+            bool debug=false;
             expr * s, *t;
             if (u.str.is_suffix(ex, s, t)){
                 //expr=suffix_of(s,t)
@@ -17382,7 +17420,7 @@ namespace smt {
 
                 expr_ref_vector ands(m);
                 expr_ref s_eq_ycx(createEqualOP(s, mk_concat(mk_concat(y, c), x)),m);
-                expr_ref t_eq_zdx(createEqualOP(s, mk_concat(mk_concat(z, d), x)),m);
+                expr_ref t_eq_zdx(createEqualOP(t, mk_concat(mk_concat(z, d), x)),m);
                 expr_ref c_neq_d(m.mk_not(createEqualOP(c,d)),m);
 
                 ands.push_back(s_eq_ycx);
@@ -17393,27 +17431,14 @@ namespace smt {
 
                 negative_implication=createOrOP(negative_implication,createAndOP(ands));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
+                if(debug){
+                    std::cout<<"IF "<<mk_pp(ex,m)<<std::endl;
+                    std::cout<<"THEN "<<mk_pp(postive_implication,m)<<std::endl;
+                    std::cout<<"ELSE "<<mk_pp(negative_implication,m)<<std::endl;
+                }
                 assert_axiom(to_assert);
 
             }
-
-
-            expr_ref ts0(mk_str_var("pre_suffix"), m);
-            expr_ref ts1(mk_str_var("post_suffix"), m);
-            suffix_set.insert(ex, ts1.get());
-            expr_ref_vector inner_items(m);
-            inner_items.push_back(createEqualOP(ex->get_arg(1), mk_concat(ts0, ts1)));
-            inner_items.push_back(createEqualOP(mk_strlen(ts1), mk_strlen(ex->get_arg(0))));
-            inner_items.push_back(m.mk_ite(createEqualOP(ts1, ex->get_arg(0)), ex, mk_not(m, ex)));
-            expr_ref then1(m.mk_and(inner_items.size(), inner_items.c_ptr()), m);
-
-            // the top-level condition is Length(arg0) >= Length(arg1)
-            expr_ref sub(m_autil.mk_sub(mk_strlen(ex->get_arg(1)), mk_strlen(ex->get_arg(0))), m);
-            m_rewrite(sub);
-            expr_ref premise(m_autil.mk_ge(sub, mk_int(0)), m);
-
-            expr_ref to_assert(m.mk_ite(premise, then1, mk_not(m, ex)), m);
-            assert_axiom(to_assert);
         }
     }
 
