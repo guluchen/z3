@@ -75,7 +75,8 @@ namespace smt {
               opt_DisableIntegerTheoryIntegration(false),
               opt_ConcatOverlapAvoid(true),
               uState(m),
-              implied_facts(m){
+              implied_facts(m),
+              m_debug(false){
         timer=clock();
         str_int_bound = rational(0);
     }
@@ -3338,7 +3339,7 @@ namespace smt {
     }
     int count = 0;
     final_check_status theory_trau::final_check_eh() {
-        bool debug=false;
+        bool debug=m_debug;
 
         context &ctx = get_context();
         expr_ref_vector eqc_roots(m);
@@ -3472,6 +3473,11 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         // new
         if (refined_init_chain_free(non_fresh_vars, eq_combination)){
+            if(debug) {
+                std::cout << "Resuming search due to axioms added by refined_init_chain_free. --start" << std::endl;
+                cout_eq_combination(eq_combination);
+                std::cout << "Resuming search due to axioms added by refined_init_chain_free. --end" << std::endl;
+            }
             TRACE("str", tout << "Resuming search due to axioms added by refined_init_chain_free." << std::endl;);
             return FC_CONTINUE;
         }
@@ -5287,7 +5293,7 @@ namespace smt {
      * --> indexOf1 = replace1
      */
     expr* theory_trau::create_equations_over_contain_vars(expr* x, expr* y){
-        bool debug=false;
+        bool debug=m_debug;
 
         if(debug) {
             std::cout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;
@@ -6013,8 +6019,15 @@ namespace smt {
             obj_map<expr, ptr_vector<expr>> const& eq_combination,
             obj_map<expr, int> & non_fresh_vars,
             expr_ref_vector const& diff) {
+        bool debug=m_debug;
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
-        
+
+        if(debug){
+            std::cout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;
+            cout_eq_combination(eq_combination);
+
+        }
+
         print_eq_combination(eq_combination, __LINE__);
 
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
@@ -6597,6 +6610,25 @@ namespace smt {
             if(com.get_value().size()>1)
                 std::cout<<msg.str()<< std::endl;
         }
+
+        for (const auto& e: m_wi_expr_memo){
+            expr* lhs = e.first.get();
+            expr* rhs = e.second.get();
+            expr* contain = nullptr;
+            if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
+                std::cout << mk_pp(lhs, m)  <<"!=" <<mk_pp(rhs, m)<< std::endl;
+            }else{
+                if (is_contain_family_equality(lhs, contain)) {
+                    std::cout << "not contains("<< mk_pp(rhs, m)  <<", " <<mk_pp(contain, m)<<")" <<std::endl;
+                }
+                else if (is_contain_family_equality(rhs, contain)) {
+                    std::cout << "not contains("<< mk_pp(lhs, m)  <<", " <<mk_pp(contain, m)<<")" <<std::endl;
+                }
+
+
+            }
+
+        }
     }
 
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){
@@ -6867,6 +6899,9 @@ namespace smt {
                     if (!review_not_contain(rhs, lhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         cause = nullptr;
+
+//                        std::cout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";
+
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
@@ -6876,12 +6911,16 @@ namespace smt {
                     if (!review_not_contain(lhs, rhs, contain, eq_combination, cause)){
                         cause = createAndOP(cause, mk_not(m, createEqualOP(lhs, rhs)));
                         cause = nullptr;
+//                        std::cout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";
+
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
                 }
                 else {
                     if (!review_disequality(lhs, rhs, eq_combination)) {
+//                        std::cout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";
+
                         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " Invalid (" << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         return false;
                     }
@@ -6892,6 +6931,8 @@ namespace smt {
     }
 
     bool theory_trau::review_not_contain(expr* lhs, expr* rhs, expr* needle, obj_map<expr, ptr_vector<expr>> const& eq_combination, expr* &cause){
+        bool debug= false;
+
         expr_ref_vector eqs_rhs(m);
         collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqs_rhs);
         for (const auto& eq : eqs_rhs)
@@ -6906,12 +6947,20 @@ namespace smt {
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " not contain " << mk_pp(new_needle, m) << ")\n";);
         context & ctx = get_context();
         expr* root_lhs = ctx.get_enode(lhs)->get_root()->get_owner();
+
+
+
         if (u.str.is_string(lhs))
             root_lhs = lhs;
+
+        if(debug){
+            std::cout<<mk_pp(lhs,m)<<" has root "<<mk_pp(root_lhs,m)<<std::endl;
+        }
 
         if (eq_combination.contains(root_lhs)){
             for (const auto& s : eq_combination[root_lhs])
                 if (s != lhs){
+                    if(debug) std::cout<<mk_pp(lhs,m)<<" has eq_node "<<mk_pp(s,m)<<std::endl;
                     ptr_vector <expr> nodes;
                     get_nodes_in_concat(s, nodes);
                     for (const auto& nn : nodes)
@@ -16211,7 +16260,7 @@ namespace smt {
             bool &axiom_added) {
         clock_t t = clock();
 
-        bool debug=false;
+        bool debug=m_debug;
 
 
         context &ctx = get_context();
@@ -16260,6 +16309,25 @@ namespace smt {
                 }
                 if (non_empty)
                     std::cout << msg.str() << std::endl;
+            }
+
+            for (const auto& e: m_wi_expr_memo){
+                expr* lhs = e.first.get();
+                expr* rhs = e.second.get();
+                expr* contain = nullptr;
+                if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
+                    std::cout << mk_pp(lhs, m)  <<"!=" <<mk_pp(rhs, m)<< std::endl;
+                }else{
+                    if (is_contain_family_equality(lhs, contain)) {
+                        std::cout << "not contains("<< mk_pp(rhs, m)  <<", " <<mk_pp(contain, m)<<")" <<std::endl;
+                    }
+                    else if (is_contain_family_equality(rhs, contain)) {
+                        std::cout << "not contains("<< mk_pp(lhs, m)  <<", " <<mk_pp(contain, m)<<")" <<std::endl;
+                    }
+
+
+                }
+
             }
             std::cout << __LINE__ << " original eq (step 0)---end" << std::endl << std::endl;
         }
@@ -16886,23 +16954,25 @@ namespace smt {
             }
         }
 
+
+
+
         // continuing refining
-        for (const auto& nn : eq_concat)
+        for (const auto& nn : eq_concat) {
             if (((!u.str.is_extract(nn)) &&
                  (!u.str.is_at(nn)) &&
                  (!u.str.is_replace(nn)) &&
                  (!u.str.is_itos(nn)) &&
                  (!u.str.is_nth_i(nn)) &&
                  (!u.str.is_nth_u(nn))) ||
-                 u.str.is_concat(nn)){
+                u.str.is_concat(nn)) {
                 if (has_empty_vars(nn))
                     continue;
                 expr_ref_vector tmp(m);
                 get_const_regex_str_asts_in_node(nn, tmp);
                 if (tmp.size() != 0 && !concat_in_set(nn, results)) {
                     results.push_back(nn);
-                }
-                else {
+                } else {
                     obj_hashtable<expr> ret;
                     get_non_fresh_in_node(nn, non_fresh_vars, ret, true);
                     if ((!ret.contains(nn) || ret.size() >= 2) && !concat_in_set(nn, results)) {
@@ -16910,6 +16980,8 @@ namespace smt {
                     }
                 }
             }
+        }
+
         if (results.size() == 0) {
             expr* simp_concat = simplify_concat(node);
             if (!results.contains(simp_concat)) {
@@ -16934,7 +17006,12 @@ namespace smt {
             }
         }
 
+        if(!results.contains(node))
+            results.push_back(node);
+
         combinations.insert(node, results);
+
+
 
         for (const auto& e: results)
             STRACE("str",
@@ -17346,7 +17423,7 @@ namespace smt {
                 expr_ref postive_implication(createEqualOP(mk_concat(s, post_prefix), t),m);
 
                 //!prefix(s,t) => s != ""
-                expr_ref negative_implication(createEqualOP(s,mk_string("")),m);
+                expr_ref negative_implication(m.mk_not(createEqualOP(mk_strlen(s),mk_int(0))),m);
                 //!prefix(s,t) => len(s) > len(t) or s = xcy & t = xdz & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
@@ -17369,7 +17446,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(c), mk_int(1)));
                 ands.push_back(createEqualOP(mk_strlen(d), mk_int(1)));
 
-                negative_implication=createOrOP(negative_implication,createAndOP(ands));
+                negative_implication=createAndOP(negative_implication,createAndOP(ands));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
 
                 if(debug){
@@ -17398,7 +17475,7 @@ namespace smt {
             return;
         }
         else {
-            bool debug=false;
+            bool debug=m_debug;
             expr * s, *t;
             if (u.str.is_suffix(ex, s, t)){
                 //expr=suffix_of(s,t)
@@ -17406,7 +17483,7 @@ namespace smt {
                 expr_ref postive_implication(createEqualOP(mk_concat(pre_suffix,s), t),m);
 
                 //!suffix(e1,e2) => s != ""
-                expr_ref negative_implication(createEqualOP(s,mk_string("")),m);
+                expr_ref negative_implication(m.mk_not(createEqualOP(mk_strlen(s),mk_int(0))),m);
                 //!suffix(e1,e2) => len(s) > len(t) or s = ycx & t = zdx & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
@@ -17429,7 +17506,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(c), mk_int(1)));
                 ands.push_back(createEqualOP(mk_strlen(d), mk_int(1)));
 
-                negative_implication=createOrOP(negative_implication,createAndOP(ands));
+                negative_implication=createAndOP(negative_implication,createAndOP(ands));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
                 if(debug){
                     std::cout<<"IF "<<mk_pp(ex,m)<<std::endl;
@@ -20213,6 +20290,8 @@ namespace smt {
     }
 
     void theory_trau::assert_axiom(expr *const e) {
+        bool debug= m_debug;
+
         if (e == nullptr || m.is_true(e)) return;
         context& ctx = get_context();
         expr_ref ex{e, m};
@@ -20224,7 +20303,7 @@ namespace smt {
         literal lit(ctx.get_literal(ex));
         ctx.mark_as_relevant(lit);
 
-//        std::cout<<"assert ("<<mk_pp(e,m)<<")"<<std::endl;
+        if(debug) std::cout<<"assert ("<<mk_pp(e,m)<<")"<<std::endl;
 
         ctx.mk_th_axiom(get_id(), 1, &lit);
     }
