@@ -75,10 +75,10 @@ namespace smt {
               opt_DisableIntegerTheoryIntegration(false),
               opt_ConcatOverlapAvoid(true),
               uState(m),
-              implied_facts(m),
-              m_debug(false){
+              implied_facts(m){
         timer=clock();
         str_int_bound = rational(0);
+        m_debug=false;
     }
 
     theory_trau::~theory_trau() {
@@ -17005,10 +17005,7 @@ namespace smt {
                     }
             }
         }
-
-        if(!results.contains(node))
-            results.push_back(node);
-
+        
         combinations.insert(node, results);
 
 
@@ -17422,8 +17419,8 @@ namespace smt {
                 expr_ref post_prefix(mk_str_var("post_prefix"), m);
                 expr_ref postive_implication(createEqualOP(mk_concat(s, post_prefix), t),m);
 
-                //!prefix(s,t) => s != ""
-                expr_ref negative_implication(m.mk_not(createEqualOP(mk_strlen(s),mk_int(0))),m);
+                //!prefix(s,t) => len(s) > 0
+                expr_ref negative_implication(m_autil.mk_ge(mk_strlen(s), mk_int(1)), m);
                 //!prefix(s,t) => len(s) > len(t) or s = xcy & t = xdz & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
@@ -17482,8 +17479,8 @@ namespace smt {
                 expr_ref pre_suffix(mk_str_var("pre_suffix"), m);
                 expr_ref postive_implication(createEqualOP(mk_concat(pre_suffix,s), t),m);
 
-                //!suffix(e1,e2) => s != ""
-                expr_ref negative_implication(m.mk_not(createEqualOP(mk_strlen(s),mk_int(0))),m);
+                //!suffix(e1,e2) => len(s) > 0
+                expr_ref negative_implication(m_autil.mk_ge(mk_strlen(s), mk_int(1)), m);
                 //!suffix(e1,e2) => len(s) > len(t) or s = ycx & t = zdx & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
