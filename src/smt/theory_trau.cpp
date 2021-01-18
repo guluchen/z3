@@ -3338,6 +3338,15 @@ namespace smt {
         pop_scope_eh(get_context().get_scope_level());
     }
     int count = 0;
+
+    /*
+     *   Changes logs:
+     *
+     *      1. Correct encoding of prefix_of and suffix_of
+     *      2. Comment out can_merge_combination
+     *      3. In handle_contains_family, can merge the prefix only if the needle (middle string) is equivalent.
+     *         Previous version goes wrong in the example: contains(x, “a”) /\ contains(x, “ab”) /\ contains(x,”ac”)
+    */
     final_check_status theory_trau::final_check_eh() {
         bool debug=m_debug;
 
@@ -17417,6 +17426,7 @@ namespace smt {
             if (u.str.is_prefix(ex, s, t)){
                 //expr=prefix_of(s,t)
                 expr_ref post_prefix(mk_str_var("post_prefix"), m);
+                //prefix(s,t) => t=s.post_prefix
                 expr_ref postive_implication(createEqualOP(mk_concat(s, post_prefix), t),m);
 
                 //!prefix(s,t) => len(s) > 0
@@ -17424,7 +17434,7 @@ namespace smt {
                 //!prefix(s,t) => len(s) > len(t) or s = xcy & t = xdz & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
-                expr_ref s_gt_t(m_autil.mk_gt(sub, mk_int(0)), m);
+                expr_ref s_gt_t(m_autil.mk_ge(sub, mk_int(1)), m);
 
                 expr_ref x(mk_str_var("x"), m);
                 expr_ref c(mk_str_var("c"), m);
@@ -17443,7 +17453,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(c), mk_int(1)));
                 ands.push_back(createEqualOP(mk_strlen(d), mk_int(1)));
 
-                negative_implication=createAndOP(negative_implication,createAndOP(ands));
+                negative_implication=createAndOP(negative_implication,createOrOP(s_gt_t, createAndOP(ands)));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
 
                 if(debug){
@@ -17477,14 +17487,16 @@ namespace smt {
             if (u.str.is_suffix(ex, s, t)){
                 //expr=suffix_of(s,t)
                 expr_ref pre_suffix(mk_str_var("pre_suffix"), m);
+
+                //suffix(s,t) => t=pre_suffix.s
                 expr_ref postive_implication(createEqualOP(mk_concat(pre_suffix,s), t),m);
 
-                //!suffix(e1,e2) => len(s) > 0
+                //!suffix(s,t) => len(s) > 0
                 expr_ref negative_implication(m_autil.mk_ge(mk_strlen(s), mk_int(1)), m);
-                //!suffix(e1,e2) => len(s) > len(t) or s = ycx & t = zdx & c != d
+                //!suffix(s,t) => len(s) > len(t) or s = ycx & t = zdx & c != d
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
-                expr_ref s_gt_t(m_autil.mk_gt(sub, mk_int(0)), m);
+                expr_ref s_gt_t(m_autil.mk_ge(sub, mk_int(1)), m);
 
                 expr_ref x(mk_str_var("x"), m);
                 expr_ref c(mk_str_var("c"), m);
@@ -17503,7 +17515,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(c), mk_int(1)));
                 ands.push_back(createEqualOP(mk_strlen(d), mk_int(1)));
 
-                negative_implication=createAndOP(negative_implication,createAndOP(ands));
+                negative_implication=createAndOP(negative_implication,createOrOP(s_gt_t, createAndOP(ands)));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
                 if(debug){
                     std::cout<<"IF "<<mk_pp(ex,m)<<std::endl;
