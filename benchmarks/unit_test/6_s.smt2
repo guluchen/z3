@@ -1,0 +1,5 @@
+(set-logic ALL)
+(declare-fun y () String)
+(assert (not (= (str.contains y "A") (str.prefixof "A" y))))
+(check-sat)
+(get-value (y))

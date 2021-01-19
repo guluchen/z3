@@ -1,0 +1,6 @@
+(set-logic ALL)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert (not (= (str.suffixof "A" (str.substr x z z)) (str.prefixof "A" (str.substr x z z)))))
+(check-sat)
