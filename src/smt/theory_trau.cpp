@@ -3945,9 +3945,9 @@ namespace smt {
     // 3. collect non-fresh variables
     //      (1) if a variable occurs >=2 times in the word equations and is not const, then it is non-fresh
     //      (2) if a variable is used in no_contains or disequality and is not const, then it is non-fresh
-    //      (3) if a variable is in the equivalence class of a non-fresh varaible, then it is also non-fresh
-    // normalize: if a var used in lhs => not used in rhs
-    // rhs no fresh vars
+    //      (3) if a variable is in the equivalence class of a non-fresh variable, then it is also non-fresh
+    // ?normalize: if a var used in lhs => not used in rhs
+    // ?rhs no fresh vars
     bool theory_trau::init_chain_free(
             obj_map<expr, int> &non_fresh_vars,
             obj_map<expr, ptr_vector<expr>> &eq_combination){
@@ -6035,9 +6035,14 @@ namespace smt {
             std::cout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;
             cout_eq_combination(eq_combination);
 
-        }
+            expr_ref_vector assignments(m);
+            get_context().get_assignments(assignments);
+            for (const auto& s : assignments) {
+                std::cout << "guessed assignments: " <<mk_pp(s,m) << std::endl;
+            }
 
-        print_eq_combination(eq_combination, __LINE__);
+
+        }
 
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
         fetch_guessed_exprs_with_scopes(guessed_eqs, guessed_diseqs);
@@ -17422,7 +17427,7 @@ namespace smt {
         }
         else {
             expr *s, *t;
-            bool debug=false;
+            bool debug=m_debug;
             if (u.str.is_prefix(ex, s, t)){
                 //expr=prefix_of(s,t)
                 expr_ref post_prefix(mk_str_var("post_prefix"), m);
@@ -17431,7 +17436,7 @@ namespace smt {
 
                 //!prefix(s,t) => len(s) > 0
                 expr_ref negative_implication(m_autil.mk_ge(mk_strlen(s), mk_int(1)), m);
-                //!prefix(s,t) => len(s) > len(t) or s = xcy & t = xdz & c != d
+                //!prefix(s,t) => len(s) > len(t) or (s = xcy & t = xdz & c != d)
                 expr_ref sub(m_autil.mk_sub(mk_strlen(s), mk_strlen(t)), m);
                 m_rewrite(sub);
                 expr_ref s_gt_t(m_autil.mk_ge(sub, mk_int(1)), m);
@@ -17447,6 +17452,8 @@ namespace smt {
                 expr_ref t_eq_xdz(createEqualOP(t, mk_concat(mk_concat(x, d), z)),m);
                 expr_ref c_neq_d(m.mk_not(createEqualOP(c,d)),m);
 
+                //I tried three layers "and-or-and" alternations and z3 gives wrong answer, maybe ite only allows
+                // two layers "and-or" alternations
                 ands.push_back(s_eq_xcy);
                 ands.push_back(t_eq_xdz);
                 ands.push_back(c_neq_d);
@@ -17482,7 +17489,7 @@ namespace smt {
             return;
         }
         else {
-            bool debug=m_debug;
+            bool debug=false;
             expr * s, *t;
             if (u.str.is_suffix(ex, s, t)){
                 //expr=suffix_of(s,t)
@@ -17515,7 +17522,7 @@ namespace smt {
                 ands.push_back(createEqualOP(mk_strlen(c), mk_int(1)));
                 ands.push_back(createEqualOP(mk_strlen(d), mk_int(1)));
 
-                negative_implication=createAndOP(negative_implication,createOrOP(s_gt_t, createAndOP(ands)));
+                negative_implication=createAndOP(negative_implication, createOrOP(s_gt_t,createAndOP(ands)));
                 expr_ref to_assert(m.mk_ite(ex, postive_implication, negative_implication), m);
                 if(debug){
                     std::cout<<"IF "<<mk_pp(ex,m)<<std::endl;
@@ -20299,7 +20306,7 @@ namespace smt {
     }
 
     void theory_trau::assert_axiom(expr *const e) {
-        bool debug= m_debug;
+        bool debug= false;
 
         if (e == nullptr || m.is_true(e)) return;
         context& ctx = get_context();
