@@ -18021,41 +18021,48 @@ namespace smt {
         return true;
     }
 
-    void theory_trau::sync_indexof(expr* e){
-        expr * arg0 = nullptr; // "haystack"
-        expr * arg1 = nullptr; // "needle"
-        expr * start_index = nullptr; // start index
-        u.str.is_index(e, arg0, arg1, start_index);
+    /* 0 <= other_offset, other_offset <= offset, other_result == -1 ==> result == -1 (*)
+       0 <= other_offset, other_offset <= offset, result >= 0 ==> other_result >= 0   (**)
+       0 <= offset, offset <= other_offset, result == -1 ==> other_result == -1       (*)
+       0 <= offset, offset <= other_offset, other_result >= 0 ==> result >= 0         (**)
+       0 <= offset, offset <= other_offset, other_offset <= result ==> result == other_result       (***)
+       0 <= other_offset, other_offset <= offset, offset <= other_result ==> result == other_result (***)
+    */
+    void theory_trau::sync_indexof(expr* result){
+        expr * haystack = nullptr; // "haystack"
+        expr * needle = nullptr; // "needle"
+        expr * offset = nullptr; // start index
+        u.str.is_index(result, haystack, needle, offset);
         expr* minus_one = mk_int(-1);
         expr* zero = mk_int(0);
-        for (const auto& ex : index_set){
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << " " << mk_pp(e, m) << std::endl;);
-            expr * haystack = nullptr; // "haystack"
-            expr * needle = nullptr; // "needle"
-            expr * index = nullptr; // start index
-            u.str.is_index(ex, haystack, needle, index);
-            if (haystack == arg0 && arg1 == needle){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(ex, m) << std::endl;);
-                expr_ref premise(createAndOP(createGreaterEqOP(index, zero), createLessEqOP(index, start_index), createEqualOP(ex, minus_one)), m);
-                assert_axiom(rewrite_implication(premise, createEqualOP(e, minus_one)));
+        for (const auto& other_result : index_set){ // index_set: we guess it consists of all str.indexof constraints. (Wei-Lun, Tsai)
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(other_result, m) << " " << mk_pp(result, m) << std::endl;);
+            expr * other_haystack = nullptr; // "haystack"
+            expr * other_needle = nullptr; // "needle"
+            expr * other_offset = nullptr; // start index
+            u.str.is_index(other_result, other_haystack, other_needle, other_offset);
+            if (other_haystack == haystack && needle == other_needle){
+                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(other_result, m) << std::endl;);
+                expr_ref premise(createAndOP(createGreaterEqOP(other_offset, zero), createLessEqOP(other_offset, offset), createEqualOP(other_result, minus_one)), m);
+                assert_axiom(rewrite_implication(premise, createEqualOP(result, minus_one)));
 
-                premise = createAndOP(createGreaterEqOP(index, zero), createLessEqOP(index, start_index), createGreaterEqOP(e, zero));
-                assert_axiom(rewrite_implication(premise, createGreaterEqOP(ex, zero)));
+                premise = createAndOP(createGreaterEqOP(other_offset, zero), createLessEqOP(other_offset, offset), createGreaterEqOP(result, zero));
+                assert_axiom(rewrite_implication(premise, createGreaterEqOP(other_result, zero)));
 
-                premise = createAndOP(createGreaterEqOP(start_index, zero), createLessEqOP(start_index, index), createEqualOP(e, minus_one));
-                assert_axiom(rewrite_implication(premise, createEqualOP(ex, minus_one)));
+                premise = createAndOP(createGreaterEqOP(offset, zero), createLessEqOP(offset, other_offset), createEqualOP(result, minus_one));
+                assert_axiom(rewrite_implication(premise, createEqualOP(other_result, minus_one)));
 
-                premise = createAndOP(createGreaterEqOP(start_index, zero), createLessEqOP(start_index, index), createEqualOP(ex, minus_one));
-                assert_axiom(rewrite_implication(premise, createGreaterEqOP(e, zero)));
+                premise = createAndOP(createGreaterEqOP(offset, zero), createLessEqOP(offset, other_offset), createGreaterEqOP(other_result, zero));
+                assert_axiom(rewrite_implication(premise, createGreaterEqOP(result, zero)));
 
-                premise = createAndOP(createGreaterEqOP(start_index, zero), createLessEqOP(start_index, index), createLessEqOP(index, e));
-                assert_axiom(rewrite_implication(premise, createEqualOP(e, ex)));
+                premise = createAndOP(createGreaterEqOP(offset, zero), createLessEqOP(offset, other_offset), createLessEqOP(other_offset, result));
+                assert_axiom(rewrite_implication(premise, createEqualOP(result, other_result)));
 
-                premise = createAndOP(createGreaterEqOP(index, zero), createLessEqOP(index, start_index), createLessEqOP(start_index, ex));
-                assert_axiom(rewrite_implication(premise, createEqualOP(e, ex)));
+                premise = createAndOP(createGreaterEqOP(other_offset, zero), createLessEqOP(other_offset, offset), createLessEqOP(offset, other_result));
+                assert_axiom(rewrite_implication(premise, createEqualOP(result, other_result)));
             }
         }
-        index_set.insert(e);
+        index_set.insert(result);
     }
 
     /*
