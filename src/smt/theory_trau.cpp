@@ -3296,6 +3296,27 @@ namespace smt {
     }
 
     void theory_trau::pop_scope_eh(const unsigned num_scopes) {
+        /*
+        std::cout << "IN pop_scope\n";
+        std::cout << "before pop\n";
+        std::cout << "num_scopes: " << num_scopes << "\n";
+        std::cout << "m_wi_expr_memo.size: " << m_wi_expr_memo.size() << std::endl;
+        std::cout << "m_we_expr_memo.size: " << m_we_expr_memo.size() << std::endl;
+        std::cout << "mful_scope_levels.size: " << mful_scope_levels.size() << std::endl;
+        std::cout << "m_scope_level: " << m_scope_level << std::endl;
+
+        std::cout << std::endl;
+        
+        for (const auto& we : m_we_expr_memo) {
+            std::cout << mk_pp(we.first, m) << " = " << mk_pp(we.second, m) << "\n";
+        }
+        for (const auto& wi : m_wi_expr_memo) {
+            std::cout << mk_pp(wi.first, m) << " != " << mk_pp(wi.second, m) << "\n";
+        }
+
+        std::cout << std::endl;
+        */
+
         STRACE("str", tout << __FUNCTION__ << ": at level " << m_scope_level << "/ eqLevel = " << uState.eqLevel << "; diseqLevel = " << uState.diseqLevel << std::endl;);
         m_scope_level -= num_scopes;
 
@@ -3325,6 +3346,25 @@ namespace smt {
         m_trail_stack.pop_scope(num_scopes);
         STRACE("str", tout << "pop m_trail_stack " << num_scopes << " to " << m_scope_level << std::endl;);
         theory::pop_scope_eh(num_scopes);
+
+        /*
+        std::cout << "after pop\n";
+        std::cout << "m_wi_expr_memo.size: " << m_wi_expr_memo.size() << std::endl;
+        std::cout << "m_we_expr_memo.size: " << m_we_expr_memo.size() << std::endl;
+        std::cout << "mful_scope_levels.size: " << mful_scope_levels.size() << std::endl;
+        std::cout << "m_scope_level: " << m_scope_level << std::endl;
+
+        std::cout << std::endl;
+
+        for (const auto& we : m_we_expr_memo) {
+            std::cout<< mk_pp(we.first, m) << " = " << mk_pp(we.second, m) << "\n";
+        }
+        for (const auto& wi : m_wi_expr_memo) {
+            std::cout << mk_pp(wi.first, m) << " != " << mk_pp(wi.second, m) << "\n";
+        }
+
+        std::cout << std::endl;
+        */
     }
 
     void theory_trau::reset_eh() {
@@ -3348,7 +3388,7 @@ namespace smt {
      *         Previous version goes wrong in the example: contains(x, “a”) /\ contains(x, “ab”) /\ contains(x,”ac”)
     */
     final_check_status theory_trau::final_check_eh() {
-        bool debug=m_debug;
+        bool debug=true;
 
         context &ctx = get_context();
         expr_ref_vector eqc_roots(m);
@@ -6041,7 +6081,7 @@ namespace smt {
                 std::cout << "guessed assignments: " <<mk_pp(s,m) << std::endl;
             }
 
-
+            std::cout << "\n **** guessed assignments print end **** \n" << std::endl;
         }
 
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
@@ -6089,16 +6129,37 @@ namespace smt {
             uState = state;
             uState.str_int_bound = str_int_bound;
         }
-
         init_underapprox(eq_combination, non_fresh_vars);
         for (const auto& n : non_fresh_vars)
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
 
-        //handle_diseq_notcontain();
+        /*
+        std::cout << "************ Before *******************\n\n";
+        expr_ref_vector assignments(m);
+        get_context().get_assignments(assignments);
+        for (const auto& s : assignments) {
+            std::cout << "guessed assignments: " << mk_pp(s, m) << std::endl;
+        }
+        std::cout << "%%%%%%%%%%%% Print End %%%%%%%%%%%%%%%%%\n\n";
+        */
+
+
         handle_diseq_notcontain();
         bool axiomAdded = handle_str_int();
         guessed_eqs.append(diff);
         axiomAdded = convert_equalities(eq_combination, non_fresh_vars, createAndOP(guessed_eqs)) || axiomAdded;
+
+        /*
+        std::cout << "************ After *******************\n\n";
+        if (axiomAdded)
+        {
+            get_context().get_assignments(assignments);
+            for (const auto& s : assignments) {
+                std::cout << "guessed assignments: " << mk_pp(s, m) << std::endl;
+            }
+        }
+        std::cout << "%%%%%%%%%%%% Print End %%%%%%%%%%%%%%%%%\n\n";
+        */
 
         STRACE("str", tout << __LINE__ <<  " axiomAdded: " << axiomAdded << std::endl;);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
@@ -7181,6 +7242,7 @@ namespace smt {
             }
         }
         else {
+            // TODO check the correctness
             assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
         }
     }
@@ -7197,6 +7259,7 @@ namespace smt {
         bool has_val = false;
         expr* string_expr_val = get_eqc_value(lhs, has_val);
         zstring string_val;
+        // TODO check if the const-const case is covered.
         if (has_val && u.str.is_string(string_expr_val, string_val)){
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " trivial not (" << mk_pp(lhs, m) << " = " << string_val << " != " << rhs << ")\n";);
             return;
@@ -8612,7 +8675,6 @@ namespace smt {
 
         for (const auto& n : non_fresh_vars)
             STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " " << mk_pp(n.m_key, m) << " " << n.m_value << std::endl;);
-
         expr_ref_vector asserted_constraints(m);
         bool axiomAdded = false;
         for (const auto& vareq : eq_combination) {
@@ -17489,7 +17551,7 @@ namespace smt {
             return;
         }
         else {
-            bool debug=false;
+            bool debug=m_debug;
             expr * s, *t;
             if (u.str.is_suffix(ex, s, t)){
                 //expr=suffix_of(s,t)
@@ -20306,7 +20368,7 @@ namespace smt {
     }
 
     void theory_trau::assert_axiom(expr *const e) {
-        bool debug= false;
+        bool debug= m_debug;
 
         if (e == nullptr || m.is_true(e)) return;
         context& ctx = get_context();
