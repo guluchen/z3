@@ -6884,7 +6884,11 @@ namespace smt {
         }
         return axiomAdded;
     }
-
+    /*
+     No matter cached ?= true, 
+     both "handle_disequalities()" and "handle_disequalities_cached()" 
+      => "handle_disequality(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars)"
+    */
     void theory_trau::handle_diseq_notcontain(bool cached){
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " cached = " << cached << " @lvl " << m_scope_level << "\n";);
         if (!cached){
@@ -7247,6 +7251,13 @@ namespace smt {
         }
     }
 
+    /*
+        rhs: a constant string
+        lhs != rhs if
+        (1) len(lhs) != len(rhs); or
+        (2) len(lhs) >= len(rhs) and 
+            exists i in {1, ..., len(rhs)}, lhs(i) != rhs(i)
+    */
     void theory_trau::handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars){
         
         expr_ref_vector cases(m);
@@ -7257,20 +7268,24 @@ namespace smt {
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
         cases.push_back(notLenEq);
         bool has_val = false;
-        expr* string_expr_val = get_eqc_value(lhs, has_val);
+        expr* string_expr_val = get_eqc_value(lhs, has_val); // if lhs is equivalent to a constant, the constant is assined to "string_expr_val" and has_val = true;
+                                                             // otherwise, has_val = false.
         zstring string_val;
         // TODO check if the const-const case is covered.
+        // if lhs = constant, return directly.
         if (has_val && u.str.is_string(string_expr_val, string_val)){
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " trivial not (" << mk_pp(lhs, m) << " = " << string_val << " != " << rhs << ")\n";);
             return;
         }
         else {
+            // this branch does nothing except prints lhs' equivalent terms
             expr_ref_vector eqs(m);
-            collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs);
+            collect_eq_nodes_and_return_eq_constStrNode_if_exists(lhs, eqs); // eqs: the set of terms equivalent to lhs
             for (const auto& eq : eqs){
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " = " << mk_pp(eq, m) << ")\n";);
             }
         }
+        // lhs: not a constant.
         if (is_non_fresh(lhs, non_fresh_vars) && !is_trivial_inequality(lhs, rhs)) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = get_var_flat_array(lhs);
@@ -7285,16 +7300,19 @@ namespace smt {
             for (unsigned i = 0; i < rhs.length(); ++i) {
                 expr_ref_vector subcases(m);
                 subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
-                expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)), m_autil.mk_int(rhs[i])), m);
-                subcases.push_back(mk_not(m, tmp));
+                expr_ref having_same_symbol_at_i(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)), m_autil.mk_int(rhs[i])), m);
+                subcases.push_back(mk_not(m, having_same_symbol_at_i));
                 cases.push_back(createAndOP(subcases));
             }
             expr_ref conclusion(createOrOP(cases), m);
 
 
-            expr_ref tmpAxiom(createEqualOP(premise.get(), conclusion.get()), m);
-            assert_axiom(tmpAxiom.get());
+            expr_ref lhs_and_rhs_having_position_conflict(createEqualOP(premise.get(), conclusion.get()), m);
+            assert_axiom(lhs_and_rhs_having_position_conflict.get());
         }
+        // lhs is fresh or "lhs != rhs" is non_trivial
+        // if is non-fresh, then case "len(rhs)=0" is covered.
+        // therefore, len(rhs) = 0 => lhs is fresh
         else if (rhs.length() == 0){
             expr_ref premise(mk_not(m, createEqualOP(lhs, u.str.mk_string(rhs))), m);
             ensure_enode(premise.get());
@@ -16001,6 +16019,17 @@ namespace smt {
         return createAndOP(ands);
     }
 
+    /*  trivial inequivalent
+    *   lhs: n (an expr)
+    *   rhs: s (a constant string)
+    *  (1) len(s) = 0
+    *  (2) s contains a symbol = sigma_domain.end()
+    *  (3) len(lhs) != len(rhs)
+    *  (4) lowerBound:
+    *  (5) upperBound: 
+    * 
+    */
+
     bool theory_trau::is_trivial_inequality(expr* n, zstring s){
         if (s.length() == 0)
             return true;
@@ -16012,7 +16041,7 @@ namespace smt {
         rational lenVal, lowerBoundVal, upperBoundVal;
         if (get_len_value(n, lenVal) && lenVal != s.length())
             return true;
-
+        // TODO: check the meaning of lowerBoundVal and upperBoundVal
         if (lower_bound(n, lowerBoundVal) && lowerBoundVal > s.length())
             return true;
 
@@ -16021,6 +16050,10 @@ namespace smt {
         return false;
     }
 
+    /*  trivial inequivalent
+    *  lhs != rhs if
+    *  there are x = lhs and y' = rhs and x != y
+    */
     bool theory_trau::is_trivial_inequality(expr* lhs, expr* rhs){
         expr_ref_vector lhs_eqs(m);
         expr_ref_vector rhs_eqs(m);
