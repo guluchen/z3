@@ -7203,6 +7203,15 @@ namespace smt {
         return false;
     }
 
+    /*  lhs != rhs if
+    *  (1) len(lhs) != len(rhs);
+    *  (2) 
+    *       (  i) len(lhs) >= len(lhs)
+    *       ( ii) len(rhs) >= len(lhs)
+    *       (iii) exits 1 <= i <= len(lhs), lhs(i) != rhs(i)
+    *  (3) lhs or rhs is fresh => return directly.
+    */
+
     void theory_trau::handle_disequality_var(expr *lhs, expr *rhs, obj_map<expr, int> const &non_fresh_vars){
         
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
@@ -7220,6 +7229,7 @@ namespace smt {
             len1 = len1 >= 0 ? len1 : connectingSize;
             len2 = len2 >= 0 ? len2 : connectingSize;
             int bound = std::min(len1, len2);
+            // if len(rhs) = len(lhs), return directly.
             if (get_len_value(lhs, len_lhs) && get_len_value(rhs, len_rhs)) {
                 if (len_lhs != len_rhs)
                     return;
@@ -7227,6 +7237,11 @@ namespace smt {
                     bound = len_lhs.get_int64();
                 }
             }
+            /*  premise: 
+                (1) len(rhs) = len(lhs); or 
+                (2) len(rhs) is undetermined; or 
+                (3) len(lhs) is undetermined.
+            */
             expr* arrLhs = get_var_flat_array(lhs);
             expr* arrRhs = get_var_flat_array(rhs);
             if (arrLhs != nullptr && arrRhs != nullptr) {
@@ -7236,8 +7251,8 @@ namespace smt {
                     expr_ref_vector subcases(m);
                     subcases.push_back(createGreaterEqOP(lenLhs.get(), m_autil.mk_int(i + 1)));
                     subcases.push_back(createGreaterEqOP(lenRhs.get(), m_autil.mk_int(i + 1)));
-                    expr_ref tmp(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)),createSelectOP(arrRhs, m_autil.mk_int(i))), m);
-                    subcases.push_back(mk_not(m, tmp.get()));
+                    expr_ref having_same_symbol_at_i(createEqualOP(createSelectOP(arrLhs, m_autil.mk_int(i)),createSelectOP(arrRhs, m_autil.mk_int(i))), m);
+                    subcases.push_back(mk_not(m, having_same_symbol_at_i.get()));
                     cases.push_back(createAndOP(subcases));
                 }
 
@@ -7245,10 +7260,14 @@ namespace smt {
                 assert_axiom(rewrite_implication(premises, assertExpr));
             }
         }
-        else {
-            // TODO check the correctness
-            assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
+        // add on Jan. 25, 2021 by Yen
+        else if (!is_non_fresh(lhs, non_fresh_vars) || !is_non_fresh(rhs, non_fresh_vars)) {
+            return;
         }
+        // remove on Jan. 25, 2021 by Yen
+        //else {
+        //    assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
+        //}
     }
 
     /*
@@ -7285,7 +7304,7 @@ namespace smt {
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " = " << mk_pp(eq, m) << ")\n";);
             }
         }
-        // lhs: not a constant.
+        // premise: lhs: not a constant.
         if (is_non_fresh(lhs, non_fresh_vars) && !is_trivial_inequality(lhs, rhs)) {
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << rhs << ")\n";);
             expr* arrLhs = get_var_flat_array(lhs);
