@@ -1103,7 +1103,7 @@ namespace smt {
                     bool are_equal_concat(expr* lhs, expr* rhs);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars);
                 bool is_non_fresh(expr *n, obj_map<expr, int> const &non_fresh_vars, int &l);
-                ptr_vector<expr> simplify_and_ret_eq_nodes(expr* node, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
+                ptr_vector<expr> simplify_and_ret_eq_nodes(expr* represetative_node, obj_map<expr, ptr_vector<expr>> &combinations, obj_hashtable<expr> &non_root_nodes, expr_ref_vector const& parents, obj_map<expr, int> const& non_fresh_vars);
                 bool skip_concat(expr* e);
                 expr* find_representation(expr* e);
                 expr* create_concat_with_concat(expr* n1, expr* n2);

@@ -301,8 +301,8 @@ namespace smt {
     }
 
     void context::assign_core(literal l, b_justification j, bool decision) {
-        TRACE("assign_core", tout << (decision?"decision: ":"propagating: ") << l << " ";
-              display_literal_verbose(tout, l); tout << " level: " << m_scope_lvl << "\n";
+        TRACE("assign_core", tout << (decision?"decision: ":"propagating: ") << l << " "<<mk_pp(m_bool_var2expr[l.var()],get_manager());
+              /*display_literal_verbose(tout, l);*/ tout << " level: " << m_scope_lvl << "\n";
               display(tout, j););
         m_assigned_literals.push_back(l);
         m_assignment[l.index()]    = l_true;
