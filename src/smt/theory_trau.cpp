@@ -7259,11 +7259,11 @@ namespace smt {
                 assert_axiom(rewrite_implication(premises, assertExpr));
             }
         }
-        // add on Jan. 25, 2021 by Yen
+        // added on Jan. 25, 2021 by Yen
         else if (!is_non_fresh(lhs, non_fresh_vars) || !is_non_fresh(rhs, non_fresh_vars)){
             return;
         }
-        // remove on Jan. 25, 2021 by Yen
+        // removed on Jan. 25, 2021 by Yen
         //else {
         //    assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
         //}
@@ -7364,13 +7364,14 @@ namespace smt {
     void theory_trau::handle_not_contain(expr *lhs, expr *rhs, bool cached){
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
+        /* removed on Jan. 26, 2021 by Yen
         if (is_trivial_inequality(lhs, rhs)){
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             expr* premise = createEqualOP(lhs, rhs);
             expr* conclusion = createEqualOP(mk_strlen(lhs), mk_strlen(rhs));
             assert_axiom(rewrite_implication(mk_not(m, premise), mk_not(m, conclusion)));
             return;
-        }
+        }*/
         if (is_contain_family_equality(lhs, contain)) {
             //std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
             //std::cout << "contain: " << mk_pp(contain, m) << "\n";
