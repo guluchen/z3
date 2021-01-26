@@ -7231,10 +7231,9 @@ namespace smt {
 
     /*  lhs != rhs if
     *  (1) len(lhs) != len(rhs);
-    *  (2) 
-    *       (  i) len(lhs) >= len(lhs)
-    *       ( ii) len(rhs) >= len(lhs)
-    *       (iii) exits 1 <= i <= len(lhs), lhs(i) != rhs(i)
+    *  (2)  exists i, 1 <= i <= min(const_bound(lhs), const_bound(rhs)) s.t.
+    *       (  i) len(lhs), len(rhs) >= i
+    *       ( ii) lhs(i) != rhs(i)
     *  (3) lhs or rhs is fresh => return directly.
     */
 
@@ -7287,7 +7286,7 @@ namespace smt {
             }
         }
         // add on Jan. 25, 2021 by Yen
-        else if (!is_non_fresh(lhs, non_fresh_vars) || !is_non_fresh(rhs, non_fresh_vars)) {
+        else if (!is_non_fresh(lhs, non_fresh_vars) || !is_non_fresh(rhs, non_fresh_vars)){
             return;
         }
         // remove on Jan. 25, 2021 by Yen
