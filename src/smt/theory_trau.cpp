@@ -6099,20 +6099,20 @@ namespace smt {
             obj_map<expr, ptr_vector<expr>> const& eq_combination,
             obj_map<expr, int> & non_fresh_vars,
             expr_ref_vector const& diff) {
-        bool debug=false;
+        bool debug=true;
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
 
         if(debug){
             std::cout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;
             cout_eq_combination(eq_combination);
 
-            expr_ref_vector assignments(m);
-            get_context().get_assignments(assignments);
-            for (const auto& s : assignments) {
-                std::cout << "guessed assignments: " <<mk_pp(s,m) << std::endl;
-            }
-
-            std::cout << "\n **** guessed assignments print end **** \n" << std::endl;
+//            expr_ref_vector assignments(m);
+//            get_context().get_assignments(assignments);
+//            for (const auto& s : assignments) {
+//                std::cout << "guessed assignments: " <<mk_pp(s,m) << std::endl;
+//            }
+//
+//            std::cout << "\n **** guessed assignments print end **** \n" << std::endl;
         }
 
         expr_ref_vector guessed_eqs(m), guessed_diseqs(m);
@@ -8748,7 +8748,7 @@ namespace smt {
                 continue;
 
             expr* reg = nullptr;
-            if ((is_internal_regex_var(vareq.m_key, reg)) || is_in_non_fresh_family(vareq.m_key) || u.str.is_string(vareq.m_key)){
+            if (false && ((is_internal_regex_var(vareq.m_key, reg)) || is_in_non_fresh_family(vareq.m_key) || u.str.is_string(vareq.m_key))){
                 STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** " << mk_pp(vareq.m_key, m) << std::endl;);
                 expr *result = convert_const_nonfresh_equalities(vareq.m_key, vareq.get_value(), non_fresh_vars);
                 assert_breakdown_combination(result, premise, asserted_constraints, axiomAdded);
@@ -8761,7 +8761,7 @@ namespace smt {
                     convert_regex_equalities(regexExpr, vareq.m_key, non_fresh_vars, asserted_constraints, axiomAdded);
                 }
             }
-            else if (is_long_equality(vareq.get_value())) {
+            else if (false && is_long_equality(vareq.get_value())) {
                 /* add an eq = flat . flat . flat, then other equalities will compare with it */
                 expr *result = convert_long_equalities(vareq.m_key, vareq.get_value(), non_fresh_vars);
                 assert_breakdown_combination(result, premise, asserted_constraints, axiomAdded);
