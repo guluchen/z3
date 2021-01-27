@@ -78,7 +78,7 @@ namespace smt {
               implied_facts(m){
         timer=clock();
         str_int_bound = rational(0);
-        m_debug=true;
+        m_debug=false;
     }
 
     theory_trau::~theory_trau() {
