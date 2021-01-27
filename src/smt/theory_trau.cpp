@@ -222,10 +222,13 @@ namespace smt {
     }
 
     model_value_proc *theory_trau::mk_value(enode *const n, model_generator& mg) {
-        
+        bool debug=false;
+
+        if(debug) std::cout<<__FUNCTION__ <<" : "<<mk_pp(n->get_owner(),m)<<std::endl;
         context & ctx = get_context();
         app_ref owner{m};
         owner = n->get_owner();
+
         if (!ctx.is_relevant(owner.get()) || !u.is_string(m.get_sort(owner))) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << mk_ismt2_pp(owner, m) << std::endl;);
             return alloc(expr_wrapper_proc, owner);
@@ -5370,7 +5373,7 @@ namespace smt {
      * --> indexOf1 = replace1
      */
     expr* theory_trau::create_equations_over_contain_vars(expr* x, expr* y){
-        bool debug=m_debug;
+        bool debug=false;
 
         if(debug) {
             std::cout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(x, m) << " " << mk_pp(y, m) << std::endl;

@@ -99,7 +99,17 @@ namespace smt {
                 if (m.is_bool(s)) {
                     CTRACE("model", m_context->get_assignment(r) == l_undef, 
                            tout << mk_pp(r->get_owner(), m) << "\n";);
-                    SASSERT(m_context->get_assignment(r) != l_undef);
+                    if(m_context->get_assignment(r) == l_undef) {
+                        if (m.is_eq(r->get_owner())){
+                            proc = alloc(expr_wrapper_proc, m.mk_true());
+                            //(TODO) now we just assign true for all word equations, no matter what value it is, should be fixed
+                        }
+                        else {
+                            SASSERT(m_context->get_assignment(r) != l_undef);
+                        }
+
+                    }
+
                     if (m_context->get_assignment(r) == l_true)
                         proc = alloc(expr_wrapper_proc, m.mk_true());
                     else
