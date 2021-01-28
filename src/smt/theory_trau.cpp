@@ -17122,17 +17122,25 @@ namespace smt {
         //    else:
         //       haystack = x1 . needle . x2
         //       index_node = len(x1)
-        //       haystack = x3 . x4
-        //       len(x3) = index_node + len(needle) - 1
-        //       x3 not contains needle
+        //       if len(needle) = 1:
+        //          x1 not contains needle
+        //       else:
+        //          haystack = x3 . x4
+        //          len(x3) = index_node + len(needle) - 1
+        //          x3 not contains needle
         expr_ref_vector contains_nonempty_needle_cases(m);
         expr_ref x3(mk_str_var("x3"), m);
         expr_ref x4(mk_str_var("x4"), m);
         contains_nonempty_needle_cases.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
         contains_nonempty_needle_cases.push_back(createEqualOP(index_node, mk_strlen(x1)));
-        contains_nonempty_needle_cases.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
-        contains_nonempty_needle_cases.push_back(createEqualOP(mk_strlen(x3), m_autil.mk_add(index_node, mk_strlen(needle), mk_int(-1))));
-        contains_nonempty_needle_cases.push_back(mk_not(m, mk_contains(x3, needle)));
+        zstring needleStr;
+        if (u.str.is_string(needle, needleStr) && needleStr.length() == 1)
+            contains_nonempty_needle_cases.push_back(mk_not(m, mk_contains(x1, needle)));
+        else {
+            contains_nonempty_needle_cases.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
+            contains_nonempty_needle_cases.push_back(createEqualOP(mk_strlen(x3), m_autil.mk_add(index_node, mk_strlen(needle), mk_int(-1))));
+            contains_nonempty_needle_cases.push_back(mk_not(m, mk_contains(x3, needle)));
+        }
         expr_ref contains_nonempty_needle(createAndOP(contains_nonempty_needle_cases), m);
         expr_ref contains_empty_needle(createEqualOP(index_node, mk_int(0)), m);
         expr_ref contains_needle(m.mk_ite(createEqualOP(mk_strlen(needle), mk_int(0)), contains_empty_needle, contains_nonempty_needle), m);
