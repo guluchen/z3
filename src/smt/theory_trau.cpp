@@ -17372,12 +17372,11 @@ namespace smt {
      * condition: pos >= 0 && pos < strlen(base) && len >= 0
      * if !condition
      *      return ""
-     * if !condition && (pos+len) >= strlen(base)
-     *      arg0 = substr0 . substr3 . substr 4
+     * if condition && (pos+len) >= strlen(base)
+     *      arg0 = substr0 . substr3
      *      substr0.len = pos
-     *      substr4.len = 0
      *      return substr3
-     * if !condition && (pos+len) < strlen(base)
+     * if condition && (pos+len) < strlen(base)
      *      arg0 = substr0 . substr3 . substr 4
      *      substr0.len = pos
      *      substr3.len = len
@@ -17433,43 +17432,19 @@ namespace smt {
 
 
         expr_ref_vector argumentsValid_terms(m);
-        // pos >= 0
-        argumentsValid_terms.push_back(m_autil.mk_ge(pos, zero));
-        // pos < strlen(base)
+        argumentsValid_terms.push_back(m_autil.mk_ge(pos, zero)); // pos >= 0
         argumentsValid_terms.push_back(mk_not(m, m_autil.mk_ge(
                 m_autil.mk_add(pos, m_autil.mk_mul(minusOne, mk_strlen(base))),
-                zero)));
-
-        // len >= 0
-        argumentsValid_terms.push_back(m_autil.mk_ge(len, zero));
-
-
-        // (pos+len) >= strlen(base)
-        // --> pos + len + -1*strlen(base) >= 0
-        expr_ref sub(m_autil.mk_sub(m_autil.mk_add(pos, len), mk_strlen(base)), m);
-        m_rewrite(sub);
-
-        expr_ref lenOutOfBounds(m_autil.mk_ge(sub, zero), m);
+                zero))); // pos < strlen(base)
+        argumentsValid_terms.push_back(m_autil.mk_ge(len, zero)); // len >= 0
         expr_ref argumentsValid = mk_and(argumentsValid_terms);
 
         // Case 1: pos < 0 or pos >= strlen(base) or len < 0
         // ==> (Substr ...) = ""
-        expr_ref case1_premise_1(m.mk_not(argumentsValid), m);
-        expr_ref case1_premise_2(createLessEqOP(len, mk_int(-1)), m);
+        expr_ref case1_premise(m.mk_not(argumentsValid), m);
         expr_ref case1_conclusion(createEqualOP(expr, mk_string("")), m);
-        expr_ref case1(m.mk_implies(createOrOP(case1_premise_1, case1_premise_2), case1_conclusion), m);
+        expr_ref case1(m.mk_implies(case1_premise, case1_conclusion), m);
 
-        bool startFromHead = false;
-        rational startingInteger;
-        if (m_autil.is_numeral(pos, startingInteger) && startingInteger.is_zero()) {
-            startFromHead = true;
-        }
-
-        expr_ref_vector case2_conclusion_terms(m);
-        expr_ref_vector case3_conclusion_terms(m);
-
-        // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
-        // ==> base = substr0 . substr3 . substr4 AND len(t0) = pos AND (Substr ...) = t1
         expr_ref t0(mk_str_var("substr0"), m);
         expr_ref t3(mk_str_var("substr3"), m);
         expr_ref t4(mk_str_var("substr4"), m);
@@ -17478,42 +17453,46 @@ namespace smt {
         if (m_autil.is_numeral(pos, val_pos) && val_pos.get_int64() >= 0)
             fixed_len_vars.insert(t0, val_pos.get_int64());
 
-        if (!startFromHead) {
+        // Case 2: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) >= strlen(base)
+        // ==> base = t0 . t3 AND len(t0) = pos AND (Substr ...) = t3
+        // premise: (pos+len) >= strlen(base) --> pos + len + -1*strlen(base) >= 0
+        expr_ref sub(m_autil.mk_sub(m_autil.mk_add(pos, len), mk_strlen(base)), m); m_rewrite(sub);
+        expr_ref lenOutOfBounds(m_autil.mk_ge(sub, zero), m);
+        expr_ref case2_premise(createAndOP(argumentsValid, lenOutOfBounds), m);
+
+        rational startingInteger;
+        expr_ref_vector case2_conclusion_terms(m);
+        expr_ref_vector case3_conclusion_terms(m);
+        if (!(m_autil.is_numeral(pos, startingInteger) && startingInteger.is_zero())) { // not startFromHead
             case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, t3)));
             case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), pos));
-
             case3_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
             case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), pos));
-
             sync_index_head(pos, base, t0, mk_concat(t3, t4));
         }
         else {
             case2_conclusion_terms.push_back(createEqualOP(base, t3));
             case3_conclusion_terms.push_back(createEqualOP(base, mk_concat(t3, t4)));
-            case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), mk_int(0)));
-            case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t0), mk_int(0)));
-
             sync_index_head(len, base, t3, t4);
         }
-
         case2_conclusion_terms.push_back(createEqualOP(expr, t3));
-        case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t4), mk_int(0)));
-        case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
-
+        // case2_conclusion_terms.push_back(createEqualOP(mk_strlen(t4), mk_int(0)));
+        // case2_conclusion_terms.push_back(createEqualOP(base, mk_concat(t0, mk_concat(t3, t4))));
         expr_ref case2_conclusion(mk_and(case2_conclusion_terms), m);
-        expr_ref premise_expr(m);
-        premise_expr = createAndOP(argumentsValid, lenOutOfBounds);
-        expr_ref case2(m.mk_implies(premise_expr, case2_conclusion), m);
+        expr_ref case2(m.mk_implies(case2_premise, case2_conclusion), m);
 
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
-        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case2_conclusion, m) << std::endl;);
         // Case 3: (pos >= 0 and pos < strlen(base) and len >= 0) and (pos+len) < strlen(base)
         // ==> base = t0.t3.t4 AND len(t0) = pos AND len(t3) = len AND (Substr ...) = t3
         case3_conclusion_terms.push_back(createEqualOP(mk_strlen(t3), len));
         case3_conclusion_terms.push_back(createEqualOP(expr, t3));
 
         expr_ref case3_conclusion(mk_and(case3_conclusion_terms), m);
-        expr_ref case3(m.mk_implies(m.mk_and(argumentsValid, m.mk_not(lenOutOfBounds)), case3_conclusion), m);
+        expr_ref case3_premise(m.mk_and(argumentsValid, m.mk_not(lenOutOfBounds)), m);
+        expr_ref case3(m.mk_implies(case3_premise, case3_conclusion), m);
+
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(expr, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case2_conclusion, m) << std::endl;);
+        STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << ":" << mk_pp(case3_conclusion, m) << std::endl;);
 
         {
             substr_map.insert(expr, t3.get());
