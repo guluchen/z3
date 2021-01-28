@@ -7841,7 +7841,7 @@ namespace smt {
             if (u.str.is_string(const_lhs, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << "; cached" << cached << ")\n";);
                 if (value == rhs){
-                    assert_axiom(mk_not(m, createEqualOP(mk_strlen(lhs), mk_int(value.length()))));
+                    negate_context();
                 }
                 else if (value.indexof(rhs, 0) >= 0 && !cached) {
                     negate_context();
