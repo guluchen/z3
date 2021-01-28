@@ -6099,7 +6099,7 @@ namespace smt {
             obj_map<expr, ptr_vector<expr>> const& eq_combination,
             obj_map<expr, int> & non_fresh_vars,
             expr_ref_vector const& diff) {
-        bool debug=true;
+        bool debug=false;
         STRACE("str", tout << __LINE__ <<  " *** " << __FUNCTION__ << " *** (" << m_scope_level << "/" << mful_scope_levels.size() << ")" << connectingSize << std::endl;);
 
         if(debug){
@@ -6932,12 +6932,14 @@ namespace smt {
     }
 
     void theory_trau::handle_disequalities(){
+        bool debug = m_debug;
         for (const auto &wi : m_wi_expr_memo) {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
                 expr* contain = nullptr;
                 if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
+                    if (debug) std::cout<<__FUNCTION__<<" ("<<mk_pp(lhs,m)<<","<<mk_pp(rhs,m)<<")"<<std::endl;
                     handle_disequality(lhs, rhs, uState.non_fresh_vars);
                 }
             }
@@ -6945,6 +6947,8 @@ namespace smt {
     }
 
     void theory_trau::handle_disequalities_cached(){
+        bool debug = m_debug;
+
         expr_set disequalities;
         for (const auto& b : completed_branches) {
             for (const auto &wi : b.disequalities) {
@@ -6957,6 +6961,8 @@ namespace smt {
                     STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                     expr *contain = nullptr;
                     if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
+                        if (debug) std::cout<<__FUNCTION__<<" ("<<mk_pp(lhs,m)<<","<<mk_pp(rhs,m)<<")"<<std::endl;
+
                         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " " << mk_pp(equality, m) << " " << mk_pp(lhs, m) << " != " << mk_pp(rhs, m) << ")\n";);
                         disequalities.insert(equality);
                         handle_disequality(lhs, rhs, b.non_fresh_vars);
@@ -7391,6 +7397,8 @@ namespace smt {
     }
 
     void theory_trau::handle_not_contain(expr *lhs, expr *rhs, bool cached){
+        bool debug = m_debug;
+
         expr* contain = nullptr;
         expr* premise = mk_not(m, createEqualOP(lhs, rhs));
         /* removed on Jan. 26, 2021 by Yen
@@ -7402,6 +7410,8 @@ namespace smt {
             return;
         }*/
         if (is_contain_family_equality(lhs, contain)) {
+            if(debug) std::cout<<__FUNCTION__<<" ("<<mk_pp(lhs,m)<<","<<mk_pp(rhs,m)<<")"<<std::endl;
+
             //std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
             //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
@@ -7413,6 +7423,8 @@ namespace smt {
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_family_equality(rhs, contain)) {
+            if(debug) std::cout<<__FUNCTION__<<" ("<<mk_pp(lhs,m)<<","<<mk_pp(rhs,m)<<")"<<std::endl;
+
             //std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
             //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
@@ -15251,26 +15263,28 @@ namespace smt {
             new_rhs.push_back(rhsVec[i]);
     }
 
+
+
     obj_map<expr, int> theory_trau::collect_non_fresh_vars(){
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << std::endl;);
-
+        bool debug = m_debug;
         obj_hashtable<expr> eqc_roots = get_eqc_roots();
         for(auto root:eqc_roots){
-//            std::cout<<"eqc_root: "<<mk_pp(root,m)<<std::endl;
+            if(debug) std::cout<<"eqc_root: "<<mk_pp(root,m)<<std::endl;
         }
 
         obj_map<expr, int> collected_non_fresh_vars;
         obj_map<expr, int> occurrences = count_occurrences_from_root();
         for(auto occ:occurrences){
-//            std::cout<<"occurrences: ("<<mk_pp(occ.m_key,m)<<", "<<occ.m_value<<")"<<std::endl;
+            if(debug) std::cout<<"occurrences: ("<<mk_pp(occ.m_key,m)<<", "<<occ.m_value<<")"<<std::endl;
         }
         expr_set ineq_vars = collect_non_ineq_vars();
         for(auto ineq_var:ineq_vars){
-            //std::cout<<"ineq_var: "<<mk_pp(ineq_var,m)<<std::endl;
+            if(debug) std::cout<<"ineq_var: "<<mk_pp(ineq_var,m)<<std::endl;
         }
         expr_set needles = collect_needles();
         for(auto needle:needles){
-            //std::cout<<"needle: "<<mk_pp(needle,m)<<std::endl;
+            if(debug) std::cout<<"needle: "<<mk_pp(needle,m)<<std::endl;
         }
 
         for (const auto& nn : eqc_roots) {
@@ -15700,6 +15714,7 @@ namespace smt {
     }
 
     obj_map<expr, int> theory_trau::count_occurrences_from_root(){
+        bool debug = false;
         context& ctx = get_context();
         obj_map<expr, int> ret;
         vector<str::expr_pair> visited;
@@ -15711,8 +15726,8 @@ namespace smt {
             for concat_node_map = [(c, d, cd), (c,c, cc)], it returns (c,2),(d,1).
         */
         for (const auto& n : concat_node_map) {
-//            std::cout << "concat_node_map:(" << mk_pp(n.get_key1(), m) << ", " << mk_pp(n.get_key2(), m) << ", "
-//                      << mk_pp(n.get_value(), m) << ")" << std::endl;
+            if(debug) std::cout << "concat_node_map:(" << mk_pp(n.get_key1(), m) << ", " << mk_pp(n.get_key2(), m) << ", "
+                      << mk_pp(n.get_value(), m) << ")" << std::endl;
 
             if (ctx.is_relevant(n.get_value())) {
                 expr *n1 = n.get_key1();
@@ -15759,6 +15774,8 @@ namespace smt {
                         }
                     }
                 }
+            }else{
+                if(debug) std::cout<<mk_pp(n.get_value(),m)<<" is not relevant\n";
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
@@ -15769,23 +15786,31 @@ namespace smt {
         return ret;
     }
 
-    bool theory_trau::check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> v){
-        for (const auto& p : v)
-            if (p.first.get() == lhs){
-                // e is a part of p
-                expr_ref_vector eqs(m);
-                collect_eq_nodes_and_return_eq_constStrNode_if_exists(p.second.get(), eqs);
-                for (const auto& n : eqs)
-                    if (u.str.is_concat(n)){
-                        if (are_equal_exprs(rhs, getMostLeftNodeInConcat(n)))
+    bool theory_trau::check_existing_occurence(expr* lhs, expr* rhs, vector<str::expr_pair> all_visited
+    ){
+        bool debug = false;
+        for (const auto& visited_pair : all_visited)
+            if (visited_pair.first.get() == lhs){
+                // lhs is a part of visited_pair
+                expr_ref_vector visited_pair_rhs_eqs(m);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(visited_pair.second.get(), visited_pair_rhs_eqs);
+                for (const auto& visited_pair_rhs_eq_node : visited_pair_rhs_eqs)
+                    if (u.str.is_concat(visited_pair_rhs_eq_node)){
+                        if (are_equal_exprs(rhs, getMostLeftNodeInConcat(visited_pair_rhs_eq_node))){
+                            if(debug) std::cout<<" we only compare "<<mk_pp(rhs,m)<<" with the left most node of "
+                                                <<mk_pp(visited_pair_rhs_eq_node,m)<<std::endl;
                             return true;
+                        }
                     }
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(lhs, m) << " " << mk_pp(rhs, m) << std::endl;);
-                eqs.reset();
-                collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, eqs);
-                for (const auto& n : eqs) {
-                    if (u.str.is_concat(n)) {
-                        if (are_equal_exprs(p.second.get(), getMostLeftNodeInConcat(n))) {
+
+                expr_ref_vector rhs_eqs(m);
+                collect_eq_nodes_and_return_eq_constStrNode_if_exists(rhs, rhs_eqs);
+                for (const auto& rhs_eq_node : rhs_eqs) {
+                    if (u.str.is_concat(rhs_eq_node)) {
+                        if (are_equal_exprs(visited_pair.second.get(), getMostLeftNodeInConcat(rhs_eq_node))) {
+                            if(debug) std::cout<<" we only compare "<<mk_pp(visited_pair.second.get(),m)<<" with the left most node of "
+                                               <<mk_pp(rhs_eq_node,m)<<std::endl;
                             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << std::endl;);
                             return true;
                         }
@@ -16891,12 +16916,12 @@ namespace smt {
         ptr_vector<expr> results = {};
 
 
-        for(unsigned i=0;i< e_eq_set.size();i++){
-            results.push_back(e_eq_set.get(i));
-        }
-
-        combinations.insert(represetative_node,results);
-        return results;
+//        for(unsigned i=0;i< e_eq_set.size();i++){
+//            results.push_back(e_eq_set.get(i));
+//        }
+//
+//        combinations.insert(represetative_node,results);
+//        return results;
 
 
         context& ctx = get_context();
