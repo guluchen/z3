@@ -580,7 +580,7 @@ bool cmd_context::well_sorted_check_enabled() const {
 }
 
 bool cmd_context::validate_model_enabled() const {
-    return m_params.m_model_validate;
+    return true;
 }
 
 cmd_context::check_sat_state cmd_context::cs_state() const {
@@ -1709,7 +1709,6 @@ void cmd_context::add_declared_functions(model& mdl) {
 void cmd_context::display_sat_result(lbool r) {
     switch (r) {
     case l_true:
-        regular_stream() << "sat" << std::endl;
         break;
     case l_false:
         regular_stream() << "unsat" << std::endl;
@@ -1858,6 +1857,7 @@ void cmd_context::complete_model(model_ref& md) const {
 */
 void cmd_context::validate_model() {
     model_ref md;
+    
     if (!validate_model_enabled())
         return;
     if (!is_model_available(md))
@@ -1906,7 +1906,10 @@ void cmd_context::validate_model() {
             }
         }
         if (invalid_model) {
-            throw cmd_exception("an invalid model was generated");
+            std::cout<<"unknown"<<std::endl;
+            exit(0);
+        }else{
+            std::cout<<"sat"<<std::endl;
         }
     }
 }
