@@ -6174,11 +6174,17 @@ namespace smt {
         std::cout << "%%%%%%%%%%%% Print End %%%%%%%%%%%%%%%%%\n\n";
         */
 
+        //std::cout << "************ Before *******************\n\n";
+        //cout_eq_combination(eq_combination);
 
         handle_diseq_notcontain();
         bool axiomAdded = handle_str_int();
         guessed_eqs.append(diff);
         axiomAdded = convert_equalities(eq_combination, non_fresh_vars, createAndOP(guessed_eqs)) || axiomAdded;
+
+        //std::cout << "************ After *******************\n\n";
+        //cout_eq_combination(eq_combination);
+
 
         /*
         std::cout << "************ After *******************\n\n";
@@ -7373,6 +7379,7 @@ namespace smt {
             if (!u.str.is_empty(wi.second.get()) && !u.str.is_empty(wi.first.get())) {
                 expr* lhs = wi.first.get();
                 expr* rhs = wi.second.get();
+                //std::cout << __FUNCTION__ << " (" << mk_pp(lhs, m) << "," << mk_pp(rhs, m) << ")" << std::endl;
                 STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
                 handle_not_contain(lhs, rhs);
             }
@@ -7402,8 +7409,6 @@ namespace smt {
             return;
         }*/
         if (is_contain_family_equality(lhs, contain)) {
-            //std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
-            //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(rhs, contain);
             zstring value;
@@ -7413,11 +7418,10 @@ namespace smt {
                 handle_not_contain_var(rhs, contain, premise, cached);
         }
         else if (is_contain_family_equality(rhs, contain)) {
-            //std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
-            //std::cout << "contain: " << mk_pp(contain, m) << "\n";
             STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " not (" << mk_pp(lhs, m) << " = " << mk_pp(rhs, m) << ")\n";);
             handle_not_contain_substr_index(lhs, contain);
             zstring value;
+            return;
             if (u.str.is_string(contain, value))
                 handle_not_contain_const(lhs, value, premise, cached);
             else
