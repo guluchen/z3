@@ -18028,41 +18028,41 @@ namespace smt {
             contain_split_map.insert(key, std::make_pair(ctx.get_enode(value.first), ctx.get_enode(value.second)));
         }
 
-        if (u.str.is_extract(haystack.get())){
-            app* substr = to_app(haystack.get());
-            rational ra;
-            if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
-                if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
-                    app *rootContain = mk_contains(substr->get_arg(0), needle);
-                    enode* keynode = ensure_enode(rootContain);
-                    SASSERT(contain_split_map.contains(keynode));
-                    assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
-                }
-            }
-        }
+        // if (u.str.is_extract(haystack.get())){
+        //     app* substr = to_app(haystack.get());
+        //     rational ra;
+        //     if (m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+        //         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+        //         if (contain_pair_bool_map.contains(std::make_pair(substr->get_arg(0), needle.get()))) {
+        //             app *rootContain = mk_contains(substr->get_arg(0), needle);
+        //             enode* keynode = ensure_enode(rootContain);
+        //             SASSERT(contain_split_map.contains(keynode));
+        //             assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
+        //         }
+        //     }
+        // }
 
-        for (const auto& p : contain_pair_bool_map){
-            if (u.str.is_extract(p.get_key1()) && p.get_key2() == needle.get()){
-                app* substr = to_app(p.get_key1());
-                STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
-                rational ra;
-                if (substr->get_arg(0) == haystack.get() &&
-                    m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
-                    app *rootContain = mk_contains(p.get_key1(), needle.get());
-                    enode* keynode = ensure_enode(rootContain);
-                    SASSERT(contain_split_map.contains(keynode));
-                    assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
-                }
-            }
-        }
+        // for (const auto& p : contain_pair_bool_map){
+        //     if (u.str.is_extract(p.get_key1()) && p.get_key2() == needle.get()){
+        //         app* substr = to_app(p.get_key1());
+        //         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " found substr contain " << mk_pp(haystack.get(), m) << std::endl;);
+        //         rational ra;
+        //         if (substr->get_arg(0) == haystack.get() &&
+        //             m_autil.is_numeral(substr->get_arg(1), ra) && ra.get_int64() == 0){
+        //             app *rootContain = mk_contains(p.get_key1(), needle.get());
+        //             enode* keynode = ensure_enode(rootContain);
+        //             SASSERT(contain_split_map.contains(keynode));
+        //             assert_axiom(createEqualOP(value.first, contain_split_map[keynode].first->get_owner()));
+        //         }
+        //     }
+        // }
 
         expr_ref x1(value.first, m);
         expr_ref x2(value.second, m);
         expr_ref index_node(mk_int_var("index"), m);
 
         expr* contain_constraint = mk_contains(haystack, needle);
-        expr_ref condition(contain_constraint, m);
+        expr_ref needle_is_in_haystack(contain_constraint, m);
         if (index_tail.contains(ex)) {
             STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " update index tail vs substring " << mk_pp(index_tail[ex].first, m) << std::endl;);
             assert_axiom(createEqualOP(x2.get(), index_tail[ex].second));
@@ -18083,78 +18083,49 @@ namespace smt {
             index_head.insert(ex, x1.get());
         }
         // -----------------------
-        // true branch
-        expr_ref_vector then_items(m);
-        //  args[0] = x1 . args[1] . x2
-        then_items.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
-        //  index_node = |x1|
-        then_items.push_back(createEqualOP(index_node, mk_strlen(x1)));
-        then_items.push_back(createOrOP(mk_not(m, mk_contains(x1, needle)), createEqualOP(needle, mk_string(""))));
-
-        // expr->get_arg(1) == 0 --> x1 = ""
-        if (!u.str.is_string(needle)){
-            then_items.push_back(rewrite_implication(createEqualOP(mk_strlen(needle), mk_int(0)),
-                                                     createEqualOP(mk_strlen(x1), mk_int(0))));
-        }
-
-        bool oneCharCase = false;
-        zstring needleStr;
-        if (u.str.is_string(needle, needleStr)) {
-            if (needleStr.length() == 1) {
-                oneCharCase = true;
-            }
-        }
-
-        if (!oneCharCase){
-            //     args[0]  = x3 . x4
-            //  /\ |x3| = |x1| + |args[1]| - 1
-            //  /\ ! contains(x3, args[1])
-            expr_ref curr_premise01(m_autil.mk_ge(mk_strlen(needle), mk_int(1)), m);
-            expr_ref curr_premise02(m_autil.mk_ge(index_node, mk_int(1)), m);
-            expr* curr_premise = createAndOP(curr_premise01, curr_premise02);
-
-            expr_ref x3(mk_str_var("x3"), m);
-            expr_ref x4(mk_str_var("x4"), m);
-            expr_ref tmpLen(m_autil.mk_add(index_node, mk_strlen(needle), mk_int(-1)), m);
-            SASSERT(tmpLen);
-            expr_ref_vector curr_conclusion(m);
-
-            curr_conclusion.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
-            curr_conclusion.push_back(createEqualOP(mk_strlen(x3), tmpLen));
-            curr_conclusion.push_back(createOrOP(mk_not(m, mk_contains(x3, needle)), createEqualOP(needle, mk_string(""))));
-            then_items.push_back(rewrite_implication(curr_premise, createAndOP(curr_conclusion)));
-        }
-        expr_ref thenBranch(m.mk_and(then_items.size(), then_items.c_ptr()), m);
-        SASSERT(thenBranch);
+        // (contains-needle branch)
+        // if haystack contains needle:
+        //    if len(needle) = 0: index_node = 0
+        //    else:
+        //       haystack = x1 . needle . x2
+        //       index_node = len(x1)
+        //       haystack = x3 . x4
+        //       len(x3) = index_node + len(needle) - 1
+        //       x3 not contains needle
+        expr_ref_vector contains_nonempty_needle_cases(m);
+        expr_ref x3(mk_str_var("x3"), m);
+        expr_ref x4(mk_str_var("x4"), m);
+        contains_nonempty_needle_cases.push_back(createEqualOP(haystack, mk_concat(x1, mk_concat(needle, x2))));
+        contains_nonempty_needle_cases.push_back(createEqualOP(index_node, mk_strlen(x1)));
+        contains_nonempty_needle_cases.push_back(createEqualOP(haystack, mk_concat(x3, x4)));
+        contains_nonempty_needle_cases.push_back(createEqualOP(mk_strlen(x3), m_autil.mk_add(index_node, mk_strlen(needle), mk_int(-1))));
+        contains_nonempty_needle_cases.push_back(mk_not(m, mk_contains(x3, needle)));
+        expr_ref contains_nonempty_needle(createAndOP(contains_nonempty_needle_cases), m);
+        expr_ref contains_empty_needle(createEqualOP(index_node, mk_int(0)), m);
+        expr_ref contains_needle(m.mk_ite(createEqualOP(mk_strlen(needle), mk_int(0)), contains_empty_needle, contains_nonempty_needle), m);
 
         // -----------------------
-        // false branch
-        expr_ref elseBranch(createEqualOP(index_node, mk_int(-1)), m);
-        SASSERT(elseBranch);
+        // (not-contains-needle branch)
+        // else:
+        //    index_node = -1
+        expr_ref not_contains_needle(createEqualOP(index_node, mk_int(-1)), m);
 
-        expr_ref breakdownAssert(m.mk_ite(condition, thenBranch, elseBranch), m);
-        SASSERT(breakdownAssert);
-
+        expr_ref breakdownAssert(m.mk_ite(needle_is_in_haystack, contains_needle, not_contains_needle), m);
         expr_ref reduceToIndex(createEqualOP(ex, index_node), m);
-        SASSERT(reduceToIndex);
-
         expr_ref finalAxiom(m.mk_and(breakdownAssert, reduceToIndex), m);
-        SASSERT(finalAxiom);
         assert_axiom(finalAxiom);
 
-        // | arg1 | = 0 --> indexOf = hd
+        // | needle | = 0 --> indexOf = 0
         assert_implication(createEqualOP(mk_strlen(needle), mk_int(0)), createEqualOP(index_node, mk_int(0)));
 
         {
             // heuristic: integrate with str.contains information
             // (but don't introduce it if it isn't already in the instance)
-            expr_ref startIdx(ex->get_arg(2), m);
-            expr_ref zeroAst(mk_int(0), m);
             // (H contains N) <==> (H indexof N, 0) >= 0
-            expr_ref premise(u.str.mk_contains(haystack, needle), m);
-            ctx.internalize(premise, false);
-            expr_ref conclusion(m_autil.mk_ge(ex, zeroAst), m);
-            expr_ref containsAxiom(createEqualOP(premise, conclusion), m);
+            // expr_ref premise(u.str.mk_contains(haystack, needle), m);
+            // ctx.internalize(premise, false);
+            expr_ref index_node_ge_zero(m_autil.mk_ge(ex, mk_int(0)), m);
+            expr_ref containsAxiom(createEqualOP(needle_is_in_haystack, index_node_ge_zero), m);
             SASSERT(containsAxiom);
 
             // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
@@ -18255,13 +18226,11 @@ namespace smt {
 
         // str.indexof(H, N, i):
         // i < 0 --> -1
-        // i == 0 --> str.indexof(H, N, 0)
-        // i >= len(H) --> -1
-        // 0 < i < len(H) -->
+        // i > len(H) --> -1
+        // 0 <= i <= len(H) -->
         //     H = hd ++ tl
         //     len(hd) = i
-        //     str.indexof(tl, N, 0)
-
+        //     i + str.indexof(tl, N, 0)
         expr * arg0 = nullptr; // "haystack"
         expr * arg1 = nullptr; // "needle"
         expr * startIndex = nullptr; // start index
@@ -18287,11 +18256,7 @@ namespace smt {
             assert_implication(premise, conclusion);
         }
 
-        expr_ref hd(mk_str_var("hd"), m);
-        expr_ref tl(mk_str_var("tl"), m);
-
-
-        // case 3: startIndex > len(H), return -1
+        // case 2: startIndex > len(H), return -1
         {
             expr_ref premise(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), mk_int(1)), m);
             m_rewrite(premise);
@@ -18299,7 +18264,7 @@ namespace smt {
             assert_implication(premise, conclusion);
         }
 
-        // case 4: 0 <= i < len(H),
+        // case 3: 0 <= i <= len(H),
         //      arg0 = hd . tl
         //      hd.len = startIndex
         //      tlindex = indexOf(tl, arg1, 0)
@@ -18307,10 +18272,11 @@ namespace smt {
         //          indexOf = tlindex + |hd|,
         //      else indexOf = -1
         {
+            expr_ref hd(mk_str_var("hd"), m);
+            expr_ref tl(mk_str_var("tl"), m);
             expr_ref premise1(m_autil.mk_ge(startIndex, zero), m);
             expr_ref premise2(m.mk_not(m_autil.mk_gt(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
-            expr_ref _premise(m.mk_and(premise1, premise2), m);
-            expr_ref premise(_premise);
+            expr_ref premise(m.mk_and(premise1, premise2), m);
             m_rewrite(premise);
             if (premise != m.mk_false()) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(premise, m) << " "
@@ -18335,28 +18301,30 @@ namespace smt {
             }
         }
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " " << mk_pp(e, m) << std::endl;);
-        {
-            // heuristic: integrate with str.contains information
-            // (but don't introduce it if it isn't already in the instance)
-            // (0 <= startIndex < len(arg0)) ==> (arg0 contains arg1) <==> (arg0 indexof arg1, startIndex) >= startIndex
-            expr_ref precondition1(m_autil.mk_gt(startIndex, minus_one), m);
-            expr_ref precondition2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
-            expr_ref _precondition(m.mk_and(precondition1, precondition2), m);
-            expr_ref precondition(_precondition);
-            m_rewrite(precondition);
+        // {
+        //     // TODO: maybe we can fix and add back this heuristics. (Wei-Lun, Tsai)
+        //     // heuristic: integrate with str.contains information
+        //     // (but don't introduce it if it isn't already in the instance)
+        //     // (0 <= startIndex < len(arg0)) ==>
+        //        (arg0 contains arg1) <==> (arg0 indexof arg1, startIndex) >= startIndex
+        //     expr_ref precondition1(m_autil.mk_gt(startIndex, minus_one), m);
+        //     expr_ref precondition2(m.mk_not(m_autil.mk_ge(m_autil.mk_add(startIndex, m_autil.mk_mul(minus_one, mk_strlen(arg0))), zero)), m);
+        //     expr_ref precondition(m.mk_and(precondition1, precondition2), m);
+        //     // expr_ref precondition(_precondition);
+        //     m_rewrite(precondition);
 
-            expr_ref premise(u.str.mk_contains(arg0, arg1), m);
-            ctx.internalize(premise, false);
-            expr_ref_vector conclusion(m);
-            if (m_autil.is_numeral(startIndex))
-                conclusion.push_back(m_autil.mk_ge(e, startIndex));
-            else
-                return;
-            expr_ref containsAxiom(ctx.mk_eq_atom(premise, createAddOP(conclusion)), m);
-            expr_ref finalAxiom(rewrite_implication(precondition, containsAxiom), m);
-            // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
-            m_delayed_assertions_todo.push_back(finalAxiom);
-        }
+        //     expr_ref premise(u.str.mk_contains(arg0, arg1), m);
+        //     ctx.internalize(premise, false);
+        //     expr_ref_vector conclusion(m);
+        //     if (m_autil.is_numeral(startIndex))
+        //         conclusion.push_back(m_autil.mk_ge(e, startIndex));
+        //     else
+        //         return;
+        //     expr_ref containsAxiom(ctx.mk_eq_atom(premise, createAddOP(conclusion)), m);
+        //     expr_ref finalAxiom(rewrite_implication(precondition, containsAxiom), m);
+        //     // we can't assert this during init_search as it breaks an invariant if the instance becomes inconsistent
+        //     m_delayed_assertions_todo.push_back(finalAxiom);
+        // }
     }
 
     /*
