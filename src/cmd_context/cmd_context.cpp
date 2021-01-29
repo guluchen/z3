@@ -1709,7 +1709,6 @@ void cmd_context::add_declared_functions(model& mdl) {
 void cmd_context::display_sat_result(lbool r) {
     switch (r) {
     case l_true:
-        regular_stream() << "sat" << std::endl;
         break;
     case l_false:
         regular_stream() << "unsat" << std::endl;
@@ -1858,7 +1857,7 @@ void cmd_context::complete_model(model_ref& md) const {
 */
 void cmd_context::validate_model() {
     model_ref md;
-    if (!validate_model_enabled())
+    if (!validate_model_enabled()&&false)
         return;
     if (!is_model_available(md))
         return;
@@ -1906,7 +1905,10 @@ void cmd_context::validate_model() {
             }
         }
         if (invalid_model) {
-            throw cmd_exception("an invalid model was generated");
+            std::cout<<"unknown"<<std::endl;
+            exit(0);
+        }else{
+            std::cout<<"sat"<<std::endl;
         }
     }
 }
