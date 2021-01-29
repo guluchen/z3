@@ -79,6 +79,7 @@ namespace smt {
         timer=clock();
         str_int_bound = rational(0);
         m_debug=false;
+        m_formulae_simp=false;
     }
 
     theory_trau::~theory_trau() {
@@ -16915,13 +16916,14 @@ namespace smt {
         }
         ptr_vector<expr> results = {};
 
+        if(!m_formulae_simp){
+            for(unsigned i=0;i< e_eq_set.size();i++){
+                results.push_back(e_eq_set.get(i));
+            }
 
-//        for(unsigned i=0;i< e_eq_set.size();i++){
-//            results.push_back(e_eq_set.get(i));
-//        }
-//
-//        combinations.insert(represetative_node,results);
-//        return results;
+            combinations.insert(represetative_node,results);
+            return results;
+        }
 
 
         context& ctx = get_context();

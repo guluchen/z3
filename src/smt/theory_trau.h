@@ -1306,6 +1306,7 @@ namespace smt {
 
         enode* ensure_enode(expr* e);
         bool                                                search_started;
+        bool                                                m_formulae_simp;
         bool                                                m_debug;
         th_rewriter                                         m_rewrite;
         seq_rewriter                                        m_seq_rewrite;

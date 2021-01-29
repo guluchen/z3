@@ -1857,7 +1857,7 @@ void cmd_context::complete_model(model_ref& md) const {
 */
 void cmd_context::validate_model() {
     model_ref md;
-    
+
     if (!validate_model_enabled())
         return;
     if (!is_model_available(md))
