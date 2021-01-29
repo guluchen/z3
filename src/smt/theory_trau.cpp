@@ -3433,13 +3433,13 @@ namespace smt {
             TRACE("str", tout << "Resuming search due to axioms added by refined_init_chain_free." << std::endl;);
             return FC_CONTINUE;
         }
-        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
-        if (can_merge_combination(eq_combination)){
-            TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
-            print_eq_combination(eq_combination);
-            newConstraintTriggered = true;
-            return FC_CONTINUE;
-        }
+//        STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
+//        if (can_merge_combination(eq_combination)){
+//            TRACE("str", tout << "Resuming search due to axioms added by can_merge_combination propagation." << std::endl;);
+//            print_eq_combination(eq_combination);
+//            newConstraintTriggered = true;
+//            return FC_CONTINUE;
+//        }
 
         if (!parikh_image_check(eq_combination)){
             negate_context();
