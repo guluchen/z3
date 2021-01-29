@@ -6981,9 +6981,12 @@ namespace smt {
                 assert_axiom(rewrite_implication(premises, assertExpr));
             }
         }
-        else {
-            assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
+        else if (!is_non_fresh(lhs, non_fresh_vars) || !is_non_fresh(rhs, non_fresh_vars)){
+            return;
         }
+//        else {
+//            assert_axiom(rewrite_implication(mk_not(m, createEqualOP(lhs, rhs)), mk_not(m, createEqualOP(mk_strlen(lhs), mk_strlen(rhs)))));
+//        }
     }
 
     void theory_trau::handle_disequality_const(expr *lhs, zstring rhs, obj_map<expr, int> const &non_fresh_vars){
@@ -7151,7 +7154,7 @@ namespace smt {
             if (u.str.is_string(const_lhs, value)) {
                 STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << value << ", " << rhs << "; cached" << cached << ")\n";);
                 if (value == rhs){
-                    assert_axiom(mk_not(m, createEqualOP(mk_strlen(lhs), mk_int(value.length()))));
+                    negate_context();
                 }
                 else if (value.indexof(rhs, 0) >= 0 && !cached) {
                     negate_context();
