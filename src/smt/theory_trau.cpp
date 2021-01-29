@@ -5238,7 +5238,7 @@ namespace smt {
                     zstring tmp00;
                     zstring tmp01;
                     if (u.str.is_string(nodes_x[pos + 1], tmp00) && u.str.is_string(nodes_y[pos + 1], tmp01)) {
-                        if (tmp00.prefixof(tmp01) || tmp01.prefixof(tmp00)) {
+                        if (tmp00==tmp01) {
                             if (!are_equal_exprs(nodes_x[pos], nodes_y[pos]))
                                 return createEqualOP(nodes_x[pos], nodes_y[pos]);
                         }
