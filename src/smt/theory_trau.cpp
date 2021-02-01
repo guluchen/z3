@@ -3445,13 +3445,13 @@ namespace smt {
             negate_context();
             return FC_CONTINUE;
         }
-
+        std::cout << "finished parikh_image_check\n"; cout_eq_combination(eq_combination);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
             return FC_CONTINUE;
         }
-
+        std::cout << "finished underapproximation\n"; cout_eq_combination(eq_combination);
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
         return FC_DONE;
     }
@@ -6464,6 +6464,38 @@ namespace smt {
         expr* premise = createGreaterEqOP(num, mk_int(0));
 
         return rewrite_implication(premise, createAndOP(ands));
+    }
+
+    void theory_trau::cout_eq_combination(obj_map<expr, ptr_vector<expr>> const& combinations) {
+        for (const auto& com : combinations) {
+            std::stringstream msg;
+
+            //msg << mk_pp(com.m_key, m) << " = ";
+            for (const auto& e : com.get_value())
+                if (e != com.m_key)
+                    std::cout << mk_pp(com.m_key, m) << " = " << mk_pp(e, m) << std::endl;
+
+        }
+
+        for (const auto& e : m_wi_expr_memo) {
+            expr* lhs = e.first.get();
+            expr* rhs = e.second.get();
+            expr* contain = nullptr;
+            if (!is_contain_family_equality(lhs, contain) && !is_contain_family_equality(rhs, contain)) {
+                std::cout << mk_pp(lhs, m) << "!=" << mk_pp(rhs, m) << std::endl;
+            }
+            else {
+                if (is_contain_family_equality(lhs, contain)) {
+                    std::cout << "not contains(" << mk_pp(rhs, m) << ", " << mk_pp(contain, m) << ")" << std::endl;
+                }
+                else if (is_contain_family_equality(rhs, contain)) {
+                    std::cout << "not contains(" << mk_pp(lhs, m) << ", " << mk_pp(contain, m) << ")" << std::endl;
+                }
+
+
+            }
+
+        }
     }
 
     void theory_trau::print_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination, int line){

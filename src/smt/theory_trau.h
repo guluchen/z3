@@ -453,6 +453,7 @@ namespace smt {
                 void setup_flats();
                 bool should_use_flat();
             void init_underapprox_cached();
+            void cout_eq_combination(obj_map<expr, ptr_vector<expr>> const& eq_combination);
 
             void handle_diseq_notcontain(bool cached = false);
                 void handle_disequalities();
