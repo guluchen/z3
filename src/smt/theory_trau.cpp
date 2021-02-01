@@ -3445,13 +3445,13 @@ namespace smt {
             negate_context();
             return FC_CONTINUE;
         }
-        std::cout << "finished parikh_image_check\n"; cout_eq_combination(eq_combination);
+        //std::cout << "finished parikh_image_check\n"; cout_eq_combination(eq_combination);
         STRACE("str", tout << __LINE__ <<  " current time used: " << ":  " << ((float)(clock() - startClock))/CLOCKS_PER_SEC << std::endl;);
         if (underapproximation(eq_combination, non_fresh_vars, diff)) {
             update_state();
             return FC_CONTINUE;
         }
-        std::cout << "finished underapproximation\n"; cout_eq_combination(eq_combination);
+        //std::cout << "finished underapproximation\n"; cout_eq_combination(eq_combination);
         STRACE("str", tout << __LINE__ <<  " " << __FUNCTION__ << " DONE." << std::endl;);
         return FC_DONE;
     }
