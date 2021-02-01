@@ -7110,36 +7110,369 @@ namespace smt {
 
     void theory_trau::handle_not_contain_var(expr *lhs, expr *rhs, expr *premise, bool cached){
         STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
-        int len_rhs = connectingSize;
-        is_fixed_len_var(rhs, len_rhs);
-        expr_ref_vector ors(m);
 
-        int len_lhs = connectingSize;
-        is_fixed_len_var(lhs, len_lhs);
         expr* arr_lhs = get_var_flat_array(lhs);
         expr* arr_rhs = get_var_flat_array(rhs);
 
+
+        if (!arr_lhs || !arr_rhs)
+        {
+            //assert_axiom(createOrOP(LC, premise));
+            return;
+        }
+
+
+        /*
+        * Length Conflict Part
+        */
+        expr* LC = createGreaterEqOP(createAddOP(mk_strlen(rhs), mk_int(-1)), mk_strlen(lhs));
+        //LC_union_PC.push_back(LC);
+        //assert_axiom(createOrOP(LC_or_PC));
+        //expr_ref LC(m_autil.mk_ge(m_autil.mk_add(mk_strlen(rhs), m_autil.mk_mul(mk_strlen(lhs), mk_int(-1))), mk_int(1)), m);
+        //assert_axiom(LC);
+
+
+        if (is_search_complete)
+        {
+            is_search_complete = false;
+            if (!is_printed)
+            {
+                std::cout << "imcomplete-search\n";
+                is_printed = true;
+            }
+        }
+
+        //std::cout << "\nPC-start\n";
+        /*
+        * Position Conflict Part
+        */
+        ptr_vector<expr> lhs_nodes;
+        get_nodes_in_concat(lhs, lhs_nodes);
+        pair_expr_vector lhs_nodes_elements = create_equality(lhs_nodes);
+        ptr_vector<expr> rhs_nodes;
+        get_nodes_in_concat(rhs, rhs_nodes);
+        pair_expr_vector rhs_nodes_elements = create_equality(rhs_nodes);
+
+        expr_ref_vector PC_len_cond(m);
+        
+
+        //for (int i = 0; i < lhs_nodes.size(); i++)
+            //std::cout << "lhs_node_i:" << i << " " << mk_pp(lhs_nodes[i], m) << "\n";
+        //for (int i = 0; i < rhs_nodes.size(); i++)
+            //std::cout << "rhs_node_i:" << i << " " << mk_pp(rhs_nodes[i], m) << "\n";
+        
+
+
+        assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
+        assert_axiom(createEqualOP(arr_linker[arr_rhs], rhs));
+
+        //std::cout << "arr_lhs: " << mk_pp(arr_lhs, m) << "\n";
+        //std::cout << "arr_rhs: " << mk_pp(arr_rhs, m) << "\n";
+
+        PC_len_cond.push_back(createGreaterEqOP(mk_strlen(lhs), mk_strlen(rhs)));
+        int lhs_element_bound = lhs_nodes_elements.size();
+        int rhs_element_bound = rhs_nodes_elements.size();
+
+        for (int i = 0; i < lhs_nodes_elements.size(); i++)
+        {
+            expr_ref lhs_i_loop_size(get_var_flat_size(lhs_nodes_elements[i]), m);
+            //expr_ref lhs_i_loop_iter(get_flat_iter(lhs_nodes_elements[i]), m);
+            if(lhs_nodes_elements[i].second >= 0)
+                assert_axiom(createEqualOP(arr_linker[get_var_flat_array(lhs_nodes_elements[i].first)], lhs_nodes_elements[i].first));
+            //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), lhs_i_loop_size));
+            if (lhs_nodes_elements[i].second + 1 >= lhs_element_bound)
+                lhs_element_bound = lhs_nodes_elements[i].second + 1;
+            /*
+            std::cout << "lhs_element_count: " << i << "\n";
+            std::cout << "lhs_i_element: " << mk_pp(lhs_nodes_elements[i].first, m) << "\n  " << lhs_nodes_elements[i].second << "\n  " << mk_pp(lhs_i_loop_size, m) << "\n";
+            std::cout << "get_var_flat_array(lhs_nodes_elements[i].first): " << mk_pp(get_var_flat_array(lhs_nodes_elements[i].first), m) << "\n";
+            */
+        }
+        for (int i = 0; i < rhs_nodes_elements.size(); i++)
+        {
+            expr_ref rhs_i_loop_size(get_var_flat_size(rhs_nodes_elements[i]), m);
+            //expr_ref rhs_i_loop_iter(get_flat_iter(rhs_nodes_elements[i]), m);
+            if(rhs_nodes_elements[i].second>=0)
+                assert_axiom(createEqualOP(arr_linker[get_var_flat_array(rhs_nodes_elements[i].first)], rhs_nodes_elements[i].first));
+            //PC_len_cond.push_back(createGreaterEqOP(mk_int(q_bound), rhs_i_loop_size));
+            if (rhs_nodes_elements[i].second + 1 >= rhs_element_bound)
+                rhs_element_bound = rhs_nodes_elements[i].second + 1;
+            /*
+            std::cout << "rhs_element_count: " << i << "\n";
+            std::cout << "rhs_i_element: " << mk_pp(rhs_nodes_elements[i].first, m) << "\n  " << rhs_nodes_elements[i].second << "\n  " << mk_pp(rhs_i_loop_size, m) << "\n";
+            std::cout << "get_var_flat_array(rhs_nodes_elements[i].first): " << mk_pp(get_var_flat_array(rhs_nodes_elements[i].first), m) << "\n";
+            */
+        }
+
+
+        int alpha_bound = lhs_element_bound * q_bound.get_int64();
+        int rhs_len_bound = rhs_element_bound * q_bound.get_int64();
+        int lhs_len_bound = lhs_element_bound * q_bound.get_int64();
+        /*
+        std::cout << "lhs: " << mk_pp(lhs, m) << "\n";
+        std::cout << "rhs: " << mk_pp(rhs, m) << "\n";
+        std::cout << "Alpha Bound: " << alpha_bound << "\n";
+        std::cout << "lhs_len_bound: " << lhs_len_bound << "\n";
+        std::cout << "rhs_len_bound: " << rhs_len_bound << "\n";
+        std::cout << "q_bound: " << q_bound << "\n";
+        //std::cout << "connectingSize: " << connectingSize << "\n";
+        //*/
+
+        
+        expr_ref_vector PC_cases(m);
+        for (int i = 0; i < alpha_bound; i++)
+        {
+            expr_ref_vector PC_alpha_fixed_cases(m);
+            expr* off_set_bound_cond = createGreaterEqOP(mk_strlen(lhs), createAddOP(mk_int(i), mk_strlen(rhs)));
+            for (int j = 0; j < rhs_len_bound; j++)
+            {
+                for (int k = 0; k < lhs_len_bound; k++)
+                {
+                    if (i + j == k)
+                    {
+                        //std::cout << "(i,j,k): " << i << j << k << "\n";
+                        expr* premise = createAndOP(createGreaterEqOP(mk_strlen(lhs), mk_int(k+1)), createGreaterEqOP(mk_strlen(rhs), mk_int(j+1)));
+                        expr* possible_PC = m.mk_not(createEqualOP(createSelectOP(arr_lhs, mk_int(k)), createSelectOP(arr_rhs, mk_int(j))));
+                        PC_alpha_fixed_cases.push_back(createAndOP(premise, possible_PC));
+                    }
+                }
+            }
+            //expr* pre_cond = createAndOP(off_set_bound_cond, createGreaterEqOP(mk_int(alpha_bound), mk_strlen(lhs)));
+            //PC_cases.push_back(m.mk_or(m.mk_not(pre_cond), createOrOP(PC_alpha_fixed_cases)));
+            PC_cases.push_back(m.mk_or(m.mk_not(off_set_bound_cond), createOrOP(PC_alpha_fixed_cases)));
+        }
+
+        expr* PC = createAndOP(createAndOP(PC_len_cond), createAndOP(PC_cases));
+
+        //assert_axiom(createOrOP(LC, createAndOP(PC_len_cond)));
+      
+        assert_axiom(createOrOP(LC, PC));
+        return;
+
+
+        /*
+        int len_rhs = connectingSize;
+        is_fixed_len_var(rhs, len_rhs);
+        expr_ref_vector ors(m);
+        int len_lhs = connectingSize;
+        is_fixed_len_var(lhs, len_lhs);
         if (arr_lhs && arr_rhs) {
+            std::cout << "In_loop\n";
             expr* premises = createAndOP(premise, createEqualOP(arr_linker[arr_lhs], lhs), createEqualOP(arr_linker[arr_rhs], rhs));
             expr_ref cond(createGreaterEqOP(mk_strlen(rhs), createAddOP(mk_strlen(lhs), mk_int(1))), m);
             m_rewrite(cond);
             ors.push_back(cond);
-            for (int j = 1; j <= len_rhs; ++j){
+            for (int j = 1; j <= len_rhs; ++j) {
                 expr_ref_vector ands(m);
                 ands.push_back(createGreaterEqOP(mk_strlen(rhs), mk_int(j)));
                 for (int i = 0; i < len_lhs; ++i) {
                     expr_ref_vector ands_tmp(m);
-                    for (int k = 0; k < std::min(5, j); ++k){
+                    for (int k = 0; k < std::min(5, j); ++k) {
                         ands_tmp.push_back(createEqualOP(createSelectOP(arr_lhs, mk_int(i + k)),
-                                                         createSelectOP(arr_rhs, mk_int(k))));
+                            createSelectOP(arr_rhs, mk_int(k))));
                     }
                     ands.push_back(mk_not(m, createAndOP(ands_tmp)));
                 }
                 ors.push_back(createAndOP(ands));
             }
-            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m)  << ")\n";);
+            STRACE("str", tout << __LINE__ << " " << __FUNCTION__ << " not contains (" << mk_pp(lhs, m) << ", " << mk_pp(rhs, m) << ")\n";);
             assert_axiom(rewrite_implication(premises, createOrOP(ors)));
         }
+        //*/
+
+
+
+
+
+        std::cout << "Print_start\n";
+
+
+        std::cout << "q_Bound: " << mk_pp(get_bound_q_control_var(), m) << "\n";
+
+        std::cout << "Word_term (lhs): \n";
+        std::cout << mk_pp(lhs, m) << "\n";
+        std::cout << "Word_term (rhs): \n";
+        std::cout << mk_pp(rhs, m) << "\n";
+
+
+
+        ptr_vector<expr> nodes;
+        get_nodes_in_concat(lhs, nodes);
+        pair_expr_vector nodes_elements = create_equality(nodes);
+        ptr_vector<expr> nodes_2;
+        get_nodes_in_concat(rhs, nodes_2);
+        pair_expr_vector nodes_elements_2 = create_equality(nodes_2);
+        std::cout << "\nNodes (lhs): \n";
+        std::cout << "#Nodes (lhs): " << nodes.size() << "\n";
+
+        for (int i = 0; i < nodes.size(); i++)
+            std::cout << "  (lhs) node: " << i << "\n    name: " << mk_pp(nodes[i], m) << "\n";
+
+        for (int i = 0; i < nodes_2.size(); i++)
+            std::cout << "  (rhs) node: " << i << "\n    name: " << mk_pp(nodes_2[i], m) << "\n";
+
+        std::cout << "\nElements (lhs): \n";
+        std::cout << "#Elements (lhs): " << nodes_elements.size() << "\n";
+
+
+        
+
+
+        
+
+        for (int i = 0; i < nodes_elements.size(); i++)
+        {
+            std::cout << "  Element: " << i << "\n  var_name: " << mk_pp(nodes_elements[i].first, m) << "\n";
+            std::cout << "  loop_idx: " << nodes_elements[i].second << "\n";
+            std::cout << "  length: " << mk_pp(mk_strlen(nodes_elements[i].first), m) << "\n";
+
+            expr_ref tmp(get_var_flat_size(nodes_elements[i]), m);
+            expr_ref tmp2(get_flat_iter(nodes_elements[i]), m);
+            expr_ref tmp3(get_var_flat_array(nodes_elements[i]), m);
+
+
+
+            std::cout << "  loop_size: " << mk_pp(tmp, m) << "\n";
+            std::cout << "  ite_num: " << mk_pp(tmp2, m) << "\n";
+            std::cout << "  name_var_flat_array??: " << mk_pp(tmp3, m) << "\n";
+            //std::cout << " bound: " << non_fresh_variables[nodes_elements[i].first] << "\n";
+            //createSelectOP(tmp3, m_autil.mk_int(i))
+            std::cout << "  bound: " << mk_pp(createSelectOP(tmp3, mk_int(nodes_elements[i].second)), m) << "\n";
+
+
+            std::cout << "\n";
+        }
+
+        for (int i = 0; i < nodes_elements_2.size(); i++)
+            std::cout << "  (rhs) Element: " << i << "\n  var_name: " << mk_pp(nodes_elements_2[i].first, m) << "\n";
+        std::cout << "\n";
+
+
+
+        expr_ref tmp(get_var_flat_array(nodes_elements[0].first), m);
+        expr_ref tmp_2(get_var_flat_array(nodes_elements_2[0].first), m);
+
+        
+        assert_axiom(createEqualOP(arr_linker[arr_lhs], lhs));
+        assert_axiom(createEqualOP(arr_linker[tmp], nodes_elements[0].first));
+        assert_axiom(createEqualOP(arr_linker[tmp_2], nodes_elements_2[0].first));
+
+
+        zstring my_zstr("aabaa");
+        zstring my_zstr_3("1234567890");
+        zstring my_zstr_2("c");
+
+
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, nodes_elements[3].first));
+        
+        //assert_axiom(m_autil.mk_eq(mk_strlen(nodes_elements[0].first), mk_int(5)));
+        //assert_axiom(mk_not(m, m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(2)))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(2)), createSelectOP(tmp, mk_int(3))));
+        /*
+        assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(3))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(4))));
+        */
+        /*
+        assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(3))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(arr_lhs, mk_int(4))));
+        */
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        /*
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(0))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(1)), createSelectOP(tmp, mk_int(1))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(2)), createSelectOP(tmp, mk_int(2))));
+        assert_axiom(m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(3)), createSelectOP(tmp, mk_int(3))));
+        //*/
+        //assert_axiom(m_autil.mk_eq(nodes_elements[0].first, mk_string(my_zstr)));
+        //assert_axiom(m_autil.mk_eq(nodes_elements_2[1].first, mk_string(my_zstr)));
+        //assert_axiom(m_autil.mk_eq(tmp, tmp_2));
+        //assert_axiom(mk_not(m,m_autil.mk_eq(createSelectOP(arr_lhs, mk_int(0)), createSelectOP(tmp, mk_int(1)))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(0)), createSelectOP(tmp, mk_int(2))));
+        //assert_axiom(m_autil.mk_eq(createSelectOP(tmp, mk_int(1)), createSelectOP(tmp_2, mk_int(1))));
+
+        obj_map<expr, int> non_fresh_vars;
+        non_fresh_vars = collect_non_fresh_vars();
+        if (is_non_fresh(createSelectOP(tmp, mk_int(nodes_elements[0].second)), non_fresh_vars))
+            std::cout << "Non_fresh\n";
+        else
+            std::cout << "Fresh\n";
+
+
+        std::cout << "Non_fresh_size: " << non_fresh_vars.size() << "\n";
+
+        std::cout << "nodes_elements[0].first: " << mk_pp(tmp, m) << "\n";
+        std::cout << "arr_lhs: " << mk_pp(arr_lhs, m) << "\n";
+
+        std::cout << "q_bound: " << q_bound << "\n";
+
+        expr_ref len_u_0(get_var_flat_size(nodes_elements[0]), m);
+        expr_ref len_u_1(get_var_flat_size(nodes_elements[1]), m);
+        expr_ref len_b_0(get_var_flat_size(nodes_elements_2[0]), m);
+        expr_ref len_b_1(get_var_flat_size(nodes_elements_2[1]), m);
+
+        //assert_axiom(mk_not(m, m_autil.mk_eq(m_autil.mk_add(len_u_0, len_u_1), mk_strlen(nodes_elements[0].first))));
+        //assert_axiom( m_autil.mk_eq(m_autil.mk_add(len_u_0, len_u_1), mk_strlen(nodes_elements[0].first)));
+        //assert_axiom(createGreaterEqOP(len_u_0, m_autil.mk_add(mk_int(q_bound), mk_int(45))));
+        //assert_axiom(createGreaterEqOP(m_autil.mk_add(mk_int(q_bound), mk_int(45)), len_u_1));
+        //assert_axiom(createGreaterEqOP(mk_int(5), len_u_1));
+        //assert_axiom(createGreaterEqOP(len_u_1, mk_int(5)));
+        //assert_axiom(m_autil.mk_eq(len_u_1, m_autil.mk_add(mk_int(q_bound), mk_int(10))));
+        //assert_axiom(m_autil.mk_eq(get_bound_q_control_var(), mk_strlen(nodes_elements[0].first)));
+        //assert_axiom(m_autil.mk_eq(len_u_1, mk_int(9)));
+
+        //if (my_bool)
+          //  std::cout << "Fixed_len\n";
+        //else
+          //  std::cout << "Non_fixed\n";
+
+       
+        /*
+        expr_ref x(mk_int_var("x"), m);
+        expr_ref y(mk_int_var("y"), m);
+        assert_axiom(m_autil.mk_eq(x, y));
+        assert_axiom(m_autil.mk_eq(x, mk_int(1)));
+        assert_axiom(m_autil.mk_eq(y, mk_int(1)));
+        expr* z(mk_int_var("z"));
+        //app* const* z = to_app(x);
+        //app* const* z;
+        app_ref_vector consts(m);
+        
+        //sort_ref A(m.mk_uninterpreted_sort(symbol("A")), m);
+        sort* sorts[1] = { m.get_sort(x) };
+        symbol names[1] = { symbol("z") };
+        //svector<symbol> names;
+        //names.push_back(symbol("x"));
+        //sort_ref_vector sorts(m);
+        //sorts.push_back(m.get_sort(x));
+        expr_ref body(m);
+        body = m_autil.mk_ge(m_autil.mk_add(z, mk_int(1)), z);
+        expr_ref result(m);
+        //result = m.mk_forall(1, sorts, names, body);
+        consts.push_back(to_app(z));
+        result = mk_forall(m, 1, consts.c_ptr(), body);
+        std::cout << "result: " << mk_pp(result,m) << "\n";
+        assert_axiom(result);
+        //m.mk_forall(1,)
+        //*/
+
+
+        std::cout << "Print_end\n\n";
+
+
+
+
+
+
+
+
+
+
     }
 
     void theory_trau::handle_not_contain_const(expr *lhs, zstring rhs, expr *premise, bool cached){

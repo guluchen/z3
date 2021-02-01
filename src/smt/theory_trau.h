@@ -51,6 +51,8 @@ namespace smt {
         scoped_vector<str::expr_pair>   m_wi_expr_memo;
         scoped_vector<str::expr_pair>   membership_memo;
         scoped_vector<str::expr_pair>   non_membership_memo;
+        bool is_search_complete = true;
+        bool is_printed = false;
 
         typedef union_find<theory_trau>     th_union_find;
         typedef trail_stack<theory_trau>    th_trail_stack;
