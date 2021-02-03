@@ -246,6 +246,7 @@ int main(int argc, char ** argv) {
     TST(sat_user_scope);
     TST_ARGV(ddnf);
     TST(ddnf1);
+    TST(theory_trau);
     TST(model_evaluator);
     TST(get_consequences);
     TST(pb2bv);

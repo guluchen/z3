@@ -121,6 +121,7 @@ add_executable(test-z3
   upolynomial.cpp
   var_subst.cpp
   vector.cpp
+  theory_trau.cpp
   lp/lp.cpp
   ${z3_test_extra_object_files}
 )
