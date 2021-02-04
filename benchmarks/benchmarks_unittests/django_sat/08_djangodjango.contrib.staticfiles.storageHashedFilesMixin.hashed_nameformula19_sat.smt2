@@ -1,0 +1,8 @@
+(set-logic ALL)
+(declare-const name String)
+(assert (not (str.contains name "%")))
+(assert (not (< (str.len name) 0)))
+(assert (not (> (+ 0 (str.indexof name ":" 0)) 0)))
+(assert (not (= name "//")))
+(check-sat)
+(get-value (name))
