@@ -1,0 +1,8 @@
+(set-logic ALL)
+(declare-const model_identifier String)
+(assert (not (< (str.len model_identifier) 0)))
+(assert (not (= (+ 0 (str.indexof model_identifier "." 0)) (- 1))))
+(assert (not (< (+ 0 (str.indexof model_identifier "." 0)) 0)))
+(assert (< (+ (+ 0 (str.indexof model_identifier "." 0)) 1) 0))
+(check-sat)
+(get-value (model_identifier))

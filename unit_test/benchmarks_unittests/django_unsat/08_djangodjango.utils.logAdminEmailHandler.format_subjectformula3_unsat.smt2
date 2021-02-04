@@ -1,0 +1,7 @@
+(set-logic ALL)
+(declare-const subject String)
+(assert (not (< (str.len subject) 0)))
+(assert (= (+ 0 (str.indexof subject "\n" 0)) (- 1)))
+(assert (< (str.len (str.++ "" subject)) 0))
+(check-sat)
+(get-value (subject))
