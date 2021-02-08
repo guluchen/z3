@@ -1,4 +1,4 @@
-import subprocess
+import subprocess, sys
 
 def from_file_to_data_row(file):
     print(file); result_list = [file]; ans_key = {} # since the file suffix can be .smt2 or .smt25, we don't set the filter here.
@@ -52,11 +52,17 @@ def from_file_to_data_row(file):
     # But please note that we currently don't convert unicode representation into the old one.
     # Also note that trau allows (set-logic ALL_SUPPORTED) instead of (set-logic ALL).
     t = res1 = res2 = varname = ''; read_model = False
-    p = subprocess.run(f"cat {file} | cat - <(echo ''; echo '(get-model)') |" \
-        r"sed 's/(set-logic[^)]*)//g; s/(set-option[^)]*:strings-exp[^)]*)//g; s/str\.to_int/str.to.int/g; s/str\.from_int/int.to.str/g; s/str\.in_re/str.in.re/g; s/str\.to_re/str.to.re/g' |" \
-        "time -p timeout 10 ~/z3/trau-build/z3 smt.string_solver=trau -in", shell=True, capture_output=True, executable='/bin/bash')
-        # f"time -p timeout 10 ~/z3/trau-build/z3 smt.string_solver=trau {file}", shell=True, capture_output=True, executable='/bin/bash')
-    t = p.stderr.splitlines()[-3].decode('utf-8'); assert t.startswith('real '); t = t.split(' ')[1]
+    if sys.platform == 'darwin':
+        p = subprocess.run(f"cat {file} | cat - <(echo ''; echo '(get-model)') |" \
+            r"sed 's/(set-logic[^)]*)//g; s/(set-option[^)]*:strings-exp[^)]*)//g; s/str\.to_int/str.to.int/g; s/str\.from_int/int.to.str/g; s/str\.in_re/str.in.re/g; s/str\.to_re/str.to.re/g' |" \
+            "timeout 10 ~/z3/trau-build/z3 smt.string_solver=trau -in", shell=True, capture_output=True, executable='/bin/bash')
+        t = '0' # disable time measurement in macOS
+    else:
+        p = subprocess.run(f"cat {file} | cat - <(echo ''; echo '(get-model)') |" \
+            r"sed 's/(set-logic[^)]*)//g; s/(set-option[^)]*:strings-exp[^)]*)//g; s/str\.to_int/str.to.int/g; s/str\.from_int/int.to.str/g; s/str\.in_re/str.in.re/g; s/str\.to_re/str.to.re/g' |" \
+            "time -p timeout 10 ~/z3/trau-build/z3 smt.string_solver=trau -in", shell=True, capture_output=True, executable='/bin/bash')
+            # f"time -p timeout 10 ~/z3/trau-build/z3 smt.string_solver=trau {file}", shell=True, capture_output=True, executable='/bin/bash')
+        t = p.stderr.splitlines()[-3].decode('utf-8'); assert t.startswith('real '); t = t.split(' ')[1]
     try:
         for line in p.stdout.splitlines():
             line = line.decode('utf-8').strip()
