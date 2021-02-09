@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
+#include <fstream>
+#include <set>
+#include <sstream>
 #include "ast/ast_ll_pp.h"
 #include "ast/ast_pp.h"
 #include "ast/ast_smt2_pp.h"
@@ -16,12 +19,23 @@
 #include "smt/theory_seq_empty.h"
 #include "smt/theory_trau.h"
 #include "smt/theory_lra.h"
+#include "common.h"
 
 /* TODO:
  *  1. better algorithm for checking solved form
  *  2. on-the-fly over-approximation
  *  3. better algorithm for computing state transform
  */
+
+int print_assignment_times;
+
+inline bool starts_with(std::string const & s, std::string const & sub) {
+    return s.find(sub) == 0;
+}
+inline bool ends_with(std::string const & value, std::string const & ending) {
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
 
 namespace smt {
 
@@ -45,6 +59,88 @@ namespace smt {
                 return r;
             }
         };
+    }
+
+    void theory_trau::assignment_to_smt2() {
+        // std::cout << "**** guessed assignments print start **** \n" << std::endl;
+        std::set<std::string> var_names;
+        std::ofstream myfile; std::string s(g_input_file);
+        if (!ends_with(s, ".smtsmt")) {
+            print_assignment_times++;
+            myfile.open(s + "_" + std::to_string(print_assignment_times) + ".smtsmt");
+            for (const auto& e: variable_set) {
+                std::stringstream ss;
+                ss << mk_pp(e, m);
+                if ((var_names.find(ss.str()) == var_names.end()) && (ss.str()[0]!='(') && (ss.str()[0]!='"')) {
+                    if (ss.str() == std::string("re.all"))
+                        myfile << "(declare-const " << ss.str() << " (RegEx String))" << std::endl;
+                    else if (starts_with(ss.str(), "|arr_") || starts_with(ss.str(), "arr_"))
+                        myfile << "(declare-const " << ss.str() << " (Array Int Int))" << std::endl;
+                    else
+                        myfile << "(declare-const " << ss.str() << " String)" << std::endl;
+                    var_names.insert(ss.str());
+                }
+            }
+            for (const auto& e: int_variable_set) {
+                std::stringstream ss;
+                ss << mk_pp(e, m);
+                if ((var_names.find(ss.str()) == var_names.end()) && (ss.str()[0]!='(') && (ss.str()[0]!='"')) {
+                    if (ss.str() == std::string("re.all"))
+                        myfile << "(declare-const " << ss.str() << " (RegEx String))" << std::endl;
+                    else if (starts_with(ss.str(), "|arr_") || starts_with(ss.str(), "arr_"))
+                        myfile << "(declare-const " << ss.str() << " (Array Int Int))" << std::endl;
+                    else
+                        myfile << "(declare-const " << ss.str() << " Int)" << std::endl;
+                    var_names.insert(ss.str());
+                }
+            }
+            for (const auto& e: internal_variable_set) {
+                std::stringstream ss;
+                ss << mk_pp(e, m);
+                if ((var_names.find(ss.str()) == var_names.end()) && (ss.str()[0]!='(') && (ss.str()[0]!='"')) {
+                    if (ss.str() == std::string("re.all"))
+                        myfile << "(declare-const " << ss.str() << " (RegEx String))" << std::endl;
+                    else if (starts_with(ss.str(), "|arr_") || starts_with(ss.str(), "arr_"))
+                        myfile << "(declare-const " << ss.str() << " (Array Int Int))" << std::endl;
+                    else
+                        myfile << "(declare-const " << ss.str() << " String)" << std::endl;
+                    var_names.insert(ss.str());
+                }
+            }
+            for (const auto& e: regex_variable_set) {
+                std::stringstream ss;
+                ss << mk_pp(e, m);
+                if ((var_names.find(ss.str()) == var_names.end()) && (ss.str()[0]!='(') && (ss.str()[0]!='"')) {
+                    if (ss.str() == std::string("re.all"))
+                        myfile << "(declare-const " << ss.str() << " (RegEx String))" << std::endl;
+                    else if (starts_with(ss.str(), "|arr_") || starts_with(ss.str(), "arr_"))
+                        myfile << "(declare-const " << ss.str() << " (Array Int Int))" << std::endl;
+                    else
+                        myfile << "(declare-const " << ss.str() << " String)" << std::endl;
+                    var_names.insert(ss.str());
+                }
+            }
+            for (const auto& e: m_trail) {
+                std::stringstream ss;
+                ss << mk_pp(e, m);
+                if ((var_names.find(ss.str()) == var_names.end()) && (ss.str()[0]!='(') && (ss.str()[0]!='"')) {
+                    if (ss.str() == std::string("re.all"))
+                        myfile << "(declare-const " << ss.str() << " (RegEx String))" << std::endl;
+                    else if (starts_with(ss.str(), "|arr_") || starts_with(ss.str(), "arr_"))
+                        myfile << "(declare-const " << ss.str() << " (Array Int Int))" << std::endl;
+                    else
+                        myfile << "(declare-const " << ss.str() << " String)" << std::endl;
+                    var_names.insert(ss.str());
+                }
+            }
+            expr_ref_vector assignments(m);
+            get_context().get_assignments(assignments);
+            for (const auto& s : assignments)
+                myfile << "(assert " << mk_pp(s,m) << ")" << std::endl;
+            myfile << "(check-sat)(get-model)" << std::endl;
+            // myfile.close();
+        }
+        // std::cout << "\n **** guessed assignments print end **** \n" << std::endl;
     }
 
     theory_trau::theory_trau(ast_manager& m, const theory_str_params& params)
@@ -18875,6 +18971,7 @@ namespace smt {
 
         //mk_var(ctx.get_enode(a));
         m_trail.push_back(a);
+        int_variable_set.insert(a);
         //variable_set.insert(a);
         //internal_variable_set.insert(a);
 

@@ -38,6 +38,7 @@ Revision History:
 #include "util/env_params.h"
 #include "util/file_path.h"
 #include "shell/lp_frontend.h"
+#include "common.h"
 
 #if defined( _WINDOWS ) && defined( __MINGW32__ ) && ( defined( __GNUG__ ) || defined( __clang__ ) )
 #include <crtdbg.h>
@@ -46,7 +47,7 @@ Revision History:
 typedef enum { IN_UNSPECIFIED, IN_SMTLIB_2, IN_DATALOG, IN_DIMACS, IN_WCNF, IN_OPB, IN_LP, IN_Z3_LOG, IN_MPS } input_kind;
 
 static std::string  g_aux_input_file;
-static char const * g_input_file          = nullptr;
+       char const * g_input_file          = nullptr;
 static bool         g_standard_input      = false;
 static input_kind   g_input_kind          = IN_UNSPECIFIED;
 bool                g_display_statistics  = false;

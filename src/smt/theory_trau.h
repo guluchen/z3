@@ -1311,6 +1311,7 @@ namespace smt {
         // include an occurrence of the term for which axioms are being generated
         obj_hashtable<expr>                                 axiomatized_terms;
         obj_hashtable<expr>                                 variable_set;
+        obj_hashtable<expr>                                 int_variable_set;
         obj_hashtable<expr>                                 internal_variable_set;
         obj_hashtable<expr>                                 regex_variable_set;
 
@@ -1420,6 +1421,7 @@ namespace smt {
     private:
         clock_t                                             startClock;
         bool                                                newConstraintTriggered = false;
+        void assignment_to_smt2();
         void rewrite_and_assert_axiom(expr *const e);
         void assert_axiom(expr *e);
         void assert_axiom(expr *const e1, expr *const e2);
